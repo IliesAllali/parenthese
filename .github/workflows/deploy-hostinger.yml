@@ -1,0 +1,79 @@
+name: Deploy Hostinger
+
+# Déploie Parenthèse sur le VPS à chaque push sur main. Le travail est fait sur le serveur par
+# deploy/deploy.sh, incrémental et verrouillé : seules les parties modifiées sont reconstruites.
+on:
+  push:
+    branches:
+      - main
+    # Rien à déployer quand seuls la doc, l'outillage ou l'auto-hébergement Docker changent
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE'
+      - 'tools/**'
+      - 'docker-compose.yml'
+      - 'Dockerfile.web'
+      - 'backend/Dockerfile'
+      - '**/.dockerignore'
+      - '.env.example'
+      - 'deploy/nginx.docker.conf'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: 'Tout réinstaller et tout reconstruire'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Un déploiement à la fois. Un push arrivé pendant un déploiement attend son tour au lieu de le couper
+# (couper un npm ci en cours laisse node_modules à moitié vide).
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+
+      - name: Add Hostinger host key (best-effort)
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+        run: |
+          set -euo pipefail
+          PORT="${HOSTINGER_PORT:-22}"
+          mkdir -p ~/.ssh
+          # keyscan can fail if the host firewall blocks GitHub runners; make it non-fatal
+          ssh-keyscan -T 5 -p "$PORT" -H "$HOSTINGER_HOST" >> ~/.ssh/known_hosts || true
+
+      - name: Deploy on Hostinger
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
+          FORCE_FULL: ${{ inputs.full && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          PORT="${HOSTINGER_PORT:-22}"
+
+          # backend/.env vit sur le serveur, jamais dans GitHub (dépôt public)
+          ssh -p "$PORT" -o ServerAliveInterval=30 "$HOSTINGER_USER@$HOSTINGER_HOST" "FORCE_FULL=$FORCE_FULL bash -s" <<'EOF'
+          set -euo pipefail
+          cd /var/www/parenthese
+          # Sous le même verrou que deploy.sh : récupération du code, puis déploiement
+          flock -w 900 /tmp/parenthese-deploy.lock env PARENTHESE_DEPLOY_LOCKED=1 FORCE_FULL="$FORCE_FULL" bash -c '
+            set -euo pipefail
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            bash deploy/deploy.sh
+          '
+          EOF

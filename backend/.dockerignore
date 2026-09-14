@@ -1,0 +1,10 @@
+node_modules
+dist
+.local
+storage
+test
+openapi
+.env
+.env.*
+!.env.example
+*.log

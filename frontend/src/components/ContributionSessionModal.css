@@ -1,0 +1,337 @@
+/* ============================================================
+   Contribution Session Modal - Finalisation contribution
+   ============================================================ */
+
+.contrib-session-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(30, 25, 20, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: contribFadeIn 0.2s ease;
+}
+
+@keyframes contribFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.contrib-session-modal {
+  position: relative;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: 32px 28px 24px;
+  background: rgba(254, 249, 237, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid rgba(166, 124, 82, 0.2);
+  box-shadow:
+    0 20px 60px rgba(93, 82, 75, 0.25),
+    0 4px 16px rgba(93, 82, 75, 0.1);
+  animation: contribSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes contribSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.contrib-session-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #8B7355;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.contrib-session-close:hover {
+  background: rgba(93, 82, 75, 0.1);
+  color: #5D524B;
+}
+
+.contrib-session-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.contrib-session-icon {
+  color: #FF9500;
+  margin-bottom: 12px;
+}
+
+.contrib-session-title {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #5D524B;
+  margin: 0 0 6px;
+}
+
+.contrib-session-subtitle {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #8B7355;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Récap modifications */
+.contrib-session-recap {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.contrib-recap-tag {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.contrib-recap-tag--added {
+  background: rgba(82, 178, 120, 0.12);
+  color: #3D9A5E;
+}
+
+.contrib-recap-tag--modified {
+  background: rgba(255, 149, 0, 0.12);
+  color: #E08600;
+}
+
+.contrib-recap-tag--deleted {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+
+/* Liste des changements */
+.contrib-session-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(166, 124, 82, 0.15);
+}
+
+.contrib-session-change-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.contrib-session-change-badge {
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.contrib-session-change-badge--create {
+  background: rgba(82, 178, 120, 0.15);
+  color: #3D9A5E;
+}
+
+.contrib-session-change-badge--update {
+  background: rgba(255, 149, 0, 0.12);
+  color: #E08600;
+}
+
+.contrib-session-change-badge--delete {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+
+.contrib-session-change-label {
+  color: #5D524B;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Form */
+.contrib-session-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contrib-session-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.contrib-session-label {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #8B7355;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contrib-session-optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #B8A898;
+}
+
+.contrib-session-input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #5D524B;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.contrib-session-input:focus {
+  border-color: #A67C52;
+  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.12);
+}
+
+.contrib-session-input::placeholder {
+  color: #B8A898;
+}
+
+.contrib-session-textarea {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #5D524B;
+  transition: all 0.2s ease;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.contrib-session-textarea:focus {
+  border-color: #A67C52;
+  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.12);
+}
+
+.contrib-session-textarea::placeholder {
+  color: #B8A898;
+}
+
+.contrib-session-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: #B8A898;
+}
+
+.contrib-session-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(192, 57, 43, 0.08);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  color: #C0392B;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+}
+
+/* Actions */
+.contrib-session-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.contrib-session-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: #FF9500;
+  color: white;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.contrib-session-submit:hover:not(:disabled) {
+  background: #E08600;
+  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.3);
+}
+
+.contrib-session-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.contrib-session-cancel {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #8B7355;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.contrib-session-cancel:hover {
+  background: rgba(93, 82, 75, 0.08);
+  color: #5D524B;
+}
+
+@media (max-width: 768px) {
+  .contrib-session-modal {
+    margin: 16px;
+    padding: 24px 20px 20px;
+  }
+}

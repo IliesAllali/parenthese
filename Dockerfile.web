@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+# Front Parenthèse (React + Vite) servi par nginx. Contexte de build : la racine du dépôt.
+# nginx sert frontend/dist et relaie l'API vers le service `api` (voir deploy/nginx.docker.conf).
+
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+
+# Même origine : le front appelle /api, /trees, /auth, /health sur son propre hôte.
+# Une variable vide prime sur un éventuel frontend/.env (exclu du contexte de toute façon).
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
+
+FROM nginx:1.27-alpine
+
+COPY deploy/nginx.docker.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80

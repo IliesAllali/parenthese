@@ -1,0 +1,261 @@
+/* ============================================================
+   CreateMyTreeButton — Pill + Panel morph, bas-droite
+   Même langage visuel que la ContextualNavbar
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   Pill bouton (état fermé) — même aesthetic que la navbar
+   ---------------------------------------------------------- */
+.cmt-pill {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1001;
+
+  display: flex;
+  align-items: center;
+  padding: 13px 22px;
+  border: 1px solid rgba(93, 82, 75, 0.1);
+  border-radius: 50px;
+  background: rgba(247, 236, 217, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 4px 40px rgba(93, 82, 75, 0.22),
+    0 1px 6px rgba(93, 82, 75, 0.1);
+
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #5D524B;
+  cursor: pointer;
+  white-space: nowrap;
+
+  animation: cmtPillIn 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+@keyframes cmtPillIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cmt-pill:hover {
+  background: rgba(247, 236, 217, 1);
+  box-shadow:
+    0 8px 48px rgba(93, 82, 75, 0.28),
+    0 2px 8px rgba(93, 82, 75, 0.12);
+  transform: translateY(-2px);
+}
+
+.cmt-pill:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ----------------------------------------------------------
+   Panel (état ouvert) — card qui morphe depuis la pill
+   ---------------------------------------------------------- */
+.cmt-panel {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1001;
+
+  width: 300px;
+  background: rgba(254, 249, 237, 0.97);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-radius: 20px;
+  border: 1px solid rgba(166, 124, 82, 0.18);
+  box-shadow:
+    0 12px 48px rgba(93, 82, 75, 0.22),
+    0 2px 10px rgba(93, 82, 75, 0.1);
+
+  transform-origin: bottom right;
+  animation: cmtMorphIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+@keyframes cmtMorphIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) translateY(8px);
+    border-radius: 50px;
+  }
+  60% {
+    border-radius: 22px;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    border-radius: 20px;
+  }
+}
+
+/* Header */
+.cmt-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(166, 124, 82, 0.1);
+}
+
+.cmt-panel-title {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5D524B;
+  line-height: 1.3;
+}
+
+.cmt-panel-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(93, 82, 75, 0.07);
+  color: #8B7355;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cmt-panel-close:hover {
+  background: rgba(93, 82, 75, 0.13);
+  color: #5D524B;
+}
+
+/* Body */
+.cmt-panel-body {
+  padding: 16px 18px 18px;
+}
+
+.cmt-label {
+  display: block;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: #8B7355;
+  margin-bottom: 7px;
+  letter-spacing: 0.02em;
+}
+
+.cmt-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid rgba(166, 124, 82, 0.25);
+  background: rgba(255, 253, 248, 0.9);
+  color: #453d37;
+  padding: 10px 13px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cmt-input:focus {
+  border-color: #b99762;
+  box-shadow: 0 0 0 3px rgba(185, 151, 98, 0.12);
+}
+
+.cmt-slug-preview {
+  margin-top: 8px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: #A08060;
+}
+
+.cmt-slug-preview code {
+  background: rgba(166, 124, 82, 0.1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #6a4f32;
+}
+
+.cmt-error {
+  margin-top: 8px;
+  background: rgba(171, 49, 49, 0.08);
+  border: 1px solid rgba(171, 49, 49, 0.25);
+  color: #862f2f;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.cmt-btn-create {
+  margin-top: 14px;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #8b6a43, #6a4f32);
+  color: #fef9ed;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.cmt-btn-create:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9c7a52, #7a5b3a);
+  box-shadow: 0 4px 14px rgba(166, 124, 82, 0.32);
+  transform: translateY(-1px);
+}
+
+.cmt-btn-create:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cmt-btn-create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------------------------
+   Mobile — bottom sheet
+   ---------------------------------------------------------- */
+@media (max-width: 768px) {
+  .cmt-pill {
+    bottom: 84px;
+    right: 12px;
+    font-size: 13px;
+    padding: 11px 18px;
+  }
+
+  .cmt-panel {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    transform-origin: bottom center;
+  }
+
+  @keyframes cmtMorphIn {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .cmt-panel-body {
+    padding: 16px 20px 32px;
+  }
+}

@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('./assets/Bradford/BradfordLLWeb-Regular.woff') format('woff'),
+       url('./assets/Bradford/BradfordLL-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('./assets/Bradford/BradfordLLWeb-Bold.woff') format('woff'),
+       url('./assets/Bradford/BradfordLL-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('./assets/Bradford/BradfordLLWeb-Italic.woff') format('woff'),
+       url('./assets/Bradford/BradfordLL-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradford Mono LL';
+  src: url('./assets/Bradford/BradfordMonoLLWeb-Regular.woff') format('woff'),
+       url('./assets/Bradford/BradfordMonoLL-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    font-weight: 450;
+    background-color: #FDF8EC;
+    color: #5D524B;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+    font-weight: 450;
+  }
+
+  /* Red Hat Mono pour les petits éléments UI : labels, meta, nav, badges */
+  button, input, select, textarea,
+  label,
+  .tree-meta, .admin-meta, .admin-stat-card span,
+  .contrib-invite-header span, .contrib-item-meta span,
+  .contrib-session-date, .contrib-role-badge,
+  .contrib-link-url, .contrib-pass-value, .contrib-pass-reveal,
+  .access-gate-tree-meta, .media-manager-meta span,
+  .admin-audit-main span, .admin-audit-meta,
+  .admin-person-item span,
+  .account-help {
+    font-family: 'Red Hat Mono', ui-monospace, monospace;
+  }
+}
+
+@layer utilities {
+  .text-cosmos-cream {
+    color: #FEF9ED;
+  }
+
+  .bg-cosmos-black {
+    background-color: #000000;
+  }
+}

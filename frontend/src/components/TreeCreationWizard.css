@@ -1,0 +1,92 @@
+.tree-wizard-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(44, 36, 30, 0.36);
+}
+
+.tree-wizard-card {
+  width: min(480px, 100%);
+  display: grid;
+  gap: 10px;
+  border-radius: 16px;
+  border: 1px solid #d8c7ac;
+  background: #fffdf8;
+  padding: 20px;
+  box-shadow: 0 24px 45px rgba(50, 38, 25, 0.34);
+}
+
+.tree-wizard-card h2 {
+  color: #453d37;
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.tree-wizard-card p {
+  color: #6e6258;
+}
+
+.tree-wizard-card label {
+  font-size: 14px;
+  color: #6e6258;
+}
+
+.tree-wizard-card input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #d9cdb8;
+  background: #fffdf8;
+  color: #453d37;
+  padding: 10px 12px;
+  outline: none;
+}
+
+.tree-wizard-card input:focus {
+  border-color: #b99762;
+  box-shadow: 0 0 0 2px rgba(185, 151, 98, 0.15);
+}
+
+.tree-wizard-form {
+  display: grid;
+  gap: 8px;
+}
+
+.tree-wizard-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.tree-wizard-actions button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-weight: 450;
+  color: #fef9ed;
+  background: linear-gradient(135deg, #8b6a43, #6a4f32);
+  cursor: pointer;
+}
+
+.tree-wizard-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.tree-wizard-actions .ghost {
+  background: transparent;
+  color: #6a4f32;
+  border: 1px solid #cdb89a;
+}
+
+.tree-wizard-error {
+  background: rgba(171, 49, 49, 0.1);
+  border: 1px solid rgba(171, 49, 49, 0.32);
+  color: #862f2f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}

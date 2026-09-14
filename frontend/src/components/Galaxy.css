@@ -1,0 +1,45 @@
+.galaxy-canvas {
+  cursor: default;
+  display: block;
+  touch-action: none;
+  -ms-touch-action: none;
+  overscroll-behavior: contain;
+}
+
+/* ============================================================
+   Overlay label lien de parenté — taille fixe, bas-centre
+   ============================================================ */
+
+.path-label-overlay {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+
+  background: rgba(93, 82, 75, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #FEF9ED;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Red Hat Mono", ui-monospace, monospace;
+  padding: 8px 20px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+
+  animation: pathLabelIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes pathLabelIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);   }
+}
+
+@media (max-width: 768px) {
+  .path-label-overlay {
+    bottom: 76px;
+    font-size: 13px;
+  }
+}

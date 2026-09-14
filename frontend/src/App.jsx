@@ -1,0 +1,2552 @@
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import Galaxy from './components/Galaxy'
+import PersonCard from './components/PersonCard.jsx'
+import MediaViewer from './components/MediaViewer'
+import MediaManagerPanel from './components/MediaManagerPanel'
+import AdminPanel from './components/AdminPanel'
+import AccessGate from './components/AccessGate'
+import AccountDashboard from './components/AccountDashboard'
+import AccountPanel from './components/AccountPanel'
+import TreeCreationWizard from './components/TreeCreationWizard'
+import ContributionPanel from './components/ContributionPanel'
+import EditModeOverlay from './components/EditSessionBar.jsx'
+import EditConfirmModal from './components/EditConfirmModal'
+import DraftRestoreBanner from './components/DraftRestoreBanner'
+import AddPersonPanel from './components/AddPersonPanel'
+import ContributionSessionModal from './components/ContributionSessionModal'
+import { ContextualNavbar } from './components/navbar'
+import ZoomControl from './components/ZoomControl'
+import { ExpandableSearch } from './components/search'
+import {
+  createParentChildLink,
+  deleteParentChildLink,
+  deletePerson,
+  deleteUnion,
+  createPerson,
+  createTree,
+  createUnion,
+  batchAnnotations,
+  deletePersonAvatar,
+  getTree,
+  linkTreeAccess,
+  updateTree,
+  rotateTreePasswords,
+  resolveTreeBySlug,
+  uploadPersonAvatar,
+  updatePerson,
+  uploadAnnotationPhoto,
+} from './api/treeApi'
+import { useAuth } from './hooks/useAuth'
+import { useTreeAccess, getTreeTokenStorageKey, getSlugFromPathname, readTreeAccessRole, TREE_ID_FROM_ENV } from './hooks/useTreeAccess'
+import { useMediaManager } from './hooks/useMediaManager'
+import { useContributions } from './hooks/useContributions'
+import { useUserRole } from './hooks/useUserRole'
+import { usePersonSearch } from './hooks/usePersonSearch'
+import { useEditMode } from './hooks/useEditMode'
+import { useAnnotations } from './hooks/useAnnotations'
+import AnnotationToolbar from './components/annotations/AnnotationToolbar'
+import TextInputOverlay from './components/annotations/TextInputOverlay'
+import { filiations, medias, persons, unions } from './data/mockData'
+import { fileToBase64, getAccountErrorMessage } from './utils/errorMessages'
+import { getUploadMimeType, validateMediaFile } from './utils/mediaUpload'
+import {
+  identifyUser,
+  resetUser,
+  toInteractionMediaType,
+  toJourneyRole,
+  toOpaqueTreeId,
+  trackAppEvent,
+} from './utils/analytics'
+import './App.css'
+
+function yearToIsoDate(value) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const raw = String(value).trim()
+
+  // If user provided a full date YYYY-MM-DD, keep it.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw
+  }
+
+  const year = Number.parseInt(raw.slice(0, 4), 10)
+  if (!Number.isFinite(year)) {
+    return null
+  }
+
+  return `${String(year).padStart(4, '0')}-01-01`
+}
+
+function extractYearFromIsoDate(value) {
+  if (!value || typeof value !== 'string') return null
+  const year = Number.parseInt(value.slice(0, 4), 10)
+  return Number.isFinite(year) ? year : null
+}
+
+function normalizeSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function generateSecurePassword() {
+  return crypto.randomUUID().replace(/-/g, '')
+}
+
+function getAccountSelfPersonStorageKey(userEmail, treeId) {
+  return `account_self_person_${userEmail || 'unknown'}_${treeId || 'none'}`
+}
+
+function buildContributionChangesFromDraft(draft = {}) {
+  const changes = []
+  const relationTypeToCanonical = (relation) => {
+    if (!relation || !relation.sourcePersonId || !relation.targetPersonId) {
+      return null
+    }
+
+    const sourcePersonId = String(relation.sourcePersonId)
+    const targetPersonId = String(relation.targetPersonId)
+    const relationType = String(relation.relationType || '')
+
+    if (relationType === 'spouse') {
+      const ordered = [sourcePersonId, targetPersonId].sort()
+      return {
+        relationType: 'spouse',
+        sourcePersonId,
+        targetPersonId,
+        key: `spouse:${ordered[0]}:${ordered[1]}`,
+      }
+    }
+
+    if (relationType === 'parent' || relationType === 'child') {
+      const parentPersonId = relationType === 'parent' ? targetPersonId : sourcePersonId
+      const childPersonId = relationType === 'parent' ? sourcePersonId : targetPersonId
+      return {
+        relationType: 'parent_child_link',
+        parentPersonId,
+        childPersonId,
+        key: `parent_child:${parentPersonId}:${childPersonId}`,
+      }
+    }
+
+    return null
+  }
+
+  const resolveRemovedRelationEntity = (canonicalRelation) => {
+    if (!canonicalRelation) {
+      return null
+    }
+
+    if (canonicalRelation.relationType === 'spouse') {
+      const union = unions.find((candidate) => (
+        (String(candidate.partner1Id) === canonicalRelation.sourcePersonId
+          && String(candidate.partner2Id) === canonicalRelation.targetPersonId)
+        || (String(candidate.partner1Id) === canonicalRelation.targetPersonId
+          && String(candidate.partner2Id) === canonicalRelation.sourcePersonId)
+      ))
+
+      if (!union) {
+        return null
+      }
+
+      return {
+        entityType: 'union',
+        action: 'delete',
+        entityId: String(union.id),
+      }
+    }
+
+    let link = filiations.find((candidate) => (
+      String(candidate.childId) === canonicalRelation.childPersonId
+      && String(candidate.parentId) === canonicalRelation.parentPersonId
+    ))
+
+    if (!link) {
+      const relatedUnionIds = new Set(
+        unions
+          .filter((candidate) => (
+            String(candidate.partner1Id) === canonicalRelation.parentPersonId
+            || String(candidate.partner2Id) === canonicalRelation.parentPersonId
+          ))
+          .map((candidate) => String(candidate.id)),
+      )
+
+      link = filiations.find((candidate) => (
+        String(candidate.childId) === canonicalRelation.childPersonId
+        && candidate.unionId
+        && relatedUnionIds.has(String(candidate.unionId))
+      ))
+    }
+
+    if (!link) {
+      return null
+    }
+
+    return {
+      entityType: 'parent_child_link',
+      action: 'delete',
+      entityId: String(link.id),
+    }
+  }
+
+  const addedPersons = Array.isArray(draft.addedPersons) ? draft.addedPersons : []
+  for (const person of addedPersons) {
+    if (!person || typeof person !== 'object') continue
+    if (!person.firstName || !person.lastName) continue
+
+    changes.push({
+      entityType: 'person',
+      action: 'create',
+      after: {
+        firstName: String(person.firstName).trim(),
+        lastName: String(person.lastName).trim(),
+        birthName: person.birthName ? String(person.birthName).trim() : null,
+        birthDate: person.birthDate || null,
+        deathDate: person.deathDate || null,
+      },
+    })
+  }
+
+  const modifiedPersons = draft.modifiedPersons && typeof draft.modifiedPersons === 'object'
+    ? draft.modifiedPersons
+    : {}
+
+  for (const [personId, rawChanges] of Object.entries(modifiedPersons)) {
+    const source = rawChanges && typeof rawChanges === 'object' ? rawChanges : {}
+    const after = {}
+
+    if (Object.prototype.hasOwnProperty.call(source, 'firstName')) after.firstName = source.firstName || ''
+    if (Object.prototype.hasOwnProperty.call(source, 'lastName')) after.lastName = source.lastName || ''
+    if (Object.prototype.hasOwnProperty.call(source, 'birthName')) after.birthName = (source.birthName || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(source, 'birthYear')) after.birthDate = yearToIsoDate(source.birthYear)
+    if (Object.prototype.hasOwnProperty.call(source, 'deathYear')) after.deathDate = yearToIsoDate(source.deathYear)
+    if (Object.prototype.hasOwnProperty.call(source, 'birthPlace')) after.birthPlace = (source.birthPlace || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(source, 'profession')) after.profession = (source.profession || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(source, 'region')) after.region = (source.region || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(source, 'nationality')) after.nationality = (source.nationality || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(source, 'note')) after.notes = source.note || null
+    if (Object.prototype.hasOwnProperty.call(source, 'isAlive') && source.isAlive === true) after.deathDate = null
+
+    if (Object.keys(after).length > 0) {
+      changes.push({
+        entityType: 'person',
+        action: 'update',
+        entityId: personId,
+        after,
+      })
+    }
+  }
+
+  const deletedPersons = Array.isArray(draft.deletedPersons) ? draft.deletedPersons : []
+  for (const personId of deletedPersons) {
+    if (!personId) continue
+    changes.push({
+      entityType: 'person',
+      action: 'delete',
+      entityId: String(personId),
+    })
+  }
+
+  const addedRelations = Array.isArray(draft.addedRelations) ? draft.addedRelations : []
+  const removedRelations = Array.isArray(draft.removedRelations) ? draft.removedRelations : []
+  const canonicalAddedRelations = []
+  const canonicalRemovedRelations = []
+  const addedRelationKeys = new Set()
+  const removedRelationKeys = new Set()
+
+  for (const relation of addedRelations) {
+    const canonicalRelation = relationTypeToCanonical(relation)
+    if (!canonicalRelation || addedRelationKeys.has(canonicalRelation.key)) continue
+    canonicalAddedRelations.push(canonicalRelation)
+    addedRelationKeys.add(canonicalRelation.key)
+  }
+
+  for (const relation of removedRelations) {
+    const canonicalRelation = relationTypeToCanonical(relation)
+    if (!canonicalRelation || removedRelationKeys.has(canonicalRelation.key)) continue
+    canonicalRemovedRelations.push(canonicalRelation)
+    removedRelationKeys.add(canonicalRelation.key)
+  }
+
+  const canceledRelationKeys = new Set(
+    [...addedRelationKeys].filter((key) => removedRelationKeys.has(key)),
+  )
+
+  for (const canonicalRelation of canonicalAddedRelations) {
+    if (canceledRelationKeys.has(canonicalRelation.key)) continue
+
+    if (canonicalRelation.relationType === 'spouse') {
+      changes.push({
+        entityType: 'union',
+        action: 'create',
+        after: {
+          partner1PersonId: canonicalRelation.sourcePersonId,
+          partner2PersonId: canonicalRelation.targetPersonId,
+          unionType: 'mariage',
+        },
+      })
+    } else if (canonicalRelation.relationType === 'parent_child_link') {
+      changes.push({
+        entityType: 'parent_child_link',
+        action: 'create',
+        after: {
+          parentPersonId: canonicalRelation.parentPersonId,
+          childPersonId: canonicalRelation.childPersonId,
+          parentageType: 'biologique',
+        },
+      })
+    }
+  }
+
+  for (const relation of canonicalRemovedRelations) {
+    if (canceledRelationKeys.has(relation.key)) continue
+    const change = resolveRemovedRelationEntity(relation)
+    if (!change) continue
+    changes.push(change)
+  }
+
+  // Annotations (stickers, dessins, textes, photos canvas)
+  const annData = Array.isArray(draft.annotationsData) ? draft.annotationsData : []
+  const addedAnnIds = new Set(Array.isArray(draft.addedAnnotations) ? draft.addedAnnotations : [])
+  const modifiedAnnIds = new Set(Array.isArray(draft.modifiedAnnotations) ? draft.modifiedAnnotations : [])
+  const deletedAnnIds = Array.isArray(draft.deletedAnnotations) ? draft.deletedAnnotations : []
+
+  for (const ann of annData) {
+    const isAdded = addedAnnIds.has(ann.id)
+    const isModified = modifiedAnnIds.has(ann.id)
+    if (!isAdded && !isModified) continue
+    const action = isAdded ? 'create' : 'update'
+    const change = {
+      entityType: 'annotation',
+      action,
+      after: {
+        type: ann.type,
+        x: ann.x,
+        y: ann.y,
+        content: ann.content,
+        style: ann.style || {},
+        zIndex: ann.zIndex || 0,
+      },
+    }
+    if (action === 'update') change.entityId = String(ann.id)
+    changes.push(change)
+  }
+
+  for (const annId of deletedAnnIds) {
+    changes.push({ entityType: 'annotation', action: 'delete', entityId: String(annId) })
+  }
+
+  return changes
+}
+
+function buildContribChangesList(draft = {}) {
+  const items = []
+  const addedPersonIds = (Array.isArray(draft.addedPersons) ? draft.addedPersons : []).map(String)
+
+  for (const id of addedPersonIds) {
+    const d = draft.modifiedPersons?.[id] || {}
+    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Nouvelle personne'
+    items.push({ entityType: 'person', action: 'create', label: name })
+  }
+
+  for (const [id, d] of Object.entries(draft.modifiedPersons || {})) {
+    if (addedPersonIds.includes(String(id))) continue
+    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Personne'
+    items.push({ entityType: 'person', action: 'update', label: name })
+  }
+
+  for (let i = 0; i < (draft.deletedPersons || []).length; i++) {
+    items.push({ entityType: 'person', action: 'delete', label: 'Personne' })
+  }
+
+  const annData = Array.isArray(draft.annotationsData) ? draft.annotationsData : []
+  const addedAnnIds = new Set(Array.isArray(draft.addedAnnotations) ? draft.addedAnnotations : [])
+  const modifiedAnnIds = new Set(Array.isArray(draft.modifiedAnnotations) ? draft.modifiedAnnotations : [])
+  const deletedAnnCount = (Array.isArray(draft.deletedAnnotations) ? draft.deletedAnnotations : []).length
+  const annTypeLabel = (t) => ({ sticker: 'Sticker', drawing: 'Dessin', text: 'Texte', photo: 'Photo' }[t] || 'Annotation')
+
+  for (const ann of annData) {
+    if (addedAnnIds.has(ann.id)) items.push({ entityType: 'annotation', action: 'create', label: annTypeLabel(ann.type) })
+    else if (modifiedAnnIds.has(ann.id)) items.push({ entityType: 'annotation', action: 'update', label: annTypeLabel(ann.type) })
+  }
+  for (let i = 0; i < deletedAnnCount; i++) {
+    items.push({ entityType: 'annotation', action: 'delete', label: 'Annotation' })
+  }
+
+  for (let i = 0; i < (draft.addedRelations || []).length; i++) {
+    items.push({ entityType: 'relation', action: 'create', label: 'Relation' })
+  }
+  for (let i = 0; i < (draft.removedRelations || []).length; i++) {
+    items.push({ entityType: 'relation', action: 'delete', label: 'Relation' })
+  }
+
+  return items
+}
+
+function getInvitePasswordStorageKey(treeId, role) {
+  return `invite_password_${treeId}_${role}`
+}
+
+function readInvitePasswordsFromStorage(treeId) {
+  if (!treeId) {
+    return { visitor: '', contributor: '' }
+  }
+
+  try {
+    return {
+      visitor: localStorage.getItem(getInvitePasswordStorageKey(treeId, 'visitor')) || '',
+      contributor: localStorage.getItem(getInvitePasswordStorageKey(treeId, 'contributor')) || '',
+    }
+  } catch {
+    return { visitor: '', contributor: '' }
+  }
+}
+
+function writeInvitePasswordsToStorage(treeId, passwords) {
+  if (!treeId) {
+    return
+  }
+
+  try {
+    if (passwords.visitor) {
+      localStorage.setItem(getInvitePasswordStorageKey(treeId, 'visitor'), passwords.visitor)
+    }
+    if (passwords.contributor) {
+      localStorage.setItem(getInvitePasswordStorageKey(treeId, 'contributor'), passwords.contributor)
+    }
+  } catch {
+    // Ignore localStorage failures
+  }
+}
+
+function App() {
+  const auth = useAuth()
+  const tree = useTreeAccess()
+  // Arbre partagé d'où l'on vient quand on ouvre l'écran compte : on y revient après connexion/création
+  const pendingSharedTreeRef = useRef(null)
+  const refreshTreeAndKeepSelection = useCallback(async (personId, options = {}) => {
+    await tree.refreshCurrentTreeGraph({
+      relayout: options.relayout !== false,
+      avatarCacheBust: options.avatarCacheBust,
+    })
+    if (personId !== null && personId !== undefined) {
+      const refreshedPerson = persons.find((candidate) => String(candidate.id) === String(personId)) || null
+      tree.setSelectedPerson(refreshedPerson)
+    }
+  }, [tree.refreshCurrentTreeGraph, tree.setSelectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const media = useMediaManager({
+    canEditCurrentTree: tree.canEditCurrentTree,
+    canSubmitContribution: tree.canSubmitContribution,
+    selectedPerson: tree.selectedPerson,
+    treeContext: tree.treeContext,
+    refreshCurrentTreeGraph: tree.refreshCurrentTreeGraph,
+    refreshTreeAndKeepSelection,
+  })
+  const contrib = useContributions({
+    canEditCurrentTree: tree.canEditCurrentTree,
+    canSubmitContribution: tree.canSubmitContribution,
+    treeContext: tree.treeContext,
+    refreshCurrentTreeGraph: tree.refreshCurrentTreeGraph,
+  })
+
+  const [adminPanelVisible, setAdminPanelVisible] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showDraftBanner, setShowDraftBanner] = useState(false)
+  const [accountPanelVisible, setAccountPanelVisible] = useState(false)
+  const [linkedSelfPersonId, setLinkedSelfPersonId] = useState('')
+  const [relationFeedback, setRelationFeedback] = useState({
+    loading: false,
+    success: '',
+    error: '',
+  })
+  const [avatarActionState, setAvatarActionState] = useState({
+    loading: false,
+    error: '',
+  })
+  const [treeNotFound, setTreeNotFound] = useState(false)
+  const [accountEntryMode, setAccountEntryMode] = useState('login')
+  const [treeWizardVisible, setTreeWizardVisible] = useState(false)
+  const [treeWizardLoading, setTreeWizardLoading] = useState(false)
+  const [treeWelcomeVisible, setTreeWelcomeVisible] = useState(false)
+  const [contribInviteState, setContribInviteState] = useState({
+    shareUrl: '',
+    knownPasswords: {
+      visitor: '',
+      contributor: '',
+    },
+    loading: false,
+    error: '',
+    message: '',
+  })
+
+  const buildEmptyTreeContext = useCallback((overrides = {}) => ({
+    treeId: '',
+    treeName: '',
+    treeDescription: '',
+    treeOwnerName: '',
+    treeOwnerEmail: '',
+    role: '',
+    accessMode: '',
+    rootPersonId: null,
+    accessToken: '',
+    ...overrides,
+  }), [])
+
+  // Déterminer le rôle et permissions de l'utilisateur
+  const userRole = useUserRole({
+    treeContext: tree.treeContext,
+    authenticated: auth.authenticated,
+  })
+
+  const accountUser = auth.userAuth.user || null
+  const linkedSelfPerson = useMemo(() => (
+    persons.find((candidate) => String(candidate.id) === String(linkedSelfPersonId)) || null
+  ), [linkedSelfPersonId, tree.graphRevision, tree.treeContext.treeId])
+
+  const accountDisplayName = useMemo(() => {
+    if (linkedSelfPerson) {
+      const fullName = `${linkedSelfPerson.firstName || ''} ${linkedSelfPerson.lastName || ''}`.trim()
+      if (fullName) {
+        return fullName
+      }
+    }
+
+    const firstName = accountUser?.firstName || accountUser?.name || ''
+    if (firstName && String(firstName).trim()) {
+      return String(firstName).trim()
+    }
+
+    const email = accountUser?.email || ''
+    if (!email) {
+      return 'Compte'
+    }
+
+    return String(email).split('@')[0] || 'Compte'
+  }, [accountUser?.email, accountUser?.firstName, accountUser?.name, linkedSelfPerson])
+
+  const accountEmail = accountUser?.email || ''
+  const accountAvatarPhoto = linkedSelfPerson?.photo || ''
+  const activeAccountTreeName = useMemo(() => {
+    const activeTree = auth.accountTrees.find(
+      (candidate) => String(candidate.id) === String(tree.treeContext.treeId),
+    )
+    return activeTree?.name || tree.treeContext.treeName || ''
+  }, [auth.accountTrees, tree.treeContext.treeId, tree.treeContext.treeName])
+
+  const isDemoMode = tree.treeContext.accessMode === 'demo'
+  const canEditInCurrentMode = tree.canSubmitContribution || isDemoMode
+
+  // Recherche de personnes avec scoring
+  const search = usePersonSearch(persons)
+
+  // Mode édition avec auto-save
+  const editMode = useEditMode({
+    treeId: tree.treeContext.treeId,
+    canEdit: canEditInCurrentMode,
+  })
+
+  const localEntityCounterRef = useRef(0)
+  const makeLocalId = useCallback((prefix) => {
+    localEntityCounterRef.current += 1
+    return `${prefix}-${Date.now().toString(36)}-${localEntityCounterRef.current}`
+  }, [])
+  const shareSessionStartedAtRef = useRef(0)
+  const shareSessionTimeSentRef = useRef(false)
+
+  const journeyRole = useMemo(
+    () => toJourneyRole(tree.treeContext.role),
+    [tree.treeContext.role],
+  )
+  const opaqueTreeId = useMemo(
+    () => toOpaqueTreeId(tree.treeContext.treeId),
+    [tree.treeContext.treeId],
+  )
+  const isTrackableShareSession = Boolean(
+    tree.bootState === 'ready'
+    && tree.treeContext.accessMode === 'share'
+    && tree.treeContext.treeId
+    && journeyRole,
+  )
+
+  const captureTreeTimeSpent = useCallback(() => {
+    if (!isTrackableShareSession || shareSessionTimeSentRef.current) return
+    if (!shareSessionStartedAtRef.current) return
+
+    const elapsedSeconds = Math.max(1, Math.round((Date.now() - shareSessionStartedAtRef.current) / 1000))
+    trackAppEvent('tree_time_spent', {
+      seconds: elapsedSeconds,
+      role: journeyRole,
+      tree_id: opaqueTreeId,
+    })
+    shareSessionTimeSentRef.current = true
+  }, [isTrackableShareSession, journeyRole, opaqueTreeId])
+
+  useEffect(() => {
+    if (!isTrackableShareSession) {
+      shareSessionStartedAtRef.current = 0
+      shareSessionTimeSentRef.current = false
+      return
+    }
+
+    shareSessionStartedAtRef.current = Date.now()
+    shareSessionTimeSentRef.current = false
+    trackAppEvent('tree_viewed', {
+      role: journeyRole,
+      tree_id: opaqueTreeId,
+    })
+
+    const fiveMinutesTimeout = window.setTimeout(() => {
+      captureTreeTimeSpent()
+    }, 5 * 60 * 1000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        captureTreeTimeSpent()
+      }
+    }
+    const handlePageHide = () => {
+      captureTreeTimeSpent()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
+
+    return () => {
+      window.clearTimeout(fiveMinutesTimeout)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
+      captureTreeTimeSpent()
+    }
+  }, [captureTreeTimeSpent, isTrackableShareSession, journeyRole, opaqueTreeId])
+
+  const trackTreeInteraction = useCallback((mediaType) => {
+    if (!isTrackableShareSession) return
+    trackAppEvent('tree_interaction', {
+      role: journeyRole,
+      media_type: mediaType,
+      tree_id: opaqueTreeId,
+    })
+  }, [isTrackableShareSession, journeyRole, opaqueTreeId])
+
+  // Identifiant technique du compte, jamais l'adresse email (engagement de la page Données et vie privée)
+  useEffect(() => {
+    if (auth.authenticated && auth.userAuth.user?.id) {
+      identifyUser(auth.userAuth.user.id)
+      return
+    }
+
+    resetUser()
+  }, [auth.authenticated, auth.userAuth.user?.id])
+
+  useEffect(() => {
+    const treeId = tree.treeContext.treeId
+    if (!treeId || !accountEmail) {
+      setLinkedSelfPersonId('')
+      return
+    }
+
+    try {
+      const saved = localStorage.getItem(getAccountSelfPersonStorageKey(accountEmail, treeId)) || ''
+      setLinkedSelfPersonId(saved)
+    } catch {
+      setLinkedSelfPersonId('')
+    }
+  }, [accountEmail, tree.treeContext.treeId])
+
+  useEffect(() => {
+    if (!linkedSelfPersonId || !tree.treeContext.treeId || !accountEmail) {
+      return
+    }
+
+    const exists = persons.some((candidate) => String(candidate.id) === String(linkedSelfPersonId))
+    if (!exists) {
+      setLinkedSelfPersonId('')
+      try {
+        localStorage.removeItem(getAccountSelfPersonStorageKey(accountEmail, tree.treeContext.treeId))
+      } catch {
+        // Ignore storage failures
+      }
+    }
+  }, [accountEmail, linkedSelfPersonId, tree.graphRevision, tree.treeContext.treeId])
+
+  // Annotations canvas (dessin, stickers, texte)
+  const annot = useAnnotations({
+    editModeActive: editMode.isActive,
+    updateDraft: editMode.updateDraft,
+  })
+
+  const handlePersonSelect = useCallback((personLike) => {
+    const personId = personLike && typeof personLike === 'object' ? personLike.id : personLike
+    if (personId === null || personId === undefined) {
+      tree.setSelectedPerson(null)
+      return
+    }
+
+    const freshPerson = persons.find((candidate) => String(candidate.id) === String(personId)) || personLike || null
+    tree.setSelectedPerson(freshPerson)
+    trackTreeInteraction('text')
+  }, [tree.setSelectedPerson, trackTreeInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleMediaSelectFresh = useCallback((media, personLike) => {
+    const personId = personLike && typeof personLike === 'object' ? personLike.id : personLike
+    const freshPerson = personId !== null && personId !== undefined
+      ? persons.find((candidate) => String(candidate.id) === String(personId)) || personLike || null
+      : personLike || null
+
+    tree.handleMediaSelect(media, freshPerson)
+    trackTreeInteraction(toInteractionMediaType(media?.type))
+  }, [tree.handleMediaSelect, trackTreeInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ref that Galaxy fills with a pointer to its transformRef (for computing view center)
+  const galaxyTransformReadRef = useRef(null)
+  // Ref exposant l'API zoom de Galaxy au ZoomControl
+  const galaxyZoomApiRef = useRef(null)
+
+  // Called by AnnotationToolbar when user picks a photo file for canvas annotation
+  const handleAnnotationPhotoFile = useCallback(async (file) => {
+    const treeId = tree.treeContext.treeId
+    const token = tree.treeContext.accessToken || auth.userAuth.token
+    if (!treeId || !token || !file) return
+
+    try {
+      const dataBase64 = await fileToBase64(file)
+      const result = await uploadAnnotationPhoto(
+        treeId,
+        {
+          fileName: file.name || 'photo.jpg',
+          mimeType: file.type || 'image/jpeg',
+          sizeBytes: file.size,
+          dataBase64,
+        },
+        token,
+      )
+
+      // Compute world-space view center so the photo appears in the middle of the screen
+      const t = galaxyTransformReadRef.current?.current || { x: 0, y: 0, scale: 1 }
+      const worldX = (window.innerWidth / 2 - t.x) / t.scale
+      const worldY = (window.innerHeight / 2 - t.y) / t.scale
+
+      // Get natural dimensions from the file
+      const img = new Image()
+      img.onload = () => {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+        const fullUrl = token
+          ? `${apiBase}${result.photoPath}?token=${encodeURIComponent(token)}`
+          : `${apiBase}${result.photoPath}`
+        annot.placePhoto(worldX, worldY, result.photoPath, fullUrl, img.naturalWidth, img.naturalHeight)
+        URL.revokeObjectURL(img.src)
+      }
+      img.onerror = () => URL.revokeObjectURL(img.src)
+      img.src = URL.createObjectURL(file)
+    } catch {
+      // silent — user can retry
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree.treeContext.treeId, tree.treeContext.accessToken, auth.userAuth.token])
+
+  // Afficher le banner de restauration si un draft existe au mount
+  useEffect(() => {
+    if (editMode.hasDraft && !editMode.isActive) {
+      setShowDraftBanner(true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Toggle édition avec confirmation si draft en cours
+  const handleEditToggle = useCallback(() => {
+    if (editMode.isActive && editMode.hasDraft) {
+      setShowConfirmModal(true)
+    } else {
+      editMode.toggle()
+    }
+  }, [editMode.isActive, editMode.hasDraft, editMode.toggle]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Actions de la modal de confirmation
+  const handleConfirmContinue = useCallback(() => {
+    setShowConfirmModal(false)
+  }, [])
+
+  const handleConfirmSaveAndQuit = useCallback(() => {
+    editMode.saveDraft()
+    editMode.deactivate()
+    setShowConfirmModal(false)
+  }, [editMode.saveDraft, editMode.deactivate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleConfirmDiscard = useCallback(() => {
+    editMode.clearDraft()
+    editMode.deactivate()
+    setShowConfirmModal(false)
+  }, [editMode.clearDraft, editMode.deactivate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Actions du banner de restauration
+  const handleDraftRestore = useCallback(() => {
+    editMode.activate()
+    setShowDraftBanner(false)
+  }, [editMode.activate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleDraftDiscard = useCallback(() => {
+    editMode.clearDraft()
+    setShowDraftBanner(false)
+  }, [editMode.clearDraft]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!relationFeedback.success) return undefined
+
+    const timeout = setTimeout(() => {
+      setRelationFeedback((current) => ({ ...current, success: '' }))
+    }, 2500)
+
+    return () => clearTimeout(timeout)
+  }, [relationFeedback.success])
+
+  useEffect(() => {
+    setAvatarActionState({ loading: false, error: '' })
+  }, [tree.selectedPerson?.id])
+
+  // Panneau ajout personne
+  const [addPersonPanelVisible, setAddPersonPanelVisible] = useState(false)
+  const [addPersonLoading, setAddPersonLoading] = useState(false)
+  const [addPersonError, setAddPersonError] = useState('')
+
+  const handleOpenAddPerson = useCallback(() => {
+    setAddPersonError('')
+    setAddPersonPanelVisible(true)
+  }, [])
+
+  const handleCloseAddPerson = useCallback(() => {
+    setAddPersonPanelVisible(false)
+    setAddPersonError('')
+  }, [])
+
+  const handleAddPersonSubmit = useCallback(async (formData) => {
+    if (!tree.treeContext.treeId && !isDemoMode) return
+
+    setAddPersonLoading(true)
+    setAddPersonError('')
+
+    try {
+      if (!tree.canEditCurrentTree) {
+        if (isDemoMode) {
+          const personId = makeLocalId('local-person')
+          const birthYear = extractYearFromIsoDate(formData.birthDate)
+          const deathYear = extractYearFromIsoDate(formData.deathDate)
+          const newPerson = {
+            id: personId,
+            firstName: formData.firstName,
+            lastName: formData.lastName || '',
+            birthName: formData.birthName || null,
+            birthDate: formData.birthDate || null,
+            deathDate: formData.deathDate || null,
+            birthYear,
+            deathYear,
+            isAlive: !deathYear,
+            photo: null,
+            frameType: 'round',
+          }
+
+          persons.push(newPerson)
+
+          for (const rel of formData.relations) {
+            if (rel.type === 'spouse') {
+              const existsUnion = unions.some((union) => (
+                (String(union.partner1Id) === String(rel.personId) && String(union.partner2Id) === String(personId))
+                || (String(union.partner1Id) === String(personId) && String(union.partner2Id) === String(rel.personId))
+              ))
+              if (!existsUnion) {
+                unions.push({
+                  id: makeLocalId('local-union'),
+                  partner1Id: rel.personId,
+                  partner2Id: personId,
+                  unionType: 'mariage',
+                  startYear: null,
+                  endYear: null,
+                  displayOrder: unions.length + 1,
+                })
+              }
+            } else if (rel.type === 'parent') {
+              filiations.push({
+                id: makeLocalId('local-filiation'),
+                childId: personId,
+                parentId: rel.personId,
+                unionId: null,
+                parentageType: 'biologique',
+                displayOrder: filiations.length + 1,
+              })
+            } else if (rel.type === 'child') {
+              filiations.push({
+                id: makeLocalId('local-filiation'),
+                childId: rel.personId,
+                parentId: personId,
+                unionId: null,
+                parentageType: 'biologique',
+                displayOrder: filiations.length + 1,
+              })
+            }
+          }
+
+          tree.bumpGraphRevision()
+          tree.setSelectedPerson({ ...newPerson })
+        }
+
+        const draft = editMode.restoreDraft()
+        const addedPersons = [
+          ...(draft.addedPersons || []),
+          {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            birthName: formData.birthName || null,
+            birthDate: formData.birthDate || null,
+            deathDate: formData.deathDate || null,
+          },
+        ]
+        editMode.updateDraft({ addedPersons })
+        return
+      }
+
+      if (!auth.userAuth.token) return
+
+      const newPerson = await createPerson(
+        tree.treeContext.treeId,
+        {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          birthName: formData.birthName,
+          birthDate: formData.birthDate,
+          deathDate: formData.deathDate,
+        },
+        auth.userAuth.token
+      )
+
+      // Créer les liens de relation
+      for (const rel of formData.relations) {
+        if (rel.type === 'child') {
+          await createParentChildLink(
+            tree.treeContext.treeId,
+            { parentPersonId: rel.personId, childPersonId: newPerson.id, parentageType: 'biologique', displayOrder: 1 },
+            auth.userAuth.token
+          )
+        } else if (rel.type === 'parent') {
+          await createParentChildLink(
+            tree.treeContext.treeId,
+            { parentPersonId: newPerson.id, childPersonId: rel.personId, parentageType: 'biologique', displayOrder: 1 },
+            auth.userAuth.token
+          )
+        } else if (rel.type === 'spouse') {
+          await createUnion(
+            tree.treeContext.treeId,
+            { partner1PersonId: rel.personId, partner2PersonId: newPerson.id, unionType: 'mariage', displayOrder: 1 },
+            auth.userAuth.token
+          )
+        }
+        // TODO: sibling (nécessite de trouver les parents communs)
+      }
+
+      // Mettre à jour le draft avec la nouvelle personne
+      editMode.updateDraft({
+        addedPersons: [...(editMode.restoreDraft().addedPersons || []), newPerson.id],
+      })
+
+      await tree.refreshCurrentTreeGraph()
+    } catch (err) {
+      setAddPersonError(err.message || "Erreur lors de l'ajout de la personne")
+    } finally {
+      setAddPersonLoading(false)
+    }
+  }, [auth.userAuth.token, tree.canEditCurrentTree, tree.treeContext.treeId, isDemoMode, makeLocalId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Modal session contribution (contributeurs)
+  const [showContribModal, setShowContribModal] = useState(false)
+  const [contribChanges, setContribChanges] = useState([])
+  const [contribSubmitLoading, setContribSubmitLoading] = useState(false)
+  const [contribSubmitError, setContribSubmitError] = useState('')
+  const [contribSuccess, setContribSuccess] = useState(false)
+
+  // Soumission des modifications
+  const handleEditSubmit = useCallback(async () => {
+    if (isDemoMode) {
+      // Démo: édition locale uniquement, jamais de persistance serveur.
+      editMode.saveDraft()
+      editMode.deactivate()
+      setContribSubmitError('')
+      setShowContribModal(false)
+      return
+    }
+
+    if (userRole.isAdmin) {
+      const token = auth.userAuth.token
+      const treeId = tree.treeContext.treeId
+      const draft = editMode.restoreDraft()
+
+      if (token && treeId) {
+        // Appliquer les modifications de personnes depuis le draft
+        const modifiedPersons = draft.modifiedPersons || {}
+        for (const [personId, rawChanges] of Object.entries(modifiedPersons)) {
+          const payload = {}
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'firstName')) payload.firstName = rawChanges.firstName || ''
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'lastName')) payload.lastName = rawChanges.lastName || ''
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthName')) payload.birthName = (rawChanges.birthName || '').trim() || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthYear')) payload.birthDate = yearToIsoDate(rawChanges.birthYear)
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'deathYear')) payload.deathDate = yearToIsoDate(rawChanges.deathYear)
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthPlace')) payload.birthPlace = (rawChanges.birthPlace || '').trim() || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'profession')) payload.profession = (rawChanges.profession || '').trim() || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'region')) payload.region = (rawChanges.region || '').trim() || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'nationality')) payload.nationality = (rawChanges.nationality || '').trim() || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'isAlive') && rawChanges.isAlive === true) payload.deathDate = null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'note')) payload.notes = rawChanges.note || null
+
+          if (Object.keys(payload).length > 0) {
+            try {
+              await updatePerson(treeId, personId, payload, token)
+            } catch (err) {
+              console.error('Failed to update person:', personId, err)
+            }
+          }
+        }
+
+        // Appliquer les annotations
+        const addedAnnIds = new Set(draft.addedAnnotations || [])
+        const modifiedAnnIds = new Set(draft.modifiedAnnotations || [])
+        const deletedAnnIds = draft.deletedAnnotations || []
+        const annData = draft.annotationsData || []
+
+        const batchPayload = {
+          create: annData
+            .filter((a) => addedAnnIds.has(a.id))
+            .map((a) => ({
+              type: a.type,
+              x: a.x,
+              y: a.y,
+              content: a.content,
+              style: a.style || {},
+              zIndex: a.zIndex || 0,
+            })),
+          update: annData
+            .filter((a) => modifiedAnnIds.has(a.id))
+            .map((a) => ({
+              id: a.id,
+              x: a.x,
+              y: a.y,
+              content: a.content,
+              style: a.style || {},
+              zIndex: a.zIndex || 0,
+            })),
+          delete: deletedAnnIds,
+        }
+
+        const hasAnnotationChanges = batchPayload.create.length > 0 || batchPayload.update.length > 0 || batchPayload.delete.length > 0
+
+        if (hasAnnotationChanges) {
+          try {
+            await batchAnnotations(treeId, batchPayload, token)
+          } catch (err) {
+            console.error('Failed to submit annotations:', err)
+          }
+        }
+      }
+
+      await tree.refreshCurrentTreeGraph({ relayout: false })
+      editMode.clearDraft()
+      editMode.deactivate()
+    } else {
+      // Contributeur → ouvrir modal session nommée
+      setContribSubmitError('')
+      setContribChanges(buildContribChangesList(editMode.restoreDraft()))
+      setShowContribModal(true)
+    }
+  }, [userRole.isAdmin, auth.userAuth.token, tree.treeContext.treeId, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleContribSessionSubmit = useCallback(async ({ comment }) => {
+    setContribSubmitLoading(true)
+    setContribSubmitError('')
+
+    try {
+      const draft = editMode.restoreDraft()
+      const changes = buildContributionChangesFromDraft(draft)
+
+      if (changes.length === 0) {
+        setContribSubmitError('Aucune modification à soumettre.')
+        return
+      }
+
+      const now = new Date()
+      const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const userName = auth.userAuth.user?.name || 'Anonyme'
+      const title = `Contribution de ${userName} · ${dateStr}`
+
+      const result = await contrib.handleSubmitContributionSession({ title, comment, changes })
+
+      if (!result?.ok) {
+        setContribSubmitError(result?.error || "Erreur lors de l'envoi des contributions")
+        return
+      }
+
+      editMode.clearDraft()
+      editMode.deactivate()
+      setShowContribModal(false)
+      setContribSubmitError('')
+      setContribSuccess(true)
+      setTimeout(() => setContribSuccess(false), 3500)
+    } catch (err) {
+      setContribSubmitError(err.message || "Erreur lors de l'envoi des contributions")
+    } finally {
+      setContribSubmitLoading(false)
+    }
+  }, [contrib, editMode, auth.userAuth.user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resolveContributionShareUrl = useCallback(async () => {
+    const slugFromPath = getSlugFromPathname()
+    if (slugFromPath) {
+      setContribInviteState((current) => ({
+        ...current,
+        shareUrl: `${window.location.origin}/arbre/${encodeURIComponent(slugFromPath)}`,
+      }))
+      return
+    }
+
+    if (!tree.treeContext.treeId) {
+      setContribInviteState((current) => ({ ...current, shareUrl: '' }))
+      return
+    }
+
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken) {
+      setContribInviteState((current) => ({ ...current, shareUrl: '' }))
+      return
+    }
+
+    try {
+      const result = await getTree(tree.treeContext.treeId, accessToken)
+      const slug = result?.tree?.slug || ''
+      setContribInviteState((current) => ({
+        ...current,
+        shareUrl: slug ? `${window.location.origin}/arbre/${encodeURIComponent(slug)}` : '',
+      }))
+    } catch {
+      setContribInviteState((current) => ({ ...current, shareUrl: '' }))
+    }
+  }, [auth.userAuth.token, tree.treeContext.accessToken, tree.treeContext.treeId])
+
+  const handleOpenContributionPanel = useCallback(async () => {
+    const knownPasswords = readInvitePasswordsFromStorage(tree.treeContext.treeId)
+    await resolveContributionShareUrl()
+    setContribInviteState((current) => ({
+      ...current,
+      knownPasswords,
+      error: '',
+      message: '',
+    }))
+    await contrib.handleOpenContributionPanel()
+  }, [contrib, resolveContributionShareUrl, tree.treeContext.treeId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleContributionPasswordRotate = useCallback(async ({ visitorPassword, contributorPassword }) => {
+    if (!tree.treeContext.treeId) {
+      return { ok: false, error: 'Arbre introuvable.' }
+    }
+
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken) {
+      return { ok: false, error: 'Session invalide.' }
+    }
+
+    const payload = {}
+    if (visitorPassword && visitorPassword.trim().length >= 8) {
+      payload.visitorPassword = visitorPassword.trim()
+    }
+
+    if (contributorPassword && contributorPassword.trim().length >= 8) {
+      payload.contributorPassword = contributorPassword.trim()
+    }
+
+    if (!payload.visitorPassword && !payload.contributorPassword) {
+      return { ok: false, error: 'Renseignez au moins un mot de passe valide.' }
+    }
+
+    const sameVisitor = payload.visitorPassword && payload.visitorPassword === contribInviteState.knownPasswords.visitor
+    const sameContributor = payload.contributorPassword && payload.contributorPassword === contribInviteState.knownPasswords.contributor
+    const nothingChanged = (!payload.visitorPassword || sameVisitor) && (!payload.contributorPassword || sameContributor)
+    if (nothingChanged) {
+      setContribInviteState((current) => ({
+        ...current,
+        loading: false,
+        error: '',
+        message: 'Aucun changement détecté sur les mots de passe.',
+      }))
+      return { ok: true }
+    }
+
+    setContribInviteState((current) => ({
+      ...current,
+      loading: true,
+      error: '',
+      message: '',
+    }))
+
+    try {
+      await rotateTreePasswords(tree.treeContext.treeId, payload, accessToken)
+      const storedPasswords = {
+        visitor: payload.visitorPassword || contribInviteState.knownPasswords.visitor || '',
+        contributor: payload.contributorPassword || contribInviteState.knownPasswords.contributor || '',
+      }
+      writeInvitePasswordsToStorage(tree.treeContext.treeId, storedPasswords)
+
+      setContribInviteState((current) => ({
+        ...current,
+        knownPasswords: storedPasswords,
+        loading: false,
+        error: '',
+        message: 'Mots de passe mis à jour.',
+      }))
+      return { ok: true }
+    } catch (error) {
+      const message = getAccountErrorMessage(error)
+      setContribInviteState((current) => ({
+        ...current,
+        loading: false,
+        error: message,
+        message: '',
+      }))
+      return { ok: false, error: message }
+    }
+  }, [auth.userAuth.token, contribInviteState.knownPasswords.contributor, contribInviteState.knownPasswords.visitor, tree.treeContext.accessToken, tree.treeContext.treeId])
+
+  // Sauvegarde modification personne (mode édition)
+  // Admin → appel API direct et immédiat.
+  // Contributeur/membre → mise dans le draft local, soumis ensuite pour approbation.
+  const handlePersonSave = useCallback(async (personId, changes) => {
+    if (!tree.canEditCurrentTree) {
+      // Mode contribution : accumuler dans le draft local
+      const draft = editMode.restoreDraft()
+      const modifiedPersons = draft.modifiedPersons || {}
+      modifiedPersons[personId] = { ...modifiedPersons[personId], ...changes }
+      editMode.updateDraft({ modifiedPersons })
+
+      const localPerson = persons.find((candidate) => String(candidate.id) === String(personId))
+      if (localPerson) {
+        if (Object.prototype.hasOwnProperty.call(changes, 'firstName')) localPerson.firstName = changes.firstName || ''
+        if (Object.prototype.hasOwnProperty.call(changes, 'lastName')) localPerson.lastName = changes.lastName || ''
+        if (Object.prototype.hasOwnProperty.call(changes, 'birthName')) localPerson.birthName = changes.birthName || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'birthYear')) {
+          const iso = yearToIsoDate(changes.birthYear)
+          localPerson.birthDate = iso
+          localPerson.birthYear = iso ? Number(iso.slice(0, 4)) : null
+        }
+        if (Object.prototype.hasOwnProperty.call(changes, 'deathYear')) {
+          const iso = yearToIsoDate(changes.deathYear)
+          localPerson.deathDate = iso
+          localPerson.deathYear = iso ? Number(iso.slice(0, 4)) : null
+        }
+        if (Object.prototype.hasOwnProperty.call(changes, 'birthPlace')) localPerson.birthPlace = changes.birthPlace || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'profession')) localPerson.profession = changes.profession || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'region')) localPerson.region = changes.region || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'nationality')) localPerson.nationality = changes.nationality || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'note')) localPerson.note = changes.note || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'isAlive') && changes.isAlive === true) {
+          localPerson.deathYear = null
+        }
+        tree.setSelectedPerson({ ...localPerson })
+      }
+      return
+    }
+
+    // Admin : appliquer directement via l'API
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken || !tree.treeContext.treeId) return
+
+    const payload = {}
+    if (Object.prototype.hasOwnProperty.call(changes, 'firstName')) payload.firstName = changes.firstName || ''
+    if (Object.prototype.hasOwnProperty.call(changes, 'lastName')) payload.lastName = changes.lastName || ''
+    if (Object.prototype.hasOwnProperty.call(changes, 'birthName')) payload.birthName = (changes.birthName || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'birthYear')) payload.birthDate = yearToIsoDate(changes.birthYear)
+    if (Object.prototype.hasOwnProperty.call(changes, 'deathYear')) payload.deathDate = yearToIsoDate(changes.deathYear)
+    if (Object.prototype.hasOwnProperty.call(changes, 'birthPlace')) payload.birthPlace = (changes.birthPlace || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'profession')) payload.profession = (changes.profession || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'region')) payload.region = (changes.region || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'nationality')) payload.nationality = (changes.nationality || '').trim() || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'isAlive') && changes.isAlive === true) payload.deathDate = null
+    if (Object.prototype.hasOwnProperty.call(changes, 'note')) payload.notes = changes.note || null
+
+    if (Object.keys(payload).length > 0) {
+      await updatePerson(tree.treeContext.treeId, personId, payload, accessToken)
+    }
+
+    await refreshTreeAndKeepSelection(personId, { relayout: false, avatarCacheBust: Date.now() })
+  }, [auth.userAuth.token, tree.canEditCurrentTree, tree.treeContext.accessToken, tree.treeContext.treeId, refreshTreeAndKeepSelection]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePersonAvatarUpload = useCallback(async (personId, file) => {
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken || !tree.treeContext.treeId) return
+
+    const validationError = validateMediaFile(file, 'photo')
+    if (validationError) {
+      setAvatarActionState({ loading: false, error: validationError })
+      return
+    }
+
+    setAvatarActionState({ loading: true, error: '' })
+
+    try {
+      const dataBase64 = await fileToBase64(file)
+      await uploadPersonAvatar(
+        tree.treeContext.treeId,
+        personId,
+        {
+          fileName: file.name || 'avatar.jpg',
+          mimeType: getUploadMimeType(file, 'photo'),
+          sizeBytes: file.size,
+          dataBase64,
+        },
+        accessToken,
+      )
+      await refreshTreeAndKeepSelection(personId, { relayout: true })
+      setAvatarActionState({ loading: false, error: '' })
+    } catch (error) {
+      setAvatarActionState({ loading: false, error: getAccountErrorMessage(error) })
+    }
+  }, [auth.userAuth.token, tree.treeContext.accessToken, tree.treeContext.treeId, refreshTreeAndKeepSelection])
+
+  const handlePersonAvatarDelete = useCallback(async (personId) => {
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken || !tree.treeContext.treeId) return
+
+    setAvatarActionState({ loading: true, error: '' })
+
+    try {
+      await deletePersonAvatar(tree.treeContext.treeId, personId, accessToken)
+      await refreshTreeAndKeepSelection(personId, { relayout: true })
+      setAvatarActionState({ loading: false, error: '' })
+    } catch (error) {
+      setAvatarActionState({ loading: false, error: getAccountErrorMessage(error) })
+    }
+  }, [auth.userAuth.token, tree.treeContext.accessToken, tree.treeContext.treeId, refreshTreeAndKeepSelection])
+
+  // Suppression personne (mode édition, admin)
+  const handlePersonDelete = useCallback(async (personId) => {
+    if (!tree.treeContext.treeId && !isDemoMode) return
+
+    if (isDemoMode) {
+      for (let idx = persons.length - 1; idx >= 0; idx -= 1) {
+        if (String(persons[idx].id) === String(personId)) {
+          persons.splice(idx, 1)
+        }
+      }
+
+      const removedUnionIds = new Set()
+      for (let idx = unions.length - 1; idx >= 0; idx -= 1) {
+        const union = unions[idx]
+        if (
+          String(union.partner1Id) === String(personId)
+          || String(union.partner2Id) === String(personId)
+        ) {
+          removedUnionIds.add(union.id)
+          unions.splice(idx, 1)
+        }
+      }
+
+      for (let idx = filiations.length - 1; idx >= 0; idx -= 1) {
+        const filiation = filiations[idx]
+        const touchesPerson = (
+          String(filiation.childId) === String(personId)
+          || String(filiation.parentId) === String(personId)
+        )
+        const touchesRemovedUnion = filiation.unionId && removedUnionIds.has(filiation.unionId)
+        if (touchesPerson || touchesRemovedUnion) {
+          filiations.splice(idx, 1)
+        }
+      }
+
+      for (let idx = medias.length - 1; idx >= 0; idx -= 1) {
+        if (String(medias[idx].personId) === String(personId)) {
+          medias.splice(idx, 1)
+        }
+      }
+
+      tree.setSelectedPerson(null)
+      tree.bumpGraphRevision()
+      return
+    }
+
+    if (tree.canEditCurrentTree) {
+      const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+      if (!accessToken) return
+
+      await deletePerson(tree.treeContext.treeId, personId, accessToken)
+      await refreshTreeAndKeepSelection(null, { relayout: true })
+      tree.setSelectedPerson(null)
+      return
+    }
+
+    // Mettre a jour le draft
+    const draft = editMode.restoreDraft()
+    const deletedPersons = [...(draft.deletedPersons || []), personId]
+    editMode.updateDraft({ deletedPersons })
+
+    tree.setSelectedPerson(null)
+  }, [auth.userAuth.token, refreshTreeAndKeepSelection, tree.canEditCurrentTree, tree.treeContext.accessToken, tree.treeContext.treeId, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ajout d'une relation (mode édition)
+  const handleAddRelation = useCallback(async (sourcePersonId, targetPersonId, relationType) => {
+    if (isDemoMode) {
+      let relationAdded = false
+
+      if (relationType === 'spouse') {
+        const existsUnion = unions.some((candidate) => (
+          (String(candidate.partner1Id) === String(sourcePersonId) && String(candidate.partner2Id) === String(targetPersonId))
+          || (String(candidate.partner1Id) === String(targetPersonId) && String(candidate.partner2Id) === String(sourcePersonId))
+        ))
+
+        if (!existsUnion) {
+          unions.push({
+            id: makeLocalId('local-union'),
+            partner1Id: sourcePersonId,
+            partner2Id: targetPersonId,
+            unionType: 'mariage',
+            startYear: null,
+            endYear: null,
+            displayOrder: unions.length + 1,
+          })
+          relationAdded = true
+        }
+      } else {
+        const childId = relationType === 'parent' ? sourcePersonId : targetPersonId
+        const parentId = relationType === 'parent' ? targetPersonId : sourcePersonId
+        const existsLink = filiations.some((candidate) => (
+          String(candidate.childId) === String(childId)
+          && String(candidate.parentId) === String(parentId)
+        ))
+
+        if (!existsLink) {
+          filiations.push({
+            id: makeLocalId('local-filiation'),
+            childId,
+            parentId,
+            unionId: null,
+            parentageType: 'biologique',
+            displayOrder: filiations.length + 1,
+          })
+          relationAdded = true
+        }
+      }
+
+      if (!relationAdded) {
+        setRelationFeedback({ loading: false, success: '', error: 'Lien déjà présent' })
+        return
+      }
+
+      const draft = editMode.restoreDraft()
+      const addedRelations = [...(draft.addedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ addedRelations })
+      tree.bumpGraphRevision()
+      setRelationFeedback({ loading: false, success: 'Lien familial ajouté (démo locale)', error: '' })
+      return
+    }
+
+    if (!tree.canEditCurrentTree) {
+      const draft = editMode.restoreDraft()
+      const addedRelations = [...(draft.addedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ addedRelations })
+      setRelationFeedback({ loading: false, success: 'Lien ajouté à la contribution', error: '' })
+      return
+    }
+
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken || !tree.treeContext.treeId) return
+
+    setRelationFeedback({ loading: true, success: '', error: '' })
+
+    try {
+      if (relationType === 'parent') {
+        // sourcePersonId est l'enfant, targetPersonId est le parent
+        await createParentChildLink(
+          tree.treeContext.treeId,
+          { parentPersonId: targetPersonId, childPersonId: sourcePersonId, parentageType: 'biologique', displayOrder: 1 },
+          accessToken
+        )
+      } else if (relationType === 'child') {
+        // sourcePersonId est le parent, targetPersonId est l'enfant
+        await createParentChildLink(
+          tree.treeContext.treeId,
+          { parentPersonId: sourcePersonId, childPersonId: targetPersonId, parentageType: 'biologique', displayOrder: 1 },
+          accessToken
+        )
+      } else if (relationType === 'spouse') {
+        await createUnion(
+          tree.treeContext.treeId,
+          { partner1PersonId: sourcePersonId, partner2PersonId: targetPersonId, unionType: 'mariage', displayOrder: 1 },
+          accessToken
+        )
+      }
+
+      // Mettre à jour le draft
+      const draft = editMode.restoreDraft()
+      const addedRelations = [...(draft.addedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ addedRelations })
+
+      await refreshTreeAndKeepSelection(sourcePersonId, { relayout: true })
+      setRelationFeedback({ loading: false, success: 'Lien familial ajouté', error: '' })
+    } catch (err) {
+      setRelationFeedback({ loading: false, success: '', error: getAccountErrorMessage(err) })
+      console.error('Failed to add relation:', err)
+    }
+  }, [auth.userAuth.token, tree.canEditCurrentTree, tree.treeContext.accessToken, tree.treeContext.treeId, refreshTreeAndKeepSelection, isDemoMode, makeLocalId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Suppression d'une relation (mode édition)
+  const handleRemoveRelation = useCallback(async (sourcePersonId, targetPersonId, relationType) => {
+    if (isDemoMode) {
+      let relationRemoved = false
+
+      if (relationType === 'spouse') {
+        for (let idx = unions.length - 1; idx >= 0; idx -= 1) {
+          const union = unions[idx]
+          if (
+            (String(union.partner1Id) === String(sourcePersonId) && String(union.partner2Id) === String(targetPersonId))
+            || (String(union.partner1Id) === String(targetPersonId) && String(union.partner2Id) === String(sourcePersonId))
+          ) {
+            const removedUnionId = union.id
+            unions.splice(idx, 1)
+            for (let fIdx = filiations.length - 1; fIdx >= 0; fIdx -= 1) {
+              if (filiations[fIdx].unionId && String(filiations[fIdx].unionId) === String(removedUnionId)) {
+                filiations.splice(fIdx, 1)
+              }
+            }
+            relationRemoved = true
+            break
+          }
+        }
+      } else {
+        const childId = relationType === 'parent' ? sourcePersonId : targetPersonId
+        const parentId = relationType === 'parent' ? targetPersonId : sourcePersonId
+        for (let idx = filiations.length - 1; idx >= 0; idx -= 1) {
+          const filiation = filiations[idx]
+          if (
+            String(filiation.childId) === String(childId)
+            && String(filiation.parentId) === String(parentId)
+          ) {
+            filiations.splice(idx, 1)
+            relationRemoved = true
+          }
+        }
+      }
+
+      if (!relationRemoved) {
+        setRelationFeedback({ loading: false, success: '', error: 'Relation introuvable pour suppression' })
+        return
+      }
+
+      const draft = editMode.restoreDraft()
+      const removedRelations = [...(draft.removedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ removedRelations })
+      tree.bumpGraphRevision()
+      setRelationFeedback({ loading: false, success: 'Lien familial supprimé (démo locale)', error: '' })
+      return
+    }
+
+    if (!tree.canEditCurrentTree) {
+      const draft = editMode.restoreDraft()
+      const removedRelations = [...(draft.removedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ removedRelations })
+      setRelationFeedback({ loading: false, success: 'Suppression de lien ajoutée à la contribution', error: '' })
+      return
+    }
+
+    const accessToken = tree.treeContext.accessToken || auth.userAuth.token
+    if (!accessToken || !tree.treeContext.treeId) return
+
+    setRelationFeedback({ loading: true, success: '', error: '' })
+
+    try {
+      let relationRemoved = false
+
+      if (relationType === 'spouse') {
+        const union = unions.find((candidate) => (
+          (String(candidate.partner1Id) === String(sourcePersonId) && String(candidate.partner2Id) === String(targetPersonId)) ||
+          (String(candidate.partner1Id) === String(targetPersonId) && String(candidate.partner2Id) === String(sourcePersonId))
+        ))
+
+        if (union) {
+          await deleteUnion(tree.treeContext.treeId, union.id, accessToken)
+          relationRemoved = true
+        }
+      } else {
+        const childId = relationType === 'parent' ? sourcePersonId : targetPersonId
+        const parentId = relationType === 'parent' ? targetPersonId : sourcePersonId
+
+        let link = filiations.find((candidate) => (
+          String(candidate.childId) === String(childId) &&
+          String(candidate.parentId) === String(parentId)
+        ))
+
+        if (!link) {
+          const relatedUnionIds = new Set(
+            unions
+              .filter((candidate) => (
+                String(candidate.partner1Id) === String(parentId) ||
+                String(candidate.partner2Id) === String(parentId)
+              ))
+              .map((candidate) => candidate.id),
+          )
+
+          link = filiations.find((candidate) => (
+            String(candidate.childId) === String(childId) &&
+            candidate.unionId &&
+            relatedUnionIds.has(candidate.unionId)
+          ))
+        }
+
+        if (link) {
+          await deleteParentChildLink(tree.treeContext.treeId, link.id, accessToken)
+          relationRemoved = true
+        }
+      }
+
+      if (!relationRemoved) {
+        setRelationFeedback({ loading: false, success: '', error: 'Relation introuvable pour suppression' })
+        return
+      }
+
+      const draft = editMode.restoreDraft()
+      const removedRelations = [...(draft.removedRelations || []), { sourcePersonId, targetPersonId, relationType }]
+      editMode.updateDraft({ removedRelations })
+
+      await refreshTreeAndKeepSelection(sourcePersonId, { relayout: true })
+      setRelationFeedback({ loading: false, success: 'Lien familial supprimé', error: '' })
+    } catch (err) {
+      setRelationFeedback({ loading: false, success: '', error: getAccountErrorMessage(err) })
+      console.error('Failed to remove relation:', err)
+    }
+  }, [auth.userAuth.token, tree.canEditCurrentTree, tree.treeContext.accessToken, tree.treeContext.treeId, refreshTreeAndKeepSelection, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Raccourcis clavier : Ctrl+E (toggle), Ctrl+S (save), ESC (quit)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      // Ignorer si focus dans un input/textarea
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+
+      if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault()
+        handleEditToggle()
+      } else if (e.ctrlKey && e.key === 's') {
+        if (editMode.isActive) {
+          e.preventDefault()
+          editMode.saveDraft()
+        }
+      } else if (e.key === 'Escape') {
+        if (annot.selectedAnnotationId) {
+          annot.selectAnnotation(null)
+        } else if (editMode.isActive) {
+          handleEditToggle()
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (editMode.isActive && annot.selectedAnnotationId) {
+          e.preventDefault()
+          annot.deleteSelectedAnnotation()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }) // re-bind chaque render pour capter isActive/hasDraft à jour
+
+  useEffect(() => {
+    if (!tree.canEditCurrentTree) {
+      setAdminPanelVisible(false)
+    }
+    if (!canEditInCurrentMode) {
+      editMode.deactivate()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree.canEditCurrentTree, canEditInCurrentMode])
+
+  const openAccountTree = useCallback(async (entry, token, options = {}) => {
+    const accessMode = entry?.accessMode || 'member'
+    const role = entry?.role || (accessMode === 'share' ? 'visitor' : 'member')
+
+    await tree.openTreeGraph(entry.id, token, {
+      treeName: entry?.name || '',
+      treeDescription: entry?.description || '',
+      treeOwnerName: entry?.ownerName || '',
+      treeOwnerEmail: entry?.ownerEmail || '',
+      role,
+      accessMode,
+      promptWizard: Boolean(options.promptWizard),
+    })
+
+    auth.persistLastOpenedTree({
+      treeId: entry.id,
+      accessMode,
+    })
+  }, [auth.persistLastOpenedTree, tree.openTreeGraph])
+
+  // Bootstrap
+  useEffect(() => {
+    let active = true
+
+    const bootstrap = async () => {
+      const query = new URLSearchParams(window.location.search)
+
+      // Explicit demo modes (landing iframe / forced demo)
+      if (query.has('embed') || query.has('demo')) {
+        tree.handleUseDemo()
+        return
+      }
+
+      const slug = getSlugFromPathname()
+      let resolvedTreeId = TREE_ID_FROM_ENV
+      let resolvedTreeName = ''
+      let resolvedTreeDescription = ''
+      let resolvedTreeOwnerName = ''
+      let resolvedTreeOwnerEmail = ''
+
+      // Root app:
+      // - not connected => demo by default
+      // - connected => continue bootstrap to open the user's tree
+      if (!slug && !TREE_ID_FROM_ENV && !query.has('account')) {
+        const userToken = auth.restoreUserToken()
+        if (!userToken) {
+          tree.handleUseDemo()
+          return
+        }
+      }
+
+      setTreeNotFound(false)
+
+      if (slug) {
+        try {
+          const treeInfo = await resolveTreeBySlug(slug)
+          resolvedTreeId = treeInfo.id
+          resolvedTreeName = treeInfo.name || ''
+          resolvedTreeDescription = treeInfo.description || ''
+          resolvedTreeOwnerName = treeInfo.ownerName || ''
+          resolvedTreeOwnerEmail = treeInfo.ownerEmail || ''
+        } catch (error) {
+          if (!active) return
+          tree.setBootState('need-access')
+          tree.setTreeContext(buildEmptyTreeContext())
+          const notFound = error?.status === 404 || error?.payload?.error === 'tree_not_found'
+          setTreeNotFound(notFound)
+          tree.setGateError(notFound ? "Cet arbre n'existe pas." : 'Impossible de résoudre ce lien de partage.')
+          return
+        }
+      }
+
+      const userToken = auth.restoreUserToken()
+      if (userToken) {
+        try {
+          const { trees, lastOpenedTree } = await auth.loadAccountTrees(userToken)
+          if (!active) return
+
+          auth.setUserAuth({
+            token: userToken,
+            user: auth.restoreUserProfile?.() || null,
+          })
+
+          if (resolvedTreeId) {
+            const resolvedTree = trees.find((entry) => String(entry.id) === String(resolvedTreeId))
+            if (resolvedTree) {
+              try {
+                await openAccountTree(resolvedTree, userToken, { promptWizard: true })
+                return
+              } catch {
+                // Fallback vers ecran partage
+              }
+            }
+
+            tree.setTreeContext(buildEmptyTreeContext({
+              treeId: resolvedTreeId,
+              treeName: resolvedTreeName,
+              treeDescription: resolvedTreeDescription,
+              treeOwnerName: resolvedTreeOwnerName,
+              treeOwnerEmail: resolvedTreeOwnerEmail,
+            }))
+            tree.setGateError('')
+            tree.setBootState('need-access')
+            return
+          }
+
+          const preferredTree = lastOpenedTree
+            ? trees.find((entry) =>
+              String(entry.id) === String(lastOpenedTree.treeId)
+              && (!lastOpenedTree.accessMode || entry.accessMode === lastOpenedTree.accessMode))
+            : null
+
+          if (preferredTree) {
+            try {
+              await openAccountTree(preferredTree, userToken, { promptWizard: true })
+              return
+            } catch {
+              // Fallback sur arbre suivant
+            }
+          }
+
+          if (trees.length > 0) {
+            try {
+              await openAccountTree(trees[0], userToken, { promptWizard: true })
+              return
+            } catch {
+              auth.setAccountError("Aucun arbre accessible n'a pu être chargé automatiquement.")
+            }
+            tree.setBootState('account')
+            return
+          }
+
+          // Premier utilisateur : aucun arbre → galaxie démo + bouton onboarding
+          tree.handleUseDemo()
+          setAccountEntryMode('register')
+          setTreeWizardVisible(true)
+          return
+        } catch {
+          auth.clearStoredUserToken()
+        }
+      }
+
+      if (resolvedTreeId) {
+        const shareToken = localStorage.getItem(getTreeTokenStorageKey(resolvedTreeId))
+        if (shareToken) {
+          try {
+            await tree.openTreeGraph(resolvedTreeId, shareToken, {
+              treeName: resolvedTreeName,
+              treeDescription: resolvedTreeDescription,
+              treeOwnerName: resolvedTreeOwnerName,
+              treeOwnerEmail: resolvedTreeOwnerEmail,
+              // Rôle lu dans le jeton : un contributeur qui recharge la page reste contributeur
+              role: readTreeAccessRole(shareToken),
+              accessMode: 'share',
+              promptWizard: false,
+            })
+            return
+          } catch {
+            localStorage.removeItem(getTreeTokenStorageKey(resolvedTreeId))
+          }
+        }
+      }
+
+      if (!active) return
+
+      if (resolvedTreeId) {
+        tree.setTreeContext(buildEmptyTreeContext({
+          treeId: resolvedTreeId,
+          treeName: resolvedTreeName,
+          treeDescription: resolvedTreeDescription,
+          treeOwnerName: resolvedTreeOwnerName,
+          treeOwnerEmail: resolvedTreeOwnerEmail,
+        }))
+        tree.setGateError('')
+        tree.setBootState('need-access')
+        return
+      }
+
+      // ?account=register (CTA de la landing) : écran compte directement en création
+      if (query.get('account') === 'register') {
+        setAccountEntryMode('register')
+        trackAppEvent('account_screen_viewed', { mode: 'register', from_shared_tree: false, source: query.get('source') || 'direct' })
+      }
+      tree.setBootState('account')
+    }
+
+    bootstrap()
+
+    return () => {
+      active = false
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUseDemo = () => {
+    setTreeNotFound(false)
+    tree.handleUseDemo()
+    auth.setAccountError('')
+    setAccountPanelVisible(false)
+    setTreeWelcomeVisible(false)
+    setTreeWizardVisible(false)
+    media.resetMediaManager()
+    setAdminPanelVisible(false)
+    contrib.resetContribState()
+  }
+
+  // Fallback auto: si l'utilisateur est connecté mais n'a aucun arbre,
+  // on bascule automatiquement sur la démo (utile en production quand la création d'account laisse l'UI vide).
+  useEffect(() => {
+    if (
+      tree.bootState === 'account' &&
+      auth.authenticated &&
+      !auth.accountLoading &&
+      auth.accountTrees.length === 0 &&
+      !pendingSharedTreeRef.current // retour sur un arbre partagé en cours : pas d'assistant "votre arbre"
+    ) {
+      handleUseDemo()
+      setAccountEntryMode('register')
+      setTreeWizardVisible(true)
+    }
+  }, [tree.bootState, auth.authenticated, auth.accountLoading, auth.accountTrees.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUseAccount = (mode = 'login') => {
+    const ctx = tree.treeContext
+    pendingSharedTreeRef.current = ctx.treeId && ctx.accessMode !== 'demo' && ctx.accessMode !== 'member'
+      ? {
+        treeId: ctx.treeId,
+        treeName: ctx.treeName,
+        treeDescription: ctx.treeDescription,
+        treeOwnerName: ctx.treeOwnerName,
+        treeOwnerEmail: ctx.treeOwnerEmail,
+      }
+      : null
+    setTreeNotFound(false)
+    tree.setGateError('')
+    auth.setAccountError('')
+    setAccountPanelVisible(false)
+    setAccountEntryMode(mode === 'register' ? 'register' : 'login')
+    trackAppEvent('account_screen_viewed', { mode: mode === 'register' ? 'register' : 'login', from_shared_tree: Boolean(pendingSharedTreeRef.current?.treeId) })
+    media.resetMediaManager()
+    setAdminPanelVisible(false)
+    contrib.resetContribState()
+    tree.setBootState('account')
+  }
+
+  const handleBackToAccess = () => {
+    setTreeNotFound(false)
+    auth.setAccountError('')
+    setAccountPanelVisible(false)
+    setAccountEntryMode('login')
+    tree.setGateError('')
+    tree.setWizardVisibility(false)
+    setTreeWizardVisible(false)
+    media.resetMediaManager()
+    setAdminPanelVisible(false)
+    contrib.resetContribState()
+    tree.setBootState('need-access')
+  }
+
+  // Après connexion ou création de compte depuis un arbre partagé : rattacher l'accès au compte
+  // (jeton d'arbre déjà en poche) et rouvrir l'arbre ; sans jeton, retour à la grille d'accès de
+  // cet arbre, où le mot de passe fera le rattachement. Renvoie true si le retour a été géré.
+  const resumePendingSharedTree = async (token) => {
+    const pending = pendingSharedTreeRef.current
+    if (!pending?.treeId) {
+      return false
+    }
+
+    // Le ref reste posé jusqu'à la fin : il bloque l'assistant "votre arbre" pendant le rattachement
+    try {
+      const shareToken = localStorage.getItem(getTreeTokenStorageKey(pending.treeId))
+      if (shareToken) {
+        try {
+          await linkTreeAccess(pending.treeId, shareToken, token)
+          const { trees } = await auth.loadAccountTrees(token)
+          const entry = trees.find((candidate) => String(candidate.id) === String(pending.treeId))
+          if (entry) {
+            await openAccountTree(entry, token, { promptWizard: false })
+            return true
+          }
+        } catch {
+          // Jeton expiré ou refusé : on repasse par le mot de passe
+        }
+      }
+
+      tree.setTreeContext(buildEmptyTreeContext(pending))
+      tree.setGateError('')
+      tree.setBootState('need-access')
+      return true
+    } finally {
+      pendingSharedTreeRef.current = null
+    }
+  }
+
+  const handleLogin = async (email, password) => {
+    const success = await auth.handleLogin(email, password)
+    if (!success) {
+      return
+    }
+
+    const token = auth.restoreUserToken()
+    if (!token) {
+      tree.setBootState('account')
+      return
+    }
+
+    if (await resumePendingSharedTree(token)) {
+      return
+    }
+
+    const { trees, lastOpenedTree } = await auth.loadAccountTrees(token)
+    const preferredTree = lastOpenedTree
+      ? trees.find((entry) =>
+        String(entry.id) === String(lastOpenedTree.treeId)
+        && (!lastOpenedTree.accessMode || entry.accessMode === lastOpenedTree.accessMode))
+      : null
+    const target = preferredTree || trees[0] || null
+    if (!target) {
+      handleUseDemo()
+      setAccountEntryMode('register')
+      setTreeWizardVisible(true)
+      return
+    }
+
+    try {
+      await openAccountTree(target, token, { promptWizard: true })
+    } catch {
+      tree.setBootState('account')
+    }
+  }
+
+  const handleRegister = async (firstName, email, password) => {
+    const success = await auth.handleRegister(firstName, email, password)
+    if (!success) {
+      return
+    }
+    trackAppEvent('account_registered', { from_shared_tree: Boolean(pendingSharedTreeRef.current?.treeId) })
+
+    const token = auth.restoreUserToken()
+    if (token && await resumePendingSharedTree(token)) {
+      return
+    }
+
+    handleUseDemo()
+    setAccountEntryMode('register')
+    setTreeWizardVisible(true)
+  }
+
+  const handleOpenTreeFromAccount = async (treeId) => {
+    if (!auth.userAuth.token) {
+      return
+    }
+
+    auth.setAccountLoading(true)
+    auth.setAccountError('')
+
+    try {
+      const treeInfo = auth.accountTrees.find((candidate) => String(candidate.id) === String(treeId))
+      if (!treeInfo) {
+        return
+      }
+      await openAccountTree(treeInfo, auth.userAuth.token, { promptWizard: true })
+    } catch (error) {
+      auth.setAccountError(getAccountErrorMessage(error))
+    } finally {
+      auth.setAccountLoading(false)
+    }
+  }
+
+  const handleOpenTreeWizard = () => {
+    auth.setAccountError('')
+    setTreeWelcomeVisible(false)
+    setTreeWizardVisible(true)
+  }
+
+  const handleCreateTreeFromWizard = async (payload) => {
+    const token = auth.userAuth.token
+    if (!token) {
+      return 'Session invalide ou expirée. Reconnectez-vous.'
+    }
+
+    setTreeWizardLoading(true)
+    auth.setAccountLoading(true)
+    auth.setAccountError('')
+
+    try {
+      const normalizedSlug = normalizeSlug(payload.treeName)
+      const safeSlug = normalizedSlug.length >= 3
+        ? normalizedSlug
+        : `famille-${Date.now().toString(36)}`
+
+      const createdTree = await createTree(
+        {
+          name: payload.treeName,
+          slug: safeSlug,
+          description: null,
+          visitorPassword: generateSecurePassword(),
+          contributorPassword: generateSecurePassword(),
+        },
+        token,
+      )
+      trackAppEvent('tree_created', { tree_id: toOpaqueTreeId(createdTree.id) })
+
+      const createdSelf = await createPerson(
+        createdTree.id,
+        {
+          firstName: payload.selfFirstName,
+          lastName: payload.selfLastName,
+          birthDate: yearToIsoDate(payload.selfBirthYear),
+        },
+        token,
+      )
+
+      if (createdSelf?.id) {
+        await updateTree(
+          createdTree.id,
+          { rootPersonId: createdSelf.id },
+          token,
+        )
+
+        if (payload.photoFile) {
+          const validationError = validateMediaFile(payload.photoFile, 'photo')
+          if (!validationError) {
+            try {
+              const dataBase64 = await fileToBase64(payload.photoFile)
+              await uploadPersonAvatar(
+                createdTree.id,
+                createdSelf.id,
+                {
+                  fileName: payload.photoFile.name || 'avatar.jpg',
+                  mimeType: getUploadMimeType(payload.photoFile, 'photo'),
+                  sizeBytes: payload.photoFile.size,
+                  dataBase64,
+                },
+                token,
+              )
+            } catch {
+              // La photo est optionnelle: ignorer l'echec sans bloquer la creation.
+            }
+          }
+        }
+      }
+
+      await auth.loadAccountTrees(token)
+      await tree.openTreeGraph(createdTree.id, token, {
+        treeName: createdTree.name || payload.treeName,
+        treeDescription: createdTree.description || '',
+        role: 'owner',
+        accessMode: 'member',
+        rootPersonId: createdSelf?.id || null,
+        promptWizard: false,
+      })
+      await auth.persistLastOpenedTree({
+        treeId: createdTree.id,
+        accessMode: 'member',
+      })
+
+      setTreeWizardVisible(false)
+      setTreeWelcomeVisible(true)
+      return null
+    } catch (error) {
+      const message = getAccountErrorMessage(error)
+      auth.setAccountError(message)
+      return message
+    } finally {
+      auth.setAccountLoading(false)
+      setTreeWizardLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    setTreeNotFound(false)
+    await auth.handleLogout()
+    tree.setWizardState({ visible: false, loading: false, error: '' })
+    setAccountPanelVisible(false)
+    setTreeWizardVisible(false)
+    setTreeWelcomeVisible(false)
+    setAccountEntryMode('login')
+    media.resetMediaManager()
+    setAdminPanelVisible(false)
+    contrib.resetContribState()
+    tree.setBootState('account')
+  }
+
+  const handleGateUnlock = async (treeId, password) => {
+    const access = await tree.handleUnlock(treeId, password, {
+      userToken: auth.userAuth.token || '',
+      treeName: tree.treeContext.treeName,
+      treeDescription: tree.treeContext.treeDescription,
+      treeOwnerName: tree.treeContext.treeOwnerName,
+      treeOwnerEmail: tree.treeContext.treeOwnerEmail,
+    })
+
+    if (!access) {
+      return
+    }
+
+    setTreeNotFound(false)
+    if (auth.userAuth.token) {
+      await auth.loadAccountTrees(auth.userAuth.token)
+      auth.persistLastOpenedTree({
+        treeId,
+        accessMode: 'share',
+      })
+    }
+  }
+
+  const handleTreeDeleted = async (deletedTreeId) => {
+    if (!auth.userAuth.token) {
+      handleUseAccount('login')
+      return
+    }
+
+    try {
+      const { trees, lastOpenedTree } = await auth.loadAccountTrees(auth.userAuth.token)
+
+      const preferredTree = lastOpenedTree
+        ? trees.find((entry) =>
+          String(entry.id) === String(lastOpenedTree.treeId)
+          && (!lastOpenedTree.accessMode || entry.accessMode === lastOpenedTree.accessMode))
+        : null
+
+      const nextTree = trees.find((entry) => String(entry.id) !== String(deletedTreeId)) || preferredTree || trees[0] || null
+      if (nextTree) {
+        await openAccountTree(nextTree, auth.userAuth.token, { promptWizard: true })
+        return
+      }
+
+      handleUseDemo()
+      setAccountEntryMode('register')
+      setTreeWizardVisible(true)
+    } catch {
+      tree.setBootState('account')
+    }
+  }
+
+  const handleGedcomImported = useCallback(async () => {
+    await refreshTreeAndKeepSelection(null, { relayout: true })
+  }, [refreshTreeAndKeepSelection])
+
+  const handleSelectSelfPerson = (personId) => {
+    const treeId = tree.treeContext.treeId
+    if (!treeId || !accountEmail) {
+      return
+    }
+
+    const nextValue = personId ? String(personId) : ''
+    setLinkedSelfPersonId(nextValue)
+
+    try {
+      const storageKey = getAccountSelfPersonStorageKey(accountEmail, treeId)
+      if (nextValue) {
+        localStorage.setItem(storageKey, nextValue)
+      } else {
+        localStorage.removeItem(storageKey)
+      }
+    } catch {
+      // Ignore storage failures
+    }
+  }
+
+
+  if (tree.bootState === 'loading') {
+    return (
+      <div className="app app-loading">
+        <div className="loading-card">Chargement de l'arbre généalogique...</div>
+      </div>
+    )
+  }
+
+  if (tree.bootState === 'need-access') {
+    return (
+      <div className="app">
+        <AccessGate
+          initialTreeId={tree.treeContext.treeId}
+          treeName={tree.treeContext.treeName}
+          treeDescription={tree.treeContext.treeDescription}
+          treeOwnerName={tree.treeContext.treeOwnerName}
+          treeOwnerEmail={tree.treeContext.treeOwnerEmail}
+          treeNotFound={treeNotFound}
+          loading={tree.gateLoading}
+          errorMessage={tree.gateError}
+          onSubmit={handleGateUnlock}
+          onUseDemo={handleUseDemo}
+          onUseAccount={handleUseAccount}
+        />
+      </div>
+    )
+  }
+
+  if (tree.bootState === 'account') {
+    return (
+      <div className="app">
+        <AccountDashboard
+          authenticated={auth.authenticated}
+          loading={auth.accountLoading}
+          errorMessage={auth.accountError}
+          trees={auth.accountTrees}
+          activeTreeId={tree.treeContext.treeId}
+          defaultMode={accountEntryMode}
+          pendingTreeName={pendingSharedTreeRef.current?.treeName || ''}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          onOpenTree={handleOpenTreeFromAccount}
+          onStartTreeWizard={handleOpenTreeWizard}
+          onLogout={handleLogout}
+          onBackToAccess={handleBackToAccess}
+          onUseDemo={handleUseDemo}
+        />
+      </div>
+    )
+  }
+
+  const isEmptyTree = persons.length === 0
+    && !!tree.treeContext.treeId
+    && tree.canEditCurrentTree
+    && tree.treeContext.accessMode !== 'demo'
+
+  return (
+    <div className="app">
+      {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
+      {treeWelcomeVisible && (
+        <div className="tree-created-prompt" role="status">
+          <strong>Votre arbre est cree.</strong>
+          Ajoutez un proche pour commencer - votre mere, votre pere, un frere. Il suffit d un prenom.
+          <button type="button" onClick={() => setTreeWelcomeVisible(false)} aria-label="Fermer">
+            Fermer
+          </button>
+        </div>
+      )}
+      {/* Bouton premier ajout (arbre vide) */}
+      {isEmptyTree && (
+        <button
+          type="button"
+          className="empty-tree-add"
+          onClick={() => { editMode.activate(); handleOpenAddPerson() }}
+          aria-label="Ajouter une première personne"
+        >
+          <svg className="empty-tree-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <div className="empty-tree-add-body">
+            <span className="empty-tree-add-title">Ajouter une personne</span>
+            <span className="empty-tree-add-hint">Commencer l'arbre</span>
+          </div>
+          <svg className="empty-tree-add-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polyline points="6 4 10 8 6 12" />
+          </svg>
+        </button>
+      )}
+      {/* Recherche Expandable */}
+      <ExpandableSearch
+        results={search.results}
+        hasResults={search.hasResults}
+        onSearch={search.handleSearch}
+        onClear={search.clearSearch}
+        onResultClick={(person) => {
+          const fullPerson = persons.find(p => p.id === person.id)
+          if (fullPerson) tree.setSelectedPerson(fullPerson)
+        }}
+        onResultHover={() => {
+          // TODO: Highlight dans galaxie
+        }}
+        onResultHoverEnd={() => {
+          // TODO: Clear highlight galaxie
+        }}
+      />
+      {/* Draft Restore Banner (au reload si draft trouvé) */}
+      <DraftRestoreBanner
+        visible={showDraftBanner && !editMode.isActive}
+        draftTimestamp={editMode.draftTimestamp}
+        onRestore={handleDraftRestore}
+        onDiscard={handleDraftDiscard}
+      />
+      {/* Edit Mode Overlay */}
+      <EditModeOverlay
+        active={editMode.isActive}
+        hasDraft={editMode.hasDraft}
+        draftTimestamp={editMode.draftTimestamp}
+        role={userRole.isAdmin ? 'admin' : 'contributor'}
+        onDeactivate={editMode.deactivate}
+        onSubmit={handleEditSubmit}
+      />
+      {/* Confirmation Modal (quitter mode édition avec draft) */}
+      <EditConfirmModal
+        visible={showConfirmModal}
+        onContinue={handleConfirmContinue}
+        onSaveAndQuit={handleConfirmSaveAndQuit}
+        onDiscard={handleConfirmDiscard}
+      />
+      {/* Slide-in Ajouter Personne */}
+      <AddPersonPanel
+        visible={addPersonPanelVisible && editMode.isActive}
+        persons={persons}
+        loading={addPersonLoading}
+        error={addPersonError}
+        onSubmit={handleAddPersonSubmit}
+        onClose={handleCloseAddPerson}
+      />
+      {/* Modal Session Contribution (contributeurs) */}
+      <ContributionSessionModal
+        visible={showContribModal}
+        changes={contribChanges}
+        recap={(() => {
+          const d = editMode.restoreDraft()
+          return {
+            added: (d.addedPersons || []).length + (d.addedAnnotations || []).length,
+            modified: Object.keys(d.modifiedPersons || {}).length + (d.modifiedAnnotations || []).length,
+            deleted: (d.deletedPersons || []).length + (d.deletedAnnotations || []).length,
+          }
+        })()}
+        loading={contribSubmitLoading}
+        error={contribSubmitError}
+        onSubmit={handleContribSessionSubmit}
+        onCancel={() => setShowContribModal(false)}
+      />
+      {/* Toast succès contribution */}
+      {contribSuccess && (
+        <div className="contrib-success-toast" role="status">
+          Contribution envoyée — merci&nbsp;!
+        </div>
+      )}
+      {/* Navbar contextuelle */}
+      <ContextualNavbar
+        userRole={userRole}
+        pendingContributions={contrib.contribState.sessions?.length || 0}
+        editModeActive={editMode.isActive}
+        trees={auth.accountTrees}
+        activeTreeId={tree.treeContext.treeId}
+        onEditClick={handleEditToggle}
+        onAddPersonClick={handleOpenAddPerson}
+        onShareClick={userRole.isAdmin ? handleOpenContributionPanel : undefined}
+        onTreeSelect={handleOpenTreeFromAccount}
+        onCreateTree={handleOpenTreeWizard}
+        onProfileClick={handleUseAccount}
+        onAccountClick={() => setAccountPanelVisible(true)}
+        onSettingsClick={() => setAdminPanelVisible(true)}
+        onLogout={handleLogout}
+        userDisplayName={accountDisplayName}
+        userEmail={accountEmail}
+        userAvatarPhoto={accountAvatarPhoto}
+        linkedPersonName={linkedSelfPerson ? `${linkedSelfPerson.firstName || ''} ${linkedSelfPerson.lastName || ''}`.trim() : ''}
+        activeTreeName={activeAccountTreeName}
+        annotationTools={editMode.isActive ? {
+          activeTool: annot.activeTool,
+          onToolChange: annot.setActiveTool,
+          currentStyle: annot.currentStyle,
+          onStyleChange: annot.setCurrentStyle,
+          selectedAnnotationId: annot.selectedAnnotationId,
+          selectedSticker: annot.selectedSticker,
+          onStickerSelect: annot.setSelectedSticker,
+          onDelete: annot.deleteSelectedAnnotation,
+          isDragging: annot.isDragging,
+          isOverTrash: annot.isOverTrash,
+          onPhotoFileSelected: handleAnnotationPhotoFile,
+        } : null}
+      />
+      <Galaxy
+        onPersonSelect={handlePersonSelect}
+        onMediaSelect={handleMediaSelectFresh}
+        selectedPersonId={tree.selectedPerson?.id || null}
+        searchHighlightIds={search.matchedPersonIds}
+        graphRevision={tree.graphRevision}
+        annotationHandlers={editMode.isActive ? annot : null}
+        transformReadRef={galaxyTransformReadRef}
+        zoomApiRef={galaxyZoomApiRef}
+      />
+      <ZoomControl zoomApiRef={galaxyZoomApiRef} />
+      {tree.selectedPerson && (
+        <PersonCard
+          person={tree.selectedPerson}
+          onClose={() => tree.setSelectedPerson(null)}
+          onMediaSelect={handleMediaSelectFresh}
+          editMode={editMode.isActive}
+          canManageMedia={editMode.isActive && tree.canSubmitContribution}
+          onManageMedia={media.handleOpenMediaManager}
+          onAvatarUpload={handlePersonAvatarUpload}
+          onAvatarDelete={handlePersonAvatarDelete}
+          avatarActionLoading={avatarActionState.loading}
+          avatarActionError={avatarActionState.error}
+          isAdmin={userRole.isAdmin}
+          onSave={handlePersonSave}
+          onDelete={handlePersonDelete}
+          onAddRelation={handleAddRelation}
+          onRemoveRelation={handleRemoveRelation}
+          relationActionLoading={relationFeedback.loading}
+          relationActionSuccess={relationFeedback.success}
+          relationActionError={relationFeedback.error}
+        />
+      )}
+      {tree.selectedMedia && (
+        <MediaViewer
+          media={tree.selectedMedia.media}
+          person={tree.selectedMedia.person}
+          onClose={() => tree.setSelectedMedia(null)}
+        />
+      )}
+      <MediaManagerPanel
+        visible={media.mediaManagerState.visible}
+        person={tree.selectedPerson}
+        medias={media.selectedPersonMedias}
+        loading={media.mediaManagerState.loading}
+        errorMessage={media.mediaManagerState.error}
+        onClose={media.handleCloseMediaManager}
+        onUpload={media.handleUploadPersonMedia}
+        onMove={media.handleMovePersonMedia}
+        onDelete={media.handleDeletePersonMedia}
+      />
+      <ContributionPanel
+        visible={contrib.contribState.visible}
+        treeId={tree.treeContext.treeId}
+        canModerate={tree.canEditCurrentTree}
+        loading={contrib.contribState.loading}
+        errorMessage={contrib.contribState.error}
+        inviteShareUrl={contribInviteState.shareUrl}
+        inviteKnownPasswords={contribInviteState.knownPasswords}
+        inviteSaving={contribInviteState.loading}
+        inviteError={contribInviteState.error}
+        inviteMessage={contribInviteState.message}
+        sessions={contrib.contribState.sessions}
+        reviewingSessionId={contrib.contribState.reviewingSessionId}
+        onClose={contrib.handleCloseContributionPanel}
+        onRefresh={contrib.refreshContributionSessions}
+        onRotatePasswords={handleContributionPasswordRotate}
+        onReviewSession={contrib.handleReviewContributionSession}
+      />
+      <AccountPanel
+        visible={accountPanelVisible}
+        userDisplayName={accountDisplayName}
+        userEmail={accountEmail}
+        linkedPerson={linkedSelfPerson}
+        selectedPersonId={linkedSelfPersonId}
+        people={persons}
+        onSelectPerson={handleSelectSelfPerson}
+        onClose={() => setAccountPanelVisible(false)}
+      />
+      <AdminPanel
+        visible={adminPanelVisible}
+        treeId={tree.treeContext.treeId}
+        authToken={tree.treeContext.accessToken}
+        onTreeDeleted={handleTreeDeleted}
+        onGedcomImported={handleGedcomImported}
+        onClose={() => setAdminPanelVisible(false)}
+      />
+      {/* Annotation Toolbar (visible uniquement en mode édition) */}
+      {editMode.isActive && (
+        <AnnotationToolbar
+          activeTool={annot.activeTool}
+          onToolChange={annot.setActiveTool}
+          currentStyle={annot.currentStyle}
+          onStyleChange={annot.setCurrentStyle}
+          selectedAnnotationId={annot.selectedAnnotationId}
+          selectedAnnotation={annot.selectedAnnotation}
+          selectedSticker={annot.selectedSticker}
+          onStickerSelect={annot.setSelectedSticker}
+          onDelete={annot.deleteSelectedAnnotation}
+          onResizeSelected={annot.resizeSelected}
+          onPhotoFileSelected={handleAnnotationPhotoFile}
+          isDragging={annot.isDragging}
+          isOverTrash={annot.isOverTrash}
+        />
+      )}
+      {/* Text Input Overlay (saisie texte sur canvas) */}
+      <TextInputOverlay
+        textInputState={annot.textInputState}
+        currentStyle={annot.currentStyle}
+        onCommit={annot.commitTextInput}
+        onCancel={annot.cancelTextInput}
+      />
+      {/* Onboarding premier arbre */}
+      <TreeCreationWizard
+        visible={treeWizardVisible}
+        loading={treeWizardLoading}
+        defaultFirstName={accountDisplayName}
+        onClose={() => setTreeWizardVisible(false)}
+        onSubmit={handleCreateTreeFromWizard}
+      />
+    </div>
+  )
+}
+
+export default App
+
+
+
+

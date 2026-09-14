@@ -1,0 +1,212 @@
+/* ============================================================
+   ZoomControl — Contrôle de zoom bas-gauche
+   Même langage visuel que ContextualNavbar / navbar-content
+   ============================================================ */
+
+.zoom-control {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  animation: zoomControlSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes zoomControlSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================
+   Bouton principal — pill solo identique à navbar-content
+   ============================================================ */
+
+.zoom-button {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+
+  /* Même pill que navbar-content */
+  background: rgba(247, 236, 217, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(93, 82, 75, 0.08);
+  box-shadow:
+    0 4px 80px rgba(93, 82, 75, 0.20),
+    0 1px 6px rgba(93, 82, 75, 0.08);
+
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Même comportement que nav-button */
+  color: #5D524B;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zoom-button:hover {
+  background: rgba(247, 236, 217, 0.98);
+  transform: scale(1.08);
+  box-shadow:
+    0 6px 80px rgba(93, 82, 75, 0.28),
+    0 2px 8px rgba(93, 82, 75, 0.12);
+}
+
+.zoom-button:active {
+  transform: scale(0.95);
+}
+
+.zoom-btn-icon {
+  color: #5D524B;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.zoom-button:hover .zoom-btn-icon {
+  color: #A67C52;
+  transform: scale(1.05);
+}
+
+/* ============================================================
+   Panel slider (desktop, apparaît au hover)
+   Même style que .navbar-annot-panel
+   ============================================================ */
+
+.zoom-slider-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+
+  width: 52px;
+  padding: 14px 0 12px;
+
+  /* Même panel que navbar-annot-panel */
+  background: rgba(254, 249, 237, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(166, 124, 82, 0.15);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 40px rgba(93, 82, 75, 0.18),
+    0 2px 8px rgba(93, 82, 75, 0.06);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  /* Caché par défaut */
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(8px) scale(0.94);
+
+  transition:
+    max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zoom-slider-panel.visible {
+  max-height: 240px;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.zoom-panel-icon {
+  color: #5D524B;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Slider track custom
+   ============================================================ */
+
+.zoom-slider-track {
+  width: 6px;
+  height: 120px;
+  background: rgba(166, 124, 82, 0.15);
+  border-radius: 3px;
+  position: relative;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Zone de clic élargie */
+.zoom-slider-track::before {
+  content: '';
+  position: absolute;
+  inset: 0 -12px;
+}
+
+.zoom-slider-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    to top,
+    rgba(166, 124, 82, 0.65),
+    rgba(166, 124, 82, 0.2)
+  );
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.zoom-slider-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: #FEF9ED;
+  border: 2px solid rgba(166, 124, 82, 0.7);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(93, 82, 75, 0.25);
+  pointer-events: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.zoom-slider-track:hover .zoom-slider-thumb {
+  transform: translateX(-50%) scale(1.25);
+  border-color: #A67C52;
+}
+
+/* ============================================================
+   Responsive mobile
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .zoom-control {
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .zoom-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Slider toujours visible sur mobile */
+  .zoom-slider-panel.visible {
+    max-height: 240px;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .zoom-slider-track {
+    cursor: pointer;
+  }
+}

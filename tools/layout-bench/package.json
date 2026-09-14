@@ -1,0 +1,13 @@
+{
+  "name": "layout-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node --import ./register.mjs run.mjs",
+    "fixture": "node fetch-fixture.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "elkjs": "^0.11.0"
+  }
+}

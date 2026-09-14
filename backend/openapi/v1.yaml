@@ -1,0 +1,1926 @@
+openapi: 3.0.3
+info:
+  title: Arbre Genealogique API
+  version: 1.0.0
+  description: Contrats V1 prioritaires (auth, trees, partage, graph read).
+servers:
+  - url: http://localhost:4000
+
+tags:
+  - name: Auth
+  - name: Trees
+  - name: Graph
+  - name: Contributions
+  - name: Public
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Credentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [email, password]
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+      required: [id, email]
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required: [token, user]
+    Tree:
+      type: object
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        rootPersonId:
+          type: string
+          nullable: true
+      required: [id, slug, name]
+    CreateTreeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]{3,64}$'
+        description:
+          type: string
+          nullable: true
+        visitorPassword:
+          type: string
+          minLength: 8
+        contributorPassword:
+          type: string
+          minLength: 8
+      required: [name, slug, visitorPassword, contributorPassword]
+    PatchTreeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9-]{3,64}$'
+        description:
+          type: string
+          nullable: true
+        rootPersonId:
+          type: string
+          nullable: true
+    UnlockRequest:
+      type: object
+      properties:
+        password:
+          type: string
+      required: [password]
+    UnlockResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        treeId:
+          type: string
+        role:
+          type: string
+          enum: [visitor, contributor]
+      required: [token, treeId, role]
+    PatchPasswordsRequest:
+      type: object
+      properties:
+        visitorPassword:
+          type: string
+          minLength: 8
+        contributorPassword:
+          type: string
+          minLength: 8
+    PatchTreeSettingsRequest:
+      type: object
+      properties:
+        memberContributionPolicy:
+          type: string
+          enum: [direct, pending]
+        contributorPolicy:
+          type: string
+          enum: [direct, pending]
+    TreeSettings:
+      type: object
+      properties:
+        treeId:
+          type: string
+        memberContributionPolicy:
+          type: string
+          enum: [direct, pending]
+        visitorPolicy:
+          type: string
+          enum: [read_only]
+        contributorPolicy:
+          type: string
+          enum: [direct, pending]
+        updatedAt:
+          type: string
+          format: date-time
+      required: [treeId, memberContributionPolicy, visitorPolicy, contributorPolicy]
+    TreeStats:
+      type: object
+      properties:
+        persons:
+          type: integer
+        unions:
+          type: integer
+        filiations:
+          type: integer
+        medias:
+          type: integer
+        pendingContributions:
+          type: integer
+        totalContributions:
+          type: integer
+      required: [persons, unions, filiations, medias, pendingContributions, totalContributions]
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        treeId:
+          type: string
+        actorType:
+          type: string
+        actorId:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        payloadJson:
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, treeId, actorType, action, entityType, entityId, createdAt]
+    CreatePersonRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        birthDate:
+          type: string
+          nullable: true
+        deathDate:
+          type: string
+          nullable: true
+        sex:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [firstName, lastName]
+    PatchPersonRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        birthDate:
+          type: string
+          nullable: true
+        deathDate:
+          type: string
+          nullable: true
+        sex:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+    CreateUnionRequest:
+      type: object
+      properties:
+        partner1PersonId:
+          type: string
+        partner2PersonId:
+          type: string
+          nullable: true
+        unionType:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          nullable: true
+        endDate:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+      required: [partner1PersonId]
+    PatchUnionRequest:
+      type: object
+      properties:
+        partner1PersonId:
+          type: string
+        partner2PersonId:
+          type: string
+          nullable: true
+        unionType:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          nullable: true
+        endDate:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+    CreateParentChildLinkRequest:
+      type: object
+      properties:
+        parentPersonId:
+          type: string
+        childPersonId:
+          type: string
+        viaUnionId:
+          type: string
+          nullable: true
+        parentageType:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+      required: [parentPersonId, childPersonId]
+    PatchParentChildLinkRequest:
+      type: object
+      properties:
+        parentPersonId:
+          type: string
+        childPersonId:
+          type: string
+        viaUnionId:
+          type: string
+          nullable: true
+        parentageType:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+    UploadMediaRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [photo, video, audio, document, citation]
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+        dataBase64:
+          type: string
+        caption:
+          type: string
+          nullable: true
+      required: [type, fileName, mimeType, sizeBytes, dataBase64]
+    ReorderMediaRequest:
+      type: object
+      properties:
+        orderedMediaIds:
+          type: array
+          items:
+            type: string
+      required: [orderedMediaIds]
+    GraphPerson:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        birthDate:
+          type: string
+          nullable: true
+        deathDate:
+          type: string
+          nullable: true
+        sex:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [id, firstName, lastName]
+    GraphUnion:
+      type: object
+      properties:
+        id:
+          type: string
+        partner1PersonId:
+          type: string
+        partner2PersonId:
+          type: string
+          nullable: true
+        unionType:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          nullable: true
+        endDate:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+      required: [id, partner1PersonId, displayOrder]
+    GraphFiliation:
+      type: object
+      properties:
+        id:
+          type: string
+        parentPersonId:
+          type: string
+        childPersonId:
+          type: string
+        viaUnionId:
+          type: string
+          nullable: true
+        parentageType:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+      required: [id, parentPersonId, childPersonId, displayOrder]
+    GraphMedia:
+      type: object
+      properties:
+        id:
+          type: string
+        personId:
+          type: string
+        type:
+          type: string
+        mimeType:
+          type: string
+        urlPath:
+          type: string
+        caption:
+          type: string
+          nullable: true
+        displayOrder:
+          type: integer
+        isFeatured:
+          type: boolean
+      required: [id, personId, type, mimeType, urlPath, displayOrder, isFeatured]
+    ContributionChangeInput:
+      type: object
+      properties:
+        entityType:
+          type: string
+          enum: [person, union, parent_child_link]
+        action:
+          type: string
+          enum: [create, update, delete, reorder]
+        entityId:
+          type: string
+          nullable: true
+        before:
+          nullable: true
+        after:
+          nullable: true
+        conflictState:
+          type: string
+          enum: [none, needs_review]
+      required: [entityType, action]
+    ContributionSessionCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        submittedByLabel:
+          type: string
+        changes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ContributionChangeInput'
+      required: [title, changes]
+    ContributionSession:
+      type: object
+      properties:
+        id:
+          type: string
+        treeId:
+          type: string
+        submittedByUserId:
+          type: string
+          nullable: true
+        submittedByLabel:
+          type: string
+        mode:
+          type: string
+          enum: [user, tree_access]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        title:
+          type: string
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContributionSessionChange'
+      required: [id, treeId, submittedByLabel, mode, status, title]
+    ContributionSessionChange:
+      type: object
+      properties:
+        id:
+          type: string
+        entityType:
+          type: string
+          enum: [person, union, parent_child_link]
+        entityId:
+          type: string
+          nullable: true
+        action:
+          type: string
+          enum: [create, update, delete, reorder]
+        beforeJson:
+          nullable: true
+        afterJson:
+          nullable: true
+        conflictState:
+          type: string
+          enum: [none, needs_review]
+        decision:
+          type: string
+          enum: [approved, rejected]
+          nullable: true
+      required: [id, entityType, action, conflictState]
+    ContributionReviewRequest:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        changeDecisions:
+          type: array
+          items:
+            type: object
+            properties:
+              changeId:
+                type: string
+              decision:
+                type: string
+                enum: [approved, rejected]
+            required: [changeId, decision]
+      required: [decision]
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+      responses:
+        '200':
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees:
+    get:
+      tags: [Trees]
+      summary: List trees for current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Trees list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trees:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Tree'
+                        - type: object
+                          properties:
+                            role:
+                              type: string
+                              enum: [owner, admin, member]
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Trees]
+      summary: Create tree
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTreeRequest'
+      responses:
+        '201':
+          description: Tree created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tree:
+                    $ref: '#/components/schemas/Tree'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}:
+    get:
+      tags: [Trees]
+      summary: Get tree metadata
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tree metadata
+        '400':
+          description: Invalid tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Trees]
+      summary: Update tree metadata
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchTreeRequest'
+      responses:
+        '200':
+          description: Tree updated
+        '400':
+          description: Invalid payload or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/access/unlock:
+    post:
+      tags: [Trees]
+      summary: Unlock tree access with visitor/contributor password
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnlockRequest'
+      responses:
+        '200':
+          description: Access granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnlockResponse'
+        '400':
+          description: Invalid payload or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/access/passwords:
+    patch:
+      tags: [Trees]
+      summary: Rotate visitor/contributor passwords
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchPasswordsRequest'
+      responses:
+        '200':
+          description: Passwords updated
+        '400':
+          description: Invalid payload or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/stats:
+    get:
+      tags: [Trees]
+      summary: Get admin statistics for a tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tree statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    $ref: '#/components/schemas/TreeStats'
+                required: [stats]
+        '400':
+          description: Invalid tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/settings:
+    get:
+      tags: [Trees]
+      summary: Get tree contribution settings (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tree settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    $ref: '#/components/schemas/TreeSettings'
+                required: [settings]
+        '400':
+          description: Invalid tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Trees]
+      summary: Update tree contribution settings (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchTreeSettingsRequest'
+      responses:
+        '200':
+          description: Tree settings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings:
+                    $ref: '#/components/schemas/TreeSettings'
+                required: [settings]
+        '400':
+          description: Invalid payload or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/audit:
+    get:
+      tags: [Trees]
+      summary: List admin audit logs for a tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: action
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLogEntry'
+                  nextOffset:
+                    type: integer
+                    nullable: true
+                required: [logs, nextOffset]
+        '400':
+          description: Invalid query or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/graph:
+    get:
+      tags: [Graph]
+      summary: Read tree graph payload
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Graph payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  treeId:
+                    type: string
+                  rootPersonId:
+                    type: string
+                    nullable: true
+                  graph:
+                    type: object
+                    properties:
+                      persons:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GraphPerson'
+                      unions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GraphUnion'
+                      filiations:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GraphFiliation'
+                      medias:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GraphMedia'
+        '400':
+          description: Invalid tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/persons:
+    post:
+      tags: [Trees]
+      summary: Create a person in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePersonRequest'
+      responses:
+        '201':
+          description: Person created
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/persons/{personId}:
+    patch:
+      tags: [Trees]
+      summary: Update a person in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: personId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchPersonRequest'
+      responses:
+        '200':
+          description: Person updated
+        '400':
+          description: Invalid payload or params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Person not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Trees]
+      summary: Soft-delete a person in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: personId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Person soft-deleted
+        '400':
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Person not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/unions:
+    post:
+      tags: [Trees]
+      summary: Create a union in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUnionRequest'
+      responses:
+        '201':
+          description: Union created
+        '400':
+          description: Invalid payload or reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/unions/{unionId}:
+    patch:
+      tags: [Trees]
+      summary: Update a union in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: unionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchUnionRequest'
+      responses:
+        '200':
+          description: Union updated
+        '400':
+          description: Invalid payload, params or person reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Union not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Trees]
+      summary: Soft-delete a union in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: unionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Union soft-deleted
+        '400':
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Union not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/links:
+    post:
+      tags: [Trees]
+      summary: Create a parent-child link in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateParentChildLinkRequest'
+      responses:
+        '201':
+          description: Link created
+        '400':
+          description: Invalid payload or reference
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/links/{linkId}:
+    patch:
+      tags: [Trees]
+      summary: Update a parent-child link in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: linkId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchParentChildLinkRequest'
+      responses:
+        '200':
+          description: Link updated
+        '400':
+          description: Invalid payload, params or references
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Trees]
+      summary: Soft-delete a parent-child link in the tree
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: linkId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Link soft-deleted
+        '400':
+          description: Invalid params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Link not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/persons/{personId}/media:
+    post:
+      tags: [Trees]
+      summary: Upload media for a person
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: personId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadMediaRequest'
+      responses:
+        '201':
+          description: Media uploaded
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree or person not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/persons/{personId}/media/reorder:
+    patch:
+      tags: [Trees]
+      summary: Reorder person media
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: personId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderMediaRequest'
+      responses:
+        '200':
+          description: Media reordered
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/persons/{personId}/media/{mediaId}:
+    delete:
+      tags: [Trees]
+      summary: Soft-delete person media
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: personId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media deleted
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/media/{mediaId}:
+    get:
+      tags: [Graph]
+      summary: Download media file by tree and media id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: mediaId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: token
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media binary content
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Media not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/contributions/sessions:
+    post:
+      tags: [Contributions]
+      summary: Submit a contribution session
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContributionSessionCreateRequest'
+      responses:
+        '201':
+          description: Contribution session submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: '#/components/schemas/ContributionSession'
+                  changesCount:
+                    type: integer
+                required: [session, changesCount]
+        '400':
+          description: Invalid payload or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags: [Contributions]
+      summary: List contribution sessions (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        '200':
+          description: Sessions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContributionSession'
+                required: [sessions]
+        '400':
+          description: Invalid query or tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /trees/{id}/contributions/sessions/{sessionId}/review:
+    post:
+      tags: [Contributions]
+      summary: Review contribution session (admin only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContributionReviewRequest'
+      responses:
+        '200':
+          description: Session reviewed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session:
+                    $ref: '#/components/schemas/ContributionSession'
+                  approvedCount:
+                    type: integer
+                  rejectedCount:
+                    type: integer
+                required: [session, approvedCount, rejectedCount]
+        '400':
+          description: Invalid payload or params
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Contribution session or tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Contribution session already reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /arbre/{slug}:
+    get:
+      tags: [Public]
+      summary: Resolve slug to tree metadata
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tree found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tree:
+                    $ref: '#/components/schemas/Tree'
+        '400':
+          description: Invalid slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

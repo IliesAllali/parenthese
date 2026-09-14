@@ -1,0 +1,325 @@
+.contextual-navbar {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  animation: navbarSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Let touch/mouse events pass through to canvas during annotation drag */
+.contextual-navbar--dragging {
+  pointer-events: none;
+}
+
+@keyframes navbarSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.navbar-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: rgba(247, 236, 217, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 50px;
+  border: 1px solid rgba(93, 82, 75, 0.08);
+  box-shadow:
+    0 4px 80px rgba(93, 82, 75, 0.20),
+    0 1px 6px rgba(93, 82, 75, 0.08);
+}
+
+/* Wrapper pour les dropdowns */
+.nav-dropdown-wrapper {
+  position: relative;
+}
+
+/* Avatar */
+.nav-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #A67C52, #8B6843);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 2px solid transparent;
+}
+
+.nav-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(166, 124, 82, 0.3);
+}
+
+.nav-avatar.active {
+  border-color: #A67C52;
+}
+
+.nav-avatar.admin {
+  box-shadow:
+    0 0 0 2px rgba(247, 236, 217, 1),
+    0 0 0 3px #A67C52,
+    0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.nav-avatar-initial {
+  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  font-size: 20px;
+  font-weight: 450;
+  color: #FEF9ED;
+  user-select: none;
+}
+
+.nav-avatar-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Responsive mobile */
+@media (max-width: 768px) {
+  .contextual-navbar {
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .navbar-content {
+    padding: 4px;
+    gap: 2px;
+  }
+
+  .nav-avatar,
+  .nav-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-button-icon {
+    font-size: 18px;
+  }
+}
+
+/* ============================================================
+   Mobile Annotation Mode — Navbar Morph
+   The pill transforms to host annotation tools on mobile
+   ============================================================ */
+
+/* Pill styling in annotation mode */
+.navbar-content--annot {
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid rgba(166, 124, 82, 0.15);
+  animation: annotNavMorphIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes annotNavMorphIn {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.88);
+    filter: blur(4px);
+  }
+  50% {
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Staggered pop-in for each child element */
+.navbar-content--annot > * {
+  animation: annotBtnPop 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.navbar-content--annot > *:nth-child(1) { animation-delay: 0ms; }
+.navbar-content--annot > *:nth-child(2) { animation-delay: 25ms; }
+.navbar-content--annot > *:nth-child(3) { animation-delay: 45ms; }
+.navbar-content--annot > *:nth-child(4) { animation-delay: 65ms; }
+.navbar-content--annot > *:nth-child(5) { animation-delay: 85ms; }
+.navbar-content--annot > *:nth-child(6) { animation-delay: 105ms; }
+.navbar-content--annot > *:nth-child(7) { animation-delay: 125ms; }
+.navbar-content--annot > *:nth-child(8) { animation-delay: 145ms; }
+.navbar-content--annot > *:nth-child(9) { animation-delay: 165ms; }
+
+@keyframes annotBtnPop {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.82);
+  }
+  65% {
+    transform: translateY(-1px) scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* --- Exit edit mode button --- */
+.nav-annot-exit {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(93, 82, 75, 0.08);
+  color: #8B7355;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+
+.nav-annot-exit:hover {
+  background: rgba(93, 82, 75, 0.16);
+  color: #5D524B;
+  transform: rotate(90deg);
+}
+
+.nav-annot-exit:active {
+  transform: rotate(90deg) scale(0.88);
+}
+
+/* --- Separator --- */
+.nav-annot-sep {
+  width: 1px;
+  height: 24px;
+  background: linear-gradient(180deg, transparent, rgba(166, 124, 82, 0.18), transparent);
+  margin: 0 2px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* --- Annotation tool buttons --- */
+.nav-annot-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #5D524B;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+
+.nav-annot-btn:hover:not(:disabled) {
+  background: rgba(166, 124, 82, 0.1);
+  transform: translateY(-1px);
+}
+
+.nav-annot-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* Active tool — gradient fill */
+.nav-annot-btn--active {
+  background: linear-gradient(140deg, #8b6a43, #6a4f32);
+  color: #fef9ed;
+  box-shadow: 0 2px 10px rgba(166, 124, 82, 0.35);
+}
+
+.nav-annot-btn--active:hover:not(:disabled) {
+  background: linear-gradient(140deg, #96703e, #7a5a3a);
+  transform: translateY(-1px);
+}
+
+/* Panel-open indicator — tiny dot below */
+.nav-annot-btn--panel-open::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fef9ed;
+  opacity: 0.7;
+  animation: annotDotFade 1.8s ease-in-out infinite;
+}
+
+@keyframes annotDotFade {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* --- Trash button --- */
+.nav-annot-btn--trash:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.nav-annot-btn--trash:not(:disabled):hover {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+
+.nav-annot-btn--drag-target {
+  color: #C0392B;
+  background: rgba(192, 57, 43, 0.06);
+}
+
+.nav-annot-btn--drag-over {
+  background: rgba(192, 57, 43, 0.16) !important;
+  color: #C0392B !important;
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Add person button --- */
+.nav-annot-btn--add {
+  color: #A67C52;
+}
+
+.nav-annot-btn--add:hover:not(:disabled) {
+  color: #8B6843;
+}
+
+/* --- Sub-panel (options) above navbar --- */
+.navbar-annot-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(254, 249, 237, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(166, 124, 82, 0.15);
+  box-shadow:
+    0 8px 40px rgba(93, 82, 75, 0.18),
+    0 2px 8px rgba(93, 82, 75, 0.06);
+  min-width: 190px;
+  animation: annotPanelSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes annotPanelSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

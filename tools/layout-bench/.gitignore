@@ -1,0 +1,4 @@
+# Données réelles de familles et sorties : jamais versionnées
+fixtures/
+out/
+node_modules/

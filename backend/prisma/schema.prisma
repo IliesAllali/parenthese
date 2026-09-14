@@ -1,0 +1,334 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  owner
+  admin
+  member
+}
+
+enum ContributionPolicy {
+  direct
+  pending
+}
+
+enum VisitorPolicy {
+  read_only
+}
+
+enum ContributionSessionStatus {
+  pending
+  approved
+  rejected
+}
+
+enum ContributionActorMode {
+  user
+  tree_access
+}
+
+enum ContributionEntityType {
+  person
+  union
+  parent_child_link
+  annotation
+}
+
+enum AnnotationType {
+  drawing
+  sticker
+  text
+  photo
+}
+
+enum ContributionAction {
+  create
+  update
+  delete
+  reorder
+}
+
+enum ConflictState {
+  none
+  needs_review
+}
+
+enum ContributionDecision {
+  approved
+  rejected
+}
+
+enum SharedAccessRole {
+  visitor
+  contributor
+}
+
+model User {
+  id                           String                @id @default(cuid())
+  email                        String                @unique
+  passwordHash                 String
+  lastOpenedTreeId             String?
+  lastOpenedAccessMode         String?
+  lastOpenedRole               String?
+  lastOpenedAt                 DateTime?
+  createdAt                    DateTime              @default(now())
+  ownedTrees                   Tree[]                @relation("TreeOwner")
+  memberships                  TreeMembership[]
+  sharedTreeAccesses           UserTreeAccess[]
+  submittedContributionSessions ContributionSession[] @relation("ContributionSubmittedBy")
+  reviewedContributionSessions ContributionSession[] @relation("ContributionReviewedBy")
+
+  @@map("users")
+}
+
+model Tree {
+  id                   String                @id @default(cuid())
+  ownerUserId          String
+  slug                 String                @unique
+  name                 String
+  description          String?
+  rootPersonId         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+  owner                User                  @relation("TreeOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  accessPasswords      TreeAccessPasswords?
+  memberships          TreeMembership[]
+  sharedUserAccesses   UserTreeAccess[]
+  settings             TreeSettings?
+  persons              Person[]
+  unions               Union[]
+  parentChildLinks     ParentChildLink[]
+  mediaItems           MediaItem[]
+  contributionSessions ContributionSession[]
+  auditLogs            AuditLog[]
+  annotations          Annotation[]
+
+  @@index([ownerUserId])
+  @@map("trees")
+}
+
+model TreeAccessPasswords {
+  treeId          String   @id
+  visitorHash     String
+  contributorHash String
+  updatedAt       DateTime @updatedAt
+  tree            Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@map("tree_access_passwords")
+}
+
+model TreeMembership {
+  id                       String             @id @default(cuid())
+  treeId                   String
+  userId                   String
+  role                     MembershipRole
+  contributionModeOverride ContributionPolicy?
+  createdAt                DateTime           @default(now())
+  tree                     Tree               @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user                     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([treeId, userId])
+  @@index([userId])
+  @@map("tree_memberships")
+}
+
+model UserTreeAccess {
+  id           String           @id @default(cuid())
+  treeId        String
+  userId        String
+  role          SharedAccessRole
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  tree          Tree            @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([treeId, userId])
+  @@index([userId, updatedAt])
+  @@map("user_tree_accesses")
+}
+
+model TreeSettings {
+  treeId                    String             @id
+  memberContributionPolicy  ContributionPolicy @default(pending)
+  visitorPolicy             VisitorPolicy      @default(read_only)
+  contributorPolicy         ContributionPolicy @default(pending)
+  updatedAt                 DateTime           @updatedAt
+  tree                      Tree               @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@map("tree_settings")
+}
+
+model Person {
+  id         String    @id @default(cuid())
+  treeId     String
+  firstName  String
+  lastName   String
+  birthName  String?
+  birthDate  DateTime?
+  deathDate  DateTime?
+  birthPlace String?
+  profession String?
+  region     String?
+  nationality String?
+  avatarPath String?
+  avatarMimeType String?
+  sex        String?
+  notes      String?
+  createdBy  String?
+  updatedBy  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  tree       Tree      @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+  @@map("persons")
+}
+
+model Union {
+  id               String    @id @default(cuid())
+  treeId           String
+  partner1PersonId String
+  partner2PersonId String?
+  unionType        String?
+  startDate        DateTime?
+  endDate          DateTime?
+  displayOrder     Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  tree             Tree      @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+  @@map("unions")
+}
+
+model ParentChildLink {
+  id            String    @id @default(cuid())
+  treeId        String
+  parentPersonId String
+  childPersonId String
+  viaUnionId    String?
+  parentageType String?
+  displayOrder  Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  tree          Tree      @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+  @@map("parent_child_links")
+}
+
+model MediaItem {
+  id          String   @id @default(cuid())
+  treeId      String
+  personId    String
+  type        String
+  mimeType    String
+  filePath    String
+  thumbPath   String?
+  caption     String?
+  source      String?
+  sizeBytes   Int
+  displayOrder Int      @default(1)
+  isFeatured  Boolean  @default(false)
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  tree        Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, personId, displayOrder])
+  @@map("media_items")
+}
+
+model ContributionSession {
+  id                String                    @id @default(cuid())
+  treeId            String
+  submittedByUserId String?
+  submittedByLabel  String
+  mode              ContributionActorMode
+  status            ContributionSessionStatus @default(pending)
+  title             String
+  createdAt         DateTime                  @default(now())
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  tree              Tree                      @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  submittedByUser   User?                     @relation("ContributionSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  reviewer          User?                     @relation("ContributionReviewedBy", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  changes           ContributionChange[]
+
+  @@index([treeId, status, createdAt])
+  @@index([submittedByUserId])
+  @@map("contribution_sessions")
+}
+
+model ContributionChange {
+  id           String               @id @default(cuid())
+  sessionId    String
+  entityType   ContributionEntityType
+  entityId     String?
+  action       ContributionAction
+  beforeJson   Json?
+  afterJson    Json?
+  conflictState ConflictState       @default(none)
+  decision     ContributionDecision?
+  createdAt    DateTime             @default(now())
+  session      ContributionSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("contribution_changes")
+}
+
+model Annotation {
+  id        String         @id @default(cuid())
+  treeId    String
+  type      AnnotationType
+  x         Float
+  y         Float
+  content   String
+  style     Json           @default("{}")
+  zIndex    Int            @default(0)
+  createdBy String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+  tree      Tree           @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+  @@map("annotations")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  treeId     String
+  actorType  String
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  payloadJson Json?
+  createdAt  DateTime @default(now())
+  tree       Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, createdAt])
+  @@map("audit_log")
+}
+
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  prenom    String?
+  source    String   @default("direct")
+  createdAt DateTime @default(now())
+
+  @@map("waitlist_entries")
+}
