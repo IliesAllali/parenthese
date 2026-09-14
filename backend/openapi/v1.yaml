@@ -605,6 +605,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /auth/me:
+    delete:
+      tags: [Auth]
+      summary: Permanently delete the current account
+      description: >
+        Requires the current password. Permanently deletes every tree owned by the user
+        (including trees already marked as deleted) with their media files, then the account.
+        Trees where the user is only a member or has shared access are kept.
+        The token used for the request is revoked.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+      responses:
+        '200':
+          description: Account deleted
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /trees:
     get:
       tags: [Trees]
@@ -760,6 +811,47 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: Slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Trees]
+      summary: Permanently delete a tree
+      description: >
+        Owner only. Deletes the tree and all its data (persons, links, media, annotations,
+        contributions, audit log) and removes its media directory.
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tree deleted
+        '400':
+          description: Invalid tree id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tree not found
           content:
             application/json:
               schema:

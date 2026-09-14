@@ -1,5 +1,7 @@
 # Parenthèse
 
+[![CI](https://github.com/IliesAllali/parenthese/actions/workflows/ci.yml/badge.svg)](https://github.com/IliesAllali/parenthese/actions/workflows/ci.yml)
+
 Une galaxie familiale plutôt qu'un arbre à cases. Chaque personne est un point, les unions et les filiations les relient, et l'on navigue dedans comme dans une carte.
 
 Site et démo : [parenthese.io](https://parenthese.io)
@@ -57,6 +59,8 @@ docker compose ps              # état des conteneurs
 docker compose down            # arrêt, les données sont conservées
 ```
 
+Pour vérifier qu'une installation fonctionne de bout en bout, lancez `bash tools/docker-smoke.sh http://localhost` (avec le port si `WEB_PORT` n'est pas 80). Le script a besoin de `curl` et `jq`. Il passe par le port web comme un navigateur : page d'accueil, santé de l'API, création d'un compte, connexion, création puis suppression d'une galaxie de test. Le compte de test (`smoke-...@example.com`) reste en base.
+
 ### Où sont les données
 
 Deux volumes Docker, conservés entre les redémarrages et les mises à jour :
@@ -99,6 +103,16 @@ npm --prefix backend run dev
 
 `db:bootstrap` démarre un PostgreSQL portable sous Windows (base `genealogy`, utilisateur `postgres`, port 5432) : les binaires doivent avoir été extraits dans `backend/.local/postgresql_full/pgsql`, le script ne les télécharge pas. Sur un autre système, n'importe quel PostgreSQL local convient : renseignez `DATABASE_URL` dans `backend/.env` (modèle dans `backend/.env.example`) et créez le schéma avec `npm --prefix backend run prisma:migrate`.
 
+Sur n'importe quel système avec Docker, une base jetable remplace `db:bootstrap` :
+
+```bash
+docker run -d --name parenthese-dev-db -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=genealogy postgres:16
+npm --prefix backend run prisma:deploy
+npm --prefix backend run dev
+```
+
+Avant `prisma:deploy`, `backend/.env` doit exister (copie de `backend/.env.example`) avec `DATABASE_URL="postgresql://postgres:postgres@localhost:5432/genealogy"`, qui correspond à ces identifiants. `docker stop parenthese-dev-db` arrête la base, `docker start parenthese-dev-db` la relance avec ses données.
+
 L'API écoute sur [http://localhost:4000](http://localhost:4000) et répond `{ "ok": true }` sur `/health`.
 
 ### Frontend
@@ -126,6 +140,10 @@ Le serveur Vite relaie `/api`, `/trees`, `/auth` et `/health` vers l'API locale 
 npm --prefix frontend test
 npm --prefix backend test
 ```
+
+## Contribuer
+
+Issues et petites pull requests ciblées sont les bienvenues : la marche à suivre, les tests à faire passer et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md). Pour une faille de sécurité, pas d'issue publique : voir [SECURITY.md](SECURITY.md).
 
 ## Licence
 

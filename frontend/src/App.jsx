@@ -48,6 +48,7 @@ import AnnotationToolbar from './components/annotations/AnnotationToolbar'
 import TextInputOverlay from './components/annotations/TextInputOverlay'
 import { filiations, medias, persons, unions } from './data/mockData'
 import { fileToBase64, getAccountErrorMessage } from './utils/errorMessages'
+import { getSiblingParentLinks } from './utils/familyLinks'
 import { getUploadMimeType, validateMediaFile } from './utils/mediaUpload'
 import {
   identifyUser,
@@ -830,6 +831,23 @@ function App() {
     setAddPersonError('')
 
     try {
+      // Un frère ou une sœur reçoit les mêmes parents que la personne choisie :
+      // sans parent connu, on s'arrête avant de créer quoi que ce soit.
+      const siblingParentLinks = []
+      if (tree.canEditCurrentTree || isDemoMode) {
+        for (const rel of formData.relations) {
+          if (rel.type !== 'sibling') continue
+          const links = getSiblingParentLinks(rel.personId, filiations, unions)
+          if (links.length === 0) {
+            const sibling = persons.find((person) => String(person.id) === String(rel.personId))
+            const siblingName = [sibling?.firstName, sibling?.lastName].filter(Boolean).join(' ') || 'cette personne'
+            setAddPersonError(`Ajoutez d'abord un parent à ${siblingName} pour pouvoir lui rattacher un frère ou une sœur.`)
+            return
+          }
+          siblingParentLinks.push(...links)
+        }
+      }
+
       if (!tree.canEditCurrentTree) {
         if (isDemoMode) {
           const personId = makeLocalId('local-person')
@@ -871,8 +889,8 @@ function App() {
             } else if (rel.type === 'parent') {
               filiations.push({
                 id: makeLocalId('local-filiation'),
-                childId: personId,
-                parentId: rel.personId,
+                childId: rel.personId,
+                parentId: personId,
                 unionId: null,
                 parentageType: 'biologique',
                 displayOrder: filiations.length + 1,
@@ -880,13 +898,31 @@ function App() {
             } else if (rel.type === 'child') {
               filiations.push({
                 id: makeLocalId('local-filiation'),
-                childId: rel.personId,
-                parentId: personId,
+                childId: personId,
+                parentId: rel.personId,
                 unionId: null,
                 parentageType: 'biologique',
                 displayOrder: filiations.length + 1,
               })
             }
+          }
+
+          for (const link of siblingParentLinks) {
+            const alreadyLinked = filiations.some((filiation) => (
+              String(filiation.childId) === String(personId)
+              && (link.unionId
+                ? String(filiation.unionId) === link.unionId
+                : String(filiation.parentId) === link.parentId)
+            ))
+            if (alreadyLinked) continue
+            filiations.push({
+              id: makeLocalId('local-filiation'),
+              childId: personId,
+              parentId: link.unionId ? null : link.parentId,
+              unionId: link.unionId,
+              parentageType: 'biologique',
+              displayOrder: filiations.length + 1,
+            })
           }
 
           tree.bumpGraphRevision()
@@ -923,8 +959,10 @@ function App() {
       )
 
       // Créer les liens de relation
+      const linkedParentIds = new Set()
       for (const rel of formData.relations) {
         if (rel.type === 'child') {
+          linkedParentIds.add(String(rel.personId))
           await createParentChildLink(
             tree.treeContext.treeId,
             { parentPersonId: rel.personId, childPersonId: newPerson.id, parentageType: 'biologique', displayOrder: 1 },
@@ -943,7 +981,22 @@ function App() {
             auth.userAuth.token
           )
         }
-        // TODO: sibling (nécessite de trouver les parents communs)
+      }
+
+      for (const link of siblingParentLinks) {
+        if (linkedParentIds.has(link.parentId)) continue
+        linkedParentIds.add(link.parentId)
+        await createParentChildLink(
+          tree.treeContext.treeId,
+          {
+            parentPersonId: link.parentId,
+            childPersonId: newPerson.id,
+            viaUnionId: link.unionId,
+            parentageType: 'biologique',
+            displayOrder: 1,
+          },
+          auth.userAuth.token
+        )
       }
 
       // Mettre à jour le draft avec la nouvelle personne
@@ -2135,6 +2188,22 @@ function App() {
   const handleLogout = async () => {
     setTreeNotFound(false)
     await auth.handleLogout()
+    resetSignedOutState()
+  }
+
+  // Suppression du compte : même remise à zéro que la déconnexion une fois la session effacée.
+  const handleDeleteAccount = async (password) => {
+    const errorMessage = await auth.handleDeleteAccount(password)
+    if (errorMessage) {
+      return errorMessage
+    }
+
+    setTreeNotFound(false)
+    resetSignedOutState()
+    return null
+  }
+
+  function resetSignedOutState() {
     tree.setWizardState({ visible: false, loading: false, error: '' })
     setAccountPanelVisible(false)
     setTreeWizardVisible(false)
@@ -2268,6 +2337,7 @@ function App() {
           onOpenTree={handleOpenTreeFromAccount}
           onStartTreeWizard={handleOpenTreeWizard}
           onLogout={handleLogout}
+          onDeleteAccount={handleDeleteAccount}
           onBackToAccess={handleBackToAccess}
           onUseDemo={handleUseDemo}
         />
@@ -2323,12 +2393,6 @@ function App() {
         onResultClick={(person) => {
           const fullPerson = persons.find(p => p.id === person.id)
           if (fullPerson) tree.setSelectedPerson(fullPerson)
-        }}
-        onResultHover={() => {
-          // TODO: Highlight dans galaxie
-        }}
-        onResultHoverEnd={() => {
-          // TODO: Clear highlight galaxie
         }}
       />
       {/* Draft Restore Banner (au reload si draft trouvé) */}

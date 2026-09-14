@@ -208,13 +208,21 @@ const graph = await api(`/trees/${treeId}/graph`, { token: owner.token })
 const applied = (graph.graph?.persons || []).some(p => p.firstName === 'Directe')
 check('8. contribution appliquée directement et visible dans l arbre', directSession.status === 'approved' && applied, `${directSession.status}, ${(graph.graph?.persons || []).length} personne(s)`)
 
-// ---------- Nettoyage : l'arbre de test est supprimé (les deux comptes de test restent, pas de route de suppression) ----------
+// ---------- Nettoyage : les deux comptes de test sont supprimés, l'arbre du propriétaire part avec le sien ----------
 if (process.env.CLEANUP === '1') {
+  for (const [label, account, token] of [['famille', FAMILY, familyLogin.token], ['propriétaire', OWNER, owner.token]]) {
+    try {
+      await api('/auth/me', { method: 'DELETE', token, body: { password: account.password } })
+      check(`9. compte ${label} supprimé`, true)
+    } catch (err) {
+      check(`9. compte ${label} supprimé`, false, String(err.message).slice(0, 120))
+    }
+  }
   try {
-    await api(`/trees/${treeId}`, { method: 'DELETE', token: owner.token })
-    check('9. arbre de test supprimé', true, `comptes restants : ${OWNER.email}, ${FAMILY.email}`)
-  } catch (err) {
-    check('9. arbre de test supprimé', false, String(err.message).slice(0, 120))
+    await api(`/trees/${treeId}/graph`, { token: owner.token })
+    check('9. arbre de test inaccessible', false, 'le graphe répond encore')
+  } catch {
+    check('9. arbre de test inaccessible', true)
   }
 }
 

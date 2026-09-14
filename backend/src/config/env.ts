@@ -6,11 +6,6 @@ loadDotenv()
 const DEV_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/genealogy'
 const DEV_JWT_SECRET = 'dev-secret-change-me-please'
 
-const optionalEnvString = z.preprocess(
-  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-  z.string().trim().min(1).optional(),
-)
-
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -23,12 +18,6 @@ const envSchema = z.object({
     .default('http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176')
     .transform((value) => value.split(',').map((origin) => origin.trim()).filter(Boolean)),
   MEDIA_STORAGE_PATH: z.string().default('./storage/media'),
-  RESEND_API_KEY: optionalEnvString,
-  RESEND_WAITLIST_SEGMENT_ID: optionalEnvString,
-  RESEND_WAITLIST_AUDIENCE_ID: optionalEnvString,
-  RESEND_WAITLIST_FROM: optionalEnvString,
-  RESEND_WAITLIST_REPLY_TO: optionalEnvString,
-  RESEND_WAITLIST_UNSUBSCRIBE_URL: optionalEnvString,
 })
 
 export const env = envSchema.parse(process.env)

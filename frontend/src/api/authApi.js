@@ -29,6 +29,18 @@ export async function logoutUser(token) {
   return data
 }
 
+export async function deleteAccount(token, password) {
+  const data = await apiRequest('/auth/me', {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  })
+
+  return data
+}
+
 export async function fetchLastOpenedTree(token) {
   const data = await apiRequest('/auth/me/last-tree', {
     method: 'GET',

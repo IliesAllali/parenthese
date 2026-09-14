@@ -14,6 +14,26 @@ export function getShareErrorMessage(error) {
   return 'Connexion backend impossible. Vérifiez API/DB puis réessayez.'
 }
 
+export function getAccountDeletionErrorMessage(error) {
+  if (error?.status === 403) {
+    return 'Mot de passe incorrect.'
+  }
+
+  if (error?.status === 401) {
+    return 'Session expirée. Reconnectez-vous puis réessayez.'
+  }
+
+  if (error?.status === 400) {
+    return 'Saisissez votre mot de passe actuel.'
+  }
+
+  if (error?.status === 429) {
+    return 'Trop de tentatives. Réessayez dans une minute.'
+  }
+
+  return 'Impossible de supprimer le compte pour le moment. Réessayez plus tard.'
+}
+
 export function getAccountErrorMessage(error) {
   const errorCode = error?.payload?.error || error?.message || ''
 

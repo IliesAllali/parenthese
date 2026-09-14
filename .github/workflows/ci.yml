@@ -1,0 +1,181 @@
+name: CI
+
+# Tests, lint et builds des trois projets, plus une installation Docker complète testée comme un
+# auto-hébergeur. Le déploiement de production (deploy-hostinger.yml) attend la réussite de ce workflow.
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+permissions:
+  contents: read
+
+# Un nouveau push sur la même branche annule la vérification devenue obsolète.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  landing:
+    name: Landing
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Tests
+        run: npm test
+
+      # Le build lit les polices dans ../frontend/src/assets, présentes dans le dépôt.
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    # Les tests vitest remplacent Prisma par un mock et fixent leurs propres variables d'environnement :
+    # ils n'utilisent pas la base. Elle sert à vérifier que les migrations s'appliquent sur une base
+    # vide (ce que fait le premier démarrage Docker) et qu'elles reproduisent exactement schema.prisma.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: genealogy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d genealogy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/genealogy
+      CHECKPOINT_DISABLE: '1'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Dépendances
+        run: npm ci --no-audit --no-fund
+
+      - name: Client Prisma
+        run: npm run prisma:generate
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Migrations sur une base vide
+        run: npx prisma migrate deploy
+
+      - name: Schéma Prisma aligné sur les migrations
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+
+      - name: Tests
+        run: npm test
+
+  docker:
+    name: Docker (auto-hébergement)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Fichier .env de test
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          set_env() {
+            if grep -q "^$1=" .env; then
+              sed -i "s|^$1=.*|$1=$2|" .env
+            else
+              printf '%s=%s\n' "$1" "$2" >> .env
+            fi
+          }
+          # Valeurs hexadécimales : sans caractère spécial, sûres dans l'URL de connexion PostgreSQL.
+          set_env POSTGRES_PASSWORD "$(openssl rand -hex 24)"
+          set_env JWT_SECRET "$(openssl rand -hex 48)"
+          set_env WEB_PORT 8080
+          set_env CORS_ORIGIN http://localhost:8080
+          grep -Ev '^(POSTGRES_PASSWORD|JWT_SECRET)=' .env | grep -Ev '^\s*(#|$)'
+
+      - name: Configuration compose valide
+        run: docker compose config --quiet
+
+      - name: Construction et démarrage
+        run: docker compose up -d --build --wait --wait-timeout 420
+
+      - name: Test de fumée par le port web
+        run: bash tools/docker-smoke.sh http://localhost:8080
+
+      - name: État et journaux en cas d'échec
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --timestamps
+
+      - name: Arrêt et suppression des volumes
+        if: always()
+        run: docker compose down -v --remove-orphans

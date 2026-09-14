@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # API Parenthèse (Fastify + Prisma). Contexte de build : le dossier backend/.
 # Étape 1 : dépendances complètes, client Prisma, compilation TypeScript.
-# Étape 2 : image finale avec les seules dépendances de production + la CLI Prisma
-#           (nécessaire à `prisma migrate deploy` au démarrage).
+# Étape 2 : image finale avec les seules dépendances de production, plus la CLI Prisma
+#           installée à part (nécessaire à `prisma migrate deploy` au démarrage).
 
 FROM node:24-bookworm-slim AS build
 
@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 RUN npx prisma generate
 
 COPY tsconfig.json ./
@@ -31,11 +31,19 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Dépendances de production seules, puis la CLI Prisma épinglée sur la version
-# du client déjà installé (prisma est une devDependency dans package.json).
+# Dépendances de production seules.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev \
-  && npm install --no-save --omit=dev "prisma@$(node -p "require('@prisma/client/package.json').version")" \
+RUN npm ci --omit=dev --no-audit --no-fund \
+  && npm cache clean --force
+
+# CLI Prisma : c'est une devDependency, donc absente de l'installation précédente. Elle est installée
+# dans un dossier séparé, à la version exacte du package-lock, pour ne pas toucher à node_modules
+# (un `npm install --omit=dev prisma` dans /app l'ignorerait, puisqu'elle est déclarée en dev).
+RUN PRISMA_VERSION="$(node -p "require('./package-lock.json').packages['node_modules/prisma'].version")" \
+  && mkdir -p /opt/prisma \
+  && cd /opt/prisma \
+  && echo '{"private":true}' > package.json \
+  && npm install --no-audit --no-fund "prisma@${PRISMA_VERSION}" \
   && npm cache clean --force
 
 # Client Prisma généré à l'étape 1 (même image de base, même cible de moteur).
@@ -48,11 +56,12 @@ RUN mkdir -p /app/storage/media && chown -R node:node /app/storage
 
 ENV NODE_ENV=production \
     PORT=4000 \
-    MEDIA_STORAGE_PATH=/app/storage/media
+    MEDIA_STORAGE_PATH=/app/storage/media \
+    CHECKPOINT_DISABLE=1 \
+    PATH=/opt/prisma/node_modules/.bin:$PATH
 
 USER node
 EXPOSE 4000
 
-# Applique les migrations en attente puis démarre l'API (docker-compose.yml
-# reprend la même commande explicitement).
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && exec node dist/server.js"]
+# Applique les migrations en attente puis démarre l'API.
+CMD ["sh", "-c", "prisma migrate deploy && exec node dist/server.js"]

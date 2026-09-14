@@ -1,5 +1,24 @@
 import { describe, it, expect } from 'vitest'
-import { getShareErrorMessage, getAccountErrorMessage } from './errorMessages'
+import { getShareErrorMessage, getAccountErrorMessage, getAccountDeletionErrorMessage } from './errorMessages'
+
+describe('getAccountDeletionErrorMessage', () => {
+  it('returns wrong password message for 403', () => {
+    expect(getAccountDeletionErrorMessage({ status: 403 })).toBe('Mot de passe incorrect.')
+  })
+
+  it('returns session message for 401', () => {
+    expect(getAccountDeletionErrorMessage({ status: 401 })).toBe('Session expirée. Reconnectez-vous puis réessayez.')
+  })
+
+  it('returns rate limit message for 429', () => {
+    expect(getAccountDeletionErrorMessage({ status: 429 })).toBe('Trop de tentatives. Réessayez dans une minute.')
+  })
+
+  it('returns default message for unknown errors', () => {
+    expect(getAccountDeletionErrorMessage(null))
+      .toBe('Impossible de supprimer le compte pour le moment. Réessayez plus tard.')
+  })
+})
 
 describe('getShareErrorMessage', () => {
   it('returns password message for 401', () => {

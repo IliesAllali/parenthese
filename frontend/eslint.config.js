@@ -33,4 +33,10 @@ export default defineConfig([
       'react-hooks/exhaustive-deps': 'off',
     },
   },
+  {
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

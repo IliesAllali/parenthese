@@ -5,11 +5,16 @@ import { z } from 'zod'
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
 import { revokeUserToken } from '../lib/token-revocation.js'
+import { deleteTreeRecords, removeTreeMediaDirectories } from '../lib/tree-purge.js'
 import type { AnyJwtPayload } from '../types/auth.js'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
+})
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1).max(128),
 })
 
 const updateLastTreeSchema = z.object({
@@ -278,6 +283,77 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       },
     })
   })
+
+  app.delete(
+    '/me',
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      if (!request.actor || request.actor.kind !== 'user') {
+        return reply.code(401).send({ error: 'authentication_required' })
+      }
+
+      const parsed = deleteAccountSchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
+      }
+
+      const userId = request.actor.userId
+      const user = await app.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          passwordHash: true,
+        },
+      })
+
+      if (!user) {
+        return reply.code(401).send({ error: 'authentication_required' })
+      }
+
+      const isValid = await verifyPassword(parsed.data.password, user.passwordHash)
+      if (!isValid) {
+        return reply.code(403).send({ error: 'invalid_password' })
+      }
+
+      const payload = await request.jwtVerify<AnyJwtPayload & { exp?: number }>()
+
+      // Arbres possédés (y compris ceux marqués supprimés) puis compte, dans une seule transaction :
+      // la relation propriétaire est en Restrict, les arbres doivent partir avant l'utilisateur.
+      const ownedTreeIds = await app.prisma.$transaction(async (tx) => {
+        const ownedTrees = await tx.tree.findMany({
+          where: { ownerUserId: userId },
+          select: { id: true },
+        })
+        const treeIds = ownedTrees.map((tree) => tree.id)
+
+        await deleteTreeRecords(tx, treeIds)
+
+        // Les contributions envoyées à d'autres familles restent, sans l'adresse email de l'auteur.
+        await tx.contributionSession.updateMany({
+          where: { submittedByUserId: userId },
+          data: { submittedByLabel: 'Contributeur' },
+        })
+
+        await tx.user.delete({ where: { id: userId } })
+        return treeIds
+      })
+
+      if (payload.kind === 'user' && typeof payload.exp === 'number') {
+        revokeUserToken(payload.jti, payload.exp)
+      }
+
+      await removeTreeMediaDirectories(ownedTreeIds, request.log)
+
+      return reply.send({ ok: true })
+    },
+  )
 
   app.post('/logout', async (request, reply) => {
     if (!request.actor || request.actor.kind !== 'user') {

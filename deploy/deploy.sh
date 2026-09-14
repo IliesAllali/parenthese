@@ -1,7 +1,7 @@
 #!/bin/bash
 # Parenthèse : déploiement sur le VPS.
 #
-# Lancé par GitHub Actions à chaque push sur main (.github/workflows/deploy-hostinger.yml),
+# Lancé par GitHub Actions après une CI réussie sur main (.github/workflows/deploy-hostinger.yml),
 # ou à la main :  bash deploy/deploy.sh --sync   (aligne le dépôt sur origin/main puis déploie)
 #
 # Incrémental : les dépendances ne sont réinstallées que si un package-lock a changé, et seules les
