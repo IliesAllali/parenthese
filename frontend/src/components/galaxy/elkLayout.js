@@ -1,0 +1,767 @@
+import { persons as globalPersons, unions as globalUnions, filiations as globalFiliations } from '../../data/mockData'
+import {
+  PERSON_W, PERSON_H, UNION_W, UNION_H,
+  UNKNOWN_W, UNKNOWN_H,
+  JITTER_RADIUS, FLOAT_AMPLITUDE, FLOAT_SPEED,
+  ANGLE_VARIATION, MAX_ORBIT_MEDIAS, ORBIT_RADIUS,
+} from './constants'
+
+// ============================================================
+// État partagé — peuplé par computeLayout, lu par renderers
+// ============================================================
+export let coupleBarMeta = []
+export let componentOrderPerGen = new Map()
+
+// ============================================================
+// Helpers
+// ============================================================
+function toOrder(value) {
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+}
+
+function compareByOrderThenId(a, b) {
+  const orderDiff = toOrder(a.displayOrder) - toOrder(b.displayOrder)
+  if (orderDiff !== 0) return orderDiff
+  return String(a.id || '').localeCompare(String(b.id || ''))
+}
+
+function makePairKey(a, b) {
+  const left = String(a)
+  const right = String(b)
+  return left < right ? `${left}|${right}` : `${right}|${left}`
+}
+
+// ============================================================
+// Normalisation des filiations
+// ============================================================
+export function normalizeFiliationsForLayout(filiations = [], unions = []) {
+  const unionsById = new Map(unions.map((union) => [union.id, union]))
+  const bestUnionByPair = new Map()
+
+  unions.forEach((union) => {
+    if (!union.partner1Id || !union.partner2Id) return
+    const key = makePairKey(union.partner1Id, union.partner2Id)
+    const current = bestUnionByPair.get(key)
+    if (!current || compareByOrderThenId(union, current) < 0) {
+      bestUnionByPair.set(key, union)
+    }
+  })
+
+  const byChild = new Map()
+  filiations.forEach((filiation) => {
+    const childId = filiation.childId
+    if (!childId) return
+    if (!byChild.has(childId)) byChild.set(childId, [])
+    byChild.get(childId).push(filiation)
+  })
+
+  const normalized = []
+
+  byChild.forEach((childFiliations) => {
+    const ordered = [...childFiliations].sort(compareByOrderThenId)
+    const unionFiliations = []
+    const directByParent = new Map()
+    const seenUnionIds = new Set()
+
+    ordered.forEach((filiation) => {
+      if (filiation.unionId) {
+        if (!seenUnionIds.has(filiation.unionId)) {
+          seenUnionIds.add(filiation.unionId)
+          unionFiliations.push(filiation)
+        }
+        return
+      }
+
+      if (!filiation.parentId) return
+      if (!directByParent.has(filiation.parentId)) {
+        directByParent.set(filiation.parentId, filiation)
+      }
+    })
+
+    const usedDirectParents = new Set()
+    const directParents = [...directByParent.keys()].sort((left, right) => (
+      compareByOrderThenId(directByParent.get(left), directByParent.get(right))
+    ))
+
+    unionFiliations.forEach((filiation) => {
+      const union = unionsById.get(filiation.unionId)
+      if (!union || !union.partner1Id || !union.partner2Id) return
+      usedDirectParents.add(union.partner1Id)
+      usedDirectParents.add(union.partner2Id)
+    })
+
+    const syntheticUnionFiliations = []
+    for (let i = 0; i < directParents.length; i += 1) {
+      const parentA = directParents[i]
+      if (usedDirectParents.has(parentA)) continue
+
+      for (let j = i + 1; j < directParents.length; j += 1) {
+        const parentB = directParents[j]
+        if (usedDirectParents.has(parentB)) continue
+
+        const filiationA = directByParent.get(parentA)
+        const matchingUnion = bestUnionByPair.get(makePairKey(parentA, parentB))
+        if (!matchingUnion || seenUnionIds.has(matchingUnion.id)) continue
+
+        syntheticUnionFiliations.push({
+          id: `synthetic-${filiationA.childId}-${matchingUnion.id}`,
+          childId: filiationA.childId,
+          unionId: matchingUnion.id,
+          parentId: null,
+          parentageType: 'biologique',
+          displayOrder: Math.min(toOrder(filiationA.displayOrder), toOrder(directByParent.get(parentB)?.displayOrder)),
+        })
+
+        seenUnionIds.add(matchingUnion.id)
+        usedDirectParents.add(parentA)
+        usedDirectParents.add(parentB)
+        break
+      }
+    }
+
+    const directFiliations = directParents
+      .filter((parentId) => !usedDirectParents.has(parentId))
+      .map((parentId) => directByParent.get(parentId))
+
+    normalized.push(...unionFiliations, ...syntheticUnionFiliations, ...directFiliations)
+  })
+
+  return normalized.sort((left, right) => {
+    const childDiff = String(left.childId).localeCompare(String(right.childId))
+    if (childDiff !== 0) return childDiff
+    return compareByOrderThenId(left, right)
+  })
+}
+
+// ============================================================
+// Layout complet
+//
+// Algorithme Sugiyama adapté aux couples :
+//   Phase 1 : Assignation des générations (Y) par parcours parental
+//   Phase 2 : Création des nœuds (personne, union, inconnu)
+//   Phase 3 : Chaînes par génération + tri barycentrique
+//   Phase 4 : Positionnement X — placement symétrique bidirectionnel
+//     Pass A : Ordonnancement top-down par position parentale
+//     Pass B : Placement initial bottom-up (centrage sur enfants)
+//     Pass C : Convergence itérative (top-down + bottom-up, 4 itérations)
+//     Normalisation X ≥ 0
+//   Phase 5 : Positionnement Y
+//
+// Le placement symétrique (balayage LR + RL, moyenne) élimine
+// la dérive vers la droite et centre les sous-arbres naturellement.
+// ============================================================
+
+const LAYER_SPACING = 60
+const BASE_NODE_SPACING = 30
+const BASE_FAMILY_GAP = 60
+const LARGE_FAMILY_NODE_SPACING = 40
+const LARGE_FAMILY_GAP = 80
+const LARGE_FAMILY_THRESHOLD = 3
+const CLUSTER_SPREAD_FACTOR = 6
+
+export function computeLayout(graphData = null) {
+  const persons = graphData?.persons || globalPersons
+  const unions = graphData?.unions || globalUnions
+  const filiations = graphData?.filiations || globalFiliations
+
+  const normalizedFiliations = normalizeFiliationsForLayout(filiations, unions)
+
+  const unionsById = new Map(unions.map(u => [u.id, u]))
+  const filiationsByChild = new Map()
+  normalizedFiliations.forEach(f => {
+    if (!filiationsByChild.has(f.childId)) filiationsByChild.set(f.childId, [])
+    filiationsByChild.get(f.childId).push(f)
+  })
+
+  // ----------------------------------------------------------
+  // PHASE 1 : Assigner les générations (Y)
+  // ----------------------------------------------------------
+  const genMap = new Map()
+
+  function calcGen(pid, visited = new Set()) {
+    if (genMap.has(pid)) return genMap.get(pid)
+    if (visited.has(pid)) return 0
+    visited.add(pid)
+    const parentFils = filiationsByChild.get(pid) || []
+    if (parentFils.length === 0) { genMap.set(pid, 0); return 0 }
+
+    let best = Number.MAX_SAFE_INTEGER
+    for (const f of parentFils) {
+      if (f.unionId) {
+        const u = unionsById.get(f.unionId)
+        if (!u) continue
+        const g = Math.max(
+          calcGen(u.partner1Id, new Set(visited)),
+          calcGen(u.partner2Id, new Set(visited)),
+        ) + 1
+        if (g < best) best = g
+      } else if (f.parentId) {
+        const g = calcGen(f.parentId, new Set(visited)) + 1
+        if (g < best) best = g
+      }
+    }
+    const gen = best === Number.MAX_SAFE_INTEGER ? 0 : best
+    genMap.set(pid, gen)
+    return gen
+  }
+
+  persons.forEach(p => calcGen(p.id))
+
+  // Aligner les partenaires sur la même génération
+  unions.forEach(u => {
+    const maxG = Math.max(genMap.get(u.partner1Id) ?? 0, genMap.get(u.partner2Id) ?? 0)
+    genMap.set(u.partner1Id, maxG)
+    genMap.set(u.partner2Id, maxG)
+  })
+
+  // Ajuster les racines orphelines : si un ancêtre sans parents connus
+  // a des enfants à gen N, il doit être à gen N-1 (pas gen 0).
+  {
+    const rootIds = new Set(persons.filter(p => !filiationsByChild.has(p.id)).map(p => p.id))
+    const maxChildGenByRoot = new Map()
+    normalizedFiliations.forEach(f => {
+      const childGen = genMap.get(f.childId)
+      if (childGen === undefined) return
+      const parentIds = []
+      if (f.unionId) {
+        const u = unionsById.get(f.unionId)
+        if (u?.partner1Id) parentIds.push(u.partner1Id)
+        if (u?.partner2Id) parentIds.push(u.partner2Id)
+      } else if (f.parentId) {
+        parentIds.push(f.parentId)
+      }
+      for (const pid of parentIds) {
+        if (!rootIds.has(pid)) continue
+        if ((maxChildGenByRoot.get(pid) ?? -1) < childGen) maxChildGenByRoot.set(pid, childGen)
+      }
+    })
+
+    let anyAdjusted = false
+    for (const [pid, maxChildGen] of maxChildGenByRoot) {
+      const idealGen = maxChildGen - 1
+      if (idealGen > 0) { genMap.set(pid, idealGen); anyAdjusted = true }
+    }
+
+    if (anyAdjusted) {
+      unions.forEach(u => {
+        const maxG = Math.max(genMap.get(u.partner1Id) ?? 0, genMap.get(u.partner2Id) ?? 0)
+        genMap.set(u.partner1Id, maxG)
+        genMap.set(u.partner2Id, maxG)
+      })
+      persons.forEach(p => { if (!rootIds.has(p.id)) genMap.delete(p.id) })
+      persons.forEach(p => calcGen(p.id))
+      unions.forEach(u => {
+        const maxG = Math.max(genMap.get(u.partner1Id) ?? 0, genMap.get(u.partner2Id) ?? 0)
+        genMap.set(u.partner1Id, maxG)
+        genMap.set(u.partner2Id, maxG)
+      })
+    }
+  }
+
+  // ----------------------------------------------------------
+  // PHASE 2 : Créer les nœuds du graphe
+  // ----------------------------------------------------------
+  const allNodes = []
+  const allEdges = []
+  const pushedNodeIds = new Set()
+  const personByElkId = new Map(persons.map(p => [`p-${p.id}`, p]))
+  const unionEntryByElkId = new Map()
+
+  function pushNode(node) {
+    if (pushedNodeIds.has(node.id)) return
+    pushedNodeIds.add(node.id)
+    allNodes.push(node)
+  }
+
+  // Unions virtuelles (parent unique → inconnu)
+  const virtualUnions = []
+  normalizedFiliations.forEach(f => {
+    if (!f.unionId && f.parentId) {
+      virtualUnions.push({
+        elkId: `vu-${f.id}`,
+        unknownElkId: `unknown-${f.id}`,
+        parentId: f.parentId,
+        filiation: f,
+      })
+    }
+  })
+
+  // Entrées d'union unifiées (réelles + virtuelles)
+  const allUnionEntries = [
+    ...unions.map(u => ({
+      elkId: `u-${u.id}`, p1Key: `p-${u.partner1Id}`, p2Key: `p-${u.partner2Id}`, virtual: false,
+    })),
+    ...virtualUnions.map(vu => ({
+      elkId: vu.elkId, p1Key: `p-${vu.parentId}`, p2Key: vu.unknownElkId, virtual: true,
+    })),
+  ]
+  allUnionEntries.forEach(e => unionEntryByElkId.set(e.elkId, e))
+
+  // Adjacence partenaire (personne ↔ personne via union, même génération)
+  const adj = new Map()
+  function ensureAdj(key) { if (!adj.has(key)) adj.set(key, []) }
+  persons.forEach(p => ensureAdj(`p-${p.id}`))
+  virtualUnions.forEach(vu => ensureAdj(vu.unknownElkId))
+  allUnionEntries.forEach(ue => {
+    ensureAdj(ue.p1Key)
+    ensureAdj(ue.p2Key)
+    adj.get(ue.p1Key).push({ unionElkId: ue.elkId, otherKey: ue.p2Key })
+    adj.get(ue.p2Key).push({ unionElkId: ue.elkId, otherKey: ue.p1Key })
+  })
+
+  // Grouper les clés personne/inconnu par génération
+  const genNodeKeys = new Map()
+  persons.forEach(p => {
+    const g = genMap.get(p.id) ?? 0
+    if (!genNodeKeys.has(g)) genNodeKeys.set(g, new Set())
+    genNodeKeys.get(g).add(`p-${p.id}`)
+  })
+  virtualUnions.forEach(vu => {
+    const g = genMap.get(vu.parentId) ?? 0
+    if (!genNodeKeys.has(g)) genNodeKeys.set(g, new Set())
+    genNodeKeys.get(g).add(vu.unknownElkId)
+  })
+
+  // Enfants par clé parente (pour heuristiques de tri)
+  const childrenByParentKey = new Map()
+  normalizedFiliations.forEach(f => {
+    const childKey = `p-${f.childId}`
+    if (f.unionId) {
+      const union = unionsById.get(f.unionId)
+      if (!union) return
+      for (const partnerId of [union.partner1Id, union.partner2Id]) {
+        const pKey = `p-${partnerId}`
+        if (!childrenByParentKey.has(pKey)) childrenByParentKey.set(pKey, [])
+        childrenByParentKey.get(pKey).push(childKey)
+      }
+    } else if (f.parentId) {
+      const pKey = `p-${f.parentId}`
+      if (!childrenByParentKey.has(pKey)) childrenByParentKey.set(pKey, [])
+      childrenByParentKey.get(pKey).push(childKey)
+    }
+  })
+
+  // union/vu elkId → [child elkId]
+  const childrenBySourceId = new Map()
+  normalizedFiliations.forEach(f => {
+    const sourceId = f.unionId ? `u-${f.unionId}` : `vu-${f.id}`
+    const targetId = `p-${f.childId}`
+    if (!childrenBySourceId.has(sourceId)) childrenBySourceId.set(sourceId, [])
+    childrenBySourceId.get(sourceId).push(targetId)
+  })
+
+  // child nodeId → [parent union/vu nodeIds]
+  const parentUnionsByChild = new Map()
+  for (const [sourceId, children] of childrenBySourceId) {
+    for (const childId of children) {
+      if (!parentUnionsByChild.has(childId)) parentUnionsByChild.set(childId, [])
+      parentUnionsByChild.get(childId).push(sourceId)
+    }
+  }
+
+  // ----------------------------------------------------------
+  // PHASE 3 : Chaînes par génération + linéarisation
+  // ----------------------------------------------------------
+  const sortedGens = [...genNodeKeys.keys()].sort((a, b) => a - b)
+  componentOrderPerGen = new Map()
+
+  function traverseChain(component, gen, chainVisited) {
+    // Choisir le point de départ (extrémité de la chaîne)
+    const leaves = [...component].filter(key =>
+      (adj.get(key) || []).filter(n => component.has(n.otherKey)).length <= 1
+    )
+    let leaf = leaves[0] || [...component][0]
+
+    // Si plusieurs extrémités, choisir celle dont les enfants sont le plus à gauche
+    if (leaves.length > 1) {
+      const nodeIdx = new Map(allNodes.map((n, i) => [n.id, i]))
+      let bestIdx = Number.MAX_SAFE_INTEGER
+      for (const leafKey of leaves) {
+        const children = childrenByParentKey.get(leafKey) || []
+        const minIdx = children.reduce((m, c) => Math.min(m, nodeIdx.get(c) ?? Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER)
+        if (minIdx < bestIdx) { bestIdx = minIdx; leaf = leafKey }
+      }
+    }
+
+    function traverse(key) {
+      if (chainVisited.has(key)) return
+      chainVisited.add(key)
+
+      if (key.startsWith('p-')) {
+        const person = personByElkId.get(key)
+        if (person) {
+          pushNode({
+            id: key, width: PERSON_W, height: PERSON_H,
+            _type: 'person', _data: person, _generation: gen,
+          })
+        }
+      } else if (key.startsWith('unknown-')) {
+        pushNode({
+          id: key, width: UNKNOWN_W, height: UNKNOWN_H,
+          _type: 'unknown', _data: { label: 'Inconnu' }, _generation: gen,
+        })
+      }
+
+      const neighbors = (adj.get(key) || [])
+        .filter(n => component.has(n.otherKey) && !chainVisited.has(n.otherKey))
+
+      for (const { unionElkId, otherKey } of neighbors) {
+        pushNode({
+          id: unionElkId, width: UNION_W, height: UNION_H,
+          _type: 'union',
+          _data: unionEntryByElkId.get(unionElkId) || { id: unionElkId },
+          _generation: gen,
+        })
+        traverse(otherKey)
+      }
+    }
+
+    traverse(leaf)
+  }
+
+  for (const gen of sortedGens) {
+    const keysInGen = genNodeKeys.get(gen)
+    const visited = new Set()
+    const components = []
+
+    for (const startKey of keysInGen) {
+      if (visited.has(startKey)) continue
+      const component = new Set()
+      const queue = [startKey]
+      component.add(startKey)
+      while (queue.length > 0) {
+        const cur = queue.shift()
+        for (const { otherKey } of (adj.get(cur) || [])) {
+          if (!component.has(otherKey) && keysInGen.has(otherKey)) {
+            component.add(otherKey)
+            queue.push(otherKey)
+          }
+        }
+      }
+      component.forEach(k => visited.add(k))
+      components.push(component)
+    }
+
+    // Heuristique barycentrique : trier par position des parents déjà placés
+    if (gen > 0) {
+      const nodeIdx = new Map(allNodes.map((n, i) => [n.id, i]))
+      const getAvgParentPos = (comp) => {
+        let sum = 0, count = 0
+        for (const key of comp) {
+          for (const unionId of (parentUnionsByChild.get(key) || [])) {
+            const idx = nodeIdx.get(unionId)
+            if (idx !== undefined) { sum += idx; count++ }
+          }
+        }
+        return count > 0 ? sum / count : Number.MAX_SAFE_INTEGER
+      }
+      sortWithSiblingGrouping(components, getAvgParentPos)
+    }
+
+    if (!componentOrderPerGen.has(gen)) componentOrderPerGen.set(gen, [])
+    for (const component of components) {
+      const countBefore = allNodes.length
+      traverseChain(component, gen, new Set())
+      const addedIds = allNodes.slice(countBefore).map(n => n.id)
+      componentOrderPerGen.get(gen).push(addedIds)
+    }
+  }
+
+  // Construire coupleBarMeta et edges
+  const validNodeIds = new Set(allNodes.map(n => n.id))
+  coupleBarMeta = allUnionEntries
+    .filter(e => validNodeIds.has(e.elkId) && validNodeIds.has(e.p1Key) && validNodeIds.has(e.p2Key))
+    .map(e => ({ ...e }))
+
+  normalizedFiliations.forEach(f => {
+    const sourceId = f.unionId ? `u-${f.unionId}` : `vu-${f.id}`
+    const targetId = `p-${f.childId}`
+    if (!validNodeIds.has(sourceId) || !validNodeIds.has(targetId)) return
+    allEdges.push({
+      id: `e-${f.id}`, sources: [sourceId], targets: [targetId],
+      _parentageType: f.parentageType,
+    })
+  })
+
+  // ----------------------------------------------------------
+  // PHASE 4 : Positionnement X (3 passes)
+  // ----------------------------------------------------------
+  const nodeById = new Map(allNodes.map(n => [n.id, n]))
+
+  function isLargeFamilyUnion(unionId) {
+    return (childrenBySourceId.get(unionId) || []).length >= LARGE_FAMILY_THRESHOLD
+  }
+
+  function hasLargeFamilyContext(compNodeIds) {
+    for (const nodeId of compNodeIds) {
+      const node = nodeById.get(nodeId)
+      if (node?._type === 'union' && isLargeFamilyUnion(nodeId)) return true
+      for (const uid of (parentUnionsByChild.get(nodeId) || [])) {
+        if (isLargeFamilyUnion(uid)) return true
+      }
+    }
+    return false
+  }
+
+  function getSpacing(compNodeIds) {
+    const isLarge = hasLargeFamilyContext(compNodeIds)
+    const nodeSpacing = isLarge ? LARGE_FAMILY_NODE_SPACING : BASE_NODE_SPACING
+    const baseGap = isLarge ? LARGE_FAMILY_GAP : BASE_FAMILY_GAP
+    const extraGap = Math.min(Math.max(0, compNodeIds.length - 2), 15) * CLUSTER_SPREAD_FACTOR
+    return { nodeSpacing, familyGap: baseGap + extraGap }
+  }
+
+  function getComponentWidth(compNodeIds, nodeSpacing) {
+    const nodes = compNodeIds.map(id => nodeById.get(id)).filter(Boolean)
+    return nodes.reduce((sum, n) => sum + n.width, 0) + Math.max(0, nodes.length - 1) * nodeSpacing
+  }
+
+  function placeComponentAt(compNodeIds, left, nodeSpacing) {
+    let x = left
+    for (const nodeId of compNodeIds) {
+      const node = nodeById.get(nodeId)
+      if (!node) continue
+      node.x = x
+      x += node.width + nodeSpacing
+    }
+  }
+
+  // Helper : trier avec regroupement des fratries (union-find)
+  // Garantit que les composantes partageant une union parente restent contiguës.
+  function sortWithSiblingGrouping(components, getKey) {
+    if (components.length <= 1) return
+
+    const uf = Array.from({ length: components.length }, (_, i) => i)
+    function find(x) {
+      while (uf[x] !== x) { uf[x] = uf[uf[x]]; x = uf[x] }
+      return x
+    }
+    function unite(a, b) { uf[find(a)] = find(b) }
+
+    const unionToComp = new Map()
+    components.forEach((comp, idx) => {
+      for (const nodeId of comp) {
+        for (const unionId of (parentUnionsByChild.get(nodeId) || [])) {
+          if (unionToComp.has(unionId)) unite(idx, unionToComp.get(unionId))
+          else unionToComp.set(unionId, idx)
+        }
+      }
+    })
+
+    const individualKeys = components.map(comp => getKey(comp))
+    const groupMinKey = new Map()
+    individualKeys.forEach((key, idx) => {
+      const root = find(idx)
+      const cur = groupMinKey.get(root)
+      if (cur === undefined || key < cur) groupMinKey.set(root, key)
+    })
+
+    const entries = components.map((comp, idx) => ({
+      comp, groupKey: groupMinKey.get(find(idx)), key: individualKeys[idx],
+    }))
+    entries.sort((a, b) => {
+      const gd = a.groupKey - b.groupKey
+      return gd !== 0 ? gd : a.key - b.key
+    })
+
+    for (let i = 0; i < components.length; i++) components[i] = entries[i].comp
+  }
+
+  // --- PASS A (top-down) : ordonner les chaînes par position parente ---
+  const sortedGensAsc = [...componentOrderPerGen.keys()].sort((a, b) => a - b)
+  for (const gen of sortedGensAsc) {
+    const parentGen = gen - 1
+    if (parentGen < 0 || !componentOrderPerGen.has(parentGen)) continue
+
+    const nodeToParentFlatIdx = new Map()
+    let flatIdx = 0
+    componentOrderPerGen.get(parentGen).forEach(compIds => compIds.forEach(id => nodeToParentFlatIdx.set(id, flatIdx++)))
+
+    const avgIdx = (compIds) => {
+      let sum = 0, count = 0
+      for (const nodeId of compIds) {
+        for (const unionId of (parentUnionsByChild.get(nodeId) || [])) {
+          const idx = nodeToParentFlatIdx.get(unionId)
+          if (idx !== undefined) { sum += idx; count++ }
+        }
+      }
+      return count > 0 ? sum / count : Number.MAX_SAFE_INTEGER
+    }
+    sortWithSiblingGrouping(componentOrderPerGen.get(gen), avgIdx)
+  }
+
+  // ----------------------------------------------------------
+  // Helpers : calcul du centre idéal d'une composante
+  // ----------------------------------------------------------
+  function childrenCenterOf(compIds) {
+    let sum = 0, count = 0
+    for (const nodeId of compIds) {
+      const node = nodeById.get(nodeId)
+      if (!node || node._type !== 'union') continue
+      for (const childId of (childrenBySourceId.get(nodeId) || [])) {
+        const child = nodeById.get(childId)
+        if (child?.x !== undefined) { sum += child.x + child.width / 2; count++ }
+      }
+    }
+    return count > 0 ? sum / count : null
+  }
+
+  function parentCenterOf(compIds) {
+    let sum = 0, count = 0
+    for (const nodeId of compIds) {
+      for (const unionId of (parentUnionsByChild.get(nodeId) || [])) {
+        const pn = nodeById.get(unionId)
+        if (pn?.x !== undefined) { sum += pn.x + pn.width / 2; count++ }
+      }
+    }
+    return count > 0 ? sum / count : null
+  }
+
+  function currentCenterOf(compIds) {
+    const fn = nodeById.get(compIds[0])
+    if (fn?.x !== undefined) {
+      const { nodeSpacing } = getSpacing(compIds)
+      return fn.x + getComponentWidth(compIds, nodeSpacing) / 2
+    }
+    return 0
+  }
+
+  // ----------------------------------------------------------
+  // Placement symétrique d'une génération (Sugiyama-style)
+  //
+  // Cette fonction résout les chevauchements dans les DEUX sens :
+  //   1. Balayage gauche→droite (pousse à droite si chevauchement)
+  //   2. Balayage droite→gauche (pousse à gauche si chevauchement)
+  //   3. Position finale = moyenne des deux
+  //
+  // Le résultat centre naturellement chaque composante entre
+  // ses contraintes gauche et droite.
+  // ----------------------------------------------------------
+  function placeGenSymmetric(gen, idealCenterFn) {
+    const components = componentOrderPerGen.get(gen)
+    if (!components || components.length === 0) return
+
+    sortWithSiblingGrouping(components, idealCenterFn)
+
+    const n = components.length
+    const meta = components.map(comp => {
+      const { nodeSpacing, familyGap } = getSpacing(comp)
+      const width = getComponentWidth(comp, nodeSpacing)
+      const ic = idealCenterFn(comp)
+      const idealLeft = (ic !== null && Number.isFinite(ic)) ? ic - width / 2 : null
+      return { comp, nodeSpacing, familyGap, width, idealLeft }
+    })
+
+    // Balayage gauche→droite : la première composante va à sa position
+    // idéale, les suivantes sont poussées à droite si chevauchement.
+    const leftLR = new Array(n)
+    let cursor = -Infinity
+    for (let i = 0; i < n; i++) {
+      if (meta[i].idealLeft !== null) {
+        leftLR[i] = Math.max(meta[i].idealLeft, cursor)
+      } else {
+        leftLR[i] = Number.isFinite(cursor) ? cursor : 0
+      }
+      cursor = leftLR[i] + meta[i].width + meta[i].familyGap
+    }
+
+    // Balayage droite→gauche : borné par l'étendue totale du balayage LR,
+    // chaque composante est poussée à gauche si elle dépasse à droite.
+    const leftRL = new Array(n)
+    let rightBound = leftLR[n - 1] + meta[n - 1].width
+    for (let i = n - 1; i >= 0; i--) {
+      const maxLeft = rightBound - meta[i].width
+      if (meta[i].idealLeft !== null) {
+        leftRL[i] = Math.min(meta[i].idealLeft, maxLeft)
+      } else {
+        leftRL[i] = maxLeft
+      }
+      if (i > 0) rightBound = leftRL[i] - meta[i - 1].familyGap
+    }
+
+    // Position finale = moyenne des deux balayages
+    for (let i = 0; i < n; i++) {
+      const finalLeft = (leftLR[i] + leftRL[i]) / 2
+      placeComponentAt(meta[i].comp, finalLeft, meta[i].nodeSpacing)
+    }
+  }
+
+  // --- PASS B (bottom-up) : placement initial centré sur les enfants ---
+  const sortedGensDesc = [...componentOrderPerGen.keys()].sort((a, b) => b - a)
+  if (sortedGensDesc.length === 0) {
+    return { children: allNodes, edges: allEdges }
+  }
+  const genMax = sortedGensDesc[0]
+  const genMin = sortedGensDesc[sortedGensDesc.length - 1]
+
+  for (const gen of sortedGensDesc) {
+    placeGenSymmetric(gen, (comp) => childrenCenterOf(comp) ?? currentCenterOf(comp))
+  }
+
+  // --- PASS C (convergence itérative) ---
+  // Alternance top-down (centrage sous parents) / bottom-up (centrage sur enfants).
+  // La dernière sous-passe est bottom-up pour que les parents finissent
+  // centrés au-dessus de leurs enfants.
+  for (let iter = 0; iter < 4; iter++) {
+    for (let g = genMin + 1; g <= genMax; g++) {
+      placeGenSymmetric(g, (comp) => parentCenterOf(comp) ?? currentCenterOf(comp))
+    }
+    for (let g = genMax; g >= genMin; g--) {
+      placeGenSymmetric(g, (comp) => childrenCenterOf(comp) ?? currentCenterOf(comp))
+    }
+  }
+
+  // Normaliser : décaler pour que le nœud le plus à gauche soit à x ≥ 0
+  let globalMinX = Infinity
+  for (const node of allNodes) {
+    if (node.x !== undefined && node.x < globalMinX) globalMinX = node.x
+  }
+  if (Number.isFinite(globalMinX) && globalMinX < 0) {
+    for (const node of allNodes) {
+      if (node.x !== undefined) node.x -= globalMinX
+    }
+  }
+
+  // ----------------------------------------------------------
+  // PHASE 5 : Positionnement Y
+  // ----------------------------------------------------------
+  for (const node of allNodes) {
+    node.y = node._generation * (PERSON_H + LAYER_SPACING)
+  }
+
+  return { children: allNodes, edges: allEdges }
+}
+
+// ============================================================
+// Données aléatoires par nœud (offset, flottement, angle)
+// ============================================================
+export function generateNodeRandomData(children) {
+  const data = new Map()
+  children.forEach(node => {
+    const angle = Math.random() * Math.PI * 2
+    const radius = Math.random() * JITTER_RADIUS
+    data.set(node.id, {
+      offsetX: Math.cos(angle) * radius,
+      offsetY: Math.sin(angle) * radius,
+      floatPhaseX: Math.random() * Math.PI * 2,
+      floatPhaseY: Math.random() * Math.PI * 2,
+      floatAmpX: FLOAT_AMPLITUDE * (0.5 + Math.random() * 0.5),
+      floatAmpY: FLOAT_AMPLITUDE * (0.5 + Math.random() * 0.5),
+      floatSpeedX: FLOAT_SPEED * (0.7 + Math.random() * 0.6),
+      floatSpeedY: FLOAT_SPEED * (0.7 + Math.random() * 0.6),
+      anchorAngleOffset: (Math.random() - 0.5) * ANGLE_VARIATION * 2,
+      labelRotation: (Math.random() - 0.5) * 0.12,
+      frameRotation: (Math.random() - 0.5) * 0.15,
+      orbitSlots: Array.from({ length: MAX_ORBIT_MEDIAS }, (_, i) => {
+        const safeArc = Math.PI * 1.5
+        const baseAngle = (3 * Math.PI / 4) + (safeArc * (i + 0.5) / MAX_ORBIT_MEDIAS)
+        return {
+          angle: baseAngle + (Math.random() - 0.5) * 0.5,
+          dist: ORBIT_RADIUS + (Math.random() - 0.5) * 12,
+          rot: (Math.random() - 0.5) * 0.3,
+        }
+      }),
+    })
+  })
+  return data
+}

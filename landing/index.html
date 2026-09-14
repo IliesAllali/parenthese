@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FDF8EC" />
+
+    <title>Parenthèse : l'arbre généalogique vivant de votre famille</title>
+    <meta name="description" content="Créez l'arbre généalogique de votre famille en ligne, avec photos, vidéos et voix. Partagez-le en un lien : la famille consulte sans compte et contribue avec un mot de passe." />
+    <link rel="canonical" href="https://parenthese.io/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type"         content="website" />
+    <meta property="og:site_name"    content="Parenthèse" />
+    <meta property="og:locale"       content="fr_FR" />
+    <meta property="og:url"          content="https://parenthese.io/" />
+    <meta property="og:title"        content="Parenthèse : l'arbre généalogique vivant de votre famille" />
+    <meta property="og:description"  content="Une galaxie de votre famille. Des photos, des anecdotes, des voix. Partageable en un lien, sans compte, sans friction." />
+    <meta property="og:image"        content="https://parenthese.io/og-image.png" />
+    <meta property="og:image:width"  content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt"    content="Parenthèse, votre histoire familiale, vivante et partagée" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Parenthèse : l'arbre généalogique vivant de votre famille" />
+    <meta name="twitter:description" content="Une galaxie de votre famille. Partageable en un lien, sans compte, sans friction." />
+    <meta name="twitter:image"       content="https://parenthese.io/og-image.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Preconnect for Google Fonts (Red Hat Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://parenthese.io/#organization",
+          "name": "Parenthèse",
+          "url": "https://parenthese.io/",
+          "logo": "https://parenthese.io/apple-touch-icon.png",
+          "founder": { "@type": "Person", "name": "Ilies Allali", "url": "https://iliesallali.design/" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://parenthese.io/#website",
+          "url": "https://parenthese.io/",
+          "name": "Parenthèse",
+          "inLanguage": "fr-FR",
+          "publisher": { "@id": "https://parenthese.io/#organization" }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://parenthese.io/#app",
+          "name": "Parenthèse",
+          "url": "https://app.parenthese.io/",
+          "applicationCategory": "LifestyleApplication",
+          "operatingSystem": "Web",
+          "inLanguage": "fr-FR",
+          "description": "Web app pour construire et partager la mémoire d'une famille : arbre en forme de galaxie, photos, anecdotes, vidéos et voix, partage par lien.",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+          "publisher": { "@id": "https://parenthese.io/#organization" }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

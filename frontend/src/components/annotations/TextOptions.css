@@ -1,0 +1,121 @@
+.text-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.text-options__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.text-options__label {
+  font-size: 14px;
+  font-weight: 450;
+  color: #8B7355;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.text-options__colors {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.text-options__color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.text-options__color-btn:hover {
+  transform: scale(1.12);
+}
+
+.text-options__color-btn--active {
+  border-color: #5D524B;
+  box-shadow: 0 0 0 2px rgba(93, 82, 75, 0.2);
+}
+
+.text-options__sizes {
+  display: flex;
+  gap: 4px;
+}
+
+.text-options__size-btn {
+  flex: 1;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  background: transparent;
+  color: #5D524B;
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.text-options__size-btn:hover {
+  background: rgba(166, 124, 82, 0.08);
+}
+
+.text-options__size-btn--active {
+  border-color: #A67C52;
+  background: rgba(166, 124, 82, 0.1);
+  color: #A67C52;
+}
+
+/* Toggle switch */
+.text-options__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.text-options__toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.text-options__toggle-track {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(166, 124, 82, 0.2);
+  transition: background 0.2s ease;
+}
+
+.text-options__toggle input:checked + .text-options__toggle-track {
+  background: #A67C52;
+}
+
+.text-options__toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.text-options__toggle input:checked + .text-options__toggle-track .text-options__toggle-thumb {
+  transform: translateX(16px);
+}
+
+.text-options__toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #5D524B;
+}

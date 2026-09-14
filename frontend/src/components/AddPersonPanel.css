@@ -1,0 +1,413 @@
+/* ============================================================
+   Add Person Panel - Slide-in gauche ajout de personne
+   400px desktop, 90% mobile
+   ============================================================ */
+
+.add-person-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 400px;
+  z-index: 1050;
+
+  background: rgba(254, 249, 237, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(166, 124, 82, 0.15);
+  box-shadow: 6px 0 32px rgba(93, 82, 75, 0.15);
+
+  transform: translateX(-100%);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.add-person-panel--open {
+  transform: translateX(0);
+}
+
+/* --- Header --- */
+
+.add-person-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(166, 124, 82, 0.1);
+  flex-shrink: 0;
+}
+
+.add-person-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5D524B;
+}
+
+.add-person-header-title h2 {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: #5D524B;
+}
+
+.add-person-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #8B7355;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.add-person-close:hover {
+  background: rgba(93, 82, 75, 0.1);
+  color: #5D524B;
+}
+
+/* --- Form --- */
+
+.add-person-form {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.add-person-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.add-person-label {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #8B7355;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.add-person-required {
+  color: #C0392B;
+}
+
+.add-person-input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #5D524B;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.add-person-input::placeholder {
+  color: #B8A898;
+}
+
+.add-person-input:focus {
+  border-color: #A67C52;
+  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.12);
+}
+
+.add-person-input--error {
+  border-color: rgba(192, 57, 43, 0.5);
+}
+
+.add-person-input--error:focus {
+  border-color: #C0392B;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1);
+}
+
+.add-person-error-text {
+  font-size: 14px;
+  color: #C0392B;
+}
+
+.add-person-row {
+  display: flex;
+  gap: 12px;
+}
+
+.add-person-row .add-person-field {
+  flex: 1;
+}
+
+/* --- Section Relations --- */
+
+.add-person-section {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(166, 124, 82, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-person-section-title {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #5D524B;
+  margin: 0;
+}
+
+/* Relation type pills */
+.relation-type-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.relation-type-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  background: transparent;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #8B7355;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.relation-type-pill:hover {
+  border-color: rgba(166, 124, 82, 0.4);
+  background: rgba(166, 124, 82, 0.05);
+}
+
+.relation-type-pill--active {
+  border-color: #A67C52;
+  background: rgba(166, 124, 82, 0.1);
+  color: #A67C52;
+}
+
+/* Relation search */
+.relation-search-wrapper {
+  position: relative;
+}
+
+.relation-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #B8A898;
+  pointer-events: none;
+}
+
+.relation-search-input {
+  padding-left: 32px !important;
+  padding-right: 28px !important;
+}
+
+.relation-search-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #B8A898;
+  pointer-events: none;
+}
+
+/* Relation dropdown */
+.relation-dropdown-wrapper {
+  position: relative;
+}
+
+.relation-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: rgba(254, 249, 237, 0.99);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(166, 124, 82, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(93, 82, 75, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.relation-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+
+.relation-dropdown-item:hover {
+  background: rgba(166, 124, 82, 0.08);
+}
+
+.relation-dropdown-name {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #5D524B;
+}
+
+.relation-dropdown-date {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #B8A898;
+}
+
+/* Relation tags */
+.relation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.relation-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: 20px;
+  background: rgba(166, 124, 82, 0.08);
+  border: 1px solid rgba(166, 124, 82, 0.15);
+}
+
+.relation-tag-type {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #A67C52;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.relation-tag-name {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #5D524B;
+}
+
+.relation-tag-remove {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #8B7355;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.relation-tag-remove:hover {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+
+/* --- Error --- */
+
+.add-person-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(192, 57, 43, 0.08);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  color: #C0392B;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+}
+
+/* --- Actions --- */
+
+.add-person-actions {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(166, 124, 82, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-person-submit {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: #A67C52;
+  color: #FEF9ED;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-person-submit:hover:not(:disabled) {
+  background: #96703E;
+  box-shadow: 0 4px 16px rgba(166, 124, 82, 0.3);
+}
+
+.add-person-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-person-cancel {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #8B7355;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-person-cancel:hover {
+  background: rgba(93, 82, 75, 0.08);
+  color: #5D524B;
+}
+
+/* --- Responsive Mobile --- */
+
+@media (max-width: 768px) {
+  .add-person-panel {
+    width: 90vw;
+  }
+
+  .add-person-header {
+    padding: 16px 18px 12px;
+  }
+
+  .add-person-form {
+    padding: 16px 18px 20px;
+  }
+}

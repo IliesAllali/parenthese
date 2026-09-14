@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://parenthese.io/sitemap.xml

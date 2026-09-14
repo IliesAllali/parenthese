@@ -1,0 +1,35 @@
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+**/coverage/
+
+# Environment files
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env*.prod-proxy
+
+# Logs
+**/*.log
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+
+# Configuration locale d'outils de développement
+.claude/
+
+# Windows reserved device-file alias accidentally listed by some shells
+NUL
+
+# Runtime uploads
+backend/storage/media/
+
+# Clés SSH / certificats
+*.pem
+id_*

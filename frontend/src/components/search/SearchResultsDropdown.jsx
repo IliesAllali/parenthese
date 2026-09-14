@@ -1,0 +1,82 @@
+import './SearchResultsDropdown.css'
+
+/**
+ * Dropdown de résultats de recherche
+ * Affiche jusqu'à 10 résultats triés par score
+ *
+ * @param {Object} props
+ * @param {Array} props.results - Résultats [{person, score, reason}]
+ * @param {string} props.query - Requête de recherche
+ * @param {Function} props.onResultClick - Handler clic résultat
+ * @param {Function} props.onResultHover - Handler hover résultat
+ * @param {Function} props.onResultHoverEnd - Handler fin hover
+ */
+function SearchResultsDropdown({
+  results = [],
+  query = '',
+  onResultClick,
+  onResultHover,
+  onResultHoverEnd,
+}) {
+  // Limiter à 10 résultats affichés
+  const displayedResults = results.slice(0, 10)
+
+  if (displayedResults.length === 0) {
+    return (
+      <div className="search-results-dropdown">
+        <div className="search-result-empty">
+          Aucun résultat pour "{query}"
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="search-results-dropdown">
+      <div className="search-results-list">
+        {displayedResults.map(({ person, reason, matchDetail }) => (
+          <button
+            key={person.id}
+            type="button"
+            className="search-result-item"
+            onClick={() => onResultClick?.(person)}
+            onMouseEnter={() => onResultHover?.(person)}
+            onMouseLeave={() => onResultHoverEnd?.()}
+          >
+            {/* Photo miniature */}
+            <div className="search-result-thumb">
+              {person.photo ? (
+                <img src={person.photo} alt="" />
+              ) : (
+                <div className="search-result-initials">
+                  {person.firstName[0]}{person.lastName[0]}
+                </div>
+              )}
+            </div>
+
+            {/* Info personne */}
+            <div className="search-result-info">
+              <div className="search-result-name">
+                {person.firstName} <span className="search-result-lastname">{person.lastName}</span>
+              </div>
+              <div className="search-result-meta">
+                <span className="search-result-badge">{reason}</span>
+                {matchDetail && (
+                  <span className="search-result-match-detail">{matchDetail}</span>
+                )}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {results.length > 10 && (
+        <div className="search-results-footer">
+          +{results.length - 10} résultats supplémentaires
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default SearchResultsDropdown

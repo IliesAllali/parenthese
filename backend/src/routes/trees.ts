@@ -1,0 +1,1981 @@
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
+import { Prisma } from '@prisma/client'
+import { z } from 'zod'
+
+import { env } from '../config/env.js'
+import { hashPassword, verifyPassword } from '../lib/auth.js'
+import type { MembershipRole } from '../types/auth.js'
+import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
+
+const treeIdParamSchema = z.object({
+  id: z.string().min(1),
+})
+
+const createTreeSchema = z.object({
+  name: z.string().min(2).max(120),
+  slug: z.string().min(1).max(128),
+  description: z.string().max(500).optional().nullable(),
+  visitorPassword: z.string().min(8).max(128),
+  contributorPassword: z.string().min(8).max(128),
+})
+
+const patchTreeSchema = z
+  .object({
+    name: z.string().min(2).max(120).optional(),
+    slug: z.string().min(1).max(128).optional(),
+    description: z.string().max(500).optional().nullable(),
+    rootPersonId: z.string().min(1).optional().nullable(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at_least_one_field_required',
+  })
+
+const unlockSchema = z.object({
+  password: z.string().min(1).max(128),
+})
+
+const linkAccessSchema = z.object({
+  accessToken: z.string().min(1),
+})
+
+const patchPasswordsSchema = z
+  .object({
+    visitorPassword: z.string().min(8).max(128).optional(),
+    contributorPassword: z.string().min(8).max(128).optional(),
+  })
+  .refine((value) => Boolean(value.visitorPassword || value.contributorPassword), {
+    message: 'at_least_one_password_required',
+  })
+
+const patchTreeSettingsSchema = z
+  .object({
+    memberContributionPolicy: z.enum(['direct', 'pending']).optional(),
+    contributorPolicy: z.enum(['direct', 'pending']).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at_least_one_setting_required',
+  })
+
+const listAuditQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  action: z.string().min(1).max(120).optional(),
+})
+
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+const createPersonSchema = z.object({
+  firstName: z.string().min(1).max(120),
+  lastName: z.string().min(1).max(120),
+  birthName: z.string().max(120).optional().nullable(),
+  birthDate: z.string().regex(isoDateRegex).optional().nullable(),
+  deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+  birthPlace: z.string().max(200).optional().nullable(),
+  profession: z.string().max(200).optional().nullable(),
+  region: z.string().max(120).optional().nullable(),
+  nationality: z.string().max(120).optional().nullable(),
+  sex: z.string().max(20).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+})
+
+const patchPersonSchema = z
+  .object({
+    firstName: z.string().min(1).max(120).optional(),
+    lastName: z.string().min(1).max(120).optional(),
+    birthName: z.string().max(120).optional().nullable(),
+    birthDate: z.string().regex(isoDateRegex).optional().nullable(),
+    deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+    birthPlace: z.string().max(200).optional().nullable(),
+    profession: z.string().max(200).optional().nullable(),
+    region: z.string().max(120).optional().nullable(),
+    nationality: z.string().max(120).optional().nullable(),
+    sex: z.string().max(20).optional().nullable(),
+    notes: z.string().max(2000).optional().nullable(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at_least_one_field_required',
+  })
+
+const createUnionSchema = z.object({
+  partner1PersonId: z.string().min(1),
+  partner2PersonId: z.string().min(1).optional().nullable(),
+  unionType: z.string().max(50).optional().nullable(),
+  startDate: z.string().regex(isoDateRegex).optional().nullable(),
+  endDate: z.string().regex(isoDateRegex).optional().nullable(),
+  displayOrder: z.number().int().positive().optional(),
+})
+
+const patchUnionSchema = z
+  .object({
+    partner1PersonId: z.string().min(1).optional(),
+    partner2PersonId: z.string().min(1).optional().nullable(),
+    unionType: z.string().max(50).optional().nullable(),
+    startDate: z.string().regex(isoDateRegex).optional().nullable(),
+    endDate: z.string().regex(isoDateRegex).optional().nullable(),
+    displayOrder: z.number().int().positive().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at_least_one_field_required',
+  })
+
+const createParentChildLinkSchema = z.object({
+  parentPersonId: z.string().min(1),
+  childPersonId: z.string().min(1),
+  viaUnionId: z.string().min(1).optional().nullable(),
+  parentageType: z.string().max(50).optional().nullable(),
+  displayOrder: z.number().int().positive().optional(),
+})
+
+const patchParentChildLinkSchema = z
+  .object({
+    parentPersonId: z.string().min(1).optional(),
+    childPersonId: z.string().min(1).optional(),
+    viaUnionId: z.string().min(1).optional().nullable(),
+    parentageType: z.string().max(50).optional().nullable(),
+    displayOrder: z.number().int().positive().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'at_least_one_field_required',
+  })
+
+const personParamsSchema = z.object({
+  id: z.string().min(1),
+  personId: z.string().min(1),
+})
+
+const unionParamsSchema = z.object({
+  id: z.string().min(1),
+  unionId: z.string().min(1),
+})
+
+const linkParamsSchema = z.object({
+  id: z.string().min(1),
+  linkId: z.string().min(1),
+})
+
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string } | null {
+  if (!request.actor || request.actor.kind !== 'user') {
+    reply.code(401).send({ error: 'authentication_required' })
+    return null
+  }
+
+  return {
+    userId: request.actor.userId,
+    email: request.actor.email,
+  }
+}
+
+function hasAdminRight(role: MembershipRole): boolean {
+  return role === 'owner' || role === 'admin'
+}
+
+async function getMembership(app: FastifyInstance, userId: string, treeId: string) {
+  return app.prisma.treeMembership.findUnique({
+    where: {
+      treeId_userId: {
+        treeId,
+        userId,
+      },
+    },
+  })
+}
+
+function toDateOrNull(value?: string | null): Date | null {
+  if (!value) {
+    return null
+  }
+
+  return new Date(`${value}T00:00:00.000Z`)
+}
+
+function toTrimmedStringOrNull(value?: string | null): string | null {
+  if (value === undefined || value === null) {
+    return null
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function normalizeSlug(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function isValidSlug(value: string): boolean {
+  return /^[a-z0-9-]{3,64}$/.test(value)
+}
+
+async function getAdminMembership(app: FastifyInstance, userId: string, treeId: string) {
+  const membership = await app.prisma.treeMembership.findUnique({
+    where: {
+      treeId_userId: {
+        treeId,
+        userId,
+      },
+    },
+    include: {
+      tree: {
+        select: {
+          deletedAt: true,
+        },
+      },
+    },
+  })
+
+  return membership
+}
+
+function hasActiveAdminMembership(
+  membership:
+    | Prisma.TreeMembershipGetPayload<{
+        include: {
+          tree: {
+            select: {
+              deletedAt: true
+            }
+          }
+        }
+      }>
+    | null,
+): boolean {
+  return Boolean(membership && !membership.tree.deletedAt && hasAdminRight(membership.role))
+}
+
+export const treeRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/trees', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const [memberships, sharedAccesses, userState] = await Promise.all([
+      app.prisma.treeMembership.findMany({
+        where: {
+          userId: user.userId,
+          tree: {
+            deletedAt: null,
+          },
+        },
+        include: {
+          tree: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              description: true,
+              rootPersonId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      }),
+      app.prisma.userTreeAccess.findMany({
+        where: {
+          userId: user.userId,
+          tree: {
+            deletedAt: null,
+          },
+        },
+        include: {
+          tree: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              description: true,
+              rootPersonId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      }),
+      app.prisma.user.findUnique({
+        where: {
+          id: user.userId,
+        },
+        select: {
+          lastOpenedTreeId: true,
+          lastOpenedAccessMode: true,
+          lastOpenedRole: true,
+          lastOpenedAt: true,
+        },
+      }),
+    ])
+
+    const membershipTreeIds = new Set(memberships.map((membership: { treeId: string }) => membership.treeId))
+    const mergedTrees: Array<{
+      id: string
+      slug: string
+      name: string
+      description: string | null
+      rootPersonId: string | null
+      createdAt: Date
+      updatedAt: Date
+      role: string
+      accessMode: 'member' | 'share'
+      lastAccessedAt: Date | null
+    }> = []
+
+    for (const membership of memberships) {
+      mergedTrees.push({
+        ...membership.tree,
+        role: membership.role,
+        accessMode: 'member',
+        lastAccessedAt: null,
+      })
+    }
+
+    for (const shared of sharedAccesses) {
+      if (membershipTreeIds.has(shared.treeId)) {
+        continue
+      }
+
+      mergedTrees.push({
+        ...shared.tree,
+        role: shared.role,
+        accessMode: 'share',
+        lastAccessedAt: shared.updatedAt,
+      })
+    }
+
+    mergedTrees.sort((left, right) => {
+      const leftTime = left.lastAccessedAt?.getTime() ?? left.updatedAt.getTime()
+      const rightTime = right.lastAccessedAt?.getTime() ?? right.updatedAt.getTime()
+      return rightTime - leftTime
+    })
+
+    const lastOpenedTree = userState?.lastOpenedTreeId
+      ? mergedTrees.find((tree) => {
+          if (tree.id !== userState.lastOpenedTreeId) return false
+          if (!userState.lastOpenedAccessMode) return true
+          return tree.accessMode === userState.lastOpenedAccessMode
+        })
+      : null
+
+    return reply.send({
+      trees: mergedTrees,
+      lastOpenedTree: lastOpenedTree
+        ? {
+            treeId: lastOpenedTree.id,
+            accessMode: lastOpenedTree.accessMode,
+            role: userState?.lastOpenedRole || lastOpenedTree.role,
+            lastOpenedAt: userState?.lastOpenedAt || lastOpenedTree.lastAccessedAt || null,
+          }
+        : null,
+    })
+  })
+
+  app.post('/trees', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const parsed = createTreeSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
+    }
+
+    const normalizedSlug = normalizeSlug(parsed.data.slug)
+    if (!isValidSlug(normalizedSlug)) {
+      return reply.code(400).send({
+        error: 'invalid_payload',
+        details: {
+          formErrors: [],
+          fieldErrors: {
+            slug: ['Slug invalide apres normalisation. Utiliser 3-64 caracteres alphanumeriques ou tirets.'],
+          },
+        },
+      })
+    }
+
+    const visitorHash = await hashPassword(parsed.data.visitorPassword)
+    const contributorHash = await hashPassword(parsed.data.contributorPassword)
+
+    try {
+      const tree = await app.prisma.tree.create({
+        data: {
+          ownerUserId: user.userId,
+          name: parsed.data.name,
+          slug: normalizedSlug,
+          description: parsed.data.description ?? null,
+          accessPasswords: {
+            create: {
+              visitorHash,
+              contributorHash,
+            },
+          },
+          memberships: {
+            create: {
+              userId: user.userId,
+              role: 'owner',
+            },
+          },
+          settings: {
+            create: {
+              memberContributionPolicy: 'pending',
+              visitorPolicy: 'read_only',
+              contributorPolicy: 'pending',
+            },
+          },
+        },
+      })
+
+      await app.prisma.user.update({
+        where: {
+          id: user.userId,
+        },
+        data: {
+          lastOpenedTreeId: tree.id,
+          lastOpenedAccessMode: 'member',
+          lastOpenedRole: 'owner',
+          lastOpenedAt: new Date(),
+        },
+      })
+
+      return reply.code(201).send({ tree })
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
+        return reply.code(409).send({ error: 'slug_already_exists' })
+      }
+
+      throw error
+    }
+  })
+
+  app.get('/trees/:id', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const tree = await app.prisma.tree.findFirst({
+      where: {
+        id: params.data.id,
+        deletedAt: null,
+      },
+      include: {
+        settings: true,
+      },
+    })
+
+    if (!tree) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    return reply.send({
+      tree,
+      role: membership.role,
+    })
+  })
+
+  app.patch('/trees/:id', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = patchTreeSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership || !hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    try {
+      const updateData: {
+        name?: string
+        slug?: string
+        description?: string | null
+        rootPersonId?: string | null
+      } = {}
+
+      if (payload.data.name !== undefined) {
+        updateData.name = payload.data.name
+      }
+
+      if (payload.data.slug !== undefined) {
+        const normalizedSlug = normalizeSlug(payload.data.slug)
+        if (!isValidSlug(normalizedSlug)) {
+          return reply.code(400).send({
+            error: 'invalid_payload',
+            details: {
+              formErrors: [],
+              fieldErrors: {
+                slug: ['Slug invalide apres normalisation. Utiliser 3-64 caracteres alphanumeriques ou tirets.'],
+              },
+            },
+          })
+        }
+
+        updateData.slug = normalizedSlug
+      }
+
+      if (payload.data.description !== undefined) {
+        updateData.description = payload.data.description
+      }
+
+      if (payload.data.rootPersonId !== undefined) {
+        if (payload.data.rootPersonId === null) {
+          updateData.rootPersonId = null
+        } else {
+          const rootPerson = await app.prisma.person.findFirst({
+            where: {
+              id: payload.data.rootPersonId,
+              treeId: params.data.id,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+            },
+          })
+
+          if (!rootPerson) {
+            return reply.code(400).send({ error: 'invalid_root_person_id' })
+          }
+
+          updateData.rootPersonId = payload.data.rootPersonId
+        }
+      }
+
+      const changedFields = Object.keys(updateData)
+      const updateResult = await app.prisma.tree.updateMany({
+        where: {
+          id: params.data.id,
+          deletedAt: null,
+        },
+        data: updateData,
+      })
+
+      if (updateResult.count === 0) {
+        return reply.code(404).send({ error: 'tree_not_found' })
+      }
+
+      const updated = await app.prisma.tree.findUnique({
+        where: { id: params.data.id },
+      })
+
+      await app.prisma.auditLog.create({
+        data: {
+          treeId: params.data.id,
+          actorType: 'user',
+          actorId: user.userId,
+          action: 'tree_updated',
+          entityType: 'tree',
+          entityId: params.data.id,
+          payloadJson: {
+            changedFields,
+          },
+        },
+      })
+
+      return reply.send({ tree: updated })
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
+        return reply.code(409).send({ error: 'slug_already_exists' })
+      }
+
+      throw error
+    }
+  })
+
+  app.delete('/trees/:id', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership || membership.role !== 'owner') {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const now = new Date()
+    const deletedTree = await app.prisma.tree.updateMany({
+      where: {
+        id: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    })
+
+    if (deletedTree.count === 0) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    await app.prisma.user.updateMany({
+      where: {
+        lastOpenedTreeId: params.data.id,
+      },
+      data: {
+        lastOpenedTreeId: null,
+        lastOpenedAccessMode: null,
+        lastOpenedRole: null,
+        lastOpenedAt: null,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'tree_deleted',
+        entityType: 'tree',
+        entityId: params.data.id,
+      },
+    })
+
+    return reply.send({ ok: true })
+  })
+
+  app.post(
+    '/trees/:id/access/unlock',
+    {
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: '1 minute',
+        },
+      },
+    },
+    async (request, reply) => {
+      const params = treeIdParamSchema.safeParse(request.params)
+      if (!params.success) {
+        return reply.code(400).send({ error: 'invalid_tree_id' })
+      }
+
+      const payload = unlockSchema.safeParse(request.body)
+      if (!payload.success) {
+        return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+      }
+
+      const accessConfig = await app.prisma.treeAccessPasswords.findUnique({
+        where: {
+          treeId: params.data.id,
+        },
+        include: {
+          tree: {
+            select: {
+              deletedAt: true,
+            },
+          },
+        },
+      })
+
+      if (!accessConfig || accessConfig.tree.deletedAt) {
+        return reply.code(404).send({ error: 'tree_not_found' })
+      }
+
+      let role: 'visitor' | 'contributor' | null = null
+      if (await verifyPassword(payload.data.password, accessConfig.contributorHash)) {
+        role = 'contributor'
+      } else if (await verifyPassword(payload.data.password, accessConfig.visitorHash)) {
+        role = 'visitor'
+      }
+
+      if (!role) {
+        return reply.code(401).send({ error: 'invalid_password' })
+      }
+
+      const token = app.jwt.sign(
+        {
+          kind: 'tree_access',
+          sub: `tree:${params.data.id}:${role}`,
+          treeId: params.data.id,
+          role,
+          accessVersion: accessConfig.updatedAt.getTime(),
+        },
+        {
+          expiresIn: env.JWT_TREE_ACCESS_EXPIRES_IN,
+        },
+      )
+
+      if (request.actor && request.actor.kind === 'user') {
+        const now = new Date()
+
+        await app.prisma.userTreeAccess.upsert({
+          where: {
+            treeId_userId: {
+              treeId: params.data.id,
+              userId: request.actor.userId,
+            },
+          },
+          create: {
+            treeId: params.data.id,
+            userId: request.actor.userId,
+            role,
+          },
+          update: {
+            role,
+            updatedAt: now,
+          },
+        })
+
+        await app.prisma.user.update({
+          where: {
+            id: request.actor.userId,
+          },
+          data: {
+            lastOpenedTreeId: params.data.id,
+            lastOpenedAccessMode: 'share',
+            lastOpenedRole: role,
+            lastOpenedAt: now,
+          },
+        })
+      }
+
+      return reply.send({
+        token,
+        treeId: params.data.id,
+        role,
+      })
+    },
+  )
+
+  // Rattache au compte connecté un accès partagé déjà ouvert : le jeton d'arbre (obtenu par mot de passe)
+  // tient lieu de preuve, on ne redemande pas le mot de passe. Même effet que l'unlock avec un compte.
+  app.post('/trees/:id/access/link', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = linkAccessSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    let accessPayload: { kind?: string; treeId?: string; role?: string; accessVersion?: number }
+    try {
+      accessPayload = app.jwt.verify(payload.data.accessToken)
+    } catch {
+      return reply.code(401).send({ error: 'invalid_access_token' })
+    }
+
+    const role = accessPayload.role === 'contributor' || accessPayload.role === 'visitor' ? accessPayload.role : null
+    if (accessPayload.kind !== 'tree_access' || accessPayload.treeId !== params.data.id || !role) {
+      return reply.code(401).send({ error: 'invalid_access_token' })
+    }
+
+    const accessConfig = await app.prisma.treeAccessPasswords.findUnique({
+      where: {
+        treeId: params.data.id,
+      },
+      include: {
+        tree: {
+          select: {
+            deletedAt: true,
+          },
+        },
+      },
+    })
+
+    if (!accessConfig || accessConfig.tree.deletedAt) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    if (accessConfig.updatedAt.getTime() !== accessPayload.accessVersion) {
+      return reply.code(401).send({ error: 'invalid_access_token' })
+    }
+
+    const now = new Date()
+    await app.prisma.userTreeAccess.upsert({
+      where: {
+        treeId_userId: {
+          treeId: params.data.id,
+          userId: user.userId,
+        },
+      },
+      create: {
+        treeId: params.data.id,
+        userId: user.userId,
+        role,
+      },
+      update: {
+        role,
+        updatedAt: now,
+      },
+    })
+
+    await app.prisma.user.update({
+      where: {
+        id: user.userId,
+      },
+      data: {
+        lastOpenedTreeId: params.data.id,
+        lastOpenedAccessMode: 'share',
+        lastOpenedRole: role,
+        lastOpenedAt: now,
+      },
+    })
+
+    return reply.send({ treeId: params.data.id, role })
+  })
+
+  app.patch('/trees/:id/access/passwords', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = patchPasswordsSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership || !hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const existing = await app.prisma.treeAccessPasswords.findUnique({
+      where: {
+        treeId: params.data.id,
+      },
+    })
+
+    if (!existing) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const data: { visitorHash?: string; contributorHash?: string } = {}
+    if (payload.data.visitorPassword) {
+      data.visitorHash = await hashPassword(payload.data.visitorPassword)
+    }
+
+    if (payload.data.contributorPassword) {
+      data.contributorHash = await hashPassword(payload.data.contributorPassword)
+    }
+
+    await app.prisma.treeAccessPasswords.update({
+      where: {
+        treeId: params.data.id,
+      },
+      data,
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'access_passwords_rotated',
+        entityType: 'tree_access_passwords',
+        entityId: params.data.id,
+        payloadJson: {
+          rotatedVisitorPassword: Boolean(payload.data.visitorPassword),
+          rotatedContributorPassword: Boolean(payload.data.contributorPassword),
+        },
+      },
+    })
+
+    return reply.send({ ok: true })
+  })
+
+  app.get('/trees/:id/stats', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const [persons, unions, links, medias, pendingContributions, totalContributions] = await Promise.all([
+      app.prisma.person.count({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+      }),
+      app.prisma.union.count({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+      }),
+      app.prisma.parentChildLink.count({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+      }),
+      app.prisma.mediaItem.count({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+      }),
+      app.prisma.contributionSession.count({
+        where: {
+          treeId: params.data.id,
+          status: 'pending',
+        },
+      }),
+      app.prisma.contributionSession.count({
+        where: {
+          treeId: params.data.id,
+        },
+      }),
+    ])
+
+    return reply.send({
+      stats: {
+        persons,
+        unions,
+        filiations: links,
+        medias,
+        pendingContributions,
+        totalContributions,
+      },
+    })
+  })
+
+  app.get('/trees/:id/settings', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const settings = await app.prisma.treeSettings.findUnique({
+      where: {
+        treeId: params.data.id,
+      },
+    })
+
+    if (!settings) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    return reply.send({ settings })
+  })
+
+  app.patch('/trees/:id/settings', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = patchTreeSettingsSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const settings = await app.prisma.treeSettings.upsert({
+      where: {
+        treeId: params.data.id,
+      },
+      create: {
+        treeId: params.data.id,
+        memberContributionPolicy: payload.data.memberContributionPolicy ?? 'pending',
+        visitorPolicy: 'read_only',
+        contributorPolicy: payload.data.contributorPolicy ?? 'pending',
+      },
+      update: {
+        memberContributionPolicy: payload.data.memberContributionPolicy,
+        contributorPolicy: payload.data.contributorPolicy,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'tree_settings_updated',
+        entityType: 'tree_settings',
+        entityId: params.data.id,
+        payloadJson: payload.data,
+      },
+    })
+
+    return reply.send({ settings })
+  })
+
+  app.get('/trees/:id/audit', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const query = listAuditQuerySchema.safeParse(request.query)
+    if (!query.success) {
+      return reply.code(400).send({ error: 'invalid_query', details: query.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const logs = await app.prisma.auditLog.findMany({
+      where: {
+        treeId: params.data.id,
+        action: query.data.action,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: query.data.offset,
+      take: query.data.limit + 1,
+    })
+
+    const hasMore = logs.length > query.data.limit
+    const items = hasMore ? logs.slice(0, query.data.limit) : logs
+
+    return reply.send({
+      logs: items,
+      nextOffset: hasMore ? query.data.offset + query.data.limit : null,
+    })
+  })
+
+  app.post('/trees/:id/persons', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = createPersonSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (!hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (membership.tree.deletedAt) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const person = await app.prisma.person.create({
+      data: {
+        treeId: params.data.id,
+        firstName: payload.data.firstName.trim(),
+        lastName: payload.data.lastName.trim(),
+        birthName: toTrimmedStringOrNull(payload.data.birthName),
+        birthDate: toDateOrNull(payload.data.birthDate),
+        deathDate: toDateOrNull(payload.data.deathDate),
+        birthPlace: toTrimmedStringOrNull(payload.data.birthPlace),
+        profession: toTrimmedStringOrNull(payload.data.profession),
+        region: toTrimmedStringOrNull(payload.data.region),
+        nationality: toTrimmedStringOrNull(payload.data.nationality),
+        sex: payload.data.sex ?? null,
+        notes: payload.data.notes ?? null,
+        createdBy: user.userId,
+        updatedBy: user.userId,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'person_created',
+        entityType: 'person',
+        entityId: person.id,
+        payloadJson: {
+          firstName: person.firstName,
+          lastName: person.lastName,
+        },
+      },
+    })
+
+    return reply.code(201).send({ person })
+  })
+
+  app.patch('/trees/:id/persons/:personId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = personParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const payload = patchPersonSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const data: {
+      firstName?: string
+      lastName?: string
+      birthName?: string | null
+      birthDate?: Date | null
+      deathDate?: Date | null
+      birthPlace?: string | null
+      profession?: string | null
+      region?: string | null
+      nationality?: string | null
+      sex?: string | null
+      notes?: string | null
+      updatedBy?: string
+    } = {}
+
+    if (payload.data.firstName !== undefined) {
+      data.firstName = payload.data.firstName.trim()
+    }
+
+    if (payload.data.lastName !== undefined) {
+      data.lastName = payload.data.lastName.trim()
+    }
+
+    if (payload.data.birthName !== undefined) {
+      data.birthName = toTrimmedStringOrNull(payload.data.birthName)
+    }
+
+    if (payload.data.birthDate !== undefined) {
+      data.birthDate = toDateOrNull(payload.data.birthDate)
+    }
+
+    if (payload.data.deathDate !== undefined) {
+      data.deathDate = toDateOrNull(payload.data.deathDate)
+    }
+
+    if (payload.data.birthPlace !== undefined) {
+      data.birthPlace = toTrimmedStringOrNull(payload.data.birthPlace)
+    }
+
+    if (payload.data.profession !== undefined) {
+      data.profession = toTrimmedStringOrNull(payload.data.profession)
+    }
+
+    if (payload.data.region !== undefined) {
+      data.region = toTrimmedStringOrNull(payload.data.region)
+    }
+
+    if (payload.data.nationality !== undefined) {
+      data.nationality = toTrimmedStringOrNull(payload.data.nationality)
+    }
+
+    if (payload.data.sex !== undefined) {
+      data.sex = payload.data.sex
+    }
+
+    if (payload.data.notes !== undefined) {
+      data.notes = payload.data.notes
+    }
+
+    data.updatedBy = user.userId
+
+    const updated = await app.prisma.person.updateMany({
+      where: {
+        id: params.data.personId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data,
+    })
+
+    if (updated.count === 0) {
+      return reply.code(404).send({ error: 'person_not_found' })
+    }
+
+    const person = await app.prisma.person.findFirst({
+      where: {
+        id: params.data.personId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'person_updated',
+        entityType: 'person',
+        entityId: params.data.personId,
+        payloadJson: {
+          changedFields: Object.keys(payload.data),
+        },
+      },
+    })
+
+    return reply.send({ person })
+  })
+
+  app.delete('/trees/:id/persons/:personId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = personParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const now = new Date()
+    const deletedPerson = await app.prisma.person.updateMany({
+      where: {
+        id: params.data.personId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+        updatedBy: user.userId,
+      },
+    })
+
+    if (deletedPerson.count === 0) {
+      return reply.code(404).send({ error: 'person_not_found' })
+    }
+
+    const [deletedUnions, deletedLinks, deletedMedia] = await Promise.all([
+      app.prisma.union.updateMany({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+          OR: [{ partner1PersonId: params.data.personId }, { partner2PersonId: params.data.personId }],
+        },
+        data: {
+          deletedAt: now,
+        },
+      }),
+      app.prisma.parentChildLink.updateMany({
+        where: {
+          treeId: params.data.id,
+          deletedAt: null,
+          OR: [{ parentPersonId: params.data.personId }, { childPersonId: params.data.personId }],
+        },
+        data: {
+          deletedAt: now,
+        },
+      }),
+      app.prisma.mediaItem.updateMany({
+        where: {
+          treeId: params.data.id,
+          personId: params.data.personId,
+          deletedAt: null,
+        },
+        data: {
+          deletedAt: now,
+        },
+      }),
+    ])
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'person_deleted',
+        entityType: 'person',
+        entityId: params.data.personId,
+        payloadJson: {
+          deletedUnions: deletedUnions.count,
+          deletedLinks: deletedLinks.count,
+          deletedMedia: deletedMedia.count,
+        },
+      },
+    })
+
+    return reply.send({
+      ok: true,
+      cascaded: {
+        unions: deletedUnions.count,
+        links: deletedLinks.count,
+        medias: deletedMedia.count,
+      },
+    })
+  })
+
+  app.post('/trees/:id/unions', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = createUnionSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (!hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (membership.tree.deletedAt) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const [partner1, partner2] = await Promise.all([
+      app.prisma.person.findFirst({
+        where: {
+          id: payload.data.partner1PersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      }),
+      payload.data.partner2PersonId
+        ? app.prisma.person.findFirst({
+            where: {
+              id: payload.data.partner2PersonId,
+              treeId: params.data.id,
+              deletedAt: null,
+            },
+            select: { id: true },
+          })
+        : Promise.resolve(null),
+    ])
+
+    if (!partner1 || (payload.data.partner2PersonId && !partner2)) {
+      return reply.code(400).send({ error: 'invalid_person_reference' })
+    }
+
+    const unionValidationError = await findUnionValidationError(
+      app.prisma,
+      params.data.id,
+      payload.data.partner1PersonId,
+      payload.data.partner2PersonId ?? null,
+    )
+    if (unionValidationError) {
+      return reply.code(400).send({ error: unionValidationError })
+    }
+
+    const union = await app.prisma.union.create({
+      data: {
+        treeId: params.data.id,
+        partner1PersonId: payload.data.partner1PersonId,
+        partner2PersonId: payload.data.partner2PersonId ?? null,
+        unionType: payload.data.unionType ?? null,
+        startDate: toDateOrNull(payload.data.startDate),
+        endDate: toDateOrNull(payload.data.endDate),
+        displayOrder: payload.data.displayOrder ?? 1,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'union_created',
+        entityType: 'union',
+        entityId: union.id,
+        payloadJson: {
+          partner1PersonId: union.partner1PersonId,
+          partner2PersonId: union.partner2PersonId,
+        },
+      },
+    })
+
+    return reply.code(201).send({ union })
+  })
+
+  app.patch('/trees/:id/unions/:unionId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = unionParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const payload = patchUnionSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const existingUnion = await app.prisma.union.findFirst({
+      where: {
+        id: params.data.unionId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      select: {
+        partner1PersonId: true,
+        partner2PersonId: true,
+      },
+    })
+
+    if (!existingUnion) {
+      return reply.code(404).send({ error: 'union_not_found' })
+    }
+
+    if (payload.data.partner1PersonId) {
+      const partner1 = await app.prisma.person.findFirst({
+        where: {
+          id: payload.data.partner1PersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+
+      if (!partner1) {
+        return reply.code(400).send({ error: 'invalid_person_reference' })
+      }
+    }
+
+    if (payload.data.partner2PersonId) {
+      const partner2 = await app.prisma.person.findFirst({
+        where: {
+          id: payload.data.partner2PersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+
+      if (!partner2) {
+        return reply.code(400).send({ error: 'invalid_person_reference' })
+      }
+    }
+
+    const hasPartner2Field = Object.prototype.hasOwnProperty.call(payload.data, 'partner2PersonId')
+    const finalPartner1PersonId = payload.data.partner1PersonId ?? existingUnion.partner1PersonId
+    const finalPartner2PersonId = hasPartner2Field ? payload.data.partner2PersonId ?? null : existingUnion.partner2PersonId
+    const unionValidationError = await findUnionValidationError(
+      app.prisma,
+      params.data.id,
+      finalPartner1PersonId,
+      finalPartner2PersonId,
+    )
+    if (unionValidationError) {
+      return reply.code(400).send({ error: unionValidationError })
+    }
+
+    const updated = await app.prisma.union.updateMany({
+      where: {
+        id: params.data.unionId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        partner1PersonId: payload.data.partner1PersonId,
+        partner2PersonId: payload.data.partner2PersonId,
+        unionType: payload.data.unionType,
+        startDate: payload.data.startDate !== undefined ? toDateOrNull(payload.data.startDate) : undefined,
+        endDate: payload.data.endDate !== undefined ? toDateOrNull(payload.data.endDate) : undefined,
+        displayOrder: payload.data.displayOrder,
+      },
+    })
+
+    if (updated.count === 0) {
+      return reply.code(404).send({ error: 'union_not_found' })
+    }
+
+    const union = await app.prisma.union.findFirst({
+      where: {
+        id: params.data.unionId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'union_updated',
+        entityType: 'union',
+        entityId: params.data.unionId,
+        payloadJson: {
+          changedFields: Object.keys(payload.data),
+        },
+      },
+    })
+
+    return reply.send({ union })
+  })
+
+  app.delete('/trees/:id/unions/:unionId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = unionParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const now = new Date()
+    const deletedUnion = await app.prisma.union.updateMany({
+      where: {
+        id: params.data.unionId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    })
+
+    if (deletedUnion.count === 0) {
+      return reply.code(404).send({ error: 'union_not_found' })
+    }
+
+    const deletedLinks = await app.prisma.parentChildLink.updateMany({
+      where: {
+        treeId: params.data.id,
+        viaUnionId: params.data.unionId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'union_deleted',
+        entityType: 'union',
+        entityId: params.data.unionId,
+        payloadJson: {
+          deletedLinks: deletedLinks.count,
+        },
+      },
+    })
+
+    return reply.send({
+      ok: true,
+      cascaded: {
+        links: deletedLinks.count,
+      },
+    })
+  })
+
+  app.post('/trees/:id/links', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = createParentChildLinkSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (!hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    if (membership.tree.deletedAt) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const [parent, child, union] = await Promise.all([
+      app.prisma.person.findFirst({
+        where: {
+          id: payload.data.parentPersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      }),
+      app.prisma.person.findFirst({
+        where: {
+          id: payload.data.childPersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      }),
+      payload.data.viaUnionId
+        ? app.prisma.union.findFirst({
+            where: {
+              id: payload.data.viaUnionId,
+              treeId: params.data.id,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              partner1PersonId: true,
+              partner2PersonId: true,
+            },
+          })
+        : Promise.resolve(null),
+    ])
+
+    if (!parent || !child) {
+      return reply.code(400).send({ error: 'invalid_person_reference' })
+    }
+
+    if (payload.data.viaUnionId && !union) {
+      return reply.code(400).send({ error: 'invalid_union_reference' })
+    }
+
+    const linkValidationError = await findParentChildValidationError(
+      app.prisma,
+      params.data.id,
+      payload.data.parentPersonId,
+      payload.data.childPersonId,
+      {
+        viaUnionId: payload.data.viaUnionId ?? null,
+        resolvedViaUnion: union ?? null,
+      },
+    )
+    if (linkValidationError) {
+      return reply.code(400).send({ error: linkValidationError })
+    }
+
+    const link = await app.prisma.parentChildLink.create({
+      data: {
+        treeId: params.data.id,
+        parentPersonId: payload.data.parentPersonId,
+        childPersonId: payload.data.childPersonId,
+        viaUnionId: payload.data.viaUnionId ?? null,
+        parentageType: payload.data.parentageType ?? 'biologique',
+        displayOrder: payload.data.displayOrder ?? 1,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'parent_child_link_created',
+        entityType: 'parent_child_link',
+        entityId: link.id,
+        payloadJson: {
+          parentPersonId: link.parentPersonId,
+          childPersonId: link.childPersonId,
+          viaUnionId: link.viaUnionId,
+        },
+      },
+    })
+
+    return reply.code(201).send({ link })
+  })
+
+  app.patch('/trees/:id/links/:linkId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = linkParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const payload = patchParentChildLinkSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const existingLink = await app.prisma.parentChildLink.findFirst({
+      where: {
+        id: params.data.linkId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      select: {
+        parentPersonId: true,
+        childPersonId: true,
+        viaUnionId: true,
+      },
+    })
+    if (!existingLink) {
+      return reply.code(404).send({ error: 'link_not_found' })
+    }
+
+    if (payload.data.parentPersonId) {
+      const parent = await app.prisma.person.findFirst({
+        where: {
+          id: payload.data.parentPersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+
+      if (!parent) {
+        return reply.code(400).send({ error: 'invalid_person_reference' })
+      }
+    }
+
+    if (payload.data.childPersonId) {
+      const child = await app.prisma.person.findFirst({
+        where: {
+          id: payload.data.childPersonId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+
+      if (!child) {
+        return reply.code(400).send({ error: 'invalid_person_reference' })
+      }
+    }
+
+    let resolvedViaUnion: { id: string; partner1PersonId: string; partner2PersonId: string | null } | null = null
+    if (payload.data.viaUnionId) {
+      const union = await app.prisma.union.findFirst({
+        where: {
+          id: payload.data.viaUnionId,
+          treeId: params.data.id,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          partner1PersonId: true,
+          partner2PersonId: true,
+        },
+      })
+
+      if (!union) {
+        return reply.code(400).send({ error: 'invalid_union_reference' })
+      }
+
+      resolvedViaUnion = union
+    }
+
+    const hasViaUnionIdField = Object.prototype.hasOwnProperty.call(payload.data, 'viaUnionId')
+    const finalParentPersonId = payload.data.parentPersonId ?? existingLink.parentPersonId
+    const finalChildPersonId = payload.data.childPersonId ?? existingLink.childPersonId
+    const finalViaUnionId = hasViaUnionIdField ? payload.data.viaUnionId ?? null : existingLink.viaUnionId
+    const linkValidationError = await findParentChildValidationError(
+      app.prisma,
+      params.data.id,
+      finalParentPersonId,
+      finalChildPersonId,
+      {
+        excludeLinkId: params.data.linkId,
+        viaUnionId: finalViaUnionId,
+        resolvedViaUnion: finalViaUnionId ? resolvedViaUnion : null,
+      },
+    )
+    if (linkValidationError) {
+      return reply.code(400).send({ error: linkValidationError })
+    }
+
+    const updated = await app.prisma.parentChildLink.updateMany({
+      where: {
+        id: params.data.linkId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        parentPersonId: payload.data.parentPersonId,
+        childPersonId: payload.data.childPersonId,
+        viaUnionId: payload.data.viaUnionId,
+        parentageType: payload.data.parentageType,
+        displayOrder: payload.data.displayOrder,
+      },
+    })
+
+    if (updated.count === 0) {
+      return reply.code(404).send({ error: 'link_not_found' })
+    }
+
+    const link = await app.prisma.parentChildLink.findFirst({
+      where: {
+        id: params.data.linkId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+    })
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'parent_child_link_updated',
+        entityType: 'parent_child_link',
+        entityId: params.data.linkId,
+        payloadJson: {
+          changedFields: Object.keys(payload.data),
+        },
+      },
+    })
+
+    return reply.send({ link })
+  })
+
+  app.delete('/trees/:id/links/:linkId', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = linkParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+
+    const membership = await getAdminMembership(app, user.userId, params.data.id)
+    if (!hasActiveAdminMembership(membership)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const deleted = await app.prisma.parentChildLink.updateMany({
+      where: {
+        id: params.data.linkId,
+        treeId: params.data.id,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    })
+
+    if (deleted.count === 0) {
+      return reply.code(404).send({ error: 'link_not_found' })
+    }
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: user.userId,
+        action: 'parent_child_link_deleted',
+        entityType: 'parent_child_link',
+        entityId: params.data.linkId,
+      },
+    })
+
+    return reply.send({ ok: true })
+  })
+}

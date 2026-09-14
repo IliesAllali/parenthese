@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Bradford LL — shared from the main app's font assets */
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('@fonts/BradfordLLWeb-Regular.woff') format('woff'),
+       url('@fonts/BradfordLL-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('@fonts/BradfordLLWeb-Bold.woff') format('woff'),
+       url('@fonts/BradfordLL-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Bradford LL';
+  src: url('@fonts/BradfordLLWeb-Italic.woff') format('woff'),
+       url('@fonts/BradfordLL-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FEF9ED;
+  color: #5D524B;
+  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  font-weight: 450;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 {
+  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  font-weight: 450;
+}
+
+button, input, select, textarea {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+}
+
+
+/* Révélations douces inspirées de microsoft.ai */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px) scale(0.985);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}

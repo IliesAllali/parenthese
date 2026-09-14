@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest'
+
+import { getPersonById, getPersonMedias, loadGraphData } from './mockData'
+
+describe('loadGraphData avatar mapping', () => {
+  it('uses dedicated avatarUrlPath and does not derive person photo from medias', () => {
+    loadGraphData(
+      {
+        persons: [
+          {
+            id: 'p-1',
+            firstName: 'Alice',
+            lastName: 'Martin',
+            birthDate: null,
+            deathDate: null,
+            notes: null,
+            avatarUrlPath: '/trees/t-1/persons/p-1/avatar',
+          },
+          {
+            id: 'p-2',
+            firstName: 'Bob',
+            lastName: 'Martin',
+            birthDate: null,
+            deathDate: null,
+            notes: null,
+            avatarUrlPath: null,
+          },
+        ],
+        unions: [],
+        filiations: [],
+        medias: [
+          {
+            id: 'm-1',
+            personId: 'p-2',
+            type: 'photo',
+            urlPath: '/trees/t-1/media/m-1',
+            caption: null,
+            source: 'Album familial',
+            displayOrder: 1,
+            isFeatured: true,
+          },
+        ],
+        annotations: [],
+      },
+      { apiBaseUrl: '/api', authToken: 'abc' },
+    )
+
+    expect(getPersonById('p-1')?.photo).toBe('/api/trees/t-1/persons/p-1/avatar?token=abc')
+    expect(getPersonById('p-2')?.photo).toBeNull()
+    expect(getPersonMedias('p-2')[0]?.source).toBe('Album familial')
+  })
+})

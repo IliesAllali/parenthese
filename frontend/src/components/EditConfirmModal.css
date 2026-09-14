@@ -1,0 +1,142 @@
+/* ============================================================
+   Edit Confirm Modal - Confirmation désactivation mode édition
+   ============================================================ */
+
+.edit-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(30, 25, 20, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: confirmFadeIn 0.2s ease;
+}
+
+@keyframes confirmFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.edit-confirm-modal {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  padding: 32px 28px 24px;
+  background: rgba(254, 249, 237, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid rgba(166, 124, 82, 0.2);
+  box-shadow:
+    0 20px 60px rgba(93, 82, 75, 0.25),
+    0 4px 16px rgba(93, 82, 75, 0.1);
+  text-align: center;
+  animation: confirmSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes confirmSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.edit-confirm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255, 149, 0, 0.1);
+  color: #E08600;
+  margin-bottom: 16px;
+}
+
+.edit-confirm-title {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #5D524B;
+  margin: 0 0 8px;
+}
+
+.edit-confirm-message {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  color: #8B7355;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.edit-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-confirm-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-confirm-btn:focus-visible {
+  outline: 2px solid #A67C52;
+  outline-offset: 2px;
+}
+
+/* Continuer l'édition - primary outline */
+.edit-confirm-btn--continue {
+  background: rgba(166, 124, 82, 0.08);
+  color: #A67C52;
+  border: 1.5px solid rgba(166, 124, 82, 0.25);
+}
+
+.edit-confirm-btn--continue:hover {
+  background: rgba(166, 124, 82, 0.15);
+  border-color: rgba(166, 124, 82, 0.4);
+}
+
+/* Enregistrer et quitter - primary solid */
+.edit-confirm-btn--save {
+  background: #A67C52;
+  color: #FEF9ED;
+}
+
+.edit-confirm-btn--save:hover {
+  background: #96703E;
+  box-shadow: 0 4px 12px rgba(166, 124, 82, 0.3);
+}
+
+/* Abandonner - danger text */
+.edit-confirm-btn--discard {
+  background: transparent;
+  color: #C0392B;
+  font-weight: 500;
+}
+
+.edit-confirm-btn--discard:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+@media (max-width: 768px) {
+  .edit-confirm-modal {
+    padding: 24px 20px 20px;
+  }
+}

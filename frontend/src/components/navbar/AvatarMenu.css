@@ -1,0 +1,156 @@
+.avatar-menu.account-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: min(340px, 86vw);
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: rgba(247, 236, 217, 0.98);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 12px;
+  border: 1px solid rgba(93, 82, 75, 0.08);
+  box-shadow:
+    0 8px 32px rgba(93, 82, 75, 0.25),
+    0 2px 8px rgba(93, 82, 75, 0.08);
+  padding: 8px;
+  animation: dropdownSlideUp 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: bottom right;
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.account-menu-header {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+
+.account-menu-header--action {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu-header--action:hover {
+  background: rgba(166, 124, 82, 0.1);
+}
+
+.account-menu-header strong {
+  color: #42382f;
+  font-size: 15px;
+}
+
+.account-menu-header span {
+  color: #7d6e60;
+  font-size: 13px;
+}
+
+.account-menu-trees {
+  border-top: 1px solid rgba(93, 82, 75, 0.08);
+  border-bottom: 1px solid rgba(93, 82, 75, 0.08);
+  padding: 8px 0;
+  display: grid;
+  gap: 4px;
+}
+
+.account-menu-single-tree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #5d524b;
+  font-size: 14px;
+}
+
+.avatar-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #5d524b;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.avatar-menu-item:hover {
+  background: rgba(166, 124, 82, 0.1);
+}
+
+.avatar-menu-item.danger {
+  color: #d32f2f;
+}
+
+.avatar-menu-item.danger:hover {
+  background: rgba(211, 47, 47, 0.08);
+}
+
+.tree-choice {
+  align-items: center;
+}
+
+.tree-choice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #baa17f;
+  flex-shrink: 0;
+}
+
+.tree-choice.active {
+  background: rgba(166, 124, 82, 0.16);
+  font-weight: 700;
+}
+
+.tree-choice.active .tree-choice-dot {
+  background: #8b6a43;
+}
+
+.tree-choice-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-choice-arrow {
+  color: #9a8570;
+}
+
+.tree-create {
+  color: #7a5d3a;
+}
+
+.avatar-menu-icon {
+  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+}
+
+.avatar-menu-separator {
+  height: 1px;
+  background: rgba(93, 82, 75, 0.08);
+  margin: 6px 0;
+}

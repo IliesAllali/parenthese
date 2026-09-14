@@ -1,0 +1,127 @@
+/* ============================================================
+   Draft Restore Banner - Restauration brouillon au reload
+   ============================================================ */
+
+.draft-restore-banner {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1002;
+  animation: draftBannerSlideDown 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes draftBannerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.draft-restore-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: rgba(254, 249, 237, 0.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 50px;
+  border: 1px solid rgba(166, 124, 82, 0.25);
+  box-shadow:
+    0 8px 28px rgba(93, 82, 75, 0.18),
+    0 2px 8px rgba(93, 82, 75, 0.08);
+}
+
+.draft-restore-text {
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  color: #5D524B;
+  white-space: nowrap;
+}
+
+.draft-restore-time {
+  font-weight: 400;
+  color: #8B7355;
+}
+
+.draft-restore-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.draft-restore-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: none;
+  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.draft-restore-btn:focus-visible {
+  outline: 2px solid #A67C52;
+  outline-offset: 2px;
+}
+
+/* Restaurer - primary */
+.draft-restore-btn--restore {
+  background: #A67C52;
+  color: #FEF9ED;
+}
+
+.draft-restore-btn--restore:hover {
+  background: #96703E;
+  box-shadow: 0 2px 8px rgba(166, 124, 82, 0.3);
+}
+
+/* Ignorer - ghost */
+.draft-restore-btn--discard {
+  background: rgba(93, 82, 75, 0.08);
+  color: #8B7355;
+}
+
+.draft-restore-btn--discard:hover {
+  background: rgba(93, 82, 75, 0.15);
+  color: #5D524B;
+}
+
+@media (max-width: 768px) {
+  .draft-restore-banner {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    transform: none;
+  }
+
+  @keyframes draftBannerSlideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .draft-restore-content {
+    flex-wrap: wrap;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,604 @@
+import { randomUUID } from 'node:crypto'
+import type { FastifyInstance } from 'fastify'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { prismaMock } = vi.hoisted(() => ({
+  prismaMock: {
+    user: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    tree: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    treeMembership: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+    treeSettings: {
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
+    treeAccessPasswords: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    userTreeAccess: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    person: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    union: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    parentChildLink: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    mediaItem: {
+      count: vi.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    annotation: {
+      findMany: vi.fn(),
+    },
+    contributionSession: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
+    },
+    contributionChange: {
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
+    $disconnect: vi.fn(),
+  },
+}))
+
+vi.mock('../src/lib/prisma.js', () => ({
+  prisma: prismaMock,
+}))
+
+let createApp: () => FastifyInstance
+
+function applyTestEnv(): void {
+  process.env.NODE_ENV = 'test'
+  process.env.PORT = '4000'
+  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/genealogy'
+  process.env.JWT_SECRET = 'test-secret-with-sufficient-length'
+  process.env.JWT_EXPIRES_IN = '7d'
+  process.env.JWT_TREE_ACCESS_EXPIRES_IN = '24h'
+  process.env.CORS_ORIGIN = 'http://localhost:5173'
+}
+
+async function createUserToken(app: FastifyInstance, userId = 'user-1'): Promise<string> {
+  await app.ready()
+  return (app as any).jwt.sign(
+    { kind: 'user', sub: userId, jti: randomUUID(), userId, email: 'user@example.com' },
+    { expiresIn: '1h' },
+  )
+}
+
+beforeAll(async () => {
+  applyTestEnv()
+  const module = await import('../src/app.js')
+  createApp = module.createApp
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+
+  prismaMock.user.findUnique.mockResolvedValue(null)
+  prismaMock.user.create.mockResolvedValue({ id: 'user-1', email: 'user@example.com' })
+  prismaMock.user.update.mockResolvedValue({ id: 'user-1' })
+
+  prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null })
+  prismaMock.tree.findUnique.mockResolvedValue({ id: 'tree-1', slug: 'tree-1', name: 'Tree' })
+  prismaMock.tree.create.mockResolvedValue({ id: 'tree-1', slug: 'tree-1', name: 'Tree' })
+  prismaMock.tree.updateMany.mockResolvedValue({ count: 1 })
+
+  prismaMock.treeMembership.findMany.mockResolvedValue([])
+  prismaMock.treeMembership.findUnique.mockResolvedValue({
+    treeId: 'tree-1',
+    userId: 'user-1',
+    role: 'owner',
+    tree: { deletedAt: null, rootPersonId: null },
+  })
+
+  prismaMock.treeAccessPasswords.findUnique.mockResolvedValue({
+    treeId: 'tree-1',
+    visitorHash: 'hash',
+    contributorHash: 'hash',
+    updatedAt: new Date('2026-02-11T10:00:00.000Z'),
+    tree: { deletedAt: null },
+  })
+  prismaMock.userTreeAccess.findMany.mockResolvedValue([])
+  prismaMock.userTreeAccess.findUnique.mockResolvedValue(null)
+  prismaMock.userTreeAccess.upsert.mockResolvedValue({
+    id: 'share-1',
+    treeId: 'tree-1',
+    userId: 'user-1',
+    role: 'visitor',
+  })
+  prismaMock.userTreeAccess.updateMany.mockResolvedValue({ count: 0 })
+  prismaMock.treeSettings.findUnique.mockResolvedValue({
+    treeId: 'tree-1',
+    memberContributionPolicy: 'pending',
+    visitorPolicy: 'read_only',
+    contributorPolicy: 'pending',
+  })
+  prismaMock.treeSettings.create.mockResolvedValue({ treeId: 'tree-1' })
+
+  prismaMock.person.findMany.mockResolvedValue([])
+  prismaMock.person.findFirst.mockResolvedValue({ id: 'person-1' })
+  prismaMock.person.create.mockResolvedValue({ id: 'person-1' })
+  prismaMock.person.count.mockResolvedValue(0)
+  prismaMock.person.updateMany.mockResolvedValue({ count: 1 })
+  prismaMock.union.findMany.mockResolvedValue([])
+  prismaMock.union.create.mockResolvedValue({ id: 'union-1' })
+  prismaMock.union.count.mockResolvedValue(0)
+  prismaMock.parentChildLink.findMany.mockResolvedValue([])
+  prismaMock.parentChildLink.create.mockResolvedValue({ id: 'link-1' })
+  prismaMock.parentChildLink.count.mockResolvedValue(0)
+  prismaMock.mediaItem.findMany.mockResolvedValue([])
+  prismaMock.mediaItem.count.mockResolvedValue(0)
+  prismaMock.annotation.findMany.mockResolvedValue([])
+  prismaMock.contributionSession.count.mockResolvedValue(0)
+  prismaMock.auditLog.create.mockResolvedValue({ id: 'audit-1' })
+  prismaMock.$transaction.mockImplementation(async (callback: (tx: typeof prismaMock) => Promise<unknown>) => callback(prismaMock))
+  prismaMock.$disconnect.mockResolvedValue(undefined)
+})
+
+describe('Auth routes', () => {
+  it('registers a new user and returns a token', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { email: 'new@example.com', password: 'password123' },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const body = response.json()
+    expect(body.token).toBeDefined()
+    expect(body.user.email).toBe('user@example.com')
+    await app.close()
+  })
+
+  it('rejects register with existing email', async () => {
+    const app = createApp()
+    prismaMock.user.findUnique.mockResolvedValue({ id: 'existing', email: 'taken@example.com' })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { email: 'taken@example.com', password: 'password123' },
+    })
+
+    expect(response.statusCode).toBe(409)
+    expect(response.json().error).toBe('email_already_exists')
+    await app.close()
+  })
+
+  it('rejects register with invalid email', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { email: 'not-an-email', password: 'password123' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toBe('invalid_payload')
+    await app.close()
+  })
+
+  it('rejects register with short password', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/register',
+      payload: { email: 'user@example.com', password: '123' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('rejects login with wrong credentials', async () => {
+    const app = createApp()
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      passwordHash: '$2a$12$invalid_hash_that_wont_match_anything_00000000000000000',
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { email: 'user@example.com', password: 'wrong-password' },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json().error).toBe('invalid_credentials')
+    await app.close()
+  })
+
+  it('rejects login for non-existent user', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/login',
+      payload: { email: 'nobody@example.com', password: 'password123' },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json().error).toBe('invalid_credentials')
+    await app.close()
+  })
+
+  it('rejects logout without token', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/auth/logout',
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+})
+
+describe('Public routes', () => {
+  it('resolves tree by slug', async () => {
+    const app = createApp()
+    prismaMock.tree.findFirst.mockResolvedValue({
+      id: 'tree-1',
+      slug: 'famille-martin',
+      name: 'Famille Martin',
+      description: null,
+    })
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/arbre/famille-martin',
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.tree.slug).toBe('famille-martin')
+    expect(body.tree.name).toBe('Famille Martin')
+    expect(body.tree).not.toHaveProperty('ownerEmail')
+    expect(body.tree).not.toHaveProperty('ownerName')
+    await app.close()
+  })
+
+  it('returns 404 for unknown slug', async () => {
+    const app = createApp()
+    prismaMock.tree.findFirst.mockResolvedValue(null)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/arbre/inexistant',
+    })
+
+    expect(response.statusCode).toBe(404)
+    expect(response.json().error).toBe('tree_not_found')
+    await app.close()
+  })
+
+  it('returns 400 for invalid slug format', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/arbre/ab',
+    })
+
+    expect(response.statusCode).toBe(400)
+    await app.close()
+  })
+})
+
+describe('Graph routes', () => {
+  it('returns graph data for authenticated user', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    prismaMock.person.findMany.mockResolvedValue([
+      {
+        id: 'p-1',
+        treeId: 'tree-1',
+        firstName: 'Alice',
+        lastName: 'Martin',
+        birthDate: new Date('1990-01-15'),
+        deathDate: null,
+        sex: 'female',
+        notes: null,
+        createdBy: null,
+        updatedBy: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      },
+    ])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.mediaItem.findMany.mockResolvedValue([])
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.treeId).toBe('tree-1')
+    expect(body.graph.persons).toHaveLength(1)
+    expect(body.graph.persons[0].firstName).toBe('Alice')
+    expect(body.graph.unions).toHaveLength(0)
+    expect(body.graph.filiations).toHaveLength(0)
+    await app.close()
+  })
+
+  it('rejects graph access without auth', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+
+  it('rejects graph access for non-member user', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeMembership.findUnique.mockResolvedValue(null)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(403)
+    await app.close()
+  })
+
+  it('allows tree access token to fetch graph', async () => {
+    const app = createApp()
+    await app.ready()
+
+    const treeAccessToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:visitor',
+      treeId: 'tree-1',
+      role: 'visitor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: 'p-1' })
+    prismaMock.person.findMany.mockResolvedValue([])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.mediaItem.findMany.mockResolvedValue([])
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+      headers: { authorization: `Bearer ${treeAccessToken}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json().rootPersonId).toBe('p-1')
+    await app.close()
+  })
+})
+
+describe('Health check', () => {
+  it('returns ok', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/health',
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({ ok: true })
+    await app.close()
+  })
+})
+
+describe('Tree CRUD', () => {
+  it('creates a tree and returns it', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        name: 'Mon Arbre',
+        slug: 'mon-arbre',
+        visitorPassword: 'visitor-pass-123',
+        contributorPassword: 'contributor-pass-123',
+      },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.tree.create).toHaveBeenCalled()
+    const createCall = prismaMock.tree.create.mock.calls[0][0]
+    expect(createCall.data.memberships.create.role).toBe('owner')
+    expect(createCall.data.settings.create).toBeDefined()
+    expect(createCall.data.accessPasswords.create.visitorHash).toBeDefined()
+    await app.close()
+  })
+
+  it('requires auth to create a tree', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees',
+      payload: { name: 'Mon Arbre', slug: 'mon-arbre' },
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+
+  it('lists user trees', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeMembership.findMany.mockResolvedValue([
+      {
+        role: 'owner',
+        tree: { id: 'tree-1', slug: 'mon-arbre', name: 'Mon Arbre', description: null, rootPersonId: null, createdAt: new Date() },
+      },
+    ])
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.trees).toHaveLength(1)
+    expect(body.trees[0].name).toBe('Mon Arbre')
+    await app.close()
+  })
+
+  it('requires auth to list trees', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees',
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+})
+
+describe('Relationship guardrails', () => {
+  it('rejects creating a union between ancestor and descendant', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    prismaMock.person.findFirst.mockImplementation(async (args: any) => ({
+      id: args.where.id,
+    }))
+    prismaMock.parentChildLink.findMany.mockResolvedValue([
+      {
+        id: 'link-1',
+        parentPersonId: 'person-parent',
+        childPersonId: 'person-child',
+        viaUnionId: null,
+      },
+    ])
+    prismaMock.union.findMany.mockResolvedValue([])
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/unions',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        partner1PersonId: 'person-parent',
+        partner2PersonId: 'person-child',
+        unionType: 'mariage',
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toBe('forbidden_union_with_ancestor_descendant')
+    expect(prismaMock.union.create).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('rejects creating a parent-child link that introduces a cycle', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    prismaMock.person.findFirst.mockImplementation(async (args: any) => ({
+      id: args.where.id,
+    }))
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([
+      {
+        id: 'link-a',
+        parentPersonId: 'a',
+        childPersonId: 'b',
+        viaUnionId: null,
+      },
+      {
+        id: 'link-b',
+        parentPersonId: 'b',
+        childPersonId: 'c',
+        viaUnionId: null,
+      },
+    ])
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/links',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        parentPersonId: 'c',
+        childPersonId: 'a',
+        parentageType: 'biologique',
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toBe('parent_child_cycle_detected')
+    expect(prismaMock.parentChildLink.create).not.toHaveBeenCalled()
+    await app.close()
+  })
+})

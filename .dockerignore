@@ -1,0 +1,9 @@
+# Contexte de build de Dockerfile.web : seuls le front et la configuration nginx sont utiles
+*
+!frontend
+!deploy/nginx.docker.conf
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/.env.*
+!frontend/.env.example

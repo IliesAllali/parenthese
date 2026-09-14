@@ -1,0 +1,130 @@
+.annotation-toolbar {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1050;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+/* Let mouse events pass through to canvas during drag */
+.annotation-toolbar--dragging {
+  pointer-events: none;
+}
+
+.annotation-toolbar__tools {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 16px;
+  background: rgba(254, 249, 237, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(166, 124, 82, 0.18);
+  box-shadow: 0 8px 32px rgba(93, 82, 75, 0.15);
+}
+
+.annotation-toolbar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #5D524B;
+}
+
+.annotation-toolbar__btn:hover:not(:disabled) {
+  background: rgba(166, 124, 82, 0.1);
+}
+
+.annotation-toolbar__btn--active {
+  background: linear-gradient(135deg, #8b6a43, #6a4f32);
+  color: #fef9ed;
+  box-shadow: 0 2px 8px rgba(166, 124, 82, 0.3);
+}
+
+.annotation-toolbar__btn--active:hover:not(:disabled) {
+  background: linear-gradient(135deg, #96703e, #7a5a3a);
+}
+
+.annotation-toolbar__btn--delete:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.annotation-toolbar__btn--delete:not(:disabled):hover {
+  background: rgba(192, 57, 43, 0.1);
+  color: #C0392B;
+}
+
+.annotation-toolbar__btn svg {
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Drag target: subtle hint that trash is available */
+.annotation-toolbar__btn--drag-target {
+  opacity: 1 !important;
+  cursor: default;
+  color: #C0392B;
+  background: rgba(192, 57, 43, 0.05);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Drag over: confirm drop zone */
+.annotation-toolbar__btn--drag-over {
+  opacity: 1 !important;
+  background: rgba(192, 57, 43, 0.14) !important;
+  color: #C0392B !important;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12);
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.annotation-toolbar__separator {
+  width: 28px;
+  height: 1px;
+  margin: 4px auto;
+  background: rgba(166, 124, 82, 0.2);
+}
+
+/* Sub-panel (options) */
+.annotation-toolbar__panel {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(254, 249, 237, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(166, 124, 82, 0.18);
+  box-shadow: 0 8px 32px rgba(93, 82, 75, 0.15);
+  min-width: 180px;
+  animation: annotation-panel-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes annotation-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile: hidden — annotation tools are integrated into ContextualNavbar */
+@media (max-width: 768px) {
+  .annotation-toolbar {
+    display: none;
+  }
+}

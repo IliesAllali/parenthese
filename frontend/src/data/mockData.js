@@ -1,0 +1,395 @@
+// ============================================================
+// Data model: Person / Union / Filiation / Media / Annotation
+// Compatible with the current Galaxy frontend.
+// ============================================================
+
+export let persons = [
+  { id: 1, firstName: 'Jean', lastName: 'Dupont', birthYear: 1890, deathYear: 1965, isAlive: false, photo: 'https://randomuser.me/api/portraits/men/81.jpg', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Menuisier', nationality: 'Française', note: 'Patriarche de la famille' },
+  { id: 2, firstName: 'Marie', lastName: 'Martin', birthYear: 1895, deathYear: 1970, isAlive: false, photo: 'https://randomuser.me/api/portraits/women/71.jpg', frameType: 'round', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Couturière', note: 'Atelier de couture rue du Commerce' },
+  { id: 3, firstName: 'Robert', lastName: 'Dupont', birthYear: 1920, deathYear: 1995, isAlive: false, photo: 'https://randomuser.me/api/portraits/men/67.jpg', frameType: 'rect', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Instituteur', note: 'A enseigné 35 ans à l\'école communale' },
+  { id: 4, firstName: 'André', lastName: 'Dupont', birthYear: 1923, deathYear: 2000, isAlive: false, photo: 'https://randomuser.me/api/portraits/men/58.jpg', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Charpentier' },
+  { id: 5, firstName: 'Simone', lastName: 'Petit', birthYear: 1925, deathYear: 2010, isAlive: false, photo: 'https://randomuser.me/api/portraits/women/54.jpg', frameType: 'round', birthPlace: 'Guéret', region: 'Creuse', profession: 'Infirmière' },
+  { id: 9, firstName: 'Isabelle', lastName: 'Bernard', birthYear: 1928, isAlive: true, photo: 'https://randomuser.me/api/portraits/women/66.jpg', frameType: 'rect', birthPlace: 'Tulle', region: 'Corrèze', profession: 'Sage-femme', note: 'Doyenne de la famille, vit à Brive' },
+  { id: 6, firstName: 'Jacques', lastName: 'Dupont', birthYear: 1945, deathYear: 2015, isAlive: false, photo: 'https://randomuser.me/api/portraits/men/45.jpg', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Journaliste', note: 'Reporter au Populaire du Centre' },
+  { id: 7, firstName: 'Philippe', lastName: 'Dupont', birthYear: 1948, isAlive: true, photo: 'https://randomuser.me/api/portraits/men/32.jpg', frameType: 'round', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Pharmacien' },
+  { id: 8, firstName: 'Sophie', lastName: 'Dupont', birthYear: 1960, isAlive: true, photo: 'https://randomuser.me/api/portraits/women/65.jpg', frameType: 'rect', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Architecte', note: 'Cabinet d’architecture à Bordeaux' },
+  { id: 10, firstName: 'Thomas', lastName: 'Dupont', birthYear: 1962, isAlive: true, photo: 'https://randomuser.me/api/portraits/men/29.jpg', frameType: 'polaroid', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Vétérinaire' },
+  { id: 11, firstName: 'Claire', lastName: 'Dupont', birthYear: 1955, isAlive: true, photo: 'https://randomuser.me/api/portraits/women/58.jpg', birthPlace: 'Paris', region: 'Ile-de-France', profession: 'Enseignante' },
+]
+
+export let medias = [
+  { id: 'm1', personId: 1, type: 'photo', url: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Mariage 1918' },
+  { id: 'm2', personId: 1, type: 'photo', url: 'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Atelier de menuiserie' },
+  { id: 'm3', personId: 1, type: 'video', url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', mimeType: 'video/youtube', label: 'Témoignage filmé 1960' },
+  { id: 'm4', personId: 2, type: 'photo', url: 'https://images.pexels.com/photos/1462630/pexels-photo-1462630.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/1462630/pexels-photo-1462630.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Jeunesse' },
+  { id: 'm5', personId: 2, type: 'photo', url: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/1542085/pexels-photo-1542085.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Portrait de famille' },
+  { id: 'm6', personId: 3, type: 'photo', url: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Service militaire' },
+  { id: 'm7', personId: 3, type: 'video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', mimeType: 'video/youtube', label: 'Mariage Simone 1943' },
+  { id: 'm8', personId: 3, type: 'photo', url: 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Années 70' },
+  { id: 'm9', personId: 8, type: 'photo', url: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Diplôme' },
+  { id: 'm10', personId: 8, type: 'photo', url: 'https://images.pexels.com/photos/1300402/pexels-photo-1300402.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/1300402/pexels-photo-1300402.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'Plan du cabinet 1985' },
+  { id: 'm11', personId: 10, type: 'video', url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE', mimeType: 'video/youtube', label: 'Anniversaire 2020' },
+  { id: 'm12', personId: 6, type: 'photo', url: 'https://images.pexels.com/photos/3777931/pexels-photo-3777931.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', urlHd: 'https://images.pexels.com/photos/3777931/pexels-photo-3777931.jpeg?auto=compress&cs=tinysrgb&w=1200&dpr=1', label: 'En rédaction' },
+  { id: 'm13', personId: 6, type: 'video', url: 'https://www.youtube.com/watch?v=ScMzIvxBSi4', mimeType: 'video/youtube', label: 'Interview archive radio' },
+]
+
+export let unions = [
+  { id: 'u1', partner1Id: 1, partner2Id: 2, unionType: 'mariage', startYear: 1918, endYear: null, displayOrder: 1 },
+  { id: 'u2', partner1Id: 3, partner2Id: 5, unionType: 'mariage', startYear: 1943, endYear: 1958, displayOrder: 1 },
+  { id: 'u3', partner1Id: 3, partner2Id: 9, unionType: 'mariage', startYear: 1959, endYear: null, displayOrder: 2 },
+]
+
+export let filiations = [
+  { id: 'f1', childId: 3, unionId: 'u1', parentId: null, parentageType: 'biologique', displayOrder: 1 },
+  { id: 'f2', childId: 4, unionId: 'u1', parentId: null, parentageType: 'biologique', displayOrder: 2 },
+  { id: 'f3', childId: 6, unionId: 'u2', parentId: null, parentageType: 'biologique', displayOrder: 1 },
+  { id: 'f4', childId: 7, unionId: 'u2', parentId: null, parentageType: 'biologique', displayOrder: 2 },
+  { id: 'f5', childId: 8, unionId: 'u3', parentId: null, parentageType: 'biologique', displayOrder: 1 },
+  { id: 'f6', childId: 10, unionId: 'u3', parentId: null, parentageType: 'biologique', displayOrder: 2 },
+  { id: 'f7', childId: 11, unionId: null, parentId: 4, parentageType: 'inconnu', displayOrder: 1 },
+]
+
+export let annotations = []
+
+const INITIAL_PERSONS = JSON.parse(JSON.stringify(persons))
+const INITIAL_MEDIAS = JSON.parse(JSON.stringify(medias))
+const INITIAL_UNIONS = JSON.parse(JSON.stringify(unions))
+const INITIAL_FILIATIONS = JSON.parse(JSON.stringify(filiations))
+
+function parseYearFromDate(value) {
+  if (!value || typeof value !== 'string') {
+    return null
+  }
+
+  const year = Number.parseInt(value.slice(0, 4), 10)
+  return Number.isFinite(year) ? year : null
+}
+
+function pickFrameType(id) {
+  const frameTypes = ['round', 'rect', 'polaroid']
+  const text = String(id)
+  let hash = 0
+
+  for (let i = 0; i < text.length; i += 1) {
+    hash += text.charCodeAt(i)
+  }
+
+  return frameTypes[hash % frameTypes.length]
+}
+
+function buildProtectedAssetUrl(pathOrUrl, apiBaseUrl, authToken, cacheBust = null) {
+  if (!pathOrUrl) {
+    return null
+  }
+
+  const absolutePath = pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')
+    ? pathOrUrl
+    : `${apiBaseUrl}${pathOrUrl}`
+
+  let protectedUrl = authToken ? `${absolutePath}?token=${encodeURIComponent(authToken)}` : absolutePath
+  if (cacheBust !== null && cacheBust !== undefined) {
+    const separator = protectedUrl.includes('?') ? '&' : '?'
+    protectedUrl = `${protectedUrl}${separator}v=${encodeURIComponent(String(cacheBust))}`
+  }
+
+  return protectedUrl
+}
+
+function mapRemotePersonToLocal(person, current = null) {
+  const birthYear = parseYearFromDate(person?.birthDate)
+  const deathYear = parseYearFromDate(person?.deathDate)
+
+  return {
+    id: person?.id ?? current?.id,
+    firstName: person?.firstName || current?.firstName || 'Inconnu',
+    lastName: person?.lastName || current?.lastName || '',
+    birthName: person?.birthName ?? current?.birthName ?? null,
+    birthYear,
+    birthDate: person?.birthDate || current?.birthDate || null,
+    deathDate: person?.deathDate || current?.deathDate || null,
+    deathYear,
+    isAlive: !deathYear,
+    frameType: current?.frameType || pickFrameType(person?.id),
+    note: person?.notes || null,
+    birthPlace: person?.birthPlace || null,
+    region: person?.region || null,
+    profession: person?.profession || null,
+    nationality: person?.nationality || null,
+    photo: current?.photo || null,
+  }
+}
+
+export function resetToDemoData() {
+  persons = JSON.parse(JSON.stringify(INITIAL_PERSONS))
+  medias = JSON.parse(JSON.stringify(INITIAL_MEDIAS))
+  unions = JSON.parse(JSON.stringify(INITIAL_UNIONS))
+  filiations = JSON.parse(JSON.stringify(INITIAL_FILIATIONS))
+}
+
+export function loadGraphData(graph, options = {}) {
+  const authToken = options.authToken || ''
+  const apiBaseUrl = (options.apiBaseUrl || '').replace(/\/$/, '')
+  const avatarCacheBust = options.avatarCacheBust ?? null
+
+  const remotePersons = Array.isArray(graph?.persons) ? graph.persons : []
+  const remoteUnions = Array.isArray(graph?.unions) ? graph.unions : []
+  const remoteFiliations = Array.isArray(graph?.filiations) ? graph.filiations : []
+  const remoteMedias = Array.isArray(graph?.medias) ? graph.medias : []
+  const remoteAnnotations = Array.isArray(graph?.annotations) ? graph.annotations : []
+
+  persons = remotePersons.map((person) => {
+    const localPerson = mapRemotePersonToLocal(person)
+    localPerson.photo = buildProtectedAssetUrl(person.avatarUrlPath || null, apiBaseUrl, authToken, avatarCacheBust)
+    return localPerson
+  })
+
+  const personIdSet = new Set(persons.map((person) => person.id))
+
+  unions = remoteUnions
+    .map((union, index) => ({
+      id: union.id,
+      partner1Id: union.partner1PersonId,
+      partner2Id: union.partner2PersonId,
+      unionType: union.unionType || null,
+      startYear: parseYearFromDate(union.startDate),
+      endYear: parseYearFromDate(union.endDate),
+      displayOrder: Number.isFinite(union.displayOrder) ? union.displayOrder : index + 1,
+    }))
+    .filter((union) => (
+      personIdSet.has(union.partner1Id) &&
+      personIdSet.has(union.partner2Id)
+    ))
+
+  const unionIdSet = new Set(unions.map((union) => union.id))
+
+  const seenUnionChildKey = new Set()
+  filiations = remoteFiliations
+    .map((filiation, index) => ({
+      id: filiation.id,
+      childId: filiation.childPersonId,
+      unionId: filiation.viaUnionId || null,
+      parentId: filiation.viaUnionId ? null : filiation.parentPersonId,
+      parentageType: filiation.parentageType || 'biologique',
+      displayOrder: Number.isFinite(filiation.displayOrder) ? filiation.displayOrder : index + 1,
+    }))
+    .filter((filiation) => {
+      if (!personIdSet.has(filiation.childId)) {
+        return false
+      }
+
+      if (!filiation.unionId) {
+        return filiation.parentId ? personIdSet.has(filiation.parentId) : false
+      }
+
+      if (!unionIdSet.has(filiation.unionId)) {
+        return false
+      }
+
+      const key = `${filiation.unionId}:${filiation.childId}`
+      if (seenUnionChildKey.has(key)) {
+        return false
+      }
+
+      seenUnionChildKey.add(key)
+      return true
+    })
+
+  medias = remoteMedias
+    .filter((media) => personIdSet.has(media.personId))
+    .map((media, index) => {
+      const mediaUrl = buildProtectedAssetUrl(media.urlPath || '', apiBaseUrl, authToken)
+
+      return {
+        id: media.id,
+        personId: media.personId,
+        type: media.type || 'photo',
+        url: mediaUrl,
+        urlHd: mediaUrl,
+        label: media.caption || `Media ${index + 1}`,
+        source: media.source || null,
+        displayOrder: Number.isFinite(media.displayOrder) ? media.displayOrder : index + 1,
+        isFeatured: Boolean(media.isFeatured),
+        mimeType: media.mimeType || null,
+      }
+    })
+
+  annotations = remoteAnnotations.map((ann) => {
+    let content = ann.content || ''
+    // For photo annotations: rebuild URL with current auth token from stored photoPath
+    if (ann.type === 'photo' && content) {
+      try {
+        const parsed = typeof content === 'string' ? JSON.parse(content) : content
+        if (parsed.photoPath) {
+          parsed.url = buildProtectedAssetUrl(parsed.photoPath, apiBaseUrl, authToken)
+          content = JSON.stringify(parsed)
+        }
+      } catch { /* ignore */ }
+    }
+    return {
+      id: ann.id,
+      type: ann.type || 'text',
+      x: ann.x ?? 0,
+      y: ann.y ?? 0,
+      content,
+      style: ann.style || {},
+      zIndex: ann.zIndex ?? 0,
+      createdBy: ann.createdBy || null,
+    }
+  })
+}
+
+// Index par personne, reconstruits quand le tableau est réassigné (les tableaux ne sont jamais
+// mutés en place). Appelés pour chaque nœud à chaque frame par la galaxie : un parcours linéaire
+// coûterait nœuds × éléments comparaisons par frame sur un grand arbre.
+const EMPTY_MEDIAS = []
+let mediasIndexSource = null
+let mediasByPerson = new Map()
+
+export function getPersonMedias(personId) {
+  if (mediasIndexSource !== medias) {
+    mediasIndexSource = medias
+    mediasByPerson = new Map()
+    for (const media of medias) {
+      if (!mediasByPerson.has(media.personId)) mediasByPerson.set(media.personId, [])
+      mediasByPerson.get(media.personId).push(media)
+    }
+    for (const list of mediasByPerson.values()) {
+      list.sort((a, b) => {
+        const aOrder = Number.isFinite(a.displayOrder) ? a.displayOrder : Number.MAX_SAFE_INTEGER
+        const bOrder = Number.isFinite(b.displayOrder) ? b.displayOrder : Number.MAX_SAFE_INTEGER
+        return aOrder - bOrder
+      })
+    }
+  }
+  return mediasByPerson.get(personId) || EMPTY_MEDIAS
+}
+
+let personsIndexSource = null
+let personsById = new Map()
+
+export function getPersonById(personId) {
+  if (personsIndexSource !== persons) {
+    personsIndexSource = persons
+    personsById = new Map(persons.map((person) => [String(person.id), person]))
+  }
+  return personsById.get(String(personId)) || null
+}
+
+export function upsertPersonFromGraphPayload(person) {
+  if (!person?.id) {
+    return null
+  }
+
+  const index = persons.findIndex((candidate) => String(candidate.id) === String(person.id))
+  const current = index >= 0 ? persons[index] : null
+  const localPerson = mapRemotePersonToLocal(person, current)
+
+  if (index >= 0) {
+    persons = [
+      ...persons.slice(0, index),
+      localPerson,
+      ...persons.slice(index + 1),
+    ]
+  } else {
+    persons = [...persons, localPerson]
+  }
+
+  return localPerson
+}
+
+export function getParents(personId) {
+  const fil = filiations.filter((filiation) => filiation.childId === personId)
+  const result = []
+  const seenParentIds = new Set()
+
+  for (const filiation of fil) {
+    if (filiation.unionId) {
+      const union = unions.find((currentUnion) => currentUnion.id === filiation.unionId)
+      if (union) {
+        const p1 = persons.find((person) => person.id === union.partner1Id)
+        const p2 = persons.find((person) => person.id === union.partner2Id)
+        if (p1 && !seenParentIds.has(p1.id)) {
+          seenParentIds.add(p1.id)
+          result.push(p1)
+        }
+
+        if (p2 && !seenParentIds.has(p2.id)) {
+          seenParentIds.add(p2.id)
+          result.push(p2)
+        }
+      }
+    } else if (filiation.parentId) {
+      const parent = persons.find((person) => person.id === filiation.parentId)
+      if (parent && !seenParentIds.has(parent.id)) {
+        seenParentIds.add(parent.id)
+        result.push(parent)
+      }
+    }
+  }
+
+  return result
+}
+
+export function getChildren(personId) {
+  const childIds = new Set()
+  const personUnions = unions.filter((union) => union.partner1Id === personId || union.partner2Id === personId)
+
+  for (const union of personUnions) {
+    const childrenInUnion = filiations.filter((filiation) => filiation.unionId === union.id)
+    childrenInUnion.forEach((filiation) => childIds.add(filiation.childId))
+  }
+
+  const directFiliations = filiations.filter((filiation) => filiation.parentId === personId)
+  directFiliations.forEach((filiation) => childIds.add(filiation.childId))
+
+  return [...childIds]
+    .map((id) => persons.find((person) => person.id === id))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aYear = Number.isFinite(a.birthYear) ? a.birthYear : Number.MAX_SAFE_INTEGER
+      const bYear = Number.isFinite(b.birthYear) ? b.birthYear : Number.MAX_SAFE_INTEGER
+      return aYear - bYear
+    })
+}
+
+export function getPersonUnions(personId) {
+  return unions
+    .filter((union) => union.partner1Id === personId || union.partner2Id === personId)
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+}
+
+export function getUnionChildren(unionId) {
+  return filiations
+    .filter((filiation) => filiation.unionId === unionId)
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((filiation) => persons.find((person) => person.id === filiation.childId))
+    .filter(Boolean)
+}
+
+export function getChildFiliation(childId) {
+  return filiations.find((filiation) => filiation.childId === childId) || null
+}
+
+// ---- Annotations helpers ----
+
+let annotationIdCounter = 0
+
+export function addAnnotation(ann) {
+  annotationIdCounter += 1
+  const id = ann.id || `local-ann-${annotationIdCounter}`
+  const newAnn = { ...ann, id }
+  annotations = [...annotations, newAnn]
+  return newAnn
+}
+
+export function updateAnnotation(id, changes) {
+  const index = annotations.findIndex((a) => a.id === id)
+  if (index < 0) return null
+  const updated = { ...annotations[index], ...changes }
+  annotations = [...annotations.slice(0, index), updated, ...annotations.slice(index + 1)]
+  return updated
+}
+
+export function removeAnnotation(id) {
+  annotations = annotations.filter((a) => a.id !== id)
+}
