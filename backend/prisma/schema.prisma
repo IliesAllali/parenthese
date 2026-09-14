@@ -83,7 +83,9 @@ model User {
   sharedTreeAccesses           UserTreeAccess[]
   submittedContributionSessions ContributionSession[] @relation("ContributionSubmittedBy")
   reviewedContributionSessions ContributionSession[] @relation("ContributionReviewedBy")
+  lastOpenedTree               Tree?                 @relation("UserLastOpenedTree", fields: [lastOpenedTreeId], references: [id], onDelete: SetNull)
 
+  @@index([lastOpenedAt])
   @@map("users")
 }
 
@@ -109,6 +111,7 @@ model Tree {
   contributionSessions ContributionSession[]
   auditLogs            AuditLog[]
   annotations          Annotation[]
+  lastOpenedByUsers    User[]                @relation("UserLastOpenedTree")
 
   @@index([ownerUserId])
   @@map("trees")
@@ -145,7 +148,7 @@ model UserTreeAccess {
   userId        String
   role          SharedAccessRole
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  updatedAt     DateTime        @default(now()) @updatedAt
   tree          Tree            @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
