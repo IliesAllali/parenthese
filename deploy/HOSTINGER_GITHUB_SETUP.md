@@ -4,7 +4,7 @@ Ce document concerne l'instance hébergée par Ilies Allali. Pour installer Pare
 
 ## Principe
 
-Chaque push sur `main` lance `.github/workflows/deploy-hostinger.yml`. Le workflow se connecte au serveur en SSH, aligne le dépôt sur `origin/main` sous verrou, puis lance `deploy/deploy.sh`, qui ne réinstalle et ne reconstruit que ce qui a changé depuis le dernier déploiement réussi.
+Chaque push sur `main` lance d'abord la CI (`.github/workflows/ci.yml`). Si elle passe, `.github/workflows/deploy-hostinger.yml` démarre. Le workflow se connecte au serveur en SSH, aligne le dépôt sur `origin/main` sous verrou, puis lance `deploy/deploy.sh`, qui ne réinstalle et ne reconstruit que ce qui a changé depuis le dernier déploiement réussi.
 
 ## Secrets du dépôt
 

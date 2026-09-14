@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
+import { purgeTrees } from '../lib/tree-purge.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 
@@ -624,43 +625,22 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
-    const now = new Date()
-    const deletedTree = await app.prisma.tree.updateMany({
+    const existingTree = await app.prisma.tree.findFirst({
       where: {
         id: params.data.id,
         deletedAt: null,
       },
-      data: {
-        deletedAt: now,
+      select: {
+        id: true,
       },
     })
 
-    if (deletedTree.count === 0) {
+    if (!existingTree) {
       return reply.code(404).send({ error: 'tree_not_found' })
     }
 
-    await app.prisma.user.updateMany({
-      where: {
-        lastOpenedTreeId: params.data.id,
-      },
-      data: {
-        lastOpenedTreeId: null,
-        lastOpenedAccessMode: null,
-        lastOpenedRole: null,
-        lastOpenedAt: null,
-      },
-    })
-
-    await app.prisma.auditLog.create({
-      data: {
-        treeId: params.data.id,
-        actorType: 'user',
-        actorId: user.userId,
-        action: 'tree_deleted',
-        entityType: 'tree',
-        entityId: params.data.id,
-      },
-    })
+    // Suppression définitive : données en cascade (journal d'audit compris) puis dossier médias.
+    await purgeTrees(app.prisma, [existingTree.id], request.log)
 
     return reply.send({ ok: true })
   })

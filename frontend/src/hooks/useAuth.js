@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  deleteAccount,
   fetchLastOpenedTree,
   loginUser,
   logoutUser,
@@ -143,6 +144,23 @@ export function useAuth() {
     setLastOpenedTree(null)
   }
 
+  // Renvoie null en cas de succès (session locale effacée), sinon un message d'erreur affichable.
+  const handleDeleteAccount = async (password) => {
+    const token = userAuth.token
+    if (!token) {
+      return errorMessages.getAccountDeletionErrorMessage({ status: 401 })
+    }
+
+    try {
+      await deleteAccount(token, password)
+    } catch (error) {
+      return errorMessages.getAccountDeletionErrorMessage(error)
+    }
+
+    clearStoredUserToken()
+    return null
+  }
+
   const persistLastOpenedTree = async (payload) => {
     if (!userAuth.token) {
       return null
@@ -168,6 +186,7 @@ export function useAuth() {
     handleLogin,
     handleRegister,
     handleLogout,
+    handleDeleteAccount,
     restoreUserToken,
     restoreUserProfile: loadUserProfile,
     clearStoredUserToken,

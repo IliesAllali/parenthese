@@ -2901,3 +2901,67 @@
 .tree-settings-radio small {
   color: rgba(93, 82, 75, 0.7);
 }
+
+/* Écran compte : suppression du compte */
+.account-delete-zone {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #eadfcd;
+}
+
+.account-delete-link {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: #9a6a5f;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.account-delete-link:hover:not(:disabled) {
+  color: #862f2f;
+  text-decoration: underline;
+}
+
+.account-delete-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.account-delete-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  color: #6e6258;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.account-delete-form {
+  display: grid;
+  gap: 8px;
+}
+
+.account-delete-form label {
+  font-size: 14px;
+  color: #6e6258;
+}
+
+.account-delete-modal .ghost {
+  border: 1px solid #cdb89a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  color: #6a4f32;
+  font-weight: 450;
+  cursor: pointer;
+}
+
+.account-delete-modal .ghost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

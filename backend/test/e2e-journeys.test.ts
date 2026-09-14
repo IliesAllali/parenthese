@@ -16,6 +16,7 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     user: {
       findUnique: vi.fn(),
+      count: vi.fn().mockResolvedValue(1),
       create: vi.fn(),
       update: vi.fn(),
     },

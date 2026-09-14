@@ -13,6 +13,7 @@ const AccountDashboard = ({
   onOpenTree,
   onStartTreeWizard,
   onLogout,
+  onDeleteAccount,
   onBackToAccess,
   onUseDemo,
 }) => {
@@ -20,6 +21,41 @@ const AccountDashboard = ({
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const openDeleteModal = () => {
+    setDeletePassword('')
+    setDeleteError('')
+    setDeleteModalOpen(true)
+  }
+
+  const closeDeleteModal = () => {
+    if (deleting) return
+    setDeleteModalOpen(false)
+    setDeletePassword('')
+    setDeleteError('')
+  }
+
+  const handleDeleteSubmit = async (event) => {
+    event.preventDefault()
+    if (deleting || !deletePassword || !onDeleteAccount) return
+
+    setDeleting(true)
+    setDeleteError('')
+    const errorMessage = await onDeleteAccount(deletePassword)
+    setDeleting(false)
+
+    if (errorMessage) {
+      setDeleteError(errorMessage)
+      return
+    }
+
+    setDeleteModalOpen(false)
+    setDeletePassword('')
+  }
 
   useEffect(() => {
     setMode(defaultMode === 'register' ? 'register' : 'login')
@@ -184,7 +220,63 @@ const AccountDashboard = ({
             </button>
           )}
         </div>
+
+        {onDeleteAccount && (
+          <div className="account-delete-zone">
+            <button type="button" className="account-delete-link" onClick={openDeleteModal} disabled={loading}>
+              Supprimer mon compte
+            </button>
+          </div>
+        )}
       </div>
+
+      {deleteModalOpen && (
+        <div className="settings-delete-modal-overlay" onClick={closeDeleteModal}>
+          <div
+            className="settings-delete-modal account-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="accountDeleteTitle"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="accountDeleteTitle">Supprimer mon compte</h3>
+            <p>Cette suppression est définitive, elle ne pourra pas être annulée.</p>
+            <ul className="account-delete-list">
+              <li>Votre compte et votre adresse email sont effacés.</li>
+              <li>
+                Les arbres que vous avez créés sont supprimés avec toutes leurs personnes et tous leurs médias,
+                pour toute la famille qui y avait accès.
+              </li>
+              <li>Les arbres partagés avec vous restent à leurs propriétaires. Vous n'y aurez simplement plus accès.</li>
+            </ul>
+
+            <form className="account-delete-form" onSubmit={handleDeleteSubmit}>
+              <label htmlFor="accountDeletePassword">Mot de passe actuel</label>
+              <input
+                id="accountDeletePassword"
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+                disabled={deleting}
+                autoFocus
+                required
+              />
+
+              {deleteError && <div className="account-error">{deleteError}</div>}
+
+              <div className="settings-delete-actions">
+                <button type="button" className="ghost" onClick={closeDeleteModal} disabled={deleting}>
+                  Annuler
+                </button>
+                <button type="submit" className="danger-action" disabled={deleting || !deletePassword}>
+                  {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

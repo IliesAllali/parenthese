@@ -15,7 +15,6 @@ import { publicRoutes } from './routes/public.js'
 import { annotationRoutes } from './routes/annotations.js'
 import { gedcomRoutes } from './routes/gedcom.js'
 import { treeRoutes } from './routes/trees.js'
-import { waitlistRoutes } from './routes/waitlist.js'
 import type { AnyJwtPayload } from './types/auth.js'
 
 export function createApp() {
@@ -56,6 +55,12 @@ export function createApp() {
 
       if (payload.kind === 'user') {
         if (isUserTokenRevoked(payload.jti)) {
+          return
+        }
+
+        // Un compte supprimé invalide aussi les sessions ouvertes sur d'autres appareils
+        const accountCount = await app.prisma.user.count({ where: { id: payload.userId } })
+        if (accountCount === 0) {
           return
         }
 
@@ -110,7 +115,6 @@ export function createApp() {
   app.register(contributionRoutes)
   app.register(annotationRoutes)
   app.register(gedcomRoutes)
-  app.register(waitlistRoutes)
 
   app.setErrorHandler((error: FastifyError | Error, request, reply) => {
     if (error instanceof Prisma.PrismaClientInitializationError) {
