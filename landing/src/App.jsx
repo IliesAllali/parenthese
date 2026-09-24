@@ -853,7 +853,7 @@ function Header({ onCta, elevated }) {
           <div className="flex items-center gap-3">
             <Logo size={32} />
             <span className="hidden sm:inline font-bradford text-lg text-cosmos-brown tracking-[0.01em]">
-              Parenthese
+              Parenthèse
             </span>
           </div>
 
@@ -869,7 +869,7 @@ function Header({ onCta, elevated }) {
               onClick={onCta}
               className="px-3 sm:px-5 py-2 rounded-pill bg-cosmos-gold text-cosmos-cream font-mono text-xs sm:text-sm hover:bg-[#A67C52]/90 hover:shadow-[0_4px_12px_rgba(166,124,82,0.15)] hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
             >
-              S'inscrire
+              Créer mon arbre
             </button>
           </div>
         </div>
@@ -1136,7 +1136,7 @@ export default function App() {
             <p className="w-[88%] sm:w-[82%] lg:w-[90%] mx-auto lg:mx-0 text-base sm:text-lg text-cosmos-brown/80 leading-relaxed mt-1">
               {source === 'app-shared'
                 ? "Vous venez de découvrir Parenthèse à travers le lien d'une famille. Créez la vôtre en quelques minutes."
-                : "Une galaxie de votre famille. Des photos, des anecdotes, des voix. Partageable en un lien - sans compte, sans friction. Pour ceux qui veulent garder la mémoire vivante avant qu'elle disparaisse."}
+                : "Une galaxie de votre famille. Des photos, des anecdotes, des voix. Partageable en un lien, sans compte, sans friction. Pour ceux qui veulent garder la mémoire vivante avant qu'elle disparaisse."}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mt-2">
               <button
