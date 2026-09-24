@@ -22,7 +22,7 @@ export function createApp() {
     logger: env.NODE_ENV !== 'test',
     bodyLimit: 12 * 1024 * 1024,
     // Accept both `/path` et `/path/` to avoid 301 → 400 issues via nginx
-    ignoreTrailingSlash: true,
+    routerOptions: { ignoreTrailingSlash: true },
     // Trust X-Forwarded-For from Nginx proxy so rate limiting uses real client IPs
     trustProxy: true,
   })
