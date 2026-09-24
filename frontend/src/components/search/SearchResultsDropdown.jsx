@@ -25,7 +25,7 @@ function SearchResultsDropdown({
     return (
       <div className="search-results-dropdown">
         <div className="search-result-empty">
-          Aucun résultat pour "{query}"
+          Personne ne s'appelle « {query} » dans cet arbre
         </div>
       </div>
     )
@@ -49,7 +49,7 @@ function SearchResultsDropdown({
                 <img src={person.photo} alt="" />
               ) : (
                 <div className="search-result-initials">
-                  {person.firstName[0]}{person.lastName[0]}
+                  {person.firstName?.[0] || '?'}
                 </div>
               )}
             </div>
@@ -60,8 +60,9 @@ function SearchResultsDropdown({
                 {person.firstName} <span className="search-result-lastname">{person.lastName}</span>
               </div>
               <div className="search-result-meta">
-                <span className="search-result-badge">{reason}</span>
-                {matchDetail && (
+                {person.birthYear && <span className="search-result-year">{person.birthYear}{person.deathYear ? `–${person.deathYear}` : ''}</span>}
+                {reason && reason.toLowerCase() !== 'nom' && <span className="search-result-badge">{reason}</span>}
+                {matchDetail && matchDetail !== `${person.firstName} ${person.lastName}` && (
                   <span className="search-result-match-detail">{matchDetail}</span>
                 )}
               </div>
@@ -72,7 +73,7 @@ function SearchResultsDropdown({
 
       {results.length > 10 && (
         <div className="search-results-footer">
-          +{results.length - 10} résultats supplémentaires
+          {results.length - 10} autres résultats, précisez la recherche
         </div>
       )}
     </div>

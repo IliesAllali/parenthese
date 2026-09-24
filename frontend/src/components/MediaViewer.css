@@ -1,230 +1,74 @@
+/* ============================================================
+   Visionneuse d'un souvenir (DA terracotta)
+   L'image d'abord, la légende dessous. Fond sombre discret.
+   ============================================================ */
 .media-viewer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(45, 40, 36, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: overlayFadeIn 0.3s ease;
-}
-
-@keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  background: rgba(42, 38, 34, .62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .media-viewer-card {
   position: relative;
-  max-width: 480px;
-  width: 90vw;
-  max-height: 85vh;
-  background: rgba(247, 236, 217, 0.95);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-radius: 14px;
-  border: 1px solid rgba(93, 82, 75, 0.08);
-  box-shadow:
-    0 8px 100px rgba(93, 82, 75, 0.25),
-    0 2px 8px rgba(93, 82, 75, 0.08);
+  width: min(100%, 720px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
-  animation: cardSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  transform: rotate(-0.5deg);
+  display: grid;
+  gap: 0;
+  background: var(--pz-surface);
+  border-radius: var(--pz-r-l);
+  box-shadow: var(--pz-shadow-lg);
+  animation: pz-rise 240ms var(--pz-ease) both;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pz-line) transparent;
 }
-
-.media-viewer-card::-webkit-scrollbar {
-  width: 4px;
-}
-
-.media-viewer-card::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.media-viewer-card::-webkit-scrollbar-thumb {
-  background: rgba(166, 124, 82, 0.2);
-  border-radius: 2px;
-}
-
-@keyframes cardSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95) rotate(-0.5deg);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(-0.5deg);
-  }
-}
-
-.media-viewer-card::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%) rotate(2deg);
-  width: 56px;
-  height: 14px;
-  background: rgba(166, 124, 82, 0.16);
-  border-radius: 2px;
-  box-shadow: 0 1px 3px rgba(93, 82, 75, 0.06);
-  z-index: 1;
-}
+.media-viewer-card--citation,
+.media-viewer-card--audio,
+.media-viewer-card--document { width: min(100%, 560px); }
 
 .media-viewer-close {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: rgba(93, 82, 75, 0.06);
-  border: none;
-  font-size: 20px;
-  line-height: 1;
-  color: #8B7355;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  transition: background 0.25s ease, color 0.25s ease;
-  z-index: 10;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: var(--pz-shadow);
 }
 
-.media-viewer-close:hover {
-  background: rgba(93, 82, 75, 0.12);
-  color: #5D524B;
-}
-
-/* --- Contenu média --- */
-.media-viewer-content {
-  padding: 1.75rem 1.5rem 1.5rem;
-}
-
-/* Header avec info personne */
-.media-viewer-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.media-viewer-person-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow:
-    0 0 0 2px rgba(247, 236, 217, 1),
-    0 2px 10px rgba(166, 124, 82, 0.15);
-  flex-shrink: 0;
-}
-
-.media-viewer-person-initials {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #A67C52, #8B6843);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FEF9ED;
-  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  font-size: 16px;
-  font-weight: 450;
-  flex-shrink: 0;
-  box-shadow: 0 2px 10px rgba(166, 124, 82, 0.15);
-}
-
-.media-viewer-person-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.media-viewer-person-name {
-  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  font-size: 16px;
-  color: #5D524B;
-  font-weight: 450;
-  line-height: 1.2;
-}
-
-.media-viewer-person-years {
-  font-size: 14px;
-  color: #8B7355;
-  font-weight: 400;
-}
-
-.media-viewer-label {
-  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  font-size: 20px;
-  font-weight: 450;
-  color: #5D524B;
-  margin-bottom: 1rem;
-  line-height: 1.2;
-}
-
-.media-viewer-source {
-  margin: -0.4rem 0 1rem;
-  color: #6f6256;
-  font-size: 14px;
-  line-height: 1.35;
-  word-break: break-word;
-}
-
-.media-viewer-source a {
-  color: #6a4f32;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.media-viewer-source a:hover {
-  color: #4f3b26;
-}
-
-.media-viewer-type-badge {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 50px;
-  font-size: 12px;
-  font-weight: 450;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.75rem;
-}
-
-.media-viewer-type-badge.photo { background: rgba(166, 124, 82, 0.12); color: #A67C52; }
-.media-viewer-type-badge.video { background: rgba(58, 53, 48, 0.1); color: #3A3530; }
-.media-viewer-type-badge.audio { background: rgba(44, 40, 37, 0.1); color: #2C2825; }
-.media-viewer-type-badge.document { background: rgba(200, 185, 160, 0.2); color: #8B7355; }
-.media-viewer-type-badge.citation { background: rgba(245, 237, 207, 0.5); color: #A67C52; }
-.media-viewer-type-badge.geojson { background: rgba(96, 140, 112, 0.18); color: #4f7660; }
-.media-viewer-type-badge.gpx { background: rgba(64, 118, 170, 0.2); color: #37668f; }
+.mv-stage { padding: 12px 12px 0; }
+.mv-caption { display: grid; gap: 10px; padding: 18px 22px 22px; }
+.mv-title { margin: 0; font: 400 26px/1.15 var(--pz-serif); color: var(--pz-ink); text-wrap: balance; padding-right: 8px; }
+.mv-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.mv-person { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.mv-person-avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; }
+.mv-person-initial { display: grid; place-items: center; background: var(--pz-a100); color: var(--pz-a700); font: 400 13px/1 var(--pz-serif); }
+.mv-person-name { font: 400 16px/1.2 var(--pz-serif); color: var(--pz-ink); }
+.mv-person-name em { font-style: italic; font-weight: 300; }
+.mv-person-years { font: 400 12.5px var(--pz-sans); color: var(--pz-muted); font-variant-numeric: tabular-nums; }
+.mv-source { margin: 0; font: 400 13px/1.5 var(--pz-sans); color: var(--pz-muted); overflow-wrap: anywhere; }
+.mv-source a { color: var(--pz-a700); text-underline-offset: 3px; }
 
 /* --- Skins par type --- */
 
 /* Photo */
 .media-photo-frame {
-  padding: 8px;
-  background: #FEF9ED;
-  border-radius: 4px;
-  box-shadow:
-    0 2px 20px rgba(93, 82, 75, 0.1),
-    0 0 0 1px rgba(93, 82, 75, 0.05);
-  transform: rotate(0.8deg);
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--pz-bg);
 }
 
 .media-photo-frame img {
   width: 100%;
-  border-radius: 2px;
+  max-height: 68dvh;
+  object-fit: contain;
   display: block;
+  background: var(--pz-bg);
 }
 
 /* Video */
 .media-video-container {
-  background: #2C2825;
+  background: #2A2622;
   border-radius: 8px;
   padding: 2.5rem 3rem;
   display: flex;
@@ -258,14 +102,14 @@
   width: 8px;
   height: 8px;
   border-radius: 1px;
-  background: rgba(254, 249, 237, 0.06);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .media-video-play {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(254, 249, 237, 0.1);
+  background: rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -274,21 +118,21 @@
 }
 
 .media-video-play:hover {
-  background: rgba(254, 249, 237, 0.18);
+  background: rgba(255, 255, 255, 0.18);
   transform: scale(1.05);
 }
 
 .media-video-play-triangle {
   width: 0;
   height: 0;
-  border-left: 20px solid rgba(254, 249, 237, 0.7);
+  border-left: 20px solid rgba(255, 255, 255, 0.7);
   border-top: 12px solid transparent;
   border-bottom: 12px solid transparent;
   margin-left: 5px;
 }
 
 .media-video-text {
-  color: rgba(254, 249, 237, 0.35);
+  color: rgba(255, 255, 255, 0.35);
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -298,8 +142,8 @@
 .media-video-player {
   width: 100%;
   border-radius: 10px;
-  background: #1f1b18;
-  box-shadow: 0 3px 18px rgba(44, 40, 37, 0.24);
+  background: #191817;
+  box-shadow: 0 3px 18px rgba(42, 38, 34, 0.24);
 }
 
 .media-video-container--youtube {
@@ -312,12 +156,12 @@
   aspect-ratio: 16 / 9;
   border: none;
   border-radius: 10px;
-  box-shadow: 0 3px 18px rgba(44, 40, 37, 0.24);
+  box-shadow: 0 3px 18px rgba(42, 38, 34, 0.24);
 }
 
 /* Audio */
 .media-audio-container {
-  background: #2C2825;
+  background: #2A2622;
   border-radius: 50%;
   width: 180px;
   height: 180px;
@@ -327,8 +171,8 @@
   justify-content: center;
   position: relative;
   box-shadow:
-    0 4px 30px rgba(44, 40, 37, 0.3),
-    inset 0 0 40px rgba(0, 0, 0, 0.2);
+    0 4px 30px rgba(42, 38, 34, 0.3),
+    inset 0 0 40px rgba(42, 38, 34, 0.2);
 }
 
 .media-audio-grooves {
@@ -339,8 +183,8 @@
     circle at center,
     transparent 0px,
     transparent 4px,
-    rgba(254, 249, 237, 0.04) 4px,
-    rgba(254, 249, 237, 0.04) 5px
+    rgba(255, 255, 255, 0.04) 4px,
+    rgba(255, 255, 255, 0.04) 5px
   );
 }
 
@@ -348,7 +192,7 @@
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #A67C52, #8B6843);
+  background: #2a2622;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,22 +203,22 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #2C2825;
+  background: #2A2622;
 }
 
 .media-audio-text {
   text-align: center;
-  color: #8B7355;
+  color: #6B645D;
   font-size: 14px;
   margin-top: 1rem;
   font-style: italic;
 }
 
 .media-audio-player-wrap {
-  padding: 14px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.56);
-  box-shadow: inset 0 0 0 1px rgba(93, 82, 75, 0.08);
+  margin-top: 36px;
+  padding: 10px;
+  border-radius: 999px;
+  background: var(--pz-a100);
 }
 
 .media-audio-player {
@@ -383,14 +227,14 @@
 
 /* Document */
 .media-document-container {
-  background: #F0E8D8;
+  background: #FCF3EF;
   border-radius: 2px;
   padding: 2rem 1.5rem;
   min-height: 160px;
   position: relative;
   box-shadow:
-    0 2px 12px rgba(93, 82, 75, 0.08),
-    0 0 0 1px rgba(93, 82, 75, 0.06);
+    0 2px 12px rgba(42, 38, 34, 0.08),
+    0 0 0 1px rgba(42, 38, 34, 0.06);
 }
 
 .media-document-corner {
@@ -399,7 +243,7 @@
   right: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, transparent 50%, #DDD3C2 50%);
+  background: linear-gradient(135deg, transparent 50%, #E6E1DA 50%);
 }
 
 .media-document-corner::before {
@@ -409,7 +253,7 @@
   right: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #F7ECD9 50%, transparent 50%);
+  background: linear-gradient(135deg, #F2EFEA 50%, transparent 50%);
 }
 
 .media-document-lines {
@@ -421,7 +265,7 @@
 
 .media-document-line {
   height: 3px;
-  background: rgba(93, 82, 75, 0.08);
+  background: rgba(42, 38, 34, 0.08);
   border-radius: 1px;
 }
 
@@ -431,7 +275,7 @@
 
 .media-document-text {
   text-align: center;
-  color: #8B7355;
+  color: #6B645D;
   font-size: 14px;
   margin-top: 1.25rem;
   font-style: italic;
@@ -445,7 +289,7 @@
 .media-document-pdf {
   width: 100%;
   min-height: 430px;
-  border: 1px solid rgba(93, 82, 75, 0.18);
+  border: 1px solid rgba(42, 38, 34, 0.18);
   border-radius: 8px;
   background: #fff;
 }
@@ -457,16 +301,16 @@
 }
 
 .media-document-download {
-  color: #6a4f32;
+  color: #2a2622;
   font-size: 14px;
   font-weight: 450;
   text-decoration: none;
-  border-bottom: 1px dashed rgba(106, 79, 50, 0.45);
+  border-bottom: 1px dashed rgba(42, 38, 34, 0.45);
 }
 
 .media-document-download:hover {
-  color: #4f3b26;
-  border-bottom-color: rgba(79, 59, 38, 0.6);
+  color: #2a2622;
+  border-bottom-color: rgba(42, 38, 34, 0.6);
 }
 
 /* Geo map */
@@ -480,8 +324,8 @@
   height: 280px;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(93, 82, 75, 0.14);
-  background: #f1ecdf;
+  border: 1px solid rgba(42, 38, 34, 0.14);
+  background: #f8e4db;
 }
 
 .media-map-embed {
@@ -508,7 +352,7 @@
 
 .media-map-grid {
   fill: none;
-  stroke: rgba(93, 82, 75, 0.12);
+  stroke: rgba(42, 38, 34, 0.12);
   stroke-width: 1;
 }
 
@@ -517,7 +361,7 @@
 }
 
 .media-map-bg-edge {
-  stop-color: rgba(232, 226, 210, 0.84);
+  stop-color: rgba(248, 228, 219, 0.84);
 }
 
 .media-map-trace {
@@ -546,20 +390,20 @@
 
 .media-map-meta span {
   background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(93, 82, 75, 0.14);
+  border: 1px solid rgba(42, 38, 34, 0.14);
   border-radius: 999px;
   padding: 4px 10px;
-  color: #5d524b;
+  color: #2a2622;
   font-size: 14px;
 }
 
 .media-map-status {
-  color: #7a6f65;
+  color: #6b645d;
   font-size: 14px;
   text-align: center;
   padding: 16px;
   background: rgba(255, 255, 255, 0.72);
-  border: 1px dashed rgba(93, 82, 75, 0.22);
+  border: 1px dashed rgba(42, 38, 34, 0.22);
   border-radius: 10px;
 }
 
@@ -585,57 +429,24 @@
 
 /* Citation */
 .media-citation-container {
-  background: #F5EDCF;
-  border-radius: 4px;
-  padding: 2.5rem 2rem 2rem;
-  position: relative;
-  min-height: 100px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 2px 12px rgba(93, 82, 75, 0.06);
-}
-
-.media-citation-tape {
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(1.5deg);
-  width: 48px;
-  height: 10px;
-  background: rgba(166, 124, 82, 0.15);
-  border-radius: 1px;
-}
-
-.media-citation-guillemet {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 44px;
-  color: rgba(166, 124, 82, 0.2);
-  line-height: 0.6;
-  margin-bottom: 0.5rem;
+  margin: 44px 0 0;
+  padding: 8px 12px 8px 22px;
+  border-left: 2px solid var(--pz-a300);
 }
 
 .media-citation-text {
-  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  font-size: 18px;
-  font-style: italic;
-  color: #5D524B;
-  text-align: center;
-  line-height: 1.4;
+  margin: 0;
+  font: 300 italic 26px/1.4 var(--pz-serif);
+  color: var(--pz-ink);
+  text-wrap: pretty;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .media-viewer-card {
-    width: 95vw;
-    max-width: none;
-    margin: 1rem;
-  }
-
   .media-audio-container {
     width: 140px;
     height: 140px;
   }
+  .mv-title { font-size: 22px; }
+  .media-citation-text { font-size: 22px; }
 }

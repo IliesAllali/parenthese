@@ -28,18 +28,14 @@
 
 .zoom-button {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
 
-  /* Même pill que navbar-content */
-  background: rgba(247, 236, 217, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(93, 82, 75, 0.08);
-  box-shadow:
-    0 4px 80px rgba(93, 82, 75, 0.20),
-    0 1px 6px rgba(93, 82, 75, 0.08);
+  /* Même pastille que la barre d'actions */
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
+  box-shadow: var(--pz-shadow-lg);
 
   cursor: pointer;
   display: flex;
@@ -47,16 +43,12 @@
   justify-content: center;
 
   /* Même comportement que nav-button */
-  color: #5D524B;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  color: #2A2622;
+  transition: border-color 160ms ease, transform 140ms var(--pz-ease);
 }
 
-.zoom-button:hover {
-  background: rgba(247, 236, 217, 0.98);
-  transform: scale(1.08);
-  box-shadow:
-    0 6px 80px rgba(93, 82, 75, 0.28),
-    0 2px 8px rgba(93, 82, 75, 0.12);
+@media (hover: hover) and (pointer: fine) {
+  .zoom-button:hover { border-color: var(--pz-a300); }
 }
 
 .zoom-button:active {
@@ -64,14 +56,13 @@
 }
 
 .zoom-btn-icon {
-  color: #5D524B;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
+  color: #2A2622;
+  filter: drop-shadow(0 1px 2px rgba(42, 38, 34, 0.05));
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .zoom-button:hover .zoom-btn-icon {
-  color: #A67C52;
-  transform: scale(1.05);
+  color: #93402A;
 }
 
 /* ============================================================
@@ -88,14 +79,10 @@
   padding: 14px 0 12px;
 
   /* Même panel que navbar-annot-panel */
-  background: rgba(254, 249, 237, 0.96);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(166, 124, 82, 0.15);
-  border-radius: 16px;
-  box-shadow:
-    0 8px 40px rgba(93, 82, 75, 0.18),
-    0 2px 8px rgba(93, 82, 75, 0.06);
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
+  border-radius: 999px;
+  box-shadow: var(--pz-shadow-lg);
 
   display: flex;
   flex-direction: column;
@@ -123,7 +110,7 @@
 }
 
 .zoom-panel-icon {
-  color: #5D524B;
+  color: #2A2622;
   opacity: 0.6;
   flex-shrink: 0;
 }
@@ -133,9 +120,9 @@
    ============================================================ */
 
 .zoom-slider-track {
-  width: 6px;
+  width: 4px;
   height: 120px;
-  background: rgba(166, 124, 82, 0.15);
+  background: var(--pz-line);
   border-radius: 3px;
   position: relative;
   cursor: ns-resize;
@@ -155,11 +142,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(
-    to top,
-    rgba(166, 124, 82, 0.65),
-    rgba(166, 124, 82, 0.2)
-  );
+  background: var(--pz-a500);
   border-radius: 3px;
   pointer-events: none;
 }
@@ -168,19 +151,18 @@
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 14px;
-  height: 14px;
-  background: #FEF9ED;
-  border: 2px solid rgba(166, 124, 82, 0.7);
+  width: 16px;
+  height: 16px;
+  background: var(--pz-ink);
+  border: 3px solid var(--pz-surface);
   border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(93, 82, 75, 0.25);
+  box-shadow: 0 1px 4px rgba(42, 38, 34, 0.3);
   pointer-events: none;
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .zoom-slider-track:hover .zoom-slider-thumb {
-  transform: translateX(-50%) scale(1.25);
-  border-color: #A67C52;
+  transform: translateX(-50%) scale(1.15);
 }
 
 /* ============================================================

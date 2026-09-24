@@ -8,17 +8,17 @@ export default {
     extend: {
       colors: {
         cosmos: {
-          black: '#000000',
-          cream: '#FEF9ED',
-          brown: '#5D524B',
-          gold: '#A67C52',
-          surface: '#F7ECD9',
-          yellow: '#F6E5B8',
+          black: '#2A2622',
+          cream: '#FFFFFF',
+          brown: '#2A2622',
+          gold: '#93402A',
+          surface: '#F2EFEA',
+          yellow: '#F8E4DB',
         }
       },
       fontFamily: {
-        'bradford': ['Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', 'serif'],
-        'mono': ['Red Hat Mono', 'ui-monospace', 'monospace'],
+        'bradford': ['Newsreader', 'Georgia', 'Times New Roman', 'serif'],
+        'mono': ['DM Sans', 'system-ui', 'sans-serif'],
         'segoe': ['Segoe UI', 'system-ui', 'sans-serif'],
       },
       spacing: {
@@ -37,9 +37,9 @@ export default {
         'pill': '50px',
       },
       boxShadow: {
-        'diffuse': '0 2px 24px rgba(93,82,75,0.12)',
-        'soft': '0 3px 12px rgba(0,0,0,0.10)',
-        'glow': '0 0 12px rgba(166,124,82,0.20)',
+        'diffuse': '0 2px 24px rgba(42,38,34,0.12)',
+        'soft': '0 3px 12px rgba(42,38,34,0.10)',
+        'glow': '0 0 12px rgba(147,64,42,0.20)',
       }
     },
   },

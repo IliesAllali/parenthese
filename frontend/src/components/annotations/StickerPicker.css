@@ -7,7 +7,7 @@
 .sticker-picker__label {
   font-size: 14px;
   font-weight: 450;
-  color: #8B7355;
+  color: #6B645D;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -33,37 +33,37 @@
 }
 
 .sticker-picker__btn:hover {
-  background: rgba(166, 124, 82, 0.06);
+  background: rgba(147, 64, 42, 0.06);
   transform: scale(1.1) translateY(-1px);
-  box-shadow: 0 3px 8px rgba(93, 82, 75, 0.12);
+  box-shadow: 0 3px 8px rgba(42, 38, 34, 0.12);
 }
 
 .sticker-picker__btn--active {
-  border-color: rgba(166, 124, 82, 0.3);
-  background: rgba(254, 249, 237, 0.95);
+  border-color: rgba(147, 64, 42, 0.3);
+  background: rgba(255, 255, 255, 0.95);
   transform: scale(1.2) translateY(-6px);
   box-shadow:
-    0 8px 20px rgba(93, 82, 75, 0.2),
-    0 2px 6px rgba(93, 82, 75, 0.1);
+    0 8px 20px rgba(42, 38, 34, 0.2),
+    0 2px 6px rgba(42, 38, 34, 0.1);
   animation: stickerGrab 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes stickerGrab {
   0% {
     transform: scale(1) translateY(0);
-    box-shadow: 0 1px 2px rgba(93, 82, 75, 0.08);
+    box-shadow: 0 1px 2px rgba(42, 38, 34, 0.08);
   }
   50% {
     transform: scale(1.28) translateY(-10px);
     box-shadow:
-      0 14px 28px rgba(93, 82, 75, 0.22),
-      0 4px 8px rgba(93, 82, 75, 0.1);
+      0 14px 28px rgba(42, 38, 34, 0.22),
+      0 4px 8px rgba(42, 38, 34, 0.1);
   }
   100% {
     transform: scale(1.2) translateY(-6px);
     box-shadow:
-      0 8px 20px rgba(93, 82, 75, 0.2),
-      0 2px 6px rgba(93, 82, 75, 0.1);
+      0 8px 20px rgba(42, 38, 34, 0.2),
+      0 2px 6px rgba(42, 38, 34, 0.1);
   }
 }
 
@@ -73,8 +73,8 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 10px;
-  background: rgba(166, 124, 82, 0.08);
-  border: 1px solid rgba(166, 124, 82, 0.15);
+  background: rgba(147, 64, 42, 0.08);
+  border: 1px solid rgba(147, 64, 42, 0.15);
   animation: previewSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -103,6 +103,6 @@
 
 .sticker-picker__preview-hint {
   font-size: 14px;
-  color: #8B7355;
+  color: #6B645D;
   font-style: italic;
 }

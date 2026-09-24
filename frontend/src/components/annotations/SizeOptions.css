@@ -13,7 +13,7 @@
 .size-options__label {
   font-size: 14px;
   font-weight: 450;
-  color: #8B7355;
+  color: #6B645D;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -21,7 +21,7 @@
 .size-options__value {
   font-size: 13px;
   font-weight: 600;
-  color: #A67C52;
+  color: #93402A;
   min-width: 28px;
   text-align: right;
 }
@@ -34,10 +34,10 @@
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    #A67C52 0%,
-    #A67C52 var(--slider-progress, 50%),
-    rgba(166, 124, 82, 0.2) var(--slider-progress, 50%),
-    rgba(166, 124, 82, 0.2) 100%
+    #93402A 0%,
+    #93402A var(--slider-progress, 50%),
+    rgba(147, 64, 42, 0.2) var(--slider-progress, 50%),
+    rgba(147, 64, 42, 0.2) 100%
   );
   outline: none;
   cursor: pointer;
@@ -50,9 +50,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #A67C52;
+  background: #93402A;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(166, 124, 82, 0.4);
+  box-shadow: 0 1px 4px rgba(147, 64, 42, 0.4);
   transition: transform 0.1s ease;
 }
 
@@ -64,8 +64,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #A67C52;
+  background: #93402A;
   cursor: pointer;
   border: none;
-  box-shadow: 0 1px 4px rgba(166, 124, 82, 0.4);
+  box-shadow: 0 1px 4px rgba(147, 64, 42, 0.4);
 }

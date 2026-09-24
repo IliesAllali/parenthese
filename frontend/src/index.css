@@ -2,42 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Bradford LL';
-  src: url('./assets/Bradford/BradfordLLWeb-Regular.woff') format('woff'),
-       url('./assets/Bradford/BradfordLL-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Bradford LL';
-  src: url('./assets/Bradford/BradfordLLWeb-Bold.woff') format('woff'),
-       url('./assets/Bradford/BradfordLL-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Bradford LL';
-  src: url('./assets/Bradford/BradfordLLWeb-Italic.woff') format('woff'),
-       url('./assets/Bradford/BradfordLL-Italic.ttf') format('truetype');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Bradford Mono LL';
-  src: url('./assets/Bradford/BradfordMonoLLWeb-Regular.woff') format('woff'),
-       url('./assets/Bradford/BradfordMonoLL-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 @layer base {
   * {
     margin: 0;
@@ -46,21 +10,21 @@
   }
 
   body {
-    font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-    font-weight: 450;
-    background-color: #FDF8EC;
-    color: #5D524B;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    background-color: #FBFAF7;
+    color: #2A2622;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3 {
-    font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-    font-weight: 450;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-weight: 400;
   }
 
-  /* Red Hat Mono pour les petits éléments UI : labels, meta, nav, badges */
+  /* DM Sans pour les petits éléments UI : labels, meta, nav, badges */
   button, input, select, textarea,
   label,
   .tree-meta, .admin-meta, .admin-stat-card span,
@@ -71,16 +35,16 @@
   .admin-audit-main span, .admin-audit-meta,
   .admin-person-item span,
   .account-help {
-    font-family: 'Red Hat Mono', ui-monospace, monospace;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 }
 
 @layer utilities {
   .text-cosmos-cream {
-    color: #FEF9ED;
+    color: #FFFFFF;
   }
 
   .bg-cosmos-black {
-    background-color: #000000;
+    background-color: #2A2622;
   }
 }

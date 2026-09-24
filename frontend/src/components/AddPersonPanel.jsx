@@ -140,202 +140,166 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   }
 
   return (
-    <div className={`add-person-panel ${visible ? 'add-person-panel--open' : ''}`} ref={panelRef}>
-      <div className="add-person-header">
-        <div className="add-person-header-title">
-          <UserPlus size={20} strokeWidth={2} />
-          <h2>Ajouter une personne</h2>
+    <div
+      className={`add-person-panel ${visible ? 'add-person-panel--open' : ''}`}
+      ref={panelRef}
+      role="dialog"
+      aria-labelledby="addPersonTitle"
+      aria-hidden={!visible}
+    >
+      <div className="apn-head">
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Nouvelle fiche</p>
+          <h2 id="addPersonTitle" className="pz-title">Ajouter <em>quelqu'un</em></h2>
         </div>
-        <button
-          type="button"
-          className="add-person-close"
-          onClick={onClose}
-          aria-label="Fermer"
-        >
-          <X size={20} strokeWidth={2} />
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon apn-close" onClick={onClose} aria-label="Fermer">
+          <X size={18} strokeWidth={2} />
         </button>
       </div>
 
-      <form className="add-person-form" onSubmit={handleSubmit}>
-        {/* Prénom (requis) */}
-        <div className="add-person-field">
-          <label htmlFor="ap-firstName" className="add-person-label">
-            Prénom <span className="add-person-required">*</span>
-          </label>
-          <input
-            ref={firstNameRef}
-            id="ap-firstName"
-            type="text"
-            className={`add-person-input ${touched.firstName && !firstName.trim() ? 'add-person-input--error' : ''}`}
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, firstName: true }))}
-            placeholder="Ex : Marie"
-            autoComplete="off"
-          />
+      <form className="apn-form" onSubmit={handleSubmit}>
+        <div className="apn-scroll">
+          <div className="pz-row2">
+            <div className="pz-field">
+              <label htmlFor="ap-firstName">Prénom</label>
+              <input
+                ref={firstNameRef}
+                id="ap-firstName"
+                type="text"
+                className={touched.firstName && !firstName.trim() ? 'apn-input--error' : ''}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, firstName: true }))}
+                placeholder="Marie"
+                autoComplete="off"
+                aria-invalid={touched.firstName && !firstName.trim()}
+              />
+            </div>
+            <div className="pz-field">
+              <label htmlFor="ap-lastName">Nom</label>
+              <input
+                id="ap-lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Dupont"
+                autoComplete="off"
+              />
+            </div>
+          </div>
           {touched.firstName && !firstName.trim() && (
-            <span className="add-person-error-text">Le prénom est requis</span>
+            <p className="apn-error-text">Il faut au moins un prénom.</p>
           )}
-        </div>
 
-        {/* Nom */}
-        <div className="add-person-field">
-          <label htmlFor="ap-lastName" className="add-person-label">Nom</label>
-          <input
-            id="ap-lastName"
-            type="text"
-            className="add-person-input"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Ex : Dupont"
-            autoComplete="off"
-          />
-        </div>
-
-        {/* Nom de naissance */}
-        <div className="add-person-field">
-          <label htmlFor="ap-birthName" className="add-person-label">Nom de naissance</label>
-          <input
-            id="ap-birthName"
-            type="text"
-            className="add-person-input"
-            value={birthName}
-            onChange={(e) => setBirthName(e.target.value)}
-            placeholder="Ex : Martin"
-            autoComplete="off"
-          />
-        </div>
-
-        {/* Dates en ligne */}
-        <div className="add-person-row">
-          <div className="add-person-field">
-            <label htmlFor="ap-birthDate" className="add-person-label">Date de naissance</label>
+          <div className="pz-field">
+            <label htmlFor="ap-birthName">Nom de naissance <span className="apn-optional">si différent</span></label>
             <input
-              id="ap-birthDate"
-              type="date"
-              className="add-person-input"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
+              id="ap-birthName"
+              type="text"
+              value={birthName}
+              onChange={(e) => setBirthName(e.target.value)}
+              placeholder="Martin"
+              autoComplete="off"
             />
           </div>
-          <div className="add-person-field">
-            <label htmlFor="ap-deathDate" className="add-person-label">Date de décès</label>
-            <input
-              id="ap-deathDate"
-              type="date"
-              className="add-person-input"
-              value={deathDate}
-              onChange={(e) => setDeathDate(e.target.value)}
-            />
+
+          <div className="pz-row2">
+            <div className="pz-field">
+              <label htmlFor="ap-birthDate">Naissance</label>
+              <input id="ap-birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+            </div>
+            <div className="pz-field">
+              <label htmlFor="ap-deathDate">Décès</label>
+              <input id="ap-deathDate" type="date" value={deathDate} onChange={(e) => setDeathDate(e.target.value)} />
+            </div>
           </div>
-        </div>
 
-        {/* Section Relations */}
-        <div className="add-person-section">
-          <h3 className="add-person-section-title">Relations</h3>
+          <section className="apn-section">
+            <h3 className="pz-eyebrow">Place dans la famille</h3>
 
-          {/* Type de relation */}
-          <div className="add-person-field">
-            <label htmlFor="ap-relationType" className="add-person-label">Type de lien</label>
-            <div className="relation-type-pills">
+            <div className="pz-tabs apn-types" role="radiogroup" aria-label="Type de lien">
               {Object.entries(relationTypeLabels).map(([type, label]) => (
                 <button
                   key={type}
                   type="button"
-                  className={`relation-type-pill ${selectedRelationType === type ? 'relation-type-pill--active' : ''}`}
+                  role="radio"
+                  aria-checked={selectedRelationType === type}
+                  className={`pz-tab ${selectedRelationType === type ? 'is-active' : ''}`}
                   onClick={() => setSelectedRelationType(type)}
                 >
-                  {label.split(' ')[0]}
+                  {label.replace(/ de$/, '')}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Recherche personne existante */}
-          <div className="add-person-field relation-dropdown-wrapper">
-            <label className="add-person-label">
-              {relationTypeLabels[selectedRelationType]}
-            </label>
-            <div className="relation-search-wrapper">
-              <Search size={14} strokeWidth={2} className="relation-search-icon" />
-              <input
-                type="text"
-                className="add-person-input relation-search-input"
-                value={relationSearch}
-                onChange={(e) => {
-                  setRelationSearch(e.target.value)
-                  setRelationDropdownOpen(true)
-                }}
-                onFocus={() => setRelationDropdownOpen(true)}
-                placeholder="Rechercher une personne..."
-                autoComplete="off"
-              />
-              <ChevronDown size={14} strokeWidth={2} className="relation-search-chevron" />
+            <div className="pz-field relation-dropdown-wrapper apn-relation">
+              <label htmlFor="ap-relationSearch">{relationTypeLabels[selectedRelationType]}</label>
+              <div className="apn-search">
+                <Search size={15} strokeWidth={2} className="apn-search-icon" />
+                <input
+                  id="ap-relationSearch"
+                  type="text"
+                  value={relationSearch}
+                  onChange={(e) => {
+                    setRelationSearch(e.target.value)
+                    setRelationDropdownOpen(true)
+                  }}
+                  onFocus={() => setRelationDropdownOpen(true)}
+                  placeholder="Chercher dans l'arbre"
+                  autoComplete="off"
+                />
+                <ChevronDown size={15} strokeWidth={2} className="apn-search-chevron" />
+              </div>
+
+              {relationDropdownOpen && filteredPersons.length > 0 && (
+                <ul className="apn-dropdown">
+                  {filteredPersons.slice(0, 8).map((p) => (
+                    <li key={p.id}>
+                      <button type="button" className="apn-dropdown-item" onClick={() => handleAddRelation(p)}>
+                        <span className="apn-avatar" aria-hidden="true">
+                          {p.photo ? <img src={p.photo} alt="" /> : (p.firstName || '?').charAt(0)}
+                        </span>
+                        <span className="apn-dropdown-name">{p.firstName} <em>{p.lastName || ''}</em></span>
+                        {(p.birthYear || p.birthDate) && (
+                          <span className="apn-dropdown-date">{p.birthYear || String(p.birthDate).slice(0, 4)}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            {relationDropdownOpen && filteredPersons.length > 0 && (
-              <ul className="relation-dropdown-list">
-                {filteredPersons.slice(0, 8).map((p) => (
-                  <li key={p.id}>
+            {relations.length > 0 && (
+              <div className="apn-links">
+                {relations.map((rel) => (
+                  <div key={rel.personId} className="apn-link">
+                    <span className="apn-link-type">{relationTypeLabels[rel.type]}</span>
+                    <span className="apn-link-name">{rel.personName}</span>
                     <button
                       type="button"
-                      className="relation-dropdown-item"
-                      onClick={() => handleAddRelation(p)}
+                      className="pz-btn pz-btn--ghost pz-btn--icon apn-link-remove"
+                      onClick={() => handleRemoveRelation(rel.personId)}
+                      aria-label={`Retirer ${rel.personName}`}
                     >
-                      <span className="relation-dropdown-name">
-                        {p.firstName} {p.lastName || ''}
-                      </span>
-                      {p.birthDate && (
-                        <span className="relation-dropdown-date">{p.birthDate}</span>
-                      )}
+                      <X size={14} strokeWidth={2.2} />
                     </button>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-          </div>
+          </section>
 
-          {/* Relations ajoutées */}
-          {relations.length > 0 && (
-            <div className="relation-tags">
-              {relations.map((rel) => (
-                <div key={rel.personId} className="relation-tag">
-                  <span className="relation-tag-type">{relationTypeLabels[rel.type].split(' ')[0]}</span>
-                  <span className="relation-tag-name">{rel.personName}</span>
-                  <button
-                    type="button"
-                    className="relation-tag-remove"
-                    onClick={() => handleRemoveRelation(rel.personId)}
-                    aria-label={`Retirer ${rel.personName}`}
-                  >
-                    <X size={12} strokeWidth={2.5} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          {error && <div className="pz-error" role="alert">{error}</div>}
         </div>
 
-        {/* Erreur */}
-        {error && (
-          <div className="add-person-error" role="alert">{error}</div>
-        )}
-
-        {/* Actions */}
-        <div className="add-person-actions">
-          <button
-            type="submit"
-            className="add-person-submit"
-            disabled={!isValid || loading}
-          >
-            {loading ? 'Ajout en cours...' : 'Ajouter cette personne'}
-          </button>
-          <button
-            type="button"
-            className="add-person-cancel"
-            onClick={onClose}
-          >
+        <div className="apn-actions">
+          <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose}>
             Annuler
+          </button>
+          <button type="submit" className="pz-btn pz-btn--primary" disabled={!isValid || loading}>
+            <UserPlus size={16} strokeWidth={2} />
+            {loading ? 'Ajout…' : 'Ajouter cette personne'}
           </button>
         </div>
       </form>

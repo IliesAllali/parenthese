@@ -9,7 +9,7 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
     `edit-mode-border ${isAdmin ? 'edit-mode-border--admin' : 'edit-mode-border--contributor'}`
   ), [isAdmin])
 
-  const toastLabel = isAdmin ? 'Mode édition actif' : 'Mode contribution actif'
+  const toastLabel = isAdmin ? "Vous modifiez l'arbre" : 'Vous proposez des modifications'
   const submitLabel = isAdmin ? "Mettre à jour l'arbre" : 'Envoyer les modifications'
 
   if (!active) return null
@@ -19,15 +19,16 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
       <div className={borderClass} aria-hidden="true" />
 
       <div className={`edit-mode-toast ${isAdmin ? 'edit-mode-toast--admin' : ''}`} role="status" aria-live="polite">
+        <span className="edit-mode-toast-dot" aria-hidden="true" />
         <span className="edit-mode-toast-text">{toastLabel}</span>
 
         {onSubmit && (
           <button
             type="button"
-            className={`edit-mode-submit ${isAdmin ? 'edit-mode-submit--admin' : ''}`}
+            className="pz-btn pz-btn--primary pz-btn--sm edit-mode-submit"
             onClick={onSubmit}
             disabled={!hasDraft}
-            title={hasDraft ? submitLabel : 'Aucune modification à soumettre'}
+            title={hasDraft ? submitLabel : "Aucune modification à envoyer pour l'instant"}
           >
             {submitLabel}
           </button>
@@ -35,11 +36,11 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
 
         <button
           type="button"
-          className="edit-mode-toast-close"
+          className="pz-btn pz-btn--ghost pz-btn--icon edit-mode-toast-close"
           onClick={onDeactivate}
           aria-label="Quitter le mode édition"
         >
-          <X size={16} strokeWidth={2} />
+          <X size={17} strokeWidth={2} />
         </button>
       </div>
     </>

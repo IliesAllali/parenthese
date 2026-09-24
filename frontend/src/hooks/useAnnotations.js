@@ -22,7 +22,7 @@ export function useAnnotations({ editModeActive, updateDraft }) {
   const [revision, setRevision] = useState(0)
 
   const [currentStyle, setCurrentStyle] = useState({
-    color: '#A67C52',
+    color: '#93402A',
     brushWidth: 3,
     fontSize: 18,
     stabilo: false,

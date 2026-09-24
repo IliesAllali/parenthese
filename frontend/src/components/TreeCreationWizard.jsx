@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ImagePlus } from 'lucide-react'
 import './TreeCreationWizard.css'
 
 const INITIAL_STATE = {
@@ -73,86 +74,119 @@ function TreeCreationWizard({
   }
 
   return (
-    <div className="tree-wizard-overlay" role="dialog" aria-modal="true">
-      <div className="tree-wizard-card">
+    <div className="pz-overlay tree-wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="treeWizardTitle">
+      <div className="pz-modal tree-wizard-card">
+        <div className="tw-steps" aria-label={`Étape ${step} sur 2`}>
+          <span className={`tw-step ${step >= 1 ? 'is-on' : ''}`} />
+          <span className={`tw-step ${step >= 2 ? 'is-on' : ''}`} />
+          <span className="pz-small">Étape {step} sur 2</span>
+        </div>
+
         {step === 1 ? (
           <>
-            <h2>Comment s appelle votre famille ?</h2>
-            <p>Ce nom apparaitra sur votre arbre et dans le lien de partage.</p>
+            <div className="pz-modal-head">
+              <h2 id="treeWizardTitle" className="pz-title">Comment s'appelle <em>votre famille</em> ?</h2>
+              <p className="pz-sub">Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.</p>
+            </div>
 
-            <label htmlFor="wizardTreeName">Nom de la famille</label>
-            <input
-              id="wizardTreeName"
-              type="text"
-              autoFocus
-              maxLength={120}
-              value={form.treeName}
-              onChange={(event) => updateField('treeName', event.target.value)}
-              placeholder="Famille Martin"
-              required
-            />
+            <div className="pz-field">
+              <label htmlFor="wizardTreeName">Nom de la famille</label>
+              <input
+                id="wizardTreeName"
+                type="text"
+                autoFocus
+                maxLength={120}
+                value={form.treeName}
+                onChange={(event) => updateField('treeName', event.target.value)}
+                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handleContinue() } }}
+                placeholder="Famille Martin"
+                required
+              />
+            </div>
 
-            <div className="tree-wizard-actions">
-              <button type="button" className="ghost" onClick={onClose} disabled={loading}>
+            <div className="pz-modal-actions">
+              <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
                 Fermer
               </button>
-              <button type="button" onClick={handleContinue} disabled={!canContinue}>
+              <button type="button" className="pz-btn pz-btn--primary" onClick={handleContinue} disabled={!canContinue}>
                 Continuer
               </button>
             </div>
           </>
         ) : (
-          <form onSubmit={handleCreate} className="tree-wizard-form">
-            <h2>Commencez par vous.</h2>
-            <p>Votre arbre sera cree avec votre premiere fiche.</p>
+          <form onSubmit={handleCreate} className="tw-form">
+            <div className="pz-modal-head">
+              <h2 id="treeWizardTitle" className="pz-title">Commencez <em>par vous</em></h2>
+              <p className="pz-sub">L'arbre « {form.treeName.trim()} » démarre avec votre fiche. Vous ajouterez les autres ensuite.</p>
+            </div>
 
-            <label htmlFor="wizardSelfFirstName">Votre prenom</label>
-            <input
-              id="wizardSelfFirstName"
-              type="text"
-              maxLength={120}
-              value={form.selfFirstName}
-              onChange={(event) => updateField('selfFirstName', event.target.value)}
-              required
-            />
+            <div className="pz-row2">
+              <div className="pz-field">
+                <label htmlFor="wizardSelfFirstName">Votre prénom</label>
+                <input
+                  id="wizardSelfFirstName"
+                  type="text"
+                  maxLength={120}
+                  autoComplete="given-name"
+                  value={form.selfFirstName}
+                  onChange={(event) => updateField('selfFirstName', event.target.value)}
+                  required
+                />
+              </div>
+              <div className="pz-field">
+                <label htmlFor="wizardSelfLastName">Votre nom</label>
+                <input
+                  id="wizardSelfLastName"
+                  type="text"
+                  maxLength={120}
+                  autoComplete="family-name"
+                  value={form.selfLastName}
+                  onChange={(event) => updateField('selfLastName', event.target.value)}
+                  required
+                />
+              </div>
+            </div>
 
-            <label htmlFor="wizardSelfLastName">Votre nom</label>
-            <input
-              id="wizardSelfLastName"
-              type="text"
-              maxLength={120}
-              value={form.selfLastName}
-              onChange={(event) => updateField('selfLastName', event.target.value)}
-              required
-            />
+            <div className="pz-field">
+              <label htmlFor="wizardSelfBirthYear">Année de naissance <span className="tw-optional">facultatif</span></label>
+              <input
+                id="wizardSelfBirthYear"
+                type="number"
+                inputMode="numeric"
+                min="1000"
+                max="2999"
+                value={form.selfBirthYear}
+                onChange={(event) => updateField('selfBirthYear', event.target.value)}
+                placeholder="1990"
+              />
+            </div>
 
-            <label htmlFor="wizardSelfBirthYear">Annee de naissance (optionnel)</label>
-            <input
-              id="wizardSelfBirthYear"
-              type="number"
-              min="1000"
-              max="2999"
-              value={form.selfBirthYear}
-              onChange={(event) => updateField('selfBirthYear', event.target.value)}
-              placeholder="1990"
-            />
+            <div className="pz-field">
+              <span className="pz-label">Votre photo <span className="tw-optional">facultatif</span></span>
+              <label htmlFor="wizardSelfPhoto" className="tw-photo">
+                <span className="tw-photo-icon" aria-hidden="true"><ImagePlus size={20} strokeWidth={1.8} /></span>
+                <span className="tw-photo-text">
+                  <strong>{form.photoFile ? form.photoFile.name : 'Choisir une photo'}</strong>
+                  <span>{form.photoFile ? 'Cliquez pour en choisir une autre' : 'Un portrait où l\'on voit bien votre visage'}</span>
+                </span>
+              </label>
+              <input
+                id="wizardSelfPhoto"
+                className="tw-photo-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) => updateField('photoFile', event.target.files?.[0] || null)}
+              />
+            </div>
 
-            <label htmlFor="wizardSelfPhoto">Ajouter une photo (optionnel)</label>
-            <input
-              id="wizardSelfPhoto"
-              type="file"
-              accept="image/*"
-              onChange={(event) => updateField('photoFile', event.target.files?.[0] || null)}
-            />
+            {error && <div className="pz-error tree-wizard-error" role="alert">{error}</div>}
 
-            {error && <div className="tree-wizard-error">{error}</div>}
-
-            <div className="tree-wizard-actions">
-              <button type="button" className="ghost" onClick={() => setStep(1)} disabled={loading}>
+            <div className="pz-modal-actions">
+              <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setStep(1)} disabled={loading}>
                 Retour
               </button>
-              <button type="submit" disabled={!canCreate}>
-                {loading ? 'Creation en cours...' : 'Creer mon arbre'}
+              <button type="submit" className="pz-btn pz-btn--primary" disabled={!canCreate}>
+                {loading ? 'Création en cours…' : 'Créer mon arbre'}
               </button>
             </div>
           </form>

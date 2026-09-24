@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { X } from 'lucide-react'
+import './AccountScreens.css'
 
 const AccountPanel = ({
   visible,
@@ -28,52 +30,49 @@ const AccountPanel = ({
     return null
   }
 
+  const displayName = linkedPerson
+    ? `${linkedPerson.firstName || ''} ${linkedPerson.lastName || ''}`.trim()
+    : userDisplayName || 'Mon compte'
+
   return (
-    <div className="account-overlay account-overlay--open">
-      <div className="account-card">
-        <div className="account-header">
-          <div className="account-header-text">
-            <h1>Compte</h1>
-            {userEmail && <p>{userEmail}</p>}
-          </div>
-          <button type="button" className="ghost" onClick={onClose}>Fermer</button>
+    <div className="pz-overlay account-overlay account-overlay--open" onClick={onClose}>
+      <div className="pz-modal account-card" role="dialog" aria-modal="true" aria-labelledby="accountPanelTitle" onClick={(event) => event.stopPropagation()}>
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Mon compte</p>
+          <h1 id="accountPanelTitle" className="pz-title">{displayName}</h1>
+          {userEmail && <p className="pz-sub">{userEmail}</p>}
+        </div>
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+          <X size={18} aria-hidden="true" />
+        </button>
+
+        <div className="ap-linked">
+          <span className="ap-avatar" aria-hidden="true">
+            {linkedPerson?.photo ? <img src={linkedPerson.photo} alt="" /> : (linkedPerson?.firstName || userDisplayName || 'C').charAt(0).toUpperCase()}
+          </span>
+          <p className="pz-small">
+            {linkedPerson
+              ? 'Vous apparaissez dans cet arbre sous ce nom et avec cette photo.'
+              : "Dites-nous qui vous êtes dans cet arbre, votre nom et votre photo viendront de votre fiche."}
+          </p>
         </div>
 
-        <div className="account-linked">
-          <h2>Profil lié dans cet arbre</h2>
-          <div className="account-linked-person">
-            <div className="account-linked-avatar">
-              {linkedPerson?.photo ? (
-                <img src={linkedPerson.photo} alt="" />
-              ) : (
-                <span>{(linkedPerson?.firstName || userDisplayName || 'C').charAt(0).toUpperCase()}</span>
-              )}
-            </div>
-            <div className="account-linked-meta">
-              <strong>
-                {linkedPerson ? `${linkedPerson.firstName || ''} ${linkedPerson.lastName || ''}`.trim() : userDisplayName || 'Compte'}
-              </strong>
-              <span>
-                {linkedPerson
-                  ? 'Cette personne est utilisée pour votre nom et photo de profil.'
-                  : 'Aucune personne liée pour le moment.'}
-              </span>
-            </div>
+        <div className="ap-pick">
+          <div className="pz-field">
+            <label htmlFor="accountPanelSearch">Je suis cette personne</label>
+            <input
+              id="accountPanelSearch"
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Chercher votre prénom"
+              autoComplete="off"
+            />
           </div>
-        </div>
 
-        <div className="account-pick">
-          <h2>Je suis cette personne</h2>
-          <input
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Rechercher une personne..."
-          />
-
-          <div className="account-person-list">
+          <div className="ap-list">
             {filteredPeople.length === 0 ? (
-              <div className="account-empty">Aucun résultat.</div>
+              <p className="pz-small ap-empty">Personne ne correspond à cette recherche.</p>
             ) : (
               filteredPeople.map((person) => {
                 const isSelected = String(selectedPersonId) === String(person.id)
@@ -81,30 +80,29 @@ const AccountPanel = ({
                   <button
                     key={person.id}
                     type="button"
-                    className={`account-person-item ${isSelected ? 'active' : ''}`}
+                    className={`ap-item ${isSelected ? 'is-active' : ''}`}
                     onClick={() => onSelectPerson?.(person.id)}
                   >
-                    <div className="account-person-avatar">
-                      {person.photo ? <img src={person.photo} alt="" /> : <span>{(person.firstName || '?').charAt(0)}</span>}
-                    </div>
-                    <div className="account-person-name">
-                      {person.firstName} {person.lastName || ''}
-                    </div>
-                    {isSelected && <span className="account-person-tag">Lié</span>}
+                    <span className="ap-item-avatar" aria-hidden="true">
+                      {person.photo ? <img src={person.photo} alt="" /> : (person.firstName || '?').charAt(0)}
+                    </span>
+                    <span className="ap-item-name">{person.firstName} <em>{person.lastName || ''}</em></span>
+                    {isSelected && <span className="pz-tag pz-tag--accent">C'est moi</span>}
                   </button>
                 )
               })
             )}
           </div>
-
-          {selectedPersonId && (
-            <button type="button" className="ghost" onClick={() => onSelectPerson?.(null)}>
-              Retirer la liaison
-            </button>
-          )}
         </div>
+
+        {selectedPersonId && (
+          <div className="pz-modal-actions">
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onSelectPerson?.(null)}>
+              Ce n'est plus moi
+            </button>
+          </div>
+        )}
       </div>
-      <button type="button" className="account-backdrop" aria-label="Fermer" onClick={onClose} />
     </div>
   )
 }

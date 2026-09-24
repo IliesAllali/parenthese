@@ -13,7 +13,7 @@
 .drawing-options__label {
   font-size: 14px;
   font-weight: 450;
-  color: #8B7355;
+  color: #6B645D;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -38,8 +38,8 @@
 }
 
 .drawing-options__color-btn--active {
-  border-color: #5D524B;
-  box-shadow: 0 0 0 2px rgba(93, 82, 75, 0.2);
+  border-color: #2A2622;
+  box-shadow: 0 0 0 2px rgba(42, 38, 34, 0.2);
 }
 
 .drawing-options__widths {
@@ -54,19 +54,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  border: 1.5px solid rgba(166, 124, 82, 0.2);
+  border: 1.5px solid rgba(147, 64, 42, 0.2);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .drawing-options__width-btn:hover {
-  background: rgba(166, 124, 82, 0.08);
+  background: rgba(147, 64, 42, 0.08);
 }
 
 .drawing-options__width-btn--active {
-  border-color: #A67C52;
-  background: rgba(166, 124, 82, 0.1);
+  border-color: #93402A;
+  background: rgba(147, 64, 42, 0.1);
 }
 
 .drawing-options__width-preview {

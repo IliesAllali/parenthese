@@ -40,8 +40,8 @@ function DraftRestoreBanner({ visible, draftTimestamp, onRestore, onDiscard }) {
     <div className="draft-restore-banner" role="alert" aria-live="polite">
       <div className="draft-restore-content">
         <span className="draft-restore-text">
-          Un brouillon a été trouvé
-          {timeAgo && <span className="draft-restore-time"> ({timeAgo})</span>}
+          Des modifications non enregistrées vous attendent
+          {timeAgo && <span className="draft-restore-time">{timeAgo}</span>}
         </span>
 
         <div className="draft-restore-actions">

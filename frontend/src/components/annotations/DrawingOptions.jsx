@@ -1,7 +1,7 @@
 import './DrawingOptions.css'
 
 const COLORS = [
-  '#A67C52', '#5D524B', '#C0392B', '#2980B9',
+  '#93402A', '#2A2622', '#C0392B', '#2980B9',
   '#27AE60', '#F39C12', '#8E44AD', '#2C3E50',
 ]
 
