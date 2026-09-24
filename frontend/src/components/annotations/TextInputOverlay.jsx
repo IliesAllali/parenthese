@@ -53,7 +53,7 @@ export default function TextInputOverlay({
           color: currentStyle.color,
           fontSize: currentStyle.fontSize,
           background: currentStyle.stabilo
-            ? 'rgba(255, 243, 128, 0.5)'
+            ? 'rgba(237, 182, 164, 0.5)'
             : 'rgba(255, 255, 255, 0.85)',
         }}
         onKeyDown={handleKeyDown}

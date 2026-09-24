@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Download, Trash2, X } from 'lucide-react'
+import './SettingsPanels.css'
 import {
   deleteTree,
   exportGedcom,
@@ -243,79 +245,80 @@ const AdminPanel = ({
     }
   }
 
+  if (!visible) return null
+
   return (
     <div
-      className={`contrib-overlay tree-settings-overlay ${visible ? 'contrib-overlay--open tree-settings-overlay--open' : ''}`}
+      className="pz-overlay tree-settings-overlay"
       onClick={() => {
-        if (visible && !showDeleteModal) onClose?.()
+        if (!showDeleteModal) onClose?.()
       }}
-      aria-hidden={!visible}
     >
       <div
-        className="contrib-card tree-settings-card"
+        className="pz-modal pz-modal--wide tree-settings-card"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Paramètres de l'arbre"
+        aria-labelledby="treeSettingsTitle"
       >
-        <div className="contrib-header tree-settings-header">
-          <div className="contrib-header-text">
-            <h1>Paramètres de l'arbre</h1>
-            <p>{tree?.name || 'Réglages de cet arbre familial'}</p>
-          </div>
-          <button type="button" className="ghost" onClick={onClose}>Fermer</button>
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Paramètres de l'arbre</p>
+          <h1 id="treeSettingsTitle" className="pz-title">{tree?.name || 'Votre arbre'}</h1>
+        </div>
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+          <X size={18} aria-hidden="true" />
+        </button>
+
+        <div className="pz-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={section === 'tree'} className="pz-tab" onClick={() => setSection('tree')}>Votre arbre</button>
+          <button type="button" role="tab" aria-selected={section === 'data'} className="pz-tab" onClick={() => setSection('data')}>Données</button>
+          <button type="button" role="tab" aria-selected={section === 'danger'} className="pz-tab" onClick={() => setSection('danger')}>Avancé</button>
         </div>
 
-        <div className="tree-settings-tabs">
-          <button type="button" className={`tree-settings-tab ${section === 'tree' ? 'active' : ''}`} onClick={() => setSection('tree')}>Votre arbre</button>
-          <button type="button" className={`tree-settings-tab ${section === 'data' ? 'active' : ''}`} onClick={() => setSection('data')}>Données</button>
-          <button type="button" className={`tree-settings-tab ${section === 'danger' ? 'active' : ''}`} onClick={() => setSection('danger')}>Paramètres avancés</button>
-        </div>
-
-        <div className="tree-settings-content">
+        <div className="ts-content">
           {loading ? (
-            <div className="contrib-empty">Chargement...</div>
+            <p className="pz-small ts-loading">Chargement…</p>
           ) : (
             <>
-              {errorMessage && <div className="contrib-error">{errorMessage}</div>}
-              {successMessage && <div className="contrib-ok">{successMessage}</div>}
+              {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
+              {successMessage && <div className="pz-success" role="status">{successMessage}</div>}
 
               {section === 'tree' && (
-                <form className="tree-settings-panel" onSubmit={handleSaveTree}>
-                  <h2>Votre arbre</h2>
-                  <p className="tree-settings-help">Modifiez le nom et la description affichés à votre famille.</p>
+                <form className="ts-panel" onSubmit={handleSaveTree}>
+                  <div className="pz-field">
+                    <label htmlFor="settingsTreeName">Nom de l'arbre</label>
+                    <input
+                      id="settingsTreeName"
+                      type="text"
+                      value={treeName}
+                      maxLength={120}
+                      onChange={(event) => setTreeName(event.target.value)}
+                      required
+                    />
+                  </div>
 
-                  <label htmlFor="settingsTreeName">Nom de l'arbre</label>
-                  <input
-                    id="settingsTreeName"
-                    type="text"
-                    value={treeName}
-                    maxLength={120}
-                    onChange={(event) => setTreeName(event.target.value)}
-                    required
-                  />
+                  <div className="pz-field">
+                    <label htmlFor="settingsTreeDescription">Description <span className="ts-optional">facultatif</span></label>
+                    <input
+                      id="settingsTreeDescription"
+                      type="text"
+                      value={treeDescription}
+                      maxLength={500}
+                      onChange={(event) => setTreeDescription(event.target.value)}
+                      placeholder="Quelques mots pour accueillir la famille"
+                    />
+                  </div>
 
-                  <label htmlFor="settingsTreeDescription">Description (optionnelle)</label>
-                  <input
-                    id="settingsTreeDescription"
-                    type="text"
-                    value={treeDescription}
-                    maxLength={500}
-                    onChange={(event) => setTreeDescription(event.target.value)}
-                  />
-
-                  <div className="tree-settings-actions">
-                    <button type="submit" className="tree-settings-primary" disabled={saving}>
-                      {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                  <div className="ts-actions">
+                    <button type="submit" className="pz-btn pz-btn--primary" disabled={saving}>
+                      {saving ? 'Enregistrement…' : 'Enregistrer'}
                     </button>
                   </div>
 
-                  <fieldset className="tree-settings-policy" disabled={savingPolicy}>
-                    <legend>Contributions de la famille</legend>
-                    <p className="tree-settings-help">
-                      Ce que deviennent les ajouts et corrections faits avec le mot de passe de contribution.
-                    </p>
-                    <label className="tree-settings-radio">
+                  <fieldset className="ts-policy" disabled={savingPolicy}>
+                    <legend className="pz-eyebrow">Contributions de la famille</legend>
+                    <p className="pz-small">Ce que deviennent les ajouts et corrections faits avec le mot de passe de contribution.</p>
+                    <label className={`ts-choice ${contributionPolicy === 'pending' ? 'is-active' : ''}`}>
                       <input
                         type="radio"
                         name="contributionPolicy"
@@ -323,12 +326,12 @@ const AdminPanel = ({
                         checked={contributionPolicy === 'pending'}
                         onChange={() => handlePolicyChange('pending')}
                       />
-                      <span>
+                      <span className="ts-choice-text">
                         <strong>Je valide chaque proposition</strong>
                         <small>Rien n'apparaît dans l'arbre avant votre accord.</small>
                       </span>
                     </label>
-                    <label className="tree-settings-radio">
+                    <label className={`ts-choice ${contributionPolicy === 'direct' ? 'is-active' : ''}`}>
                       <input
                         type="radio"
                         name="contributionPolicy"
@@ -336,8 +339,8 @@ const AdminPanel = ({
                         checked={contributionPolicy === 'direct'}
                         onChange={() => handlePolicyChange('direct')}
                       />
-                      <span>
-                        <strong>Les modifications sont appliquées directement</strong>
+                      <span className="ts-choice-text">
+                        <strong>Les modifications s'appliquent tout de suite</strong>
                         <small>La famille modifie l'arbre sans attendre. Vous gardez l'historique.</small>
                       </span>
                     </label>
@@ -346,62 +349,50 @@ const AdminPanel = ({
               )}
 
               {section === 'data' && (
-                <div className="tree-settings-panel">
-                  <h2>Données de l'arbre</h2>
-                  <p className="tree-settings-help">Récupérez vos informations à tout moment.</p>
-
-                  <div className="tree-settings-row">
-                    <div className="tree-settings-row-text">
+                <div className="ts-panel">
+                  <div className="ts-row">
+                    <div className="ts-row-text">
                       <strong>Importer un fichier GEDCOM</strong>
-                      <p>Ajoute les personnes et relations du fichier dans cet arbre.</p>
+                      <p className="pz-small">Ajoute les personnes et les liens du fichier à cet arbre.</p>
+                      {gedcomFile && <span className="pz-tag pz-tag--accent ts-file">{gedcomFile.name}</span>}
                     </div>
-                    <div className="tree-settings-row-actions">
+                    <div className="ts-row-actions">
                       <input
                         ref={gedcomInputRef}
-                        className="tree-settings-file-input"
+                        className="ts-file-input"
                         type="file"
                         accept=".ged,text/x-gedcom,text/plain"
                         onChange={(event) => setGedcomFile(event.target.files?.[0] || null)}
                       />
-                      <button
-                        type="button"
-                        className="tree-settings-secondary"
-                        onClick={() => gedcomInputRef.current?.click()}
-                        disabled={saving}
-                      >
+                      <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" onClick={() => gedcomInputRef.current?.click()} disabled={saving}>
                         Choisir un fichier
                       </button>
-                      {gedcomFile && <span className="tree-settings-file-name">{gedcomFile.name}</span>}
-                      <button
-                        type="button"
-                        className="tree-settings-primary"
-                        onClick={handleImportGedcom}
-                        disabled={saving || !gedcomFile}
-                      >
-                        {importingGedcom ? 'Import...' : 'Importer .ged'}
+                      <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" onClick={handleImportGedcom} disabled={saving || !gedcomFile}>
+                        {importingGedcom ? 'Import…' : 'Importer'}
                       </button>
                     </div>
                   </div>
 
-                  <div className="tree-settings-row">
-                    <div className="tree-settings-row-text">
-                      <strong>Fichier GEDCOM</strong>
-                      <p>Format standard généalogique, compatible avec les principaux outils.</p>
+                  <div className="ts-row">
+                    <div className="ts-row-text">
+                      <strong>Télécharger en GEDCOM</strong>
+                      <p className="pz-small">Le format standard, lisible par les autres logiciels d'arbre.</p>
                     </div>
-                    <div className="tree-settings-row-actions tree-settings-row-actions--inline">
-                      <button type="button" className="tree-settings-primary" onClick={handleExportGedcom} disabled={saving}>
+                    <div className="ts-row-actions">
+                      <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" onClick={handleExportGedcom} disabled={saving}>
+                        <Download size={15} aria-hidden="true" />
                         Télécharger .ged
                       </button>
                     </div>
                   </div>
 
-                  <div className="tree-settings-row tree-settings-row--muted">
-                    <div className="tree-settings-row-text">
+                  <div className="ts-row ts-row--muted">
+                    <div className="ts-row-text">
                       <strong>Sauvegarde complète</strong>
-                      <p>Toutes les données et médias (phase 2).</p>
+                      <p className="pz-small">Toutes les données et les médias. Bientôt disponible.</p>
                     </div>
-                    <div className="tree-settings-row-actions tree-settings-row-actions--inline">
-                      <button type="button" className="tree-settings-secondary" disabled>
+                    <div className="ts-row-actions">
+                      <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" disabled>
                         Télécharger .zip
                       </button>
                     </div>
@@ -410,15 +401,16 @@ const AdminPanel = ({
               )}
 
               {section === 'danger' && (
-                <div className="tree-settings-panel tree-settings-panel--danger">
-                  <h2>Paramètres avancés</h2>
-                  <p className="tree-settings-help">Ces actions ont un impact définitif.</p>
-
-                  <div className="tree-settings-danger-box">
-                    <button type="button" className="danger-action" onClick={() => setShowDeleteModal(true)}>
+                <div className="ts-panel">
+                  <div className="ts-danger">
+                    <div className="ts-row-text">
+                      <strong>Supprimer cet arbre</strong>
+                      <p className="pz-small">Toutes les personnes, les souvenirs et les médias sont effacés, pour toute la famille. C'est définitif.</p>
+                    </div>
+                    <button type="button" className="pz-btn pz-btn--danger pz-btn--sm danger-action" onClick={() => setShowDeleteModal(true)}>
+                      <Trash2 size={15} aria-hidden="true" />
                       Supprimer cet arbre
                     </button>
-                    <p>Cette action est irréversible. Toutes les données et médias seront supprimés.</p>
                   </div>
                 </div>
               )}
@@ -428,22 +420,30 @@ const AdminPanel = ({
       </div>
 
       {showDeleteModal && (
-        <div className="settings-delete-modal-overlay" onClick={() => !saving && setShowDeleteModal(false)}>
-          <div className="settings-delete-modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Confirmer la suppression</h3>
-            <p>Saisissez le nom de l'arbre pour confirmer : <strong>{tree?.name}</strong></p>
-            <input
-              type="text"
-              value={deleteConfirmName}
-              onChange={(event) => setDeleteConfirmName(event.target.value)}
-              placeholder="Nom exact de l'arbre"
-            />
-            <div className="settings-delete-actions">
-              <button type="button" className="ghost" onClick={() => setShowDeleteModal(false)} disabled={saving}>
+        <div className="pz-overlay ts-delete-overlay" onClick={(event) => { event.stopPropagation(); if (!saving) setShowDeleteModal(false) }}>
+          <div className="pz-modal settings-delete-modal" role="dialog" aria-modal="true" aria-labelledby="treeDeleteTitle" onClick={(event) => event.stopPropagation()}>
+            <div className="pz-modal-head">
+              <p className="pz-eyebrow">Dernière vérification</p>
+              <h3 id="treeDeleteTitle" className="pz-title">Supprimer « {tree?.name} »</h3>
+              <p className="pz-sub">Tapez le nom exact de l'arbre pour confirmer.</p>
+            </div>
+            <div className="pz-field">
+              <label htmlFor="treeDeleteConfirm">Nom de l'arbre</label>
+              <input
+                id="treeDeleteConfirm"
+                type="text"
+                value={deleteConfirmName}
+                onChange={(event) => setDeleteConfirmName(event.target.value)}
+                placeholder={tree?.name || ''}
+                autoComplete="off"
+              />
+            </div>
+            <div className="pz-modal-actions">
+              <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setShowDeleteModal(false)} disabled={saving}>
                 Annuler
               </button>
-              <button type="button" className="danger-action" onClick={handleDeleteTree} disabled={saving}>
-                {saving ? 'Suppression...' : 'Supprimer définitivement'}
+              <button type="button" className="pz-btn pz-btn--danger danger-action" onClick={handleDeleteTree} disabled={saving}>
+                {saving ? 'Suppression…' : 'Supprimer définitivement'}
               </button>
             </div>
           </div>

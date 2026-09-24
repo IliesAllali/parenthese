@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ChevronRight, KeyRound, LogOut, Plus, Sparkles, X } from 'lucide-react'
+import logoUrl from '../assets/parenthese-logo.svg?url'
+import './AccountScreens.css'
 
 const AccountDashboard = ({
   authenticated,
@@ -87,161 +90,205 @@ const AccountDashboard = ({
 
   if (!authenticated) {
     return (
-      <div className="account-dashboard">
-        <div className="account-dashboard-card auth-only">
-          <h1>Parenthèse</h1>
-          <p className="account-subtitle">
-            {isRegister ? 'Créez votre compte.' : 'Votre histoire familiale, vivante et partagée.'}
-          </p>
-          {pendingTreeName && (
-            <p className="account-pending-tree">
-              Vous reviendrez ensuite sur l'arbre « {pendingTreeName} », rattaché à votre compte.
-            </p>
-          )}
+      <div className="account-dashboard pz-screen">
+        <div className="pz-screen-inner">
+          <img src={logoUrl} alt="Parenthèse" className="pz-screen-logo" />
 
-          <form className="account-form" onSubmit={handleAuthSubmit}>
-            {isRegister && (
-              <>
-                <label htmlFor="accountFirstName">Prénom</label>
-                <input
-                  id="accountFirstName"
-                  type="text"
-                  autoComplete="given-name"
-                  value={firstName}
-                  maxLength={100}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  required
-                />
-              </>
-            )}
+          <div className="pz-card pz-screen-card pz-auth">
+            <div className="pz-auth-head">
+              <h1 className="pz-title">{isRegister ? <>Créez votre <em>compte</em></> : <>Retrouvez votre <em>famille</em></>}</h1>
+              <p className="pz-sub">
+                {isRegister
+                  ? 'Gratuit, et ça le restera. Un prénom, un email, un mot de passe, et vous pouvez commencer.'
+                  : 'Connectez-vous pour ouvrir vos arbres et ajouter des souvenirs.'}
+              </p>
+            </div>
 
-            <label htmlFor="accountEmail">Email</label>
-            <input
-              id="accountEmail"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-
-            <label htmlFor="accountPassword">Mot de passe</label>
-            <input
-              id="accountPassword"
-              type="password"
-              autoComplete={isRegister ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={8}
-              required
-            />
-            {isRegister && <p className="account-hint">8 caractères minimum.</p>}
-
-            {errorMessage && <div className="account-error">{errorMessage}</div>}
-
-            <button type="submit" disabled={!canSubmitAuth}>
-              {loading ? 'Traitement...' : isRegister ? 'Créer mon compte' : 'Se connecter'}
-            </button>
-            {isRegister && (
-              <p className="account-hint">
-                En créant un compte, vous acceptez{' '}
-                <a href="https://parenthese.io/donnees-et-vie-privee/" target="_blank" rel="noopener noreferrer">
-                  la façon dont Parenthèse traite vos données
-                </a>
-                .
+            {pendingTreeName && (
+              <p className="account-pending-tree pz-auth-note">
+                Vous reviendrez ensuite sur l'arbre « {pendingTreeName} », rattaché à votre compte.
               </p>
             )}
-          </form>
 
-          <div className="account-divider">ou</div>
+            <form className="pz-auth-form" onSubmit={handleAuthSubmit}>
+              {isRegister && (
+                <div className="pz-field">
+                  <label htmlFor="accountFirstName">Prénom</label>
+                  <input
+                    id="accountFirstName"
+                    type="text"
+                    autoComplete="given-name"
+                    placeholder="Camille"
+                    value={firstName}
+                    maxLength={100}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
-          <div className="account-secondary-actions">
+              <div className="pz-field">
+                <label htmlFor="accountEmail">Email</label>
+                <input
+                  id="accountEmail"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="camille@exemple.fr"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="pz-field">
+                <label htmlFor="accountPassword">Mot de passe</label>
+                <input
+                  id="accountPassword"
+                  type="password"
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  minLength={8}
+                  required
+                />
+                {isRegister && <p className="pz-hint">8 caractères minimum.</p>}
+              </div>
+
+              {errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
+
+              <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={!canSubmitAuth}>
+                {loading ? 'Un instant…' : isRegister ? 'Créer mon compte' : 'Se connecter'}
+              </button>
+
+              {isRegister && (
+                <p className="pz-small pz-auth-legal">
+                  En créant un compte, vous acceptez{' '}
+                  <a href="https://parenthese.io/donnees-et-vie-privee/" target="_blank" rel="noopener noreferrer">
+                    la façon dont Parenthèse traite vos données
+                  </a>
+                  .
+                </p>
+              )}
+            </form>
+
+            <div className="pz-divider">ou</div>
+
             <button
               type="button"
-              className="account-secondary-btn account-signup-toggle"
-              onClick={() => setMode(isRegister ? 'login' : 'register')}
-              disabled={loading}
-            >
-              {isRegister ? "J'ai déjà un compte" : 'Créer un compte'}
-            </button>
-            <button
-              type="button"
-              className="account-secondary-btn account-shared-link"
+              className="pz-btn pz-btn--secondary pz-btn--block account-shared-link"
               onClick={onBackToAccess}
               disabled={loading}
             >
-              Accéder avec un lien partagé
+              <KeyRound size={16} aria-hidden="true" />
+              Ouvrir un arbre partagé avec moi
             </button>
           </div>
+
+          <p className="pz-auth-switch pz-small">
+            {isRegister ? 'Vous avez déjà un compte ?' : 'Pas encore de compte ?'}{' '}
+            <button
+              type="button"
+              className="pz-link account-signup-toggle"
+              onClick={() => setMode(isRegister ? 'login' : 'register')}
+              disabled={loading}
+            >
+              {isRegister ? 'Me connecter' : 'Créer un compte'}
+            </button>
+          </p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="account-dashboard">
-      <div className="account-dashboard-card">
-        <h1>Votre compte</h1>
-        <p>Choisissez un arbre ou créez-en un nouveau.</p>
+    <div className="account-dashboard pz-screen">
+      <div className="pz-screen-inner">
+        <img src={logoUrl} alt="Parenthèse" className="pz-screen-logo" />
 
-        {errorMessage && <div className="account-error">{errorMessage}</div>}
+        <div className="pz-card pz-screen-card">
+          <div className="pz-auth-head">
+            <h1 className="pz-title">Vos <em>arbres</em></h1>
+            <p className="pz-sub">Ouvrez un arbre, ou commencez celui d'une autre branche de la famille.</p>
+          </div>
 
-        <div className="tree-list">
-          {trees.length === 0 ? (
-            <div className="tree-empty">Aucun arbre pour le moment.</div>
-          ) : (
-            trees.map((tree) => (
-              <button
-                key={tree.id}
-                type="button"
-                className={`tree-item ${activeTreeId === tree.id ? 'active' : ''}`}
-                onClick={() => onOpenTree(tree.id)}
-              >
-                <span className="tree-name">{tree.name}</span>
+          {errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
+
+          <div className="tree-list pz-tree-list">
+            {trees.length === 0 ? (
+              <div className="tree-empty pz-tree-empty">
+                <p className="pz-sub">Aucun arbre pour le moment.</p>
+                <p className="pz-small">Commencez par le vôtre, il suffit d'un prénom.</p>
+              </div>
+            ) : (
+              trees.map((tree) => {
+                const isActive = activeTreeId === tree.id
+                return (
+                  <button
+                    key={tree.id}
+                    type="button"
+                    className={`tree-item pz-tree-item ${isActive ? 'active' : ''}`}
+                    onClick={() => onOpenTree(tree.id)}
+                  >
+                    <span className="pz-tree-mono" aria-hidden="true">{(tree.name || '?').trim().charAt(0).toUpperCase()}</span>
+                    <span className="tree-name pz-tree-name">{tree.name}</span>
+                    {isActive && <span className="pz-tag pz-tag--accent">Ouvert</span>}
+                    <ChevronRight size={18} aria-hidden="true" className="pz-tree-chevron" />
+                  </button>
+                )
+              })
+            )}
+          </div>
+
+          <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={onStartTreeWizard} disabled={loading}>
+            <Plus size={17} aria-hidden="true" />
+            Créer un nouvel arbre
+          </button>
+
+          <div className="account-actions pz-account-actions">
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onBackToAccess} disabled={loading}>
+              <KeyRound size={15} aria-hidden="true" />
+              Accès par mot de passe partagé
+            </button>
+            {onUseDemo && (
+              <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onUseDemo} disabled={loading}>
+                <Sparkles size={15} aria-hidden="true" />
+                Essayer la démo
               </button>
-            ))
-          )}
+            )}
+          </div>
         </div>
 
-        <button type="button" onClick={onStartTreeWizard} disabled={loading}>
-          Créer un nouvel arbre
-        </button>
-
-        <div className="account-actions">
-          <button type="button" className="ghost" onClick={onLogout} disabled={loading}>
+        <div className="pz-account-foot">
+          <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onLogout} disabled={loading}>
+            <LogOut size={15} aria-hidden="true" />
             Déconnexion
           </button>
-          <button type="button" className="ghost" onClick={onBackToAccess} disabled={loading}>
-            Accès par mot de passe partagé
-          </button>
-          {onUseDemo && (
-            <button type="button" className="ghost" onClick={onUseDemo} disabled={loading}>
-              Essayer la démo
+          {onDeleteAccount && (
+            <button type="button" className="pz-btn pz-btn--danger-ghost pz-btn--sm account-delete-link" onClick={openDeleteModal} disabled={loading}>
+              Supprimer mon compte
             </button>
           )}
         </div>
-
-        {onDeleteAccount && (
-          <div className="account-delete-zone">
-            <button type="button" className="account-delete-link" onClick={openDeleteModal} disabled={loading}>
-              Supprimer mon compte
-            </button>
-          </div>
-        )}
       </div>
 
       {deleteModalOpen && (
-        <div className="settings-delete-modal-overlay" onClick={closeDeleteModal}>
+        <div className="pz-overlay" onClick={closeDeleteModal}>
           <div
-            className="settings-delete-modal account-delete-modal"
+            className="pz-modal account-delete-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="accountDeleteTitle"
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 id="accountDeleteTitle">Supprimer mon compte</h3>
-            <p>Cette suppression est définitive, elle ne pourra pas être annulée.</p>
-            <ul className="account-delete-list">
+            <div className="pz-modal-head">
+              <p className="pz-eyebrow">Compte</p>
+              <h3 id="accountDeleteTitle" className="pz-title">Supprimer mon compte</h3>
+              <p className="pz-sub">Cette suppression est définitive, elle ne pourra pas être annulée.</p>
+            </div>
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={closeDeleteModal} aria-label="Fermer" disabled={deleting}>
+              <X size={18} aria-hidden="true" />
+            </button>
+            <ul className="pz-delete-list">
               <li>Votre compte et votre adresse email sont effacés.</li>
               <li>
                 Les arbres que vous avez créés sont supprimés avec toutes leurs personnes et tous leurs médias,
@@ -250,27 +297,29 @@ const AccountDashboard = ({
               <li>Les arbres partagés avec vous restent à leurs propriétaires. Vous n'y aurez simplement plus accès.</li>
             </ul>
 
-            <form className="account-delete-form" onSubmit={handleDeleteSubmit}>
-              <label htmlFor="accountDeletePassword">Mot de passe actuel</label>
-              <input
-                id="accountDeletePassword"
-                type="password"
-                autoComplete="current-password"
-                value={deletePassword}
-                onChange={(event) => setDeletePassword(event.target.value)}
-                disabled={deleting}
-                autoFocus
-                required
-              />
+            <form className="pz-auth-form" onSubmit={handleDeleteSubmit}>
+              <div className="pz-field">
+                <label htmlFor="accountDeletePassword">Mot de passe actuel</label>
+                <input
+                  id="accountDeletePassword"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deletePassword}
+                  onChange={(event) => setDeletePassword(event.target.value)}
+                  disabled={deleting}
+                  autoFocus
+                  required
+                />
+              </div>
 
-              {deleteError && <div className="account-error">{deleteError}</div>}
+              {deleteError && <div className="account-error pz-error" role="alert">{deleteError}</div>}
 
-              <div className="settings-delete-actions">
-                <button type="button" className="ghost" onClick={closeDeleteModal} disabled={deleting}>
+              <div className="pz-modal-actions">
+                <button type="button" className="pz-btn pz-btn--ghost" onClick={closeDeleteModal} disabled={deleting}>
                   Annuler
                 </button>
-                <button type="submit" className="danger-action" disabled={deleting || !deletePassword}>
-                  {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+                <button type="submit" className="pz-btn pz-btn--danger" disabled={deleting || !deletePassword}>
+                  {deleting ? 'Suppression…' : 'Supprimer définitivement'}
                 </button>
               </div>
             </form>

@@ -1,92 +1,27 @@
-.tree-wizard-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(44, 36, 30, 0.36);
-}
+/* Création d'un arbre en deux étapes (DA terracotta) : la fenêtre vient de pz.css */
+.tw-steps { display: flex; align-items: center; gap: 6px; }
+.tw-step { width: 26px; height: 4px; border-radius: 4px; background: var(--pz-line); transition: background-color 240ms ease; }
+.tw-step.is-on { background: var(--pz-a500); }
+.tw-steps .pz-small { margin-left: 6px; }
 
-.tree-wizard-card {
-  width: min(480px, 100%);
-  display: grid;
-  gap: 10px;
-  border-radius: 16px;
-  border: 1px solid #d8c7ac;
-  background: #fffdf8;
-  padding: 20px;
-  box-shadow: 0 24px 45px rgba(50, 38, 25, 0.34);
-}
+.tw-form { display: grid; gap: 18px; }
+.tw-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
 
-.tree-wizard-card h2 {
-  color: #453d37;
-  font-size: 26px;
-  line-height: 1.15;
-}
-
-.tree-wizard-card p {
-  color: #6e6258;
-}
-
-.tree-wizard-card label {
-  font-size: 14px;
-  color: #6e6258;
-}
-
-.tree-wizard-card input {
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid #d9cdb8;
-  background: #fffdf8;
-  color: #453d37;
-  padding: 10px 12px;
-  outline: none;
-}
-
-.tree-wizard-card input:focus {
-  border-color: #b99762;
-  box-shadow: 0 0 0 2px rgba(185, 151, 98, 0.15);
-}
-
-.tree-wizard-form {
-  display: grid;
-  gap: 8px;
-}
-
-.tree-wizard-actions {
+.tw-photo-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tw-photo {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.tree-wizard-actions button {
-  border: 0;
-  border-radius: 10px;
-  padding: 11px 14px;
-  font-weight: 450;
-  color: #fef9ed;
-  background: linear-gradient(135deg, #8b6a43, #6a4f32);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--pz-a300);
+  border-radius: var(--pz-r-m);
+  background: var(--pz-a50);
   cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
-
-.tree-wizard-actions button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.tree-wizard-actions .ghost {
-  background: transparent;
-  color: #6a4f32;
-  border: 1px solid #cdb89a;
-}
-
-.tree-wizard-error {
-  background: rgba(171, 49, 49, 0.1);
-  border: 1px solid rgba(171, 49, 49, 0.32);
-  color: #862f2f;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
-}
+@media (hover: hover) and (pointer: fine) { .tw-photo:hover { background: var(--pz-a100); } }
+.tw-photo-input:focus-visible + .tw-photo, .tw-photo:focus-within { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
+.tw-photo-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--pz-surface); color: var(--pz-a700); }
+.tw-photo-text { display: grid; gap: 2px; min-width: 0; }
+.tw-photo-text strong { font: 500 14px var(--pz-sans); color: var(--pz-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tw-photo-text span { font: 400 12.5px var(--pz-sans); color: var(--pz-muted); }

@@ -1,4 +1,4 @@
-import { LogOut, Plus, Settings } from 'lucide-react'
+import { Check, ChevronRight, LogOut, Plus, Settings } from 'lucide-react'
 import './AvatarMenu.css'
 
 function AvatarMenu({
@@ -22,53 +22,60 @@ function AvatarMenu({
     || 'Aucun arbre'
   )
 
+  const displayName = linkedPersonName || userDisplayName || 'Mon compte'
+
   return (
-    <div className="avatar-menu account-menu">
-      <button type="button" className="account-menu-header account-menu-header--action" onClick={onAccountClick}>
-        <strong>{linkedPersonName || userDisplayName || 'Compte'}</strong>
-        <span>{userEmail || 'Ouvrir les options du compte'}</span>
+    <div className="avatar-menu account-menu pz-menu" role="menu">
+      <button type="button" className="am-head" onClick={onAccountClick} role="menuitem">
+        <span className="am-head-mono" aria-hidden="true">{displayName.trim().charAt(0).toUpperCase()}</span>
+        <span className="am-head-text">
+          <strong>{displayName}</strong>
+          <span>{userEmail || 'Mon compte'}</span>
+        </span>
+        <ChevronRight size={16} aria-hidden="true" className="am-head-chevron" />
       </button>
 
-      <div className="account-menu-trees">
-        {hasSeveralTrees ? (
-          trees.map((tree) => (
+      <div className="pz-menu-sep" />
+      <p className="pz-menu-label">{hasSeveralTrees ? 'Vos arbres' : 'Arbre ouvert'}</p>
+
+      {hasSeveralTrees ? (
+        trees.map((tree) => {
+          const isActive = String(tree.id) === String(activeTreeId)
+          return (
             <button
               key={tree.id}
               type="button"
-              className={`avatar-menu-item tree-choice ${String(tree.id) === String(activeTreeId) ? 'active' : ''}`}
+              role="menuitem"
+              className={`pz-menu-item ${isActive ? 'is-active' : ''}`}
               onClick={() => onSelectTree?.(tree.id)}
             >
-              <span className="tree-choice-dot" aria-hidden="true" />
-              <span className="tree-choice-name">{tree.name}</span>
-              <span className="tree-choice-arrow" aria-hidden="true">{'>'}</span>
+              <span className="am-tree-mono" aria-hidden="true">{(tree.name || '?').trim().charAt(0).toUpperCase()}</span>
+              <span className="am-tree-name">{tree.name}</span>
+              {isActive && <Check size={16} aria-hidden="true" className="am-check" />}
             </button>
-          ))
-        ) : (
-          <div className="account-menu-single-tree">
-            <span className="tree-choice-dot" aria-hidden="true" />
-            <span>{currentTreeName}</span>
-          </div>
-        )}
+          )
+        })
+      ) : (
+        <div className="pz-menu-item am-single" aria-current="true">
+          <span className="am-tree-mono" aria-hidden="true">{currentTreeName.trim().charAt(0).toUpperCase()}</span>
+          <span className="am-tree-name">{currentTreeName}</span>
+        </div>
+      )}
 
-        <button
-          type="button"
-          className="avatar-menu-item tree-create"
-          onClick={onCreateTree}
-        >
-          <span className="avatar-menu-icon"><Plus size={16} /></span>
-          <span>Créer un nouvel arbre</span>
-        </button>
-      </div>
+      <button type="button" role="menuitem" className="pz-menu-item" onClick={onCreateTree}>
+        <Plus size={16} aria-hidden="true" />
+        <span>Créer un nouvel arbre</span>
+      </button>
 
-      <div className="avatar-menu-separator" />
+      <div className="pz-menu-sep" />
 
-      <button type="button" className="avatar-menu-item" onClick={onSettings}>
-        <span className="avatar-menu-icon"><Settings size={16} /></span>
+      <button type="button" role="menuitem" className="pz-menu-item" onClick={onSettings}>
+        <Settings size={16} aria-hidden="true" />
         <span>Paramètres de l'arbre</span>
       </button>
 
-      <button type="button" className="avatar-menu-item danger" onClick={onLogout}>
-        <span className="avatar-menu-icon"><LogOut size={16} /></span>
+      <button type="button" role="menuitem" className="pz-menu-item pz-menu-item--danger" onClick={onLogout}>
+        <LogOut size={16} aria-hidden="true" />
         <span>Déconnexion</span>
       </button>
     </div>

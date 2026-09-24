@@ -97,8 +97,8 @@ const MediaViewer = ({ media, person, onClose }) => {
 
   const typeLabels = useMemo(() => ({
     photo: 'Photo',
-    video: 'Video',
-    audio: 'Audio',
+    video: 'Vidéo',
+    audio: 'Voix',
     document: 'Document',
     citation: 'Citation',
     geojson: 'Carte GPS',
@@ -349,11 +349,9 @@ const MediaViewer = ({ media, person, onClose }) => {
         return renderGeoMap()
       case 'citation':
         return (
-            <div className="media-citation-container">
-              <div className="media-citation-tape" />
-              <div className="media-citation-guillemet">"</div>
-              <div className="media-citation-text">{media?.label || 'Citation sans texte'}</div>
-            </div>
+            <blockquote className="media-citation-container">
+              <p className="media-citation-text">« {media?.label || 'Citation sans texte'} »</p>
+            </blockquote>
         )
       default:
         return null
@@ -363,44 +361,45 @@ const MediaViewer = ({ media, person, onClose }) => {
   if (!media) return null
 
   return (
-    <div className="media-viewer-overlay" onClick={handleOverlayClick}>
-      <div className="media-viewer-card">
+    <div className="pz-overlay media-viewer-overlay" onClick={handleOverlayClick}>
+      <div
+        className={`media-viewer-card media-viewer-card--${mediaType}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={media?.label || typeLabels[mediaType] || 'Souvenir'}
+      >
         <button
           type="button"
-          className="media-viewer-close"
+          className="pz-btn pz-btn--ghost pz-btn--icon media-viewer-close"
           onClick={onClose}
-          aria-label="Fermer le media"
+          aria-label="Fermer le souvenir"
         >
           <X size={18} strokeWidth={2.25} />
         </button>
 
-        <div className="media-viewer-content">
-          <div className="media-viewer-header">
-            {person?.photo ? (
-              <img className="media-viewer-person-avatar" src={person.photo} alt="" />
-            ) : (
-              <div className="media-viewer-person-initials">
-                {(person?.firstName?.[0] || '')}{(person?.lastName?.[0] || '')}
-              </div>
-            )}
-            <div className="media-viewer-person-info">
-              <span className="media-viewer-person-name">
-                {person?.firstName} {person?.lastName}
-              </span>
-              <span className="media-viewer-person-years">{personYears}</span>
-            </div>
-          </div>
+        <div className="mv-stage">
+          {renderContent()}
+        </div>
 
-          <div className={`media-viewer-type-badge ${mediaType}`}>
-            {typeLabels[mediaType] || mediaType}
-          </div>
-
-          {mediaType !== 'citation' && (
-            <h2 className="media-viewer-label">{media?.label || ''}</h2>
+        <div className="mv-caption">
+          {mediaType !== 'citation' && media?.label && (
+            <h2 className="mv-title">{media.label}</h2>
           )}
+          <div className="mv-meta">
+            <span className="mv-person">
+              {person?.photo ? (
+                <img className="mv-person-avatar" src={person.photo} alt="" />
+              ) : (
+                <span className="mv-person-avatar mv-person-initial">{person?.firstName?.[0] || '?'}</span>
+              )}
+              <span className="mv-person-name">{person?.firstName} <em>{person?.lastName}</em></span>
+              {personYears && <span className="mv-person-years">{personYears}</span>}
+            </span>
+            <span className="pz-tag">{typeLabels[mediaType] || mediaType}</span>
+          </div>
           {mediaSource && (
-            <p className="media-viewer-source">
-              Source:{' '}
+            <p className="mv-source">
+              Source{' '}
               {isMediaSourceUrl ? (
                 <a href={mediaSource} target="_blank" rel="noreferrer">{mediaSource}</a>
               ) : (
@@ -408,8 +407,6 @@ const MediaViewer = ({ media, person, onClose }) => {
               )}
             </p>
           )}
-
-          {renderContent()}
         </div>
       </div>
     </div>

@@ -31,9 +31,9 @@ function pointInView(view, cx, cy) {
 export function drawBackground(ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   const baseGradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-  baseGradient.addColorStop(0, '#FDF8EC')
-  baseGradient.addColorStop(0.6, '#FDF8EC')
-  baseGradient.addColorStop(1, '#FDF8EC')
+  baseGradient.addColorStop(0, '#FBFAF7')
+  baseGradient.addColorStop(0.6, '#FBFAF7')
+  baseGradient.addColorStop(1, '#FBFAF7')
   ctx.fillStyle = baseGradient
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -41,8 +41,8 @@ export function drawBackground(ctx, canvas) {
     canvas.width * 0.14, canvas.height * 0.08, 50,
     canvas.width * 0.14, canvas.height * 0.08, canvas.width * 0.65
   )
-  glowGradient.addColorStop(0, 'rgba(253, 248, 236, 0.2)')
-  glowGradient.addColorStop(1, 'rgba(253, 248, 236, 0)')
+  glowGradient.addColorStop(0, 'rgba(251, 250, 247, 0.2)')
+  glowGradient.addColorStop(1, 'rgba(251, 250, 247, 0)')
   ctx.fillStyle = glowGradient
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 }
@@ -242,7 +242,7 @@ export function drawPathHighlight(ctx, {
       p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData
     )
 
-    ctx.strokeStyle = `rgba(180, 120, 50, ${0.55 + 0.25 * hp})`
+    ctx.strokeStyle = `rgba(147, 64, 42, ${0.55 + 0.25 * hp})`
     ctx.lineWidth = 1.5 + 1.5 * hp
     ctx.setLineDash([])
     ctx.lineCap = 'round'
@@ -275,7 +275,7 @@ export function drawPathHighlight(ctx, {
         rdChild?.anchorAngleOffset || 0,
       )
 
-      ctx.strokeStyle = `rgba(180, 120, 50, ${0.55 + 0.25 * hp})`
+      ctx.strokeStyle = `rgba(147, 64, 42, ${0.55 + 0.25 * hp})`
       ctx.lineWidth = 1.5 + 1.5 * hp
       ctx.setLineDash([])
       ctx.lineCap = 'round'
@@ -295,8 +295,8 @@ export function drawPathHighlight(ctx, {
     if (!pos) continue
     const pathGlowR = PERSON_R + 10
     const pathGlow = ctx.createRadialGradient(pos.cx, pos.cy, PERSON_R * 0.7, pos.cx, pos.cy, pathGlowR)
-    pathGlow.addColorStop(0, `rgba(180, 120, 50, ${0.12 * hp})`)
-    pathGlow.addColorStop(1, 'rgba(180, 120, 50, 0)')
+    pathGlow.addColorStop(0, `rgba(147, 64, 42, ${0.12 * hp})`)
+    pathGlow.addColorStop(1, 'rgba(147, 64, 42, 0)')
     ctx.fillStyle = pathGlow
     ctx.beginPath()
     ctx.arc(pos.cx, pos.cy, pathGlowR, 0, Math.PI * 2)
@@ -386,13 +386,13 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     ctx.rotate(slot.rot)
 
     if (withShadow) {
-      ctx.shadowColor = 'rgba(93, 82, 75, 0.18)'
+      ctx.shadowColor = 'rgba(42, 38, 34, 0.18)'
       ctx.shadowBlur = 4
       ctx.shadowOffsetY = 1
     }
 
     const pad = 2
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
     ctx.roundRect(-ms - pad, -ms - pad, (ms + pad) * 2, (ms + pad) * 2 + 4, 2)
     ctx.fill()
@@ -416,9 +416,9 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const selGlowR = PERSON_R + 24 + sg * 14
     const selAlpha = sg * 0.38 * nodeProgress
     const selGlow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.3, cx, cy, selGlowR)
-    selGlow.addColorStop(0, `rgba(210, 160, 80, ${selAlpha})`)
-    selGlow.addColorStop(0.5, `rgba(210, 160, 80, ${selAlpha * 0.45})`)
-    selGlow.addColorStop(1, 'rgba(210, 160, 80, 0)')
+    selGlow.addColorStop(0, `rgba(210, 105, 74, ${selAlpha})`)
+    selGlow.addColorStop(0.5, `rgba(210, 105, 74, ${selAlpha * 0.45})`)
+    selGlow.addColorStop(1, 'rgba(210, 105, 74, 0)')
     ctx.fillStyle = selGlow
     ctx.beginPath()
     ctx.arc(cx, cy, selGlowR, 0, Math.PI * 2)
@@ -431,9 +431,9 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const searchGlowR = PERSON_R + 28 + srch * 18
     const searchAlpha = srch * 0.55 * nodeProgress
     const searchGlow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.25, cx, cy, searchGlowR)
-    searchGlow.addColorStop(0, `rgba(255, 225, 92, ${searchAlpha})`)
-    searchGlow.addColorStop(0.5, `rgba(255, 225, 92, ${searchAlpha * 0.55})`)
-    searchGlow.addColorStop(1, 'rgba(255, 225, 92, 0)')
+    searchGlow.addColorStop(0, `rgba(210, 105, 74, ${searchAlpha})`)
+    searchGlow.addColorStop(0.5, `rgba(210, 105, 74, ${searchAlpha * 0.55})`)
+    searchGlow.addColorStop(1, 'rgba(210, 105, 74, 0)')
     ctx.fillStyle = searchGlow
     ctx.beginPath()
     ctx.arc(cx, cy, searchGlowR, 0, Math.PI * 2)
@@ -446,8 +446,8 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const glowR = PERSON_R + 12 + hs * 6
     const glowAlpha = (person.isAlive ? 0.15 + hs * 0.1 : 0.08 + hs * 0.06) * nodeProgress
     const glow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.6, cx, cy, glowR)
-    glow.addColorStop(0, `rgba(166, 124, 82, ${glowAlpha})`)
-    glow.addColorStop(1, 'rgba(166, 124, 82, 0)')
+    glow.addColorStop(0, `rgba(147, 64, 42, ${glowAlpha})`)
+    glow.addColorStop(1, 'rgba(147, 64, 42, 0)')
     ctx.fillStyle = glow
     ctx.beginPath()
     ctx.arc(cx, cy, glowR, 0, Math.PI * 2)
@@ -465,7 +465,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const shadowBlur = 10 + hs * 14
     const shadowY = 3 + hs * 4
     const shadowAlpha = 0.15 + hs * 0.1
-    ctx.shadowColor = `rgba(93, 82, 75, ${shadowAlpha})`
+    ctx.shadowColor = `rgba(42, 38, 34, ${shadowAlpha})`
     ctx.shadowBlur = shadowBlur
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = shadowY
@@ -483,7 +483,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   ctx.translate(cx, cy + labelOffsetY)
   ctx.rotate(labelRot)
 
-  ctx.font = '450 13px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif'
+  ctx.font = '400 13px "Newsreader", Georgia, serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   const nameLabel = person.firstName || ''
@@ -498,10 +498,10 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
       const labelGlowRx = Math.max(26, Math.round(nameMetrics.width * 0.62))
       const labelGlowRy = Math.max(16, Math.round(nameBlockH * 1.15))
       const labelGlow = ctx.createRadialGradient(0, labelGlowY, 0, 0, labelGlowY, labelGlowRx)
-      labelGlow.addColorStop(0, 'rgba(253, 248, 236, 0.98)')
-      labelGlow.addColorStop(0.38, 'rgba(253, 248, 236, 0.82)')
-      labelGlow.addColorStop(0.72, 'rgba(253, 248, 236, 0.34)')
-      labelGlow.addColorStop(1, 'rgba(253, 248, 236, 0)')
+      labelGlow.addColorStop(0, 'rgba(251, 250, 247, 0.98)')
+      labelGlow.addColorStop(0.38, 'rgba(251, 250, 247, 0.82)')
+      labelGlow.addColorStop(0.72, 'rgba(251, 250, 247, 0.34)')
+      labelGlow.addColorStop(1, 'rgba(251, 250, 247, 0)')
 
       ctx.save()
       ctx.fillStyle = labelGlow
@@ -517,7 +517,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   }
 
   if (withDetail) {
-    ctx.font = '400 11px "Red Hat Mono", ui-monospace, monospace'
+    ctx.font = '400 11px "DM Sans", system-ui, sans-serif'
     ctx.fillStyle = COLORS.textLight
     const birthYearLabel = person.birthYear ?? '-'
     const years = person.deathYear ? `${birthYearLabel}–${person.deathYear}` : `${birthYearLabel}`
@@ -595,7 +595,7 @@ function drawMapThumbnailBase(ctx, ms, palette) {
 
   const vignette = ctx.createRadialGradient(0, 0, ms * 0.2, 0, 0, ms * 1.2)
   vignette.addColorStop(0, 'rgba(255, 255, 255, 0)')
-  vignette.addColorStop(1, palette.vignette || 'rgba(0, 0, 0, 0.06)')
+  vignette.addColorStop(1, palette.vignette || 'rgba(42, 38, 34, 0.06)')
   ctx.fillStyle = vignette
   ctx.fillRect(-ms, -ms, size, size)
 
@@ -675,20 +675,20 @@ function drawMediaContent(ctx, media, ms, imageCache) {
     ctx.drawImage(mImg, -ms, -ms, ms * 2, ms * 2)
     ctx.restore()
   } else if (media.type === 'video') {
-    ctx.fillStyle = '#3A3530'
+    ctx.fillStyle = '#3D3731'
     ctx.beginPath()
     ctx.roundRect(-ms, -ms, ms * 2, ms * 2, 1)
     ctx.fill()
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     for (let p = 0; p < 4; p++) {
       const py = -ms + 4 + p * (ms * 2 - 6) / 3
       ctx.fillRect(-ms + 1.5, py, 3, 3)
       ctx.fillRect(ms - 4.5, py, 3, 3)
     }
     const innerPad = 5
-    ctx.fillStyle = '#5D524B'
+    ctx.fillStyle = '#2A2622'
     ctx.fillRect(-ms + innerPad, -ms + 2, (ms - innerPad) * 2, ms * 2 - 4)
-    ctx.fillStyle = 'rgba(254, 249, 237, 0.7)'
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
     ctx.beginPath()
     ctx.moveTo(-4, -5)
     ctx.lineTo(-4, 5)
@@ -696,27 +696,27 @@ function drawMediaContent(ctx, media, ms, imageCache) {
     ctx.closePath()
     ctx.fill()
   } else if (media.type === 'audio') {
-    ctx.fillStyle = '#2C2825'
+    ctx.fillStyle = '#2A2622'
     ctx.beginPath()
     ctx.arc(0, 0, ms, 0, Math.PI * 2)
     ctx.fill()
-    ctx.strokeStyle = 'rgba(254, 249, 237, 0.08)'
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'
     ctx.lineWidth = 0.5
     for (let r = 5; r < ms; r += 3) {
       ctx.beginPath()
       ctx.arc(0, 0, r, 0, Math.PI * 2)
       ctx.stroke()
     }
-    ctx.fillStyle = '#A67C52'
+    ctx.fillStyle = '#93402A'
     ctx.beginPath()
     ctx.arc(0, 0, 6, 0, Math.PI * 2)
     ctx.fill()
-    ctx.fillStyle = '#2C2825'
+    ctx.fillStyle = '#2A2622'
     ctx.beginPath()
     ctx.arc(0, 0, 1.5, 0, Math.PI * 2)
     ctx.fill()
   } else if (media.type === 'document') {
-    ctx.fillStyle = '#F0E8D8'
+    ctx.fillStyle = '#FCF3EF'
     ctx.beginPath()
     ctx.moveTo(-ms, -ms)
     ctx.lineTo(ms - 5, -ms)
@@ -725,14 +725,14 @@ function drawMediaContent(ctx, media, ms, imageCache) {
     ctx.lineTo(-ms, ms)
     ctx.closePath()
     ctx.fill()
-    ctx.fillStyle = '#DDD3C2'
+    ctx.fillStyle = '#E6E1DA'
     ctx.beginPath()
     ctx.moveTo(ms - 5, -ms)
     ctx.lineTo(ms - 5, -ms + 5)
     ctx.lineTo(ms, -ms + 5)
     ctx.closePath()
     ctx.fill()
-    ctx.fillStyle = 'rgba(93, 82, 75, 0.15)'
+    ctx.fillStyle = 'rgba(42, 38, 34, 0.15)'
     for (let l = 0; l < 5; l++) {
       const ly = -ms + 8 + l * 6
       const lw = l === 4 ? ms * 0.6 : ms * 1.4
@@ -743,19 +743,19 @@ function drawMediaContent(ctx, media, ms, imageCache) {
   } else if (media.type === 'gpx') {
     drawGpxThumbnail(ctx, ms)
   } else if (media.type === 'citation') {
-    ctx.fillStyle = '#F5EDCF'
+    ctx.fillStyle = '#F8E4DB'
     ctx.beginPath()
     ctx.roundRect(-ms, -ms, ms * 2, ms * 2, 1)
     ctx.fill()
-    ctx.fillStyle = 'rgba(166, 124, 82, 0.12)'
+    ctx.fillStyle = 'rgba(147, 64, 42, 0.12)'
     ctx.fillRect(-6, -ms, 12, 3)
-    ctx.fillStyle = '#A67C52'
-    ctx.font = `450 ${ms * 1.1}px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif`
+    ctx.fillStyle = '#93402A'
+    ctx.font = `400 ${ms * 1.1}px "Newsreader", Georgia, serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('„', 0, -ms * 0.4)
   } else {
-    ctx.fillStyle = '#E8E2DC'
+    ctx.fillStyle = '#EBE6DF'
     ctx.beginPath()
     ctx.roundRect(-ms, -ms, ms * 2, ms * 2, 1)
     ctx.fill()
@@ -782,11 +782,9 @@ function resolveFrameType(person, img) {
     return 'polaroid'
   }
 
-  if (ratio >= 0.95 && ratio <= 1.05) {
-    return 'square'
-  }
-
-  return 'round'
+  // Photo carrée ou presque : chaque personne garde sa forme tirée au hasard
+  // (person.frameType, voir pickFrameType), pour que l'arbre ne soit pas uniforme
+  return fallback
 }
 
 function drawFrame(ctx, frameType, person, img) {
@@ -795,13 +793,13 @@ function drawFrame(ctx, frameType, person, img) {
     const ph = PERSON_R + 4
     const padSide = 4
     const padBottom = 10
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
     ctx.roundRect(-pw - padSide, -ph - padSide, (pw + padSide) * 2, (ph + padSide) + ph + padBottom, 3)
     ctx.fill()
     ctx.shadowColor = 'transparent'
     ctx.shadowBlur = 0
-    ctx.strokeStyle = 'rgba(93, 82, 75, 0.08)'
+    ctx.strokeStyle = 'rgba(42, 38, 34, 0.08)'
     ctx.lineWidth = 0.5
     ctx.stroke()
     ctx.beginPath()
@@ -811,13 +809,13 @@ function drawFrame(ctx, frameType, person, img) {
   } else if (frameType === 'square') {
     const s = PERSON_R + 4
     const pad = 3
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
     ctx.roundRect(-s - pad, -s - pad, (s + pad) * 2, (s + pad) * 2, 4)
     ctx.fill()
     ctx.shadowColor = 'transparent'
     ctx.shadowBlur = 0
-    ctx.strokeStyle = 'rgba(93, 82, 75, 0.08)'
+    ctx.strokeStyle = 'rgba(42, 38, 34, 0.08)'
     ctx.lineWidth = 0.5
     ctx.stroke()
     ctx.beginPath()
@@ -828,17 +826,18 @@ function drawFrame(ctx, frameType, person, img) {
     const ratio = img?.naturalWidth && img?.naturalHeight
       ? img.naturalWidth / img.naturalHeight
       : 1
-    const isLandscape = ratio >= 1
+    // Photo carrée : cadre vertical, qui garde le visage entier
+    const isLandscape = ratio > 1.05
     const rw = isLandscape ? PERSON_R + 12 : PERSON_R + 2
     const rh = isLandscape ? PERSON_R - 8 : PERSON_R + 6
     const pad = 3
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
     ctx.roundRect(-rw - pad, -rh - pad, (rw + pad) * 2, (rh + pad) * 2, 5)
     ctx.fill()
     ctx.shadowColor = 'transparent'
     ctx.shadowBlur = 0
-    ctx.strokeStyle = 'rgba(93, 82, 75, 0.08)'
+    ctx.strokeStyle = 'rgba(42, 38, 34, 0.08)'
     ctx.lineWidth = 0.5
     ctx.stroke()
     ctx.beginPath()
@@ -846,7 +845,7 @@ function drawFrame(ctx, frameType, person, img) {
     ctx.clip()
     drawPersonImage(ctx, img, person, -rw, -rh, rw * 2, rh * 2)
   } else {
-    ctx.fillStyle = '#FEF9ED'
+    ctx.fillStyle = '#FFFFFF'
     ctx.beginPath()
     ctx.arc(0, 0, PERSON_R + 3, 0, Math.PI * 2)
     ctx.fill()
@@ -870,14 +869,14 @@ function drawPersonImage(ctx, img, person, x, y, w, h) {
   if (img) {
     drawImageCover(ctx, img, x, y, w, h)
     if (!person.isAlive) {
-      ctx.fillStyle = 'rgba(232, 220, 200, 0.25)'
+      ctx.fillStyle = 'rgba(235, 230, 223, 0.25)'
       ctx.fillRect(x, y, w, h)
     }
   } else {
     ctx.fillStyle = person.isAlive ? COLORS.nodeAlive : COLORS.nodeDead
     ctx.fillRect(x, y, w, h)
     ctx.fillStyle = COLORS.text
-    ctx.font = '450 16px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif'
+    ctx.font = '400 16px "Newsreader", Georgia, serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText((person.firstName[0] || '') + (person.lastName[0] || ''), 0, 0)
@@ -959,12 +958,12 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       ctx.setLineDash([])
 
       ctx.fillStyle = COLORS.placeholder
-      ctx.font = '400 16px "Red Hat Mono", ui-monospace, monospace'
+      ctx.font = '400 16px "DM Sans", system-ui, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText('?', 0, 0)
 
-      ctx.font = '450 italic 10px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif'
+      ctx.font = '400 italic 10px "Newsreader", Georgia, serif'
       ctx.textBaseline = 'top'
       ctx.fillText('Inconnu', 0, UNKNOWN_R + 4)
       ctx.restore()
@@ -988,7 +987,7 @@ function drawDrawingAnnotation(ctx, ann) {
   for (const path of paths) {
     if (!path.points || path.points.length < 2) continue
     ctx.save()
-    ctx.strokeStyle = path.color || ann.style?.color || '#A67C52'
+    ctx.strokeStyle = path.color || ann.style?.color || '#93402A'
     ctx.lineWidth = path.width || ann.style?.brushWidth || 3
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -1017,12 +1016,12 @@ function drawStickerAnnotation(ctx, ann) {
 
 function drawTextAnnotation(ctx, ann) {
   const fontSize = ann.style?.fontSize || 18
-  const color = ann.style?.color || '#5D524B'
+  const color = ann.style?.color || '#2A2622'
   const stabilo = ann.style?.stabilo || false
 
   ctx.save()
   ctx.globalAlpha = ann.style?.opacity ?? 1
-  ctx.font = `450 ${fontSize}px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif`
+  ctx.font = `400 ${fontSize}px "Newsreader", Georgia, serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
 
@@ -1030,7 +1029,7 @@ function drawTextAnnotation(ctx, ann) {
     const metrics = ctx.measureText(ann.content)
     const padX = 6
     const padY = 4
-    ctx.fillStyle = 'rgba(246, 229, 184, 0.7)'
+    ctx.fillStyle = 'rgba(248, 228, 219, 0.7)'
     ctx.fillRect(
       -metrics.width / 2 - padX,
       -fontSize / 2 - padY,
@@ -1078,8 +1077,8 @@ function drawPhotoAnnotation(ctx, ann, imageCache) {
     }
     // Placeholder while loading
     ctx.save()
-    ctx.fillStyle = 'rgba(200, 180, 150, 0.25)'
-    ctx.strokeStyle = 'rgba(166, 124, 82, 0.4)'
+    ctx.fillStyle = 'rgba(210, 105, 74, 0.25)'
+    ctx.strokeStyle = 'rgba(147, 64, 42, 0.4)'
     ctx.lineWidth = 1.5
     ctx.beginPath()
     ctx.roundRect(-drawW / 2, -drawH / 2, drawW, drawH, 6)
@@ -1104,7 +1103,7 @@ function drawSelectionBorder(ctx, ann) {
 
   if (ann.type === 'text') {
     const fontSize = ann.style?.fontSize || 18
-    ctx.font = `450 ${fontSize}px "Bradford LL", "Iowan Old Style", "Palatino Linotype", serif`
+    ctx.font = `400 ${fontSize}px "Newsreader", Georgia, serif`
     const metrics = ctx.measureText(ann.content)
     w = metrics.width + 16
     h = fontSize + 12
@@ -1127,7 +1126,7 @@ function drawSelectionBorder(ctx, ann) {
   }
 
   ctx.save()
-  ctx.strokeStyle = '#A67C52'
+  ctx.strokeStyle = '#93402A'
   ctx.lineWidth = 1.5
   ctx.setLineDash([5, 3])
   ctx.strokeRect(-w / 2, -h / 2, w, h)
@@ -1173,7 +1172,7 @@ export function drawAnnotations(
       ctx.translate(0, -4 * lift)
       const s = 1 + 0.15 * lift
       ctx.scale(s, s)
-      ctx.shadowColor = `rgba(93, 82, 75, ${0.4 * lift})`
+      ctx.shadowColor = `rgba(42, 38, 34, ${0.4 * lift})`
       ctx.shadowBlur = 28 * lift
       ctx.shadowOffsetX = 0
       ctx.shadowOffsetY = 12 * lift
@@ -1244,7 +1243,7 @@ function drawStickerPreview(ctx, preview) {
 function drawActiveDrawingPath(ctx, pathData) {
   if (!pathData.points || pathData.points.length < 2) return
   ctx.save()
-  ctx.strokeStyle = pathData.color || '#A67C52'
+  ctx.strokeStyle = pathData.color || '#93402A'
   ctx.lineWidth = pathData.width || 3
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
@@ -1278,17 +1277,17 @@ export function drawPathLabel(ctx, pathLabelRef, pathLabelAlpha, pathNodesRef, p
   ctx.save()
   ctx.globalAlpha = pathLabelAlpha * 0.9
 
-  ctx.font = '500 11px "Red Hat Mono", ui-monospace, monospace'
+  ctx.font = '500 11px "DM Sans", system-ui, sans-serif'
   const metrics = ctx.measureText(pathLabelRef)
   const pillW = metrics.width + 16
   const pillH = 22
 
-  ctx.fillStyle = 'rgba(93, 82, 75, 0.85)'
+  ctx.fillStyle = 'rgba(42, 38, 34, 0.85)'
   ctx.beginPath()
   ctx.roundRect(labelX - pillW / 2, labelY - pillH / 2, pillW, pillH, pillH / 2)
   ctx.fill()
 
-  ctx.fillStyle = '#FEF9ED'
+  ctx.fillStyle = '#FFFFFF'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText(pathLabelRef, labelX, labelY)

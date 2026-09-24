@@ -8,7 +8,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(93, 82, 75, 0.4);
+  background: rgba(42, 38, 34, 0.4);
   backdrop-filter: blur(4px);
   z-index: 1200;
   animation: overlayFadeIn 0.2s ease;
@@ -26,15 +26,15 @@
 .inline-person-form {
   position: fixed;
   padding: 24px;
-  background: rgba(247, 236, 217, 0.98);
+  background: rgba(242, 239, 234, 0.98);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border-radius: 16px;
-  border: 1px solid rgba(93, 82, 75, 0.12);
+  border: 1px solid rgba(42, 38, 34, 0.12);
 
   box-shadow:
-    0 12px 48px rgba(93, 82, 75, 0.3),
-    0 4px 16px rgba(93, 82, 75, 0.15);
+    0 12px 48px rgba(42, 38, 34, 0.3),
+    0 4px 16px rgba(42, 38, 34, 0.15);
 
   min-width: 320px;
   max-width: 400px;
@@ -62,14 +62,14 @@
   justify-content: space-between;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(93, 82, 75, 0.1);
+  border-bottom: 1px solid rgba(42, 38, 34, 0.1);
 }
 
 .inline-person-form-title {
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 18px;
   font-weight: 700;
-  color: #5D524B;
+  color: #2A2622;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -85,7 +85,7 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: #8B7355;
+  color: #6B645D;
   font-size: 20px;
   cursor: pointer;
   display: flex;
@@ -95,8 +95,8 @@
 }
 
 .inline-person-form-close:hover {
-  background: rgba(93, 82, 75, 0.1);
-  color: #5D524B;
+  background: rgba(42, 38, 34, 0.1);
+  color: #2A2622;
   transform: scale(1.1);
 }
 
@@ -123,8 +123,8 @@
 }
 
 .inline-person-form-badge.sibling {
-  background: rgba(255, 149, 0, 0.15);
-  color: #FF9500;
+  background: rgba(210, 105, 74, 0.15);
+  color: #93402A;
 }
 
 /* Fields */
@@ -144,7 +144,7 @@
 .inline-person-form-label {
   font-size: 14px;
   font-weight: 450;
-  color: #5D524B;
+  color: #2A2622;
   letter-spacing: 0.2px;
 }
 
@@ -156,23 +156,23 @@
 .inline-person-form-input {
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1.5px solid rgba(93, 82, 75, 0.15);
+  border: 1.5px solid rgba(42, 38, 34, 0.15);
   background: rgba(255, 255, 255, 0.6);
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 16px; /* ≥16px prevents iOS Safari from auto-zooming on focus */
-  color: #5D524B;
+  color: #2A2622;
   transition: all 0.2s ease;
 }
 
 .inline-person-form-input:focus {
   outline: none;
-  border-color: #A67C52;
+  border-color: #93402A;
   background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 3px rgba(166, 124, 82, 0.1);
+  box-shadow: 0 0 0 3px rgba(147, 64, 42, 0.1);
 }
 
 .inline-person-form-input::placeholder {
-  color: #8B7355;
+  color: #6B645D;
   opacity: 0.6;
 }
 
@@ -194,7 +194,7 @@
   padding: 10px 20px;
   border-radius: 10px;
   border: none;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 450;
   cursor: pointer;
@@ -203,23 +203,23 @@
 
 .inline-person-form-button.cancel {
   background: transparent;
-  color: #8B7355;
+  color: #6B645D;
 }
 
 .inline-person-form-button.cancel:hover {
-  background: rgba(93, 82, 75, 0.08);
-  color: #5D524B;
+  background: rgba(42, 38, 34, 0.08);
+  color: #2A2622;
 }
 
 .inline-person-form-button.submit {
-  background: linear-gradient(135deg, #A67C52, #8B6843);
-  color: #FEF9ED;
-  box-shadow: 0 4px 12px rgba(166, 124, 82, 0.3);
+  background: #2a2622;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(147, 64, 42, 0.3);
 }
 
 .inline-person-form-button.submit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(166, 124, 82, 0.4);
+  box-shadow: 0 6px 16px rgba(147, 64, 42, 0.4);
 }
 
 .inline-person-form-button.submit:active {

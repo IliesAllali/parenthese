@@ -8,21 +8,21 @@
   min-width: 120px;
   max-width: 400px;
   padding: 6px 10px;
-  border: 1.5px solid rgba(166, 124, 82, 0.3);
+  border: 1.5px solid rgba(147, 64, 42, 0.3);
   border-radius: 8px;
   outline: none;
   font-family: inherit;
   font-size: 16px; /* ≥16px prevents iOS Safari from auto-zooming on focus */
-  box-shadow: 0 4px 16px rgba(93, 82, 75, 0.2);
+  box-shadow: 0 4px 16px rgba(42, 38, 34, 0.2);
   transition: border-color 0.15s ease;
 }
 
 .text-input-overlay__input:focus {
-  border-color: #A67C52;
-  box-shadow: 0 4px 16px rgba(93, 82, 75, 0.2), 0 0 0 3px rgba(166, 124, 82, 0.12);
+  border-color: #93402A;
+  box-shadow: 0 4px 16px rgba(42, 38, 34, 0.2), 0 0 0 3px rgba(147, 64, 42, 0.12);
 }
 
 .text-input-overlay__input::placeholder {
-  color: rgba(93, 82, 75, 0.4);
+  color: rgba(42, 38, 34, 0.4);
   font-style: italic;
 }

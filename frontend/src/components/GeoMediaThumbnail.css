@@ -6,7 +6,7 @@
   display: grid;
   place-items: center;
   position: relative;
-  background: #efe8db;
+  background: #f8e4db;
 }
 
 .geo-media-thumb__svg {
@@ -16,14 +16,14 @@
 }
 
 .geo-media-thumb__status {
-  color: rgba(93, 82, 75, 0.55);
+  color: rgba(42, 38, 34, 0.55);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
 .geo-media-thumb__fallback {
-  color: rgba(93, 82, 75, 0.75);
+  color: rgba(42, 38, 34, 0.75);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.8px;

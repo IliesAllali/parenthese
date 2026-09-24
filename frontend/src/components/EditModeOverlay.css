@@ -1,137 +1,58 @@
+/* Mode édition (DA terracotta) : un liseré autour de l'écran et une pastille en haut */
 .edit-mode-border {
   position: fixed;
   inset: 0;
-  pointer-events: none;
   z-index: 999;
-  border: 2px solid transparent;
-}
-
-.edit-mode-border--contributor {
-  border-color: rgba(255, 149, 0, 0.58);
-  box-shadow:
-    inset 0 0 32px rgba(255, 149, 0, 0.10),
-    0 0 32px rgba(255, 149, 0, 0.14);
-  animation: editPulseContributor 3s ease-in-out infinite;
-}
-
-.edit-mode-border--admin {
-  border-color: rgba(82, 178, 120, 0.52);
-  box-shadow:
-    inset 0 0 32px rgba(82, 178, 120, 0.10),
-    0 0 32px rgba(82, 178, 120, 0.13);
-  animation: editPulseAdmin 3s ease-in-out infinite;
-}
-
-@keyframes editPulseContributor {
-  0%, 100% {
-    border-color: rgba(255, 149, 0, 0.58);
-  }
-  50% {
-    border-color: rgba(255, 149, 0, 0.72);
-  }
-}
-
-@keyframes editPulseAdmin {
-  0%, 100% {
-    border-color: rgba(82, 178, 120, 0.52);
-  }
-  50% {
-    border-color: rgba(82, 178, 120, 0.68);
-  }
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--pz-a500);
+  animation: pz-fade 240ms ease both;
 }
 
 .edit-mode-toast {
   position: fixed;
-  top: 16px;
+  top: 18px;
   left: 50%;
-  transform: translateX(-50%);
   z-index: 1001;
-
   display: flex;
   align-items: center;
   gap: 10px;
-
-  padding: 9px 12px;
+  max-width: calc(100vw - 140px);
+  padding: 5px 5px 5px 16px;
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
   border-radius: 999px;
-  border: 1px solid rgba(255, 149, 0, 0.28);
-  background: rgba(247, 236, 217, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 6px 20px rgba(93, 82, 75, 0.12);
+  box-shadow: var(--pz-shadow-lg);
+  transform: translateX(-50%);
+  animation: edit-toast-in 260ms var(--pz-ease) both;
+}
+@keyframes edit-toast-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-.edit-mode-toast--admin {
-  border-color: rgba(82, 178, 120, 0.3);
+.edit-mode-toast-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pz-a500);
+  box-shadow: 0 0 0 4px var(--pz-a100);
 }
-
 .edit-mode-toast-text {
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
-  font-size: 14px;
-  font-weight: 450;
-  color: #5D524B;
+  font: 500 14px var(--pz-sans);
+  color: var(--pz-ink);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.edit-mode-submit {
-  border: none;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
-  font-size: 14px;
-  font-weight: 700;
-  color: #FEF9ED;
-  background: #A67C52;
-  cursor: pointer;
-  transition: background 0.2s ease, opacity 0.2s ease;
-}
-
-.edit-mode-submit:hover:not(:disabled) {
-  background: #8E6840;
-}
-
-.edit-mode-submit:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.edit-mode-submit--admin {
-  background: #52B278;
-}
-
-.edit-mode-submit--admin:hover:not(:disabled) {
-  background: #439A66;
-}
-
-.edit-mode-toast-close {
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: #7C6B5C;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.edit-mode-toast-close:hover {
-  background: rgba(93, 82, 75, 0.12);
-  color: #5D524B;
-}
+.edit-mode-submit { flex: none; }
+.edit-mode-toast-close { width: 36px; min-height: 36px; flex: none; }
 
 @media (max-width: 768px) {
-  .edit-mode-toast {
-    left: 12px;
-    right: 12px;
-    transform: none;
-    border-radius: 12px;
-    justify-content: space-between;
-    gap: 8px;
-  }
+  .edit-mode-toast { top: 68px; max-width: calc(100vw - 24px); }
+  .edit-mode-toast-text { font-size: 13px; }
+}
 
-  .edit-mode-toast-text {
-    min-width: 0;
-    white-space: normal;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .edit-mode-toast { animation: pz-fade 160ms ease both; }
 }

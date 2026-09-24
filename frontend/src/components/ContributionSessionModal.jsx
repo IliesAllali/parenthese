@@ -54,105 +54,69 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
   if (!visible) return null
 
   return (
-    <div className="contrib-session-backdrop" onClick={onCancel}>
+    <div className="pz-overlay" onClick={onCancel}>
       <div
-        className="contrib-session-modal"
+        className="pz-modal contrib-session-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="contrib-session-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          className="contrib-session-close"
-          onClick={onCancel}
-          aria-label="Fermer"
-        >
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onCancel} aria-label="Fermer">
           <X size={18} strokeWidth={2} />
         </button>
 
-        <div className="contrib-session-header">
-          <Send size={24} strokeWidth={1.8} className="contrib-session-icon" />
-          <h2 id="contrib-session-title" className="contrib-session-title">
-            Finaliser votre contribution
-          </h2>
-          <p className="contrib-session-subtitle">
-            Vos modifications seront soumises à validation par le propriétaire de l'arbre.
-          </p>
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Votre contribution</p>
+          <h2 id="contrib-session-title" className="pz-title">Envoyer vos <em>modifications</em></h2>
+          <p className="pz-sub">La personne qui gère l'arbre les relit, puis elles apparaissent pour toute la famille.</p>
         </div>
 
-        {/* Récap modifications */}
         {totalChanges > 0 && (
-          <div className="contrib-session-recap">
-            {recap.added > 0 && (
-              <span className="contrib-recap-tag contrib-recap-tag--added">
-                {recap.added} ajouté{recap.added > 1 ? 's' : ''}
-              </span>
-            )}
-            {recap.modified > 0 && (
-              <span className="contrib-recap-tag contrib-recap-tag--modified">
-                {recap.modified} modifié{recap.modified > 1 ? 's' : ''}
-              </span>
-            )}
-            {recap.deleted > 0 && (
-              <span className="contrib-recap-tag contrib-recap-tag--deleted">
-                {recap.deleted} supprimé{recap.deleted > 1 ? 's' : ''}
-              </span>
-            )}
+          <div className="cs-recap">
+            {recap.added > 0 && <span className="pz-tag cs-tag cs-tag--added">{recap.added} ajout{recap.added > 1 ? 's' : ''}</span>}
+            {recap.modified > 0 && <span className="pz-tag cs-tag cs-tag--modified">{recap.modified} modification{recap.modified > 1 ? 's' : ''}</span>}
+            {recap.deleted > 0 && <span className="pz-tag cs-tag cs-tag--deleted">{recap.deleted} suppression{recap.deleted > 1 ? 's' : ''}</span>}
           </div>
         )}
 
-        {/* Liste détaillée des changements */}
         {changes.length > 0 && (
-          <div className="contrib-session-changes">
+          <ul className="cs-changes">
             {changes.map((ch, i) => (
-              <div key={i} className="contrib-session-change-row">
-                <span className={`contrib-session-change-badge contrib-session-change-badge--${ch.action}`}>
-                  {formatAction(ch.action)}
-                </span>
-                <span className="contrib-session-change-label">{ch.label}</span>
-              </div>
+              <li key={i} className="cs-change">
+                <span className={`cs-dot cs-dot--${ch.action}`} aria-hidden="true" />
+                <span className="cs-change-action">{formatAction(ch.action)}</span>
+                <span className="cs-change-label">{ch.label}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
-        <form className="contrib-session-form" onSubmit={handleSubmit}>
-          <div className="contrib-session-field">
-            <label htmlFor="cs-comment" className="contrib-session-label">
-              Message <span className="contrib-session-optional">(optionnel)</span>
+        <form className="cs-form" onSubmit={handleSubmit}>
+          <div className="pz-field">
+            <label htmlFor="cs-comment">
+              Un mot pour accompagner <span className="cs-optional">facultatif</span>
             </label>
             <textarea
               id="cs-comment"
-              className="contrib-session-textarea"
               value={comment}
               onChange={(e) => setComment(e.target.value.slice(0, 500))}
-              placeholder="Ajoutez un mot pour le propriétaire de l'arbre..."
+              placeholder="Par exemple, j'ai ajouté les photos du mariage de mes grands-parents"
               rows={3}
               maxLength={500}
             />
-            <span className="contrib-session-count">{comment.length}/500</span>
+            <span className="pz-hint cs-count">{comment.length} / 500</span>
           </div>
 
-          {error && (
-            <div className="contrib-session-error" role="alert">{error}</div>
-          )}
+          {error && <div className="pz-error" role="alert">{error}</div>}
 
-          <div className="contrib-session-actions">
-            <button
-              type="submit"
-              className="contrib-session-submit"
-              disabled={loading}
-            >
-              <Send size={16} strokeWidth={2} />
-              {loading ? 'Envoi en cours...' : 'Envoyer mes contributions'}
-            </button>
-            <button
-              type="button"
-              className="contrib-session-cancel"
-              onClick={onCancel}
-              disabled={loading}
-            >
+          <div className="pz-modal-actions">
+            <button type="button" className="pz-btn pz-btn--ghost" onClick={onCancel} disabled={loading}>
               Annuler
+            </button>
+            <button type="submit" className="pz-btn pz-btn--primary" disabled={loading}>
+              <Send size={16} strokeWidth={2} />
+              {loading ? 'Envoi…' : 'Envoyer mes contributions'}
             </button>
           </div>
         </form>

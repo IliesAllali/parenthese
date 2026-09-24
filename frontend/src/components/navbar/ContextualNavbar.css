@@ -1,114 +1,72 @@
+/* Barre d'actions flottante en bas à droite (DA terracotta) */
 .contextual-navbar {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 1000;
-  animation: navbarSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: navbarSlideIn 420ms var(--pz-ease) both;
 }
 
-/* Let touch/mouse events pass through to canvas during annotation drag */
+/* Laisse passer les gestes vers le canvas pendant le glisser d'une annotation */
 .contextual-navbar--dragging {
   pointer-events: none;
 }
 
 @keyframes navbarSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
 }
 
 .navbar-content {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px;
-  background: rgba(247, 236, 217, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 50px;
-  border: 1px solid rgba(93, 82, 75, 0.08);
-  box-shadow:
-    0 4px 80px rgba(93, 82, 75, 0.20),
-    0 1px 6px rgba(93, 82, 75, 0.08);
+  gap: 2px;
+  padding: 5px;
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
+  border-radius: 999px;
+  box-shadow: var(--pz-shadow-lg);
 }
 
-/* Wrapper pour les dropdowns */
 .nav-dropdown-wrapper {
   position: relative;
+  margin-left: 4px;
 }
 
-/* Avatar */
+/* Avatar du compte */
 .nav-avatar {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
   border-radius: 50%;
-  background: linear-gradient(145deg, #A67C52, #8B6843);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--pz-a100);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  border: 2px solid transparent;
+  transition: box-shadow 160ms ease, transform 140ms var(--pz-ease);
+  box-shadow: 0 0 0 2px var(--pz-surface), 0 0 0 3px var(--pz-line);
 }
-
-.nav-avatar:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 16px rgba(166, 124, 82, 0.3);
-}
-
-.nav-avatar.active {
-  border-color: #A67C52;
-}
-
-.nav-avatar.admin {
-  box-shadow:
-    0 0 0 2px rgba(247, 236, 217, 1),
-    0 0 0 3px #A67C52,
-    0 2px 8px rgba(0, 0, 0, 0.12);
-}
+.nav-avatar:active { transform: scale(.95); }
+@media (hover: hover) and (pointer: fine) { .nav-avatar:hover { box-shadow: 0 0 0 2px var(--pz-surface), 0 0 0 3px var(--pz-a300); } }
+.nav-avatar.active,
+.nav-avatar.admin.active { box-shadow: 0 0 0 2px var(--pz-surface), 0 0 0 4px var(--pz-a500); }
+.nav-avatar:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 3px; }
 
 .nav-avatar-initial {
-  font-family: 'Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-  font-size: 20px;
-  font-weight: 450;
-  color: #FEF9ED;
+  font: 400 19px/1 var(--pz-serif);
+  color: var(--pz-a700);
   user-select: none;
 }
 
 .nav-avatar-photo {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
 }
 
-/* Responsive mobile */
 @media (max-width: 768px) {
-  .contextual-navbar {
-    bottom: 12px;
-    right: 12px;
-  }
-
-  .navbar-content {
-    padding: 4px;
-    gap: 2px;
-  }
-
-  .nav-avatar,
-  .nav-button {
-    width: 44px;
-    height: 44px;
-  }
-
-  .nav-button-icon {
-    font-size: 18px;
-  }
+  .contextual-navbar { bottom: 12px; right: 12px; }
+  .navbar-content { padding: 4px; }
 }
 
 /* ============================================================
@@ -120,7 +78,7 @@
 .navbar-content--annot {
   gap: 3px;
   padding: 5px;
-  border: 1px solid rgba(166, 124, 82, 0.15);
+  border: 1px solid rgba(147, 64, 42, 0.15);
   animation: annotNavMorphIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -177,16 +135,16 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: rgba(93, 82, 75, 0.08);
-  color: #8B7355;
+  background: rgba(42, 38, 34, 0.08);
+  color: #6B645D;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   flex-shrink: 0;
 }
 
 .nav-annot-exit:hover {
-  background: rgba(93, 82, 75, 0.16);
-  color: #5D524B;
+  background: rgba(42, 38, 34, 0.16);
+  color: #2A2622;
   transform: rotate(90deg);
 }
 
@@ -198,7 +156,7 @@
 .nav-annot-sep {
   width: 1px;
   height: 24px;
-  background: linear-gradient(180deg, transparent, rgba(166, 124, 82, 0.18), transparent);
+  background: linear-gradient(180deg, transparent, rgba(147, 64, 42, 0.18), transparent);
   margin: 0 2px;
   border-radius: 1px;
   flex-shrink: 0;
@@ -215,14 +173,14 @@
   border: none;
   border-radius: 10px;
   background: transparent;
-  color: #5D524B;
+  color: #2A2622;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   flex-shrink: 0;
 }
 
 .nav-annot-btn:hover:not(:disabled) {
-  background: rgba(166, 124, 82, 0.1);
+  background: rgba(147, 64, 42, 0.1);
   transform: translateY(-1px);
 }
 
@@ -232,13 +190,13 @@
 
 /* Active tool — gradient fill */
 .nav-annot-btn--active {
-  background: linear-gradient(140deg, #8b6a43, #6a4f32);
-  color: #fef9ed;
-  box-shadow: 0 2px 10px rgba(166, 124, 82, 0.35);
+  background: linear-gradient(140deg, #93402a, #2a2622);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(147, 64, 42, 0.35);
 }
 
 .nav-annot-btn--active:hover:not(:disabled) {
-  background: linear-gradient(140deg, #96703e, #7a5a3a);
+  background: linear-gradient(140deg, #93402a, #3d3731);
   transform: translateY(-1px);
 }
 
@@ -252,7 +210,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #fef9ed;
+  background: #ffffff;
   opacity: 0.7;
   animation: annotDotFade 1.8s ease-in-out infinite;
 }
@@ -288,11 +246,11 @@
 
 /* --- Add person button --- */
 .nav-annot-btn--add {
-  color: #A67C52;
+  color: #93402A;
 }
 
 .nav-annot-btn--add:hover:not(:disabled) {
-  color: #8B6843;
+  color: #3D3731;
 }
 
 /* --- Sub-panel (options) above navbar --- */
@@ -302,13 +260,13 @@
   right: 0;
   padding: 14px;
   border-radius: 16px;
-  background: rgba(254, 249, 237, 0.96);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(166, 124, 82, 0.15);
+  border: 1px solid rgba(147, 64, 42, 0.15);
   box-shadow:
-    0 8px 40px rgba(93, 82, 75, 0.18),
-    0 2px 8px rgba(93, 82, 75, 0.06);
+    0 8px 40px rgba(42, 38, 34, 0.18),
+    0 2px 8px rgba(42, 38, 34, 0.06);
   min-width: 190px;
   animation: annotPanelSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }

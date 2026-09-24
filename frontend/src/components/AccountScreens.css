@@ -1,0 +1,57 @@
+/* Accueil, connexion, création de compte, liste des arbres (DA terracotta) */
+
+.pz-auth-head { display: grid; gap: 8px; }
+.pz-auth-form { display: grid; gap: 16px; }
+.pz-auth-legal { text-align: center; }
+.pz-auth-switch { text-align: center; }
+.pz-auth-switch .pz-link { font-size: 13.5px; }
+
+.pz-auth-note {
+  margin: 0; padding: 12px 14px; border-radius: var(--pz-r-s);
+  background: var(--pz-a50); border: 1px solid var(--pz-a100);
+  font: 400 13.5px/1.5 var(--pz-sans); color: var(--pz-ink-2);
+}
+
+/* Liste des arbres */
+.pz-tree-list { display: grid; gap: 8px; }
+.pz-tree-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px 10px 10px;
+  border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); background: var(--pz-surface);
+  cursor: pointer; text-align: left; transition: border-color 160ms ease, background-color 160ms ease, transform 140ms var(--pz-ease);
+}
+.pz-tree-item:active { transform: scale(.99); }
+.pz-tree-item.active { border-color: var(--pz-a300); background: var(--pz-a50); }
+@media (hover: hover) and (pointer: fine) { .pz-tree-item:hover { border-color: var(--pz-a300); } }
+.pz-tree-mono {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  background: var(--pz-a100); color: var(--pz-a700); font: 400 20px/1 var(--pz-serif);
+}
+.pz-tree-item .pz-tree-name { flex: 1; min-width: 0; font: 400 19px/1.2 var(--pz-serif); color: var(--pz-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pz-tree-chevron { color: var(--pz-faint); flex: none; }
+.pz-tree-empty { display: grid; gap: 4px; padding: 20px; text-align: center; border: 1px dashed var(--pz-a300); border-radius: var(--pz-r-m); background: var(--pz-a50); }
+
+.pz-account-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.pz-account-foot { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; }
+
+.pz-delete-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; font: 400 14px/1.5 var(--pz-sans); color: var(--pz-ink-2); }
+
+/* Arbre partagé (mot de passe) */
+.pz-gate-owner { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--pz-r-m); background: var(--pz-a50); border: 1px solid var(--pz-a100); }
+.pz-gate-mono { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--pz-a100); color: var(--pz-a700); font: 400 18px/1 var(--pz-serif); }
+.pz-gate-owner-text { display: grid; gap: 2px; min-width: 0; }
+.pz-gate-owner-text strong { color: var(--pz-ink); font-weight: 500; }
+
+/* Fenêtre « Mon compte » (personne liée) */
+.ap-linked { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--pz-r-m); background: var(--pz-a50); border: 1px solid var(--pz-a100); }
+.ap-avatar { width: 44px; height: 44px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pz-a100); color: var(--pz-a700); font: 400 20px/1 var(--pz-serif); }
+.ap-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ap-pick { display: grid; gap: 10px; }
+.ap-list { display: grid; gap: 2px; max-height: 280px; overflow-y: auto; padding: 4px; border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); scrollbar-width: thin; scrollbar-color: var(--pz-line) transparent; }
+.ap-empty { padding: 14px; text-align: center; }
+.ap-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 10px; background: none; cursor: pointer; text-align: left; }
+.ap-item.is-active { background: var(--pz-a50); }
+@media (hover: hover) and (pointer: fine) { .ap-item:hover { background: var(--pz-line-soft); } .ap-item.is-active:hover { background: var(--pz-a100); } }
+.ap-item-avatar { width: 32px; height: 32px; flex: none; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pz-a100); color: var(--pz-a700); font: 400 14px/1 var(--pz-serif); }
+.ap-item-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ap-item-name { flex: 1; min-width: 0; font: 400 16px/1.2 var(--pz-serif); color: var(--pz-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-item-name em { font-style: italic; font-weight: 300; }

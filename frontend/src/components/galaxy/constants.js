@@ -48,15 +48,15 @@ export const ENTRANCE_ORBIT_DURATION = 400
 export const ENTRANCE_ORBIT_STAGGER = 100
 
 export const COLORS = {
-  nodeAlive: '#F7ECD9',
-  nodeDead: '#E8DCC8',
-  borderAlive: '#A67C52',
-  borderDead: '#8B7355',
-  text: '#5D524B',
-  textLight: '#8B7355',
-  link: '#000000',
-  linkUnknown: '#8B7355',
-  placeholder: '#C5BDB6',
-  placeholderBorder: '#A89F97',
-  placeholderFill: '#E8E2DC',
+  nodeAlive: '#F2EFEA',
+  nodeDead: '#EBE6DF',
+  borderAlive: '#93402A',
+  borderDead: '#6B645D',
+  text: '#2A2622',
+  textLight: '#6B645D',
+  link: '#2A2622',
+  linkUnknown: '#6B645D',
+  placeholder: '#C0BEBB',
+  placeholderBorder: '#A2A09D',
+  placeholderFill: '#EBE6DF',
 }

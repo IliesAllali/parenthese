@@ -15,19 +15,19 @@
   display: flex;
   align-items: center;
   padding: 13px 22px;
-  border: 1px solid rgba(93, 82, 75, 0.1);
+  border: 1px solid rgba(42, 38, 34, 0.1);
   border-radius: 50px;
-  background: rgba(247, 236, 217, 0.97);
+  background: rgba(242, 239, 234, 0.97);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:
-    0 4px 40px rgba(93, 82, 75, 0.22),
-    0 1px 6px rgba(93, 82, 75, 0.1);
+    0 4px 40px rgba(42, 38, 34, 0.22),
+    0 1px 6px rgba(42, 38, 34, 0.1);
 
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #5D524B;
+  color: #2A2622;
   cursor: pointer;
   white-space: nowrap;
 
@@ -47,10 +47,10 @@
 }
 
 .cmt-pill:hover {
-  background: rgba(247, 236, 217, 1);
+  background: rgba(242, 239, 234, 1);
   box-shadow:
-    0 8px 48px rgba(93, 82, 75, 0.28),
-    0 2px 8px rgba(93, 82, 75, 0.12);
+    0 8px 48px rgba(42, 38, 34, 0.28),
+    0 2px 8px rgba(42, 38, 34, 0.12);
   transform: translateY(-2px);
 }
 
@@ -68,14 +68,14 @@
   z-index: 1001;
 
   width: 300px;
-  background: rgba(254, 249, 237, 0.97);
+  background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   border-radius: 20px;
-  border: 1px solid rgba(166, 124, 82, 0.18);
+  border: 1px solid rgba(147, 64, 42, 0.18);
   box-shadow:
-    0 12px 48px rgba(93, 82, 75, 0.22),
-    0 2px 10px rgba(93, 82, 75, 0.1);
+    0 12px 48px rgba(42, 38, 34, 0.22),
+    0 2px 10px rgba(42, 38, 34, 0.1);
 
   transform-origin: bottom right;
   animation: cmtMorphIn 0.38s cubic-bezier(0.22, 1, 0.36, 1);
@@ -104,14 +104,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px 12px;
-  border-bottom: 1px solid rgba(166, 124, 82, 0.1);
+  border-bottom: 1px solid rgba(147, 64, 42, 0.1);
 }
 
 .cmt-panel-title {
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #5D524B;
+  color: #2A2622;
   line-height: 1.3;
 }
 
@@ -123,8 +123,8 @@
   height: 28px;
   border: none;
   border-radius: 50%;
-  background: rgba(93, 82, 75, 0.07);
-  color: #8B7355;
+  background: rgba(42, 38, 34, 0.07);
+  color: #6B645D;
   font-size: 12px;
   cursor: pointer;
   flex-shrink: 0;
@@ -132,8 +132,8 @@
 }
 
 .cmt-panel-close:hover {
-  background: rgba(93, 82, 75, 0.13);
-  color: #5D524B;
+  background: rgba(42, 38, 34, 0.13);
+  color: #2A2622;
 }
 
 /* Body */
@@ -143,9 +143,9 @@
 
 .cmt-label {
   display: block;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 12px;
-  color: #8B7355;
+  color: #6B645D;
   margin-bottom: 7px;
   letter-spacing: 0.02em;
 }
@@ -154,33 +154,33 @@
   width: 100%;
   box-sizing: border-box;
   border-radius: 12px;
-  border: 1px solid rgba(166, 124, 82, 0.25);
-  background: rgba(255, 253, 248, 0.9);
-  color: #453d37;
+  border: 1px solid rgba(147, 64, 42, 0.25);
+  background: rgba(255, 255, 255, 0.9);
+  color: #2a2622;
   padding: 10px 13px;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .cmt-input:focus {
-  border-color: #b99762;
-  box-shadow: 0 0 0 3px rgba(185, 151, 98, 0.12);
+  border-color: #d2694a;
+  box-shadow: 0 0 0 3px rgba(210, 105, 74, 0.12);
 }
 
 .cmt-slug-preview {
   margin-top: 8px;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 11px;
-  color: #A08060;
+  color: #93402A;
 }
 
 .cmt-slug-preview code {
-  background: rgba(166, 124, 82, 0.1);
+  background: rgba(147, 64, 42, 0.1);
   border-radius: 4px;
   padding: 1px 5px;
-  color: #6a4f32;
+  color: #2a2622;
 }
 
 .cmt-error {
@@ -190,7 +190,7 @@
   color: #862f2f;
   border-radius: 10px;
   padding: 9px 12px;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 12px;
 }
 
@@ -200,9 +200,9 @@
   padding: 11px 16px;
   border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #8b6a43, #6a4f32);
-  color: #fef9ed;
-  font-family: 'Red Hat Mono', ui-monospace, monospace;
+  background: #2a2622;
+  color: #ffffff;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -210,8 +210,8 @@
 }
 
 .cmt-btn-create:hover:not(:disabled) {
-  background: linear-gradient(135deg, #9c7a52, #7a5b3a);
-  box-shadow: 0 4px 14px rgba(166, 124, 82, 0.32);
+  background: linear-gradient(135deg, #93402a, #2a2622);
+  box-shadow: 0 4px 14px rgba(147, 64, 42, 0.32);
   transform: translateY(-1px);
 }
 

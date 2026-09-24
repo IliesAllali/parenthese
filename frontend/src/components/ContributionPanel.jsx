@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Check, X, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
+import './SettingsPanels.css'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ function getAnnotationPreview(change) {
   if (!type) return null
   if (type === 'sticker') return { type, emoji: data.content || '?' }
   if (type === 'text') return { type, text: data.content || '' }
-  if (type === 'drawing') return { type, color: data.style?.color || '#5D524B' }
+  if (type === 'drawing') return { type, color: data.style?.color || '#2A2622' }
   if (type === 'photo') {
     try {
       const parsed = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
@@ -254,26 +255,24 @@ const ContributionPanel = ({
     if (result?.ok) { setEditingContributorPassword(false); setNewContributorPassword('') }
   }
 
+  if (!visible) return null
+
   return (
-    <div
-      className={`contrib-overlay ${visible ? 'contrib-overlay--open' : ''}`}
-      onClick={() => visible && onClose?.()}
-      aria-hidden={!visible}
-    >
+    <div className="pz-overlay contrib-overlay" onClick={() => onClose?.()}>
       <div
-        className="contrib-card"
+        className="pz-modal pz-modal--wide contrib-card"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Panel contributions"
+        aria-labelledby="contribPanelTitle"
       >
-        <div className="contrib-header">
-          <div className="contrib-header-text">
-            <h1>Contributions</h1>
-            <p>Validation des propositions de modification</p>
-          </div>
-          <button type="button" className="ghost" onClick={onClose}>Fermer</button>
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Partager et relire</p>
+          <h1 id="contribPanelTitle" className="pz-title">La famille <em>participe</em></h1>
         </div>
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+          <X size={18} strokeWidth={2} />
+        </button>
 
         {canModerate ? (
           <div className="contrib-list-section">
@@ -281,17 +280,17 @@ const ContributionPanel = ({
             {/* ── Section invitation ── */}
             <div className="contrib-invite">
               <div className="contrib-invite-top">
-                <strong className="contrib-invite-title">Invitez vos proches à alimenter l'arbre</strong>
+                <strong className="contrib-invite-title">Le lien à envoyer à la famille</strong>
                 {copyFeedback && <span className="contrib-copy-feedback">{copyFeedback}</span>}
               </div>
               <div className="contrib-invite-link">
                 <code className="contrib-link-url">{inviteShareUrl || 'Lien indisponible'}</code>
-                <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, 'Lien copié')}>Copier</button>
+                <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, 'Lien copié')}><Copy size={14} strokeWidth={2} />Copier</button>
               </div>
               <div className="contrib-invite-passwords">
                 {/* Visiteur */}
                 <div className="contrib-role-row">
-                  <span className="contrib-role-badge">Visiteur</span>
+                  <span className="contrib-role-badge"><strong>Pour regarder</strong><small>mot de passe visiteur</small></span>
                   {editingVisitorPassword ? (
                     <form className="contrib-pass-edit-inline" onSubmit={handleSaveVisitorPassword}>
                       <input className="contrib-pass-edit-input" type="password" value={newVisitorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewVisitorPassword(e.target.value)} />
@@ -307,7 +306,7 @@ const ContributionPanel = ({
                 </div>
                 {/* Contributeur */}
                 <div className="contrib-role-row">
-                  <span className="contrib-role-badge contrib-role-badge--contrib">Contributeur</span>
+                  <span className="contrib-role-badge contrib-role-badge--contrib"><strong>Pour ajouter</strong><small>mot de passe contributeur</small></span>
                   {editingContributorPassword ? (
                     <form className="contrib-pass-edit-inline" onSubmit={handleSaveContributorPassword}>
                       <input className="contrib-pass-edit-input" type="password" value={newContributorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewContributorPassword(e.target.value)} />
@@ -329,21 +328,21 @@ const ContributionPanel = ({
             {/* ── En-tête sessions ── */}
             <div className="contrib-list-header">
               <div className="contrib-list-heading">
-                <h2>Propositions en attente</h2>
-                <p>Approuvez ou rejetez chaque modification individuellement</p>
+                <h2>Propositions à relire</h2>
+                <p>Acceptez ou refusez chaque modification, puis appliquez vos choix.</p>
               </div>
               <div className="contrib-list-header-actions">
                 <span className="contrib-count">{sessions.length || 0}</span>
-                <button type="button" className="ghost" onClick={onRefresh} disabled={loading}>Actualiser</button>
+                <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onRefresh} disabled={loading}><RefreshCw size={14} strokeWidth={2} />Actualiser</button>
               </div>
             </div>
 
             {errorMessage && <div className="contrib-error">{errorMessage}</div>}
 
             {loading ? (
-              <div className="contrib-empty">Chargement...</div>
+              <div className="contrib-empty">Chargement…</div>
             ) : sessions.length === 0 ? (
-              <div className="contrib-empty">Aucune proposition en attente.</div>
+              <div className="contrib-empty">Rien à relire pour l'instant. Les propositions de la famille apparaîtront ici.</div>
             ) : (
               <div className="contrib-list">
                 {sessions.map((session) => {
@@ -364,7 +363,7 @@ const ContributionPanel = ({
                         onKeyDown={(e) => e.key === 'Enter' && toggleCollapse(session.id)}
                       >
                         <div className="contrib-item-top">
-                          <strong className="contrib-session-title">{session.title || 'Session sans titre'}</strong>
+                          <strong className="contrib-session-title">{session.title || 'Proposition sans titre'}</strong>
                           <div className="contrib-session-top-right">
                             {formatSessionDate(session.createdAt) && (
                               <span className="contrib-session-date">{formatSessionDate(session.createdAt)}</span>
@@ -383,13 +382,13 @@ const ContributionPanel = ({
                           {hasDecisions && (
                             <>
                               <span className="contrib-meta-sep">·</span>
-                              {summary.approved > 0 && <span className="contrib-decision-summary contrib-decision-summary--ok">{summary.approved} ✓</span>}
-                              {summary.rejected > 0 && <span className="contrib-decision-summary contrib-decision-summary--ko">{summary.rejected} ✗</span>}
+                              {summary.approved > 0 && <span className="contrib-decision-summary contrib-decision-summary--ok">{summary.approved} acceptée{summary.approved > 1 ? 's' : ''}</span>}
+                              {summary.rejected > 0 && <span className="contrib-decision-summary contrib-decision-summary--ko">{summary.rejected} refusée{summary.rejected > 1 ? 's' : ''}</span>}
                               {summary.pending > 0 && <span className="contrib-decision-summary contrib-decision-summary--pending">{summary.pending} en attente</span>}
                             </>
                           )}
                           {summary.pending === 0 && summary.total > 0 && (
-                            <span className="contrib-all-decided-badge">✓ Complet</span>
+                            <span className="contrib-all-decided-badge">Tout est relu</span>
                           )}
                         </div>
                         {session.comment && (
@@ -435,7 +434,7 @@ const ContributionPanel = ({
                                   {personName || formatEntityType(change.entityType)}
                                 </span>
                                 {change.conflictState === 'needs_review' && (
-                                  <span className="contrib-conflict-badge">⚠ Conflit</span>
+                                  <span className="contrib-conflict-badge">À vérifier</span>
                                 )}
                                 <div className="contrib-card-decisions">
                                   <button
@@ -443,7 +442,7 @@ const ContributionPanel = ({
                                     className={`contrib-decision-icon contrib-decision-icon--approve${isApproved ? ' active' : ''}`}
                                     onClick={(e) => { e.stopPropagation(); toggleChangeDecision(session.id, change.id, 'approved') }}
                                     disabled={isReviewing}
-                                    title="Approuver"
+                                    title="Accepter" aria-label="Accepter"
                                   >
                                     <Check size={13} strokeWidth={2.5} />
                                   </button>
@@ -452,7 +451,7 @@ const ContributionPanel = ({
                                     className={`contrib-decision-icon contrib-decision-icon--reject${isRejected ? ' active' : ''}`}
                                     onClick={(e) => { e.stopPropagation(); toggleChangeDecision(session.id, change.id, 'rejected') }}
                                     disabled={isReviewing}
-                                    title="Rejeter"
+                                    title="Refuser" aria-label="Refuser"
                                   >
                                     <X size={13} strokeWidth={2.5} />
                                   </button>
@@ -482,12 +481,12 @@ const ContributionPanel = ({
                                       <span className="contrib-field-label">{label}</span>
                                       {oldVal !== undefined ? (
                                         <span className="contrib-field-diff">
-                                          <span className="contrib-field-old">{displayVal(oldVal) ?? '—'}</span>
+                                          <span className="contrib-field-old">{displayVal(oldVal) ?? 'vide'}</span>
                                           <span className="contrib-field-arrow">→</span>
-                                          <span className="contrib-field-new">{displayVal(newVal) ?? '—'}</span>
+                                          <span className="contrib-field-new">{displayVal(newVal) ?? 'vide'}</span>
                                         </span>
                                       ) : (
-                                        <span className="contrib-field-new">{displayVal(newVal) ?? '—'}</span>
+                                        <span className="contrib-field-new">{displayVal(newVal) ?? 'vide'}</span>
                                       )}
                                     </div>
                                   ))}
@@ -520,27 +519,27 @@ const ContributionPanel = ({
                                     onClick={() => applyDecisions(session.id, session.changes)}
                                     disabled={isReviewing}
                                   >
-                                    {isReviewing ? 'Traitement...' : `Appliquer les décisions${summary.pending > 0 ? ` (${summary.pending} non décidée${summary.pending > 1 ? 's' : ''} → rejetée${summary.pending > 1 ? 's' : ''})` : ''}`}
+                                    {isReviewing ? 'Un instant…' : `Appliquer mes choix${summary.pending > 0 ? `, ${summary.pending} sans réponse ser${summary.pending > 1 ? 'ont refusées' : 'a refusée'}` : ''}`}
                                   </button>
                                   <div className="contrib-session-quick">
                                     {confirmApproveAll === session.id ? (
                                       <div className="contrib-confirm-approve">
-                                        <span>Tout approuver ?</span>
+                                        <span>Tout accepter ?</span>
                                         <button type="button" className="contrib-confirm-yes" onClick={() => { setConfirmApproveAll(null); onReviewSession(session.id, { decision: 'approved' }) }} disabled={isReviewing}>Oui</button>
                                         <button type="button" className="contrib-confirm-no" onClick={() => setConfirmApproveAll(null)}>Non</button>
                                       </div>
                                     ) : (
-                                      <button type="button" className="contrib-quick-btn" onClick={() => setConfirmApproveAll(session.id)} disabled={isReviewing}>Tout approuver</button>
+                                      <button type="button" className="contrib-quick-btn" onClick={() => setConfirmApproveAll(session.id)} disabled={isReviewing}>Tout accepter</button>
                                     )}
-                                    <button type="button" className="contrib-quick-btn" onClick={() => onReviewSession(session.id, { decision: 'rejected' })} disabled={isReviewing}>Tout rejeter</button>
+                                    <button type="button" className="contrib-quick-btn" onClick={() => onReviewSession(session.id, { decision: 'rejected' })} disabled={isReviewing}>Tout refuser</button>
                                   </div>
                                 </>
                               ) : (
                                 <div className="contrib-session-quick contrib-session-quick--full">
                                   {confirmApproveAll === session.id ? (
                                     <div className="contrib-confirm-approve">
-                                      <span>Confirmer l'approbation de toutes les modifications ?</span>
-                                      <button type="button" className="contrib-confirm-yes" onClick={() => { setConfirmApproveAll(null); onReviewSession(session.id, { decision: 'approved' }) }} disabled={isReviewing}>Oui, tout approuver</button>
+                                      <span>Accepter toutes les modifications de cette proposition ?</span>
+                                      <button type="button" className="contrib-confirm-yes" onClick={() => { setConfirmApproveAll(null); onReviewSession(session.id, { decision: 'approved' }) }} disabled={isReviewing}>Oui, tout accepter</button>
                                       <button type="button" className="contrib-confirm-no" onClick={() => setConfirmApproveAll(null)}>Annuler</button>
                                     </div>
                                   ) : (
@@ -550,10 +549,10 @@ const ContributionPanel = ({
                                       onClick={() => setConfirmApproveAll(session.id)}
                                       disabled={isReviewing}
                                     >
-                                      {isReviewing ? 'Traitement...' : 'Tout approuver'}
+                                      {isReviewing ? 'Un instant…' : 'Tout accepter'}
                                     </button>
                                   )}
-                                  <button type="button" className="contrib-quick-btn" onClick={() => onReviewSession(session.id, { decision: 'rejected' })} disabled={isReviewing}>Tout rejeter</button>
+                                  <button type="button" className="contrib-quick-btn" onClick={() => onReviewSession(session.id, { decision: 'rejected' })} disabled={isReviewing}>Tout refuser</button>
                                 </div>
                               )}
                             </div>

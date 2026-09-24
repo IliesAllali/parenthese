@@ -28,15 +28,15 @@ class ErrorBoundary extends Component {
           justifyContent: 'center',
           height: '100vh',
           fontFamily: 'system-ui, sans-serif',
-          color: '#4a3728',
-          background: '#faf6f1',
+          color: '#2a2622',
+          background: '#f7f5f4',
           padding: '2rem',
           textAlign: 'center',
         }}>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
             Une erreur inattendue est survenue
           </h1>
-          <p style={{ color: '#8a7568', marginBottom: '1.5rem', maxWidth: '400px' }}>
+          <p style={{ color: '#6b645d', marginBottom: '1.5rem', maxWidth: '400px' }}>
             L application a rencontre un probleme. Vous pouvez essayer de recharger ou revenir a l ecran precedent.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -46,9 +46,9 @@ class ErrorBoundary extends Component {
               style={{
                 padding: '0.5rem 1.25rem',
                 borderRadius: '6px',
-                border: '1px solid #c4b5a8',
+                border: '1px solid #bab6b2',
                 background: 'white',
-                color: '#4a3728',
+                color: '#2a2622',
                 cursor: 'pointer',
                 fontSize: '0.9rem',
               }}
@@ -62,7 +62,7 @@ class ErrorBoundary extends Component {
                 padding: '0.5rem 1.25rem',
                 borderRadius: '6px',
                 border: 'none',
-                background: '#4a3728',
+                background: '#2a2622',
                 color: 'white',
                 cursor: 'pointer',
                 fontSize: '0.9rem',
@@ -75,10 +75,10 @@ class ErrorBoundary extends Component {
             <pre style={{
               marginTop: '2rem',
               padding: '1rem',
-              background: '#f0ebe4',
+              background: '#f8e4db',
               borderRadius: '6px',
               fontSize: '0.75rem',
-              color: '#8a7568',
+              color: '#6b645d',
               maxWidth: '600px',
               overflow: 'auto',
               textAlign: 'left',

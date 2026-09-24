@@ -111,7 +111,7 @@ function ExpandableSearch({
               ref={inputRef}
               type="text"
               className="search-input"
-              placeholder="Rechercher une personne..."
+              placeholder="Un prénom, un nom, une ville"
               value={query}
               onChange={handleInputChange}
               aria-label="Rechercher une personne"

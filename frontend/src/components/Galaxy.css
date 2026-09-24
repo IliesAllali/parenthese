@@ -17,13 +17,13 @@
   transform: translateX(-50%);
   z-index: 500;
 
-  background: rgba(93, 82, 75, 0.88);
+  background: rgba(42, 38, 34, 0.88);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #FEF9ED;
+  color: #FFFFFF;
   font-size: 14px;
   font-weight: 500;
-  font-family: "Red Hat Mono", ui-monospace, monospace;
+  font-family: "DM Sans", system-ui, sans-serif;
   padding: 8px 20px;
   border-radius: 20px;
   white-space: nowrap;

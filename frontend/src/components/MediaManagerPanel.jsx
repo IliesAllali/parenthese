@@ -1,7 +1,20 @@
 import { useMemo, useState } from 'react'
+import { ArrowDown, ArrowUp, FileText, Image, MapPin, Mic, Plus, Quote, Route, Trash2, Upload, Video, X } from 'lucide-react'
 import { getAcceptForMediaType } from '../utils/mediaUpload'
 import GeoMediaThumbnail from './GeoMediaThumbnail'
 import './MediaManagerPanel.css'
+
+const MEDIA_TYPES = [
+  { value: 'photo', label: 'Photo', Icon: Image },
+  { value: 'video', label: 'Vidéo', Icon: Video },
+  { value: 'audio', label: 'Voix', Icon: Mic },
+  { value: 'citation', label: 'Citation', Icon: Quote },
+  { value: 'document', label: 'Document', Icon: FileText },
+  { value: 'geojson', label: 'Carte', Icon: MapPin },
+  { value: 'gpx', label: 'Trace GPX', Icon: Route },
+]
+const TYPE_NAMES = { photo: 'Photo', video: 'Vidéo', audio: 'Voix', citation: 'Citation', document: 'Document', geojson: 'Carte', gpx: 'Trace GPX' }
+const TYPE_SHORT = { video: 'Vidéo', audio: 'Voix', citation: '«', document: 'Doc' }
 
 const YOUTUBE_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//
 const HTTP_URL_RE = /^https?:\/\/\S+$/i
@@ -94,168 +107,174 @@ const MediaManagerPanel = ({
     return normalized
   }
 
-  return (
-    <div className="media-manager-modal-overlay" onClick={handleOverlayClick}>
-      <div className="media-manager-modal-card">
-        <div className="media-manager-modal-header">
-          <div className="media-manager-modal-title-wrap">
-            <h1>Médias</h1>
-            <p>{person.firstName} {person.lastName}</p>
-          </div>
-          <button type="button" className="media-manager-close" onClick={onClose}>Fermer</button>
-        </div>
+  const changeType = (value) => {
+    setMediaType(value)
+    setFile(null)
+    setCitationText('')
+    setVideoMode('file')
+    setYoutubeUrl('')
+  }
 
-        <form className="media-manager-modal-form" onSubmit={handleSubmit}>
-          <label htmlFor="mediaUploadType">Type de media</label>
-          <select
-            id="mediaUploadType"
-            value={mediaType}
-            onChange={(event) => {
-              setMediaType(event.target.value)
-              setFile(null)
-              setCitationText('')
-              setVideoMode('file')
-              setYoutubeUrl('')
-            }}
-          >
-            <option value="photo">Photo (max 5 Mo)</option>
-            <option value="video">Video (max 20 Mo)</option>
-            <option value="audio">Audio (max 20 Mo)</option>
-            <option value="document">Document (max 20 Mo)</option>
-            <option value="geojson">Carte GPS GeoJSON (max 20 Mo)</option>
-            <option value="gpx">Trace GPX (max 20 Mo)</option>
-            <option value="citation">Citation (texte)</option>
-          </select>
+  return (
+    <div className="pz-overlay media-manager-modal-overlay" onClick={handleOverlayClick}>
+      <div className="pz-modal pz-modal--wide media-manager-modal-card" role="dialog" aria-modal="true" aria-labelledby="mediaManagerTitle">
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Souvenirs</p>
+          <h1 id="mediaManagerTitle" className="pz-title">{person.firstName} <em>{person.lastName}</em></h1>
+        </div>
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+          <X size={18} aria-hidden="true" />
+        </button>
+
+        <form className="mm-form" onSubmit={handleSubmit}>
+          <div className="pz-field">
+            <span className="pz-label" id="mediaUploadTypeLabel">Ajouter</span>
+            <div className="mm-types" role="radiogroup" aria-labelledby="mediaUploadTypeLabel">
+              {MEDIA_TYPES.map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={mediaType === type.value}
+                  className={`mm-type ${mediaType === type.value ? 'is-active' : ''}`}
+                  onClick={() => changeType(type.value)}
+                >
+                  <type.Icon size={18} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {mediaType === 'video' && (
-            <div className="media-manager-video-mode">
-              <label>
-                <input
-                  type="radio"
-                  name="videoMode"
-                  value="file"
-                  checked={videoMode === 'file'}
-                  onChange={() => { setVideoMode('file'); setYoutubeUrl('') }}
-                />
-                {' '}Fichier video
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  name="videoMode"
-                  value="youtube"
-                  checked={videoMode === 'youtube'}
-                  onChange={() => { setVideoMode('youtube'); setFile(null) }}
-                />
-                {' '}Lien YouTube
-              </label>
+            <div className="pz-tabs mm-video-mode" role="radiogroup" aria-label="Source de la vidéo">
+              <button type="button" role="radio" aria-checked={videoMode === 'file'} className={`pz-tab ${videoMode === 'file' ? 'is-active' : ''}`} onClick={() => { setVideoMode('file'); setYoutubeUrl('') }}>
+                Un fichier
+              </button>
+              <button type="button" role="radio" aria-checked={videoMode === 'youtube'} className={`pz-tab ${videoMode === 'youtube' ? 'is-active' : ''}`} onClick={() => { setVideoMode('youtube'); setFile(null) }}>
+                Un lien YouTube
+              </button>
             </div>
           )}
 
           {!isCitation && !isYoutubeVideo && (
-            <>
-              <label htmlFor="mediaUploadFile">
-                Fichier {mediaType === 'photo' ? '(max 5 Mo)' : '(max 20 Mo)'}
+            <div className="pz-field">
+              <label htmlFor="mediaUploadFile" className="mm-drop">
+                <span className="mm-drop-icon" aria-hidden="true"><Upload size={20} strokeWidth={1.8} /></span>
+                <span className="mm-drop-text">
+                  <strong>{file ? file.name : 'Choisir un fichier'}</strong>
+                  <span>{file ? 'Cliquez pour en choisir un autre' : `${mediaType === 'photo' ? '5 Mo' : '20 Mo'} au maximum`}</span>
+                </span>
               </label>
               <input
                 id="mediaUploadFile"
+                className="mm-drop-input"
                 type="file"
                 accept={fileAccept}
                 onChange={(event) => setFile(event.target.files?.[0] || null)}
               />
-            </>
+            </div>
           )}
 
           {isYoutubeVideo && (
-            <>
-              <label htmlFor="mediaUploadYoutube">URL YouTube</label>
+            <div className="pz-field">
+              <label htmlFor="mediaUploadYoutube">Lien de la vidéo</label>
               <input
                 id="mediaUploadYoutube"
                 type="url"
                 value={youtubeUrl}
                 onChange={(event) => setYoutubeUrl(event.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
+                placeholder="https://www.youtube.com/watch?v=…"
               />
-            </>
+            </div>
           )}
 
           {isCitation && (
-            <>
-              <label htmlFor="mediaUploadCitation">Texte de la citation</label>
+            <div className="pz-field">
+              <label htmlFor="mediaUploadCitation">Ce qu'elle ou il disait</label>
               <textarea
                 id="mediaUploadCitation"
-                className="media-manager-modal-textarea"
                 value={citationText}
                 onChange={(event) => setCitationText(event.target.value)}
-                placeholder="Saisissez la citation..."
-                rows={4}
+                placeholder="On partait à six dans la 4L, le coffre attaché avec une ficelle."
+                rows={3}
               />
-            </>
+            </div>
           )}
 
-          <label htmlFor="mediaUploadCaption">Legende (optionnel)</label>
-          <input
-            id="mediaUploadCaption"
-            type="text"
-            value={caption}
-            onChange={(event) => setCaption(event.target.value)}
-          />
+          <div className="pz-row2">
+            <div className="pz-field">
+              <label htmlFor="mediaUploadCaption">Titre <span className="mm-optional">facultatif</span></label>
+              <input
+                id="mediaUploadCaption"
+                type="text"
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                placeholder="Été à Quiberon, 1978"
+              />
+            </div>
+            <div className="pz-field">
+              <label htmlFor="mediaUploadSource">Source <span className="mm-optional">facultatif</span></label>
+              <input
+                id="mediaUploadSource"
+                type="text"
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
+                placeholder="Album de famille, ou un lien"
+              />
+            </div>
+          </div>
 
-          <label htmlFor="mediaUploadSource">Source (optionnel: texte ou lien)</label>
-          <input
-            id="mediaUploadSource"
-            type="text"
-            value={source}
-            onChange={(event) => setSource(event.target.value)}
-            placeholder="https://... ou description de la source"
-          />
+          {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
 
-          <button type="submit" disabled={!canUpload}>
-            {loading ? 'Upload...' : 'Uploader'}
-          </button>
+          <div className="pz-modal-actions">
+            <button type="submit" className="pz-btn pz-btn--primary" disabled={!canUpload}>
+              <Plus size={16} aria-hidden="true" />
+              {loading ? 'Envoi…' : 'Ajouter ce souvenir'}
+            </button>
+          </div>
         </form>
 
-        {errorMessage && <div className="media-manager-modal-error">{errorMessage}</div>}
-
-        <div className="media-manager-modal-list">
+        <section className="mm-list-wrap">
+          <h2 className="pz-eyebrow">{medias.length > 0 ? `Déjà là · ${medias.length}` : 'Déjà là'}</h2>
           {medias.length === 0 ? (
-            <div className="media-manager-modal-empty">Aucun media pour cette personne.</div>
+            <p className="pz-small mm-empty">Pas encore de souvenir. Le premier que vous ajoutez apparaît en tête de sa fiche.</p>
           ) : (
-            medias.map((media, index) => (
-              <div key={media.id} className="media-manager-modal-item">
-                <div className="media-manager-modal-preview">
-                  {media.type === 'photo' && media.url ? (
-                    <img src={media.url} alt="" />
-                  ) : media.type === 'geojson' || media.type === 'gpx' ? (
-                    <GeoMediaThumbnail media={media} className="media-manager-modal-preview-map" />
-                  ) : (
-                    <span>{media.type === 'citation' ? 'Citation' : media.type.toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="media-manager-modal-meta">
-                  <strong>{media.label || `Media ${index + 1}`}</strong>
-                  <span>Type: {media.type}</span>
-                  {media.source && <span>Source: {renderSource(media.source)}</span>}
-                  <span>Ordre: {media.displayOrder || index + 1}</span>
-                </div>
-                <div className="media-manager-modal-actions">
-                  <button type="button" className="media-manager-action-ghost" onClick={() => onMove(media.id, -1)} disabled={loading || index === 0}>
-                    Monter
-                  </button>
-                  <button
-                    type="button"
-                    className="media-manager-action-ghost"
-                    onClick={() => onMove(media.id, 1)}
-                    disabled={loading || index === medias.length - 1}
-                  >
-                    Descendre
-                  </button>
-                  <button type="button" className="media-manager-action-danger" onClick={() => onDelete(media.id)} disabled={loading}>Supprimer</button>
-                </div>
-              </div>
-            ))
+            <ul className="mm-list">
+              {medias.map((media, index) => (
+                <li key={media.id} className="mm-item">
+                  <span className="mm-preview" aria-hidden="true">
+                    {media.type === 'photo' && media.url ? (
+                      <img src={media.url} alt="" />
+                    ) : media.type === 'geojson' || media.type === 'gpx' ? (
+                      <GeoMediaThumbnail media={media} className="media-manager-modal-preview-map" />
+                    ) : (
+                      <span>{TYPE_SHORT[media.type] || media.type}</span>
+                    )}
+                  </span>
+                  <span className="mm-meta">
+                    <strong>{media.label || `Souvenir ${index + 1}`}</strong>
+                    <span>
+                      {TYPE_NAMES[media.type] || media.type}
+                      {media.source && <> · {renderSource(media.source)}</>}
+                    </span>
+                  </span>
+                  <span className="mm-actions">
+                    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon" onClick={() => onMove(media.id, -1)} disabled={loading || index === 0} aria-label="Monter">
+                      <ArrowUp size={16} aria-hidden="true" />
+                    </button>
+                    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon" onClick={() => onMove(media.id, 1)} disabled={loading || index === medias.length - 1} aria-label="Descendre">
+                      <ArrowDown size={16} aria-hidden="true" />
+                    </button>
+                    <button type="button" className="pz-btn pz-btn--danger-ghost pz-btn--icon" onClick={() => onDelete(media.id)} disabled={loading} aria-label="Supprimer">
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { AlertTriangle, Save, X, ArrowLeft } from 'lucide-react'
+import { Save, X, ArrowLeft } from 'lucide-react'
 import './EditConfirmModal.css'
 
 /**
@@ -33,54 +33,35 @@ function EditConfirmModal({ visible, onContinue, onSaveAndQuit, onDiscard }) {
   if (!visible) return null
 
   return (
-    <div className="edit-confirm-backdrop" onClick={onContinue}>
+    <div className="pz-overlay" onClick={onContinue}>
       <div
-        className="edit-confirm-modal"
+        className="pz-modal edit-confirm-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-confirm-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="edit-confirm-icon">
-          <AlertTriangle size={28} strokeWidth={1.8} />
+        <div className="pz-modal-head">
+          <p className="pz-eyebrow">Modifications en cours</p>
+          <h2 id="edit-confirm-title" className="pz-title">Quitter <em>l'édition</em> ?</h2>
+          <p className="pz-sub">Vos dernières modifications ne sont pas encore enregistrées. Elles restent sur cet appareil tant que vous ne les abandonnez pas.</p>
         </div>
 
-        <h2 id="edit-confirm-title" className="edit-confirm-title">
-          Quitter le mode édition ?
-        </h2>
-
-        <p className="edit-confirm-message">
-          Vous avez des modifications non enregistrées sur le serveur.
-        </p>
-
-        <div className="edit-confirm-actions">
-          <button
-            ref={continueRef}
-            type="button"
-            className="edit-confirm-btn edit-confirm-btn--continue"
-            onClick={onContinue}
-          >
-            <ArrowLeft size={16} strokeWidth={2} />
-            Continuer l'édition
-          </button>
-
-          <button
-            type="button"
-            className="edit-confirm-btn edit-confirm-btn--save"
-            onClick={onSaveAndQuit}
-          >
-            <Save size={16} strokeWidth={2} />
-            Enregistrer et quitter
-          </button>
-
-          <button
-            type="button"
-            className="edit-confirm-btn edit-confirm-btn--discard"
-            onClick={onDiscard}
-          >
+        <div className="pz-modal-actions pz-modal-actions--split">
+          <button type="button" className="pz-btn pz-btn--danger-ghost" onClick={onDiscard}>
             <X size={16} strokeWidth={2} />
             Abandonner
           </button>
+          <div className="edit-confirm-right">
+            <button ref={continueRef} type="button" className="pz-btn pz-btn--secondary" onClick={onContinue}>
+              <ArrowLeft size={16} strokeWidth={2} />
+              Continuer
+            </button>
+            <button type="button" className="pz-btn pz-btn--primary" onClick={onSaveAndQuit}>
+              <Save size={16} strokeWidth={2} />
+              Enregistrer et quitter
+            </button>
+          </div>
         </div>
       </div>
     </div>

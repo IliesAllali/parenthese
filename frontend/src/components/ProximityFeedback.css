@@ -35,7 +35,7 @@
 }
 
 .proximity-line-path.sibling {
-  stroke: rgba(255, 149, 0, 0.7);
+  stroke: rgba(210, 105, 74, 0.7);
 }
 
 .proximity-line-path.none {
@@ -61,7 +61,7 @@
   pointer-events: none;
   z-index: 1001;
 
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(42, 38, 34, 0.15);
 
   animation: badgePulse 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -88,7 +88,7 @@
 }
 
 .proximity-badge.sibling {
-  background: rgba(255, 149, 0, 0.95);
+  background: rgba(210, 105, 74, 0.95);
   color: white;
 }
 
@@ -128,8 +128,8 @@
 .proximity-highlight-glow.sibling {
   background: radial-gradient(
     circle,
-    rgba(255, 149, 0, 0.35) 0%,
-    rgba(255, 149, 0, 0.15) 50%,
+    rgba(210, 105, 74, 0.35) 0%,
+    rgba(210, 105, 74, 0.15) 50%,
     transparent 100%
   );
 }

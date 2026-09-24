@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import logoUrl from '../assets/parenthese-logo.svg?url'
+import './AccountScreens.css'
 
 const AccessGate = ({
   initialTreeId,
@@ -31,84 +33,100 @@ const AccessGate = ({
   const ownerLabel = treeOwnerName || ''
 
   return (
-    <div className="access-gate">
-      <div className="access-gate-mock-blur" aria-hidden="true">
-        <div className="access-gate-mock-card access-gate-mock-card-main" />
-        <div className="access-gate-mock-card access-gate-mock-card-side" />
-        <div className="access-gate-mock-dot" />
-      </div>
+    <div className="access-gate pz-screen">
+      <div className="pz-screen-inner">
+        <img src={logoUrl} alt="Parenthèse" className="pz-screen-logo" />
 
-      <form className="access-gate-card" onSubmit={handleSubmit}>
-        <h1>Accès à votre arbre</h1>
-        {treeNotFound ? (
-          <p>Cet arbre n'existe pas ou n'est plus disponible.</p>
-        ) : (
-          <p>
-            {treeName
-              ? `Entrez le mot de passe partagé pour ouvrir "${treeName}".`
-              : "Entrez les informations reçues avec votre lien de partage pour ouvrir l'arbre familial."}
-          </p>
-        )}
-
-        {!treeNotFound && (treeName || treeDescription || ownerLabel) && (
-          <div className="access-gate-tree-info">
-            {treeName && <div className="access-gate-tree-name">{treeName}</div>}
-            {ownerLabel && <div className="access-gate-tree-meta">Partagé par : {ownerLabel}</div>}
-            {treeDescription && <div className="access-gate-tree-desc">{treeDescription}</div>}
+        <form className="pz-card pz-screen-card" onSubmit={handleSubmit}>
+          <div className="pz-auth-head">
+            <p className="pz-eyebrow">Arbre partagé</p>
+            {treeNotFound ? (
+              <h1 className="pz-title">Cet arbre est <em>introuvable</em></h1>
+            ) : (
+              <h1 className="pz-title">
+                {treeName ? <>Ouvrir <em>{treeName}</em></> : <>Ouvrir un arbre <em>partagé</em></>}
+              </h1>
+            )}
+            <p className="pz-sub">
+              {treeNotFound
+                ? "Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé."
+                : treeName
+                  ? 'Entrez le mot de passe reçu avec le lien. Pas besoin de compte pour regarder.'
+                  : "Entrez le code et le mot de passe reçus avec votre lien de partage."}
+            </p>
           </div>
-        )}
 
-        {!treeNotFound && (
-          <>
-            <label htmlFor="treeId">Code de l'arbre partagé</label>
-            <input
-              id="treeId"
-              type="text"
-              value={treeId}
-              onChange={(event) => setTreeId(event.target.value)}
-              disabled={Boolean(initialTreeId) || loading}
-              placeholder="Ex: cm..."
-              required
-            />
+          {!treeNotFound && (ownerLabel || treeDescription) && (
+            <div className="pz-gate-owner">
+              {ownerLabel && (
+                <span className="pz-gate-mono" aria-hidden="true">{ownerLabel.trim().charAt(0).toUpperCase()}</span>
+              )}
+              <div className="pz-gate-owner-text">
+                {ownerLabel && <p className="access-gate-tree-meta pz-small">Partagé par <strong>{ownerLabel}</strong></p>}
+                {treeDescription && <p className="pz-small">{treeDescription}</p>}
+              </div>
+            </div>
+          )}
 
-            <label htmlFor="sharePassword">Mot de passe de partage</label>
-            <input
-              id="sharePassword"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              disabled={loading}
-              placeholder="********"
-              required
-            />
-          </>
-        )}
+          {!treeNotFound && (
+            <div className="pz-auth-form">
+              {!initialTreeId && (
+                <div className="pz-field">
+                  <label htmlFor="treeId">Code de l'arbre</label>
+                  <input
+                    id="treeId"
+                    type="text"
+                    value={treeId}
+                    onChange={(event) => setTreeId(event.target.value)}
+                    disabled={loading}
+                    placeholder="Il commence souvent par cm"
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+              )}
 
-        {errorMessage && <div className="access-gate-error">{errorMessage}</div>}
+              <div className="pz-field">
+                <label htmlFor="sharePassword">Mot de passe de partage</label>
+                <input
+                  id="sharePassword"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  disabled={loading}
+                  autoFocus={Boolean(initialTreeId)}
+                  required
+                />
+              </div>
+            </div>
+          )}
 
-        {!treeNotFound && (
-          <button type="submit" disabled={loading}>
-            {loading ? 'Connexion...' : "Ouvrir l'arbre"}
-          </button>
-        )}
+          {errorMessage && <div className="access-gate-error pz-error" role="alert">{errorMessage}</div>}
 
-        {treeNotFound && onUseAccount && (
-          <button type="button" className="ghost" onClick={() => onUseAccount('register')} disabled={loading}>
-            Créer mon arbre
-          </button>
-        )}
+          {!treeNotFound && (
+            <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={loading}>
+              {loading ? 'Ouverture…' : "Ouvrir l'arbre"}
+            </button>
+          )}
+
+          {treeNotFound && onUseAccount && (
+            <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={() => onUseAccount('register')} disabled={loading}>
+              Créer mon arbre
+            </button>
+          )}
+        </form>
 
         {onUseAccount && !treeNotFound && (
-          <>
-            <button type="button" className="ghost" onClick={() => onUseAccount('login')} disabled={loading}>
+          <div className="pz-account-foot">
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onUseAccount('login')} disabled={loading}>
               Se connecter avec un compte
             </button>
-            <button type="button" className="ghost" onClick={() => onUseAccount('register')} disabled={loading}>
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onUseAccount('register')} disabled={loading}>
               Créer un compte
             </button>
-          </>
+          </div>
         )}
-      </form>
+      </div>
     </div>
   )
 }
