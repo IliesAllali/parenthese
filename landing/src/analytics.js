@@ -4,9 +4,10 @@
  * Events are silently dropped when the key is absent.
  */
 
+const KEY = import.meta.env.VITE_POSTHOG_KEY
 let ph = null
 let initStarted = false
-let enabled = false
+let enabled = Boolean(KEY)
 const queuedEvents = []
 const MAX_QUEUED_EVENTS = 100
 
@@ -23,13 +24,11 @@ export const analytics = {
     if (initStarted) return
     initStarted = true
 
-    const key = import.meta.env.VITE_POSTHOG_KEY
-    if (!key) return
+    if (!KEY) return
 
-    enabled = true
     import('posthog-js')
       .then(({ default: posthog }) => {
-        posthog.init(key, {
+        posthog.init(KEY, {
           api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
           cross_subdomain_cookie: true,
           defaults: '2026-01-30',
