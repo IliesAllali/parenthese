@@ -635,7 +635,7 @@ describe('API security and authz', () => {
     })
     expect(wrong.statusCode).toBe(401)
     await app.close()
-  })
+  }, 30000) // une dizaine de vérifications bcrypt, lentes sur la machine de CI
 
   it('still rejects a wrong share password', async () => {
     const { hashPassword } = await import('../src/lib/auth')
