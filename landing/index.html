@@ -15,7 +15,7 @@
     <meta property="og:locale"       content="fr_FR" />
     <meta property="og:url"          content="https://parenthese.io/" />
     <meta property="og:title"        content="Parenthèse : l'arbre généalogique vivant de votre famille" />
-    <meta property="og:description"  content="Une galaxie de votre famille. Des photos, des anecdotes, des voix. Partageable en un lien, sans compte, sans friction." />
+    <meta property="og:description"  content="L'arbre généalogique de votre famille en ligne, avec photos, voix et souvenirs. Partageable en un lien, sans compte." />
     <meta property="og:image"        content="https://parenthese.io/og-image.png" />
     <meta property="og:image:width"  content="1200" />
     <meta property="og:image:height" content="630" />
@@ -24,13 +24,13 @@
     <!-- Twitter -->
     <meta name="twitter:card"        content="summary_large_image" />
     <meta name="twitter:title"       content="Parenthèse : l'arbre généalogique vivant de votre famille" />
-    <meta name="twitter:description" content="Une galaxie de votre famille. Partageable en un lien, sans compte, sans friction." />
+    <meta name="twitter:description" content="L'arbre généalogique de votre famille en ligne, avec photos, voix et souvenirs. Partageable en un lien, sans compte." />
     <meta name="twitter:image"       content="https://parenthese.io/og-image.png" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- Google Fonts : Newsreader et DM Sans (DA Lavande) -->
+    <!-- Google Fonts : Newsreader et DM Sans (DA terracotta) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet" />
@@ -63,7 +63,7 @@
           "applicationCategory": "LifestyleApplication",
           "operatingSystem": "Web",
           "inLanguage": "fr-FR",
-          "description": "Web app pour construire et partager la mémoire d'une famille : arbre en forme de galaxie, photos, anecdotes, vidéos et voix, partage par lien.",
+          "description": "Web app pour créer l'arbre généalogique d'une famille en ligne, avec photos, anecdotes, vidéos et voix, partageable en un lien sans compte.",
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
           "publisher": { "@id": "https://parenthese.io/#organization" }
         }
@@ -72,6 +72,8 @@
     </script>
   </head>
   <body>
+    <!-- Sans JavaScript, le contenu prérendu reste visible (les révélations au défilement demandent JS) -->
+    <noscript><style>[data-reveal] { opacity: 1; transform: none; }</style></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
