@@ -31,6 +31,8 @@ import {
   linkTreeAccess,
   updateTree,
   rotateTreePasswords,
+  fetchSharePassword,
+  rememberSharePassword,
   resolveTreeBySlug,
   uploadPersonAvatar,
   updatePerson,
@@ -423,36 +425,17 @@ function buildContribChangesList(draft = {}) {
   return items
 }
 
-function getInvitePasswordStorageKey(treeId, role) {
-  return `invite_password_${treeId}_${role}`
-}
-
-// Mot de passe de partage connu de ce navigateur (le serveur ne garde qu'un hash).
-// Repli sur les anciennes clés « contributor » puis « visitor » d'avant le mot de passe unique.
-function readInvitePasswordsFromStorage(treeId) {
+// Anciennes copies locales du mot de passe (avant qu'il soit gardé par le serveur) : on les efface,
+// elles pouvaient montrer un mot de passe changé depuis un autre appareil.
+function clearLegacyInvitePasswords(treeId) {
   if (!treeId) {
-    return { share: '' }
-  }
-
-  try {
-    return {
-      share: localStorage.getItem(getInvitePasswordStorageKey(treeId, 'share'))
-        || localStorage.getItem(getInvitePasswordStorageKey(treeId, 'contributor'))
-        || localStorage.getItem(getInvitePasswordStorageKey(treeId, 'visitor'))
-        || '',
-    }
-  } catch {
-    return { share: '' }
-  }
-}
-
-function writeInvitePasswordsToStorage(treeId, passwords) {
-  if (!treeId || !passwords.share) {
     return
   }
 
   try {
-    localStorage.setItem(getInvitePasswordStorageKey(treeId, 'share'), passwords.share)
+    for (const role of ['share', 'contributor', 'visitor']) {
+      localStorage.removeItem(`invite_password_${treeId}_${role}`)
+    }
   } catch {
     // Ignore localStorage failures
   }
@@ -1240,16 +1223,52 @@ function App() {
   }, [auth.userAuth.token, tree.treeContext.accessToken, tree.treeContext.treeId])
 
   const handleOpenContributionPanel = useCallback(async () => {
-    const knownPasswords = readInvitePasswordsFromStorage(tree.treeContext.treeId)
+    const treeId = tree.treeContext.treeId
+    clearLegacyInvitePasswords(treeId)
     await resolveContributionShareUrl()
+    let share = ''
+    const accessToken = auth.userAuth.token || tree.treeContext.accessToken
+    if (treeId && accessToken && tree.canEditCurrentTree) {
+      try {
+        share = (await fetchSharePassword(treeId, accessToken))?.share || ''
+      } catch {
+        share = ''
+      }
+    }
     setContribInviteState((current) => ({
       ...current,
-      knownPasswords,
+      knownPasswords: { share },
       error: '',
       message: '',
     }))
     await contrib.handleOpenContributionPanel()
-  }, [contrib, resolveContributionShareUrl, tree.treeContext.treeId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [contrib, resolveContributionShareUrl, tree.treeContext.treeId, tree.canEditCurrentTree, tree.treeContext.accessToken, auth.userAuth.token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleContributionPasswordRemember = useCallback(async ({ password }) => {
+    const accessToken = auth.userAuth.token || tree.treeContext.accessToken
+    if (!tree.treeContext.treeId || !accessToken) {
+      return { ok: false, error: 'Session invalide.' }
+    }
+
+    setContribInviteState((current) => ({ ...current, loading: true, error: '', message: '' }))
+    try {
+      const result = await rememberSharePassword(tree.treeContext.treeId, String(password || '').trim(), accessToken)
+      setContribInviteState((current) => ({
+        ...current,
+        knownPasswords: { share: result?.share || '' },
+        loading: false,
+        error: '',
+        message: "C'est bien lui. Rien ne change pour la famille.",
+      }))
+      return { ok: true }
+    } catch (error) {
+      const message = error?.status === 422
+        ? "Ce n'est pas le mot de passe actuel de l'arbre."
+        : getAccountErrorMessage(error)
+      setContribInviteState((current) => ({ ...current, loading: false, error: message, message: '' }))
+      return { ok: false, error: message }
+    }
+  }, [auth.userAuth.token, tree.treeContext.accessToken, tree.treeContext.treeId])
 
   const handleContributionPasswordRotate = useCallback(async ({ password }) => {
     if (!tree.treeContext.treeId) {
@@ -1288,7 +1307,6 @@ function App() {
     try {
       await rotateTreePasswords(tree.treeContext.treeId, payload, accessToken)
       const storedPasswords = { share: nextPassword }
-      writeInvitePasswordsToStorage(tree.treeContext.treeId, storedPasswords)
 
       setContribInviteState((current) => ({
         ...current,
@@ -2149,7 +2167,7 @@ function App() {
         ? normalizedSlug
         : `famille-${Date.now().toString(36)}`
 
-      // Un seul mot de passe de partage, gardé dans ce navigateur pour que le propriétaire le voie
+      // Un seul mot de passe de partage, gardé chiffré par le serveur pour que le propriétaire le voie
       const sharePassword = generateSecurePassword()
       const createdTree = await createTree(
         {
@@ -2161,7 +2179,6 @@ function App() {
         },
         token,
       )
-      writeInvitePasswordsToStorage(createdTree.id, { share: sharePassword })
       trackAppEvent('tree_created', { tree_id: toOpaqueTreeId(createdTree.id) })
 
       const createdSelf = await createPerson(
@@ -2603,6 +2620,7 @@ function App() {
         onClose={contrib.handleCloseContributionPanel}
         onRefresh={contrib.refreshContributionSessions}
         onRotatePasswords={handleContributionPasswordRotate}
+        onRememberPassword={handleContributionPasswordRemember}
         onReviewSession={contrib.handleReviewContributionSession}
       />
       <AccountPanel

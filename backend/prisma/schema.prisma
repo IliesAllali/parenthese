@@ -109,6 +109,7 @@ model Tree {
   deletedAt            DateTime?
   owner                User                  @relation("TreeOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
   accessPasswords      TreeAccessPasswords?
+  sharePassword        TreeSharePassword?
   memberships          TreeMembership[]
   sharedUserAccesses   UserTreeAccess[]
   settings             TreeSettings?
@@ -133,6 +134,17 @@ model TreeAccessPasswords {
   tree            Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
 
   @@map("tree_access_passwords")
+}
+
+// Mot de passe de partage en clair chiffré, pour que le propriétaire voie toujours celui en vigueur.
+// Table à part : écrire dans tree_access_passwords changerait updatedAt, qui sert de version aux accès ouverts.
+model TreeSharePassword {
+  treeId      String   @id
+  passwordEnc String
+  setAt       DateTime @default(now())
+  tree        Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@map("tree_share_passwords")
 }
 
 model TreeMembership {

@@ -31,6 +31,11 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    treeSharePassword: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     userTreeAccess: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
@@ -164,6 +169,9 @@ beforeEach(() => {
   })
   prismaMock.userTreeAccess.updateMany.mockResolvedValue({ count: 0 })
   prismaMock.treeAccessPasswords.update.mockResolvedValue({ treeId: 'tree-1' })
+  prismaMock.treeSharePassword.findUnique.mockResolvedValue(null)
+  prismaMock.treeSharePassword.upsert.mockResolvedValue({ treeId: 'tree-1' })
+  prismaMock.treeSharePassword.deleteMany.mockResolvedValue({ count: 0 })
   prismaMock.treeSettings.findUnique.mockResolvedValue({
     treeId: 'tree-1',
     memberContributionPolicy: 'pending',
@@ -670,6 +678,101 @@ describe('API security and authz', () => {
     const data = prismaMock.treeAccessPasswords.update.mock.calls.at(-1)?.[0]?.data
     expect(data.visitorHash).toBe(data.contributorHash)
     expect(await verifyPassword('un-seul-mot-de-passe', data.contributorHash)).toBe(true)
+    await app.close()
+  })
+
+  // Mot de passe toujours à jour chez le propriétaire (25/09/2026) : gardé chiffré par le serveur
+  it('keeps the new share password readable for the owner', async () => {
+    const { decryptSharePassword } = await import('../src/lib/share-password')
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    await app.inject({
+      method: 'PATCH',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { password: 'lilas-en-avril' },
+    })
+
+    const stored = prismaMock.treeSharePassword.upsert.mock.calls.at(-1)?.[0]?.create?.passwordEnc
+    expect(stored).not.toContain('lilas-en-avril')
+    expect(decryptSharePassword(stored)).toBe('lilas-en-avril')
+
+    prismaMock.treeSharePassword.findUnique.mockResolvedValue({ treeId: 'tree-1', passwordEnc: stored })
+    const read = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(read.statusCode).toBe(200)
+    expect(read.json().share).toBe('lilas-en-avril')
+    await app.close()
+  })
+
+  it('forgets the readable password when two different passwords are set', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    await app.inject({
+      method: 'PATCH',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { visitorPassword: 'regarder-seul' },
+    })
+
+    expect(prismaMock.treeSharePassword.deleteMany).toHaveBeenCalledWith({ where: { treeId: 'tree-1' } })
+    expect(prismaMock.treeSharePassword.upsert).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('remembers the current password without changing access', async () => {
+    const { hashPassword } = await import('../src/lib/auth')
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeAccessPasswords.findUnique.mockResolvedValue({
+      treeId: 'tree-1',
+      visitorHash: await hashPassword('ancien-visiteur'),
+      contributorHash: await hashPassword('celui-de-la-famille'),
+      updatedAt: new Date('2026-02-11T10:00:00.000Z'),
+      tree: { deletedAt: null },
+    })
+
+    const wrong = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/access/passwords/remember',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { password: 'pas-le-bon' },
+    })
+    expect(wrong.statusCode).toBe(422)
+    expect(prismaMock.treeSharePassword.upsert).not.toHaveBeenCalled()
+
+    const right = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/access/passwords/remember',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { password: 'celui-de-la-famille' },
+    })
+    expect(right.statusCode).toBe(200)
+    expect(right.json().share).toBe('celui-de-la-famille')
+    expect(prismaMock.treeSharePassword.upsert).toHaveBeenCalledTimes(1)
+    expect(prismaMock.treeAccessPasswords.update).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('refuses the readable password to anyone but an admin', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeMembership.findUnique.mockResolvedValue(null)
+
+    const read = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(read.statusCode).toBe(403)
+
+    const anonymous = await app.inject({ method: 'GET', url: '/trees/tree-1/access/passwords' })
+    expect(anonymous.statusCode).toBe(401)
     await app.close()
   })
 

@@ -212,6 +212,25 @@ export async function rotateTreePasswords(treeId, payload, token) {
   return data
 }
 
+export async function fetchSharePassword(treeId, token) {
+  return apiRequest(`/trees/${encodeURIComponent(treeId)}/access/passwords`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+}
+
+export async function rememberSharePassword(treeId, password, token) {
+  return apiRequest(`/trees/${encodeURIComponent(treeId)}/access/passwords/remember`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  })
+}
+
 export async function fetchTreeStats(treeId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/stats`, {
     method: 'GET',
