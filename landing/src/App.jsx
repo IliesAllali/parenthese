@@ -788,7 +788,8 @@ function InlineDemo() {
   const [active, setActive] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [shouldLoad, setShouldLoad] = useState(false)
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches)
+  // Faux au prérendu comme au premier rendu client (hydratation identique), corrigé par l'effet ci-dessous
+  const [isMobile, setIsMobile] = useState(false)
   const sectionRef = useRef(null)
 
   // L'iframe de l'app (500 Ko de JS + la galaxie) ne se charge qu'à l'approche de la section,
@@ -824,8 +825,8 @@ function InlineDemo() {
       <div className="wrap sec-in">
         <div className="head c" data-reveal>
           <span className="eyebrow">Un exemple</span>
-          <h2 className="t-d2">Toute une famille <em className="s">sur une page</em></h2>
-          <p className="lede">Cliquez sur un visage, sa fiche s'ouvre. C'est l'arbre de démonstration, vous pouvez l'explorer sans créer de compte.</p>
+          <h2 className="t-d2">Un arbre généalogique <em className="s">avec photos, à explorer</em></h2>
+          <p className="lede">Cliquez sur un visage pour ouvrir sa fiche. C'est un arbre de démonstration, sans compte à créer.</p>
         </div>
 
         <div className="demo-frame" data-reveal>
@@ -904,14 +905,20 @@ const GUIDES = [
   },
 ]
 
+const readSource = () => new URLSearchParams(window.location.search).get('source') || 'direct'
+
 export default function App() {
   const [headerElevated, setHeaderElevated] = useState(false)
   const [sharedReturnUrl, setSharedReturnUrl] = useState('')
   const scrollMilestonesRef = useRef({ half: false, full: false })
 
-  const source = new URLSearchParams(window.location.search).get('source') || 'direct'
+  // La page est prérendue à la compilation, sans URL : le premier rendu est toujours la variante
+  // par défaut, puis la variante `app-shared` est posée après le montage (pas d'écart d'hydratation).
+  const [source, setSource] = useState('direct')
+  useEffect(() => { setSource(readSource()) }, [])
+
   const buildEventProps = (extra = {}) => ({
-    source,
+    source: readSource(),
     referrer: document.referrer || 'none',
     viewport: window.innerWidth < 768 ? 'mobile' : 'desktop',
     ...extra,
@@ -1001,14 +1008,14 @@ export default function App() {
           <HeroGraph className="order-1 lg:order-2" />
 
           <div className="hero-txt order-2 lg:order-1">
-            <span className="pill rise"><i />Gratuit, sans compte pour lire</span>
+            <span className="pill rise"><i />Arbre généalogique gratuit, en ligne</span>
             <h1 className="t-d1 rise" style={{ animationDelay: '80ms' }}>
               L'histoire de votre famille, racontée par ceux qui <em className="s">l'ont vécue</em>
             </h1>
             <p className="lede rise" style={{ animationDelay: '160ms' }}>
               {source === 'app-shared'
                 ? "Vous venez de découvrir Parenthèse à travers le lien d'une famille. Créez la vôtre en quelques minutes."
-                : 'Des visages, des voix, des souvenirs rangés par génération. Un lien suffit pour que toute la famille y ait accès.'}
+                : "Créez l'arbre généalogique de votre famille en ligne, avec des photos, des voix et des souvenirs. Un lien suffit pour que toute la famille le consulte."}
             </p>
             <div className="ctas rise" style={{ animationDelay: '240ms' }}>
               <button type="button" onClick={() => goToSignup('hero')} className="btn p">Créer mon arbre</button>
@@ -1030,7 +1037,7 @@ export default function App() {
         <div className="wrap sec-in">
           <div className="head c" data-reveal>
             <span className="eyebrow">Comment ça marche</span>
-            <h2 className="t-d2">Trois gestes, <em className="s">pas plus</em></h2>
+            <h2 className="t-d2">Créer un arbre généalogique, <em className="s">en trois gestes</em></h2>
           </div>
           <div className="steps" data-reveal>
             <div className="card step">
@@ -1081,7 +1088,7 @@ export default function App() {
             <div className="head">
               <span className="eyebrow">Pour qui</span>
               <h2 className="t-d2">Du petit-fils de 8 ans <em className="s">à la grand-mère de 80</em></h2>
-              <p className="lede">Parenthèse se lit comme un album. Pas de jargon, pas d'arborescence à comprendre. On reconnaît quelqu'un, on clique.</p>
+              <p className="lede">Parenthèse se lit comme un album de famille. On reconnaît un visage, on clique, on écoute.</p>
             </div>
             <div className="gens" aria-hidden="true">
               <figure><div className="ph" style={{ '--s': 74, backgroundImage: 'url(/hero/photos/lya-14.webp)' }} /><figcaption>Lya, 14 ans</figcaption></figure>
@@ -1104,7 +1111,7 @@ export default function App() {
         <div className="wrap sec-in">
           <div className="head c" data-reveal>
             <span className="eyebrow">Guides</span>
-            <h2 className="t-d2">Avant de commencer, <em className="s">ou pour aller plus loin</em></h2>
+            <h2 className="t-d2">Guides pour faire <em className="s">son arbre généalogique</em></h2>
           </div>
           <div className="guides" data-reveal>
             {GUIDES.map(({ href, title, text }) => (
