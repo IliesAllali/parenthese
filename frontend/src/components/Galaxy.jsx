@@ -228,9 +228,20 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     // Grand arbre : vu en entier, les portraits deviennent des pastilles illisibles.
     // On ouvre sur la personne de départ, à une taille où l'on reconnaît les visages.
     const focusId = focusPersonIdRef.current
-    const focusNode = focusId != null
-      ? result.children.find((n) => n._type === 'person' && String(n._data?.id) === String(focusId))
+    const personNodes = result.children.filter((n) => n._type === 'person')
+    let focusNode = focusId != null
+      ? personNodes.find((n) => String(n._data?.id) === String(focusId))
       : null
+    // Sans personne de départ : la personne avec un portrait la plus proche du centre de la famille
+    if (!focusNode && personNodes.length > 0) {
+      const cx = personNodes.reduce((sum, n) => sum + n.x + n.width / 2, 0) / personNodes.length
+      const cy = personNodes.reduce((sum, n) => sum + n.y + n.height / 2, 0) / personNodes.length
+      const candidates = personNodes.some((n) => n._data?.photo) ? personNodes.filter((n) => n._data?.photo) : personNodes
+      focusNode = candidates.reduce((best, n) => {
+        const d = (n.x + n.width / 2 - cx) ** 2 + (n.y + n.height / 2 - cy) ** 2
+        return !best || d < best.d ? { n, d } : best
+      }, null)?.n || null
+    }
     if (focusNode && fitScale < FOCUS_MIN_READABLE_SCALE) {
       scale = FOCUS_SCALE
       offsetX = cssW / 2 - (focusNode.x + focusNode.width / 2) * scale
