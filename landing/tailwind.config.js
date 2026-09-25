@@ -6,20 +6,6 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        cosmos: {
-          black: '#000000',
-          cream: '#FEF9ED',
-          brown: '#5D524B',
-          gold: '#A67C52',
-          surface: '#F7ECD9',
-          yellow: '#F6E5B8',
-        },
-      },
-      fontFamily: {
-        bradford: ['Bradford LL', 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', 'serif'],
-        mono: ['Red Hat Mono', 'ui-monospace', 'monospace'],
-      },
       spacing: {
         '20fx': '0.44rem',
         '30fx': '0.67rem',
