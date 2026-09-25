@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import { readContributorName } from '../utils/contributorName.js'
 
 export async function resolveTreeBySlug(slug) {
   const data = await apiRequest(`/api/arbre/${encodeURIComponent(slug)}`)
@@ -41,11 +42,14 @@ export async function linkTreeAccess(treeId, accessToken, userToken) {
 }
 
 export async function fetchTreeGraph(treeId, token) {
+  // Prénom retenu sur cet appareil : le serveur l'inscrit au journal des visites
+  const visitorName = readContributorName()
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/graph?t=${Date.now()}`, {
     method: 'GET',
     cache: 'no-store',
     headers: {
       Authorization: `Bearer ${token}`,
+      ...(visitorName ? { 'X-Visitor-Name': encodeURIComponent(visitorName) } : {}),
     },
   })
 
@@ -291,6 +295,21 @@ export async function listTreeAuditLogs(treeId, token, options = {}) {
   return {
     logs: Array.isArray(data?.logs) ? data.logs : [],
     nextOffset: typeof data?.nextOffset === 'number' ? data.nextOffset : null,
+  }
+}
+
+// Journal des visites (administrateurs de l'arbre)
+export async function listTreeVisits(treeId, token) {
+  const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/visits`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  return {
+    summary: data?.summary || { last7: { visits: 0, visitors: 0 }, last30: { visits: 0, visitors: 0 } },
+    recent: Array.isArray(data?.recent) ? data.recent : [],
   }
 }
 

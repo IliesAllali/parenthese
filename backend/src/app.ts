@@ -15,6 +15,7 @@ import { publicRoutes } from './routes/public.js'
 import { annotationRoutes } from './routes/annotations.js'
 import { gedcomRoutes } from './routes/gedcom.js'
 import { treeRoutes } from './routes/trees.js'
+import { visitRoutes } from './routes/visits.js'
 import type { AnyJwtPayload } from './types/auth.js'
 
 export function createApp() {
@@ -115,6 +116,7 @@ export function createApp() {
   app.register(contributionRoutes)
   app.register(annotationRoutes)
   app.register(gedcomRoutes)
+  app.register(visitRoutes)
 
   app.setErrorHandler((error: FastifyError | Error, request, reply) => {
     if (error instanceof Prisma.PrismaClientInitializationError) {

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 
+import { recordTreeVisit, type VisitAccessKind } from '../lib/tree-visits.js'
 import { buildGraphPayload } from '../utils/graph-payload.js'
 
 const treeIdParamSchema = z.object({
@@ -17,6 +18,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
     const treeId = params.data.id
     const actor = request.actor
     let rootPersonId: string | null = null
+    let visitKind: VisitAccessKind = 'share'
 
     if (!actor) {
       return reply.code(401).send({ error: 'authentication_required' })
@@ -65,6 +67,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
 
       if (membership && !membership.tree.deletedAt) {
         rootPersonId = membership.tree.rootPersonId
+        visitKind = 'member'
       } else {
         const shared = await app.prisma.userTreeAccess.findUnique({
           where: {
@@ -88,8 +91,12 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
         }
 
         rootPersonId = shared.tree.rootPersonId
+        visitKind = 'shared_account'
       }
     }
+
+    // Journal des visites (onglet Visites des administrateurs), sans attendre
+    void recordTreeVisit(app, request, treeId, visitKind, actor.kind === 'user' ? actor.userId : null)
 
     const [persons, unions, links, medias, annotations] = await Promise.all([
       app.prisma.person.findMany({

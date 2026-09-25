@@ -158,6 +158,8 @@
 .pz-screen-inner { width: min(100%, 440px); display: grid; gap: 22px; }
 .pz-screen-logo { justify-self: center; height: 26px; width: auto; display: block; }
 .pz-screen-card { padding: 30px; display: grid; gap: 20px; }
+.pz-screen-close { position: fixed; top: 20px; right: 20px; z-index: 1; }
+@media (max-width: 480px) { .pz-screen-close { top: 12px; right: 12px; } }
 @media (max-width: 480px) { .pz-screen-card { padding: 24px 20px; } }
 
 /* ── Menus ────────────────────────────────────────────────────── */

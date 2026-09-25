@@ -30,6 +30,17 @@
 .ts-choice-text small { font: 400 13px/1.45 var(--pz-sans); color: var(--pz-muted); }
 
 .ts-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); }
+
+/* ── Visites ── */
+.tv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tv-stat { display: grid; gap: 2px; padding: 14px 16px; border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); background: var(--pz-surface); }
+.tv-stat-value { margin: 4px 0 0; font: 400 24px/1.15 var(--pz-serif); color: var(--pz-ink); }
+.tv-list { display: grid; gap: 8px; padding-top: 16px; border-top: 1px solid var(--pz-line); }
+.tv-list ul { list-style: none; margin: 0; padding: 0; display: grid; max-height: 320px; overflow: auto; }
+.tv-row { display: grid; gap: 1px; padding: 9px 0; border-bottom: 1px solid var(--pz-line); }
+.tv-row:last-child { border-bottom: 0; }
+.tv-name { font: 500 14px/1.35 var(--pz-sans); color: var(--pz-ink); }
+.tv-row.is-you .tv-name { color: var(--pz-muted); }
 .ts-row--muted { opacity: .6; }
 .ts-row-text { display: grid; gap: 4px; min-width: 0; }
 .ts-row-text strong { font: 500 14.5px var(--pz-sans); color: var(--pz-ink); }

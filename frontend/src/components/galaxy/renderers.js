@@ -97,6 +97,8 @@ export const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
 const BUS_DY = 100
 // Rayon horizontal des virages (plafonné à la moitié de l'écart union → enfant)
 const BUS_TURN = 56
+// En dessous de cet écart union → enfant, pas de virage
+const BUS_STRAIGHT_DX = 30
 
 function busY(sourceId, sy) {
   let h = 0
@@ -109,7 +111,8 @@ function traceBus(ctx, sx, sy, by, ex, ey) {
   const dx = ex - sx
   ctx.beginPath()
   ctx.moveTo(sx, sy)
-  if (Math.abs(dx) < 1) { ctx.lineTo(ex, ey); ctx.stroke(); return }
+  // Enfant presque sous l'union (enfant unique, décalage aléatoire de quelques px) : trait direct, pas de S
+  if (Math.abs(dx) < BUS_STRAIGHT_DX) { ctx.lineTo(ex, ey); ctx.stroke(); return }
   const dir = Math.sign(dx)
   const turn = Math.min(BUS_TURN, Math.abs(dx) / 2)
   // Descente de l'union, virage large vers la ligne de la fratrie

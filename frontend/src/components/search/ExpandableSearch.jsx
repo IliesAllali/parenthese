@@ -27,12 +27,15 @@ function ExpandableSearch({
 }) {
   const [expanded, setExpanded] = useState(false)
   const [query, setQuery] = useState('')
+  // Après un choix, la liste se replie pour laisser voir la personne dans l'arbre ; toucher le champ la rouvre
+  const [resultsHidden, setResultsHidden] = useState(false)
   const inputRef = useRef(null)
   const containerRef = useRef(null)
 
   const handleCollapse = useCallback(() => {
     setExpanded(false)
     setQuery('')
+    setResultsHidden(false)
     onClear?.()
   }, [onClear])
 
@@ -79,12 +82,15 @@ function ExpandableSearch({
   const handleInputChange = (e) => {
     const value = e.target.value
     setQuery(value)
+    setResultsHidden(false)
     onSearch?.(value)
   }
 
   const handleResultClick = (person) => {
     onResultClick?.(person)
-    // On ne collapse pas après clic pour permettre de cliquer sur d'autres résultats
+    // La recherche reste ouverte (le champ garde la saisie), seule la liste se replie
+    setResultsHidden(true)
+    inputRef.current?.blur()
   }
 
   return (
@@ -114,6 +120,7 @@ function ExpandableSearch({
               placeholder="Un prénom, un nom, une ville"
               value={query}
               onChange={handleInputChange}
+              onFocus={() => setResultsHidden(false)}
               aria-label="Rechercher une personne"
             />
             <button
@@ -127,7 +134,7 @@ function ExpandableSearch({
           </div>
 
           {/* Dropdown résultats */}
-          {query.trim().length >= 2 && (
+          {query.trim().length >= 2 && !resultsHidden && (
             <SearchResultsDropdown
               results={results}
               query={query}
