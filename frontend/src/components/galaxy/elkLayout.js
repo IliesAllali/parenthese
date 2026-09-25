@@ -1,7 +1,7 @@
 import { persons as globalPersons, unions as globalUnions, filiations as globalFiliations } from '../../data/mockData'
 import {
   PERSON_W, PERSON_H, UNION_W, UNION_H,
-  UNKNOWN_W, UNKNOWN_H,
+  UNKNOWN_W, UNKNOWN_H, COMPACT_W, COMPACT_JOIN_GAP,
   JITTER_RADIUS, FLOAT_AMPLITUDE, FLOAT_SPEED,
   ANGLE_VARIATION, MAX_ORBIT_MEDIAS, ORBIT_RADIUS,
 } from './constants'
@@ -23,6 +23,15 @@ function compareByOrderThenId(a, b) {
   const orderDiff = toOrder(a.displayOrder) - toOrder(b.displayOrder)
   if (orderDiff !== 0) return orderDiff
   return String(a.id || '').localeCompare(String(b.id || ''))
+}
+
+// Écart entre deux nœuds voisins d'une chaîne de couples. Autour d'une union de conjoint isolé :
+// rien côté conjoint, un écart négatif côté partenaire, pour que le petit portrait se colle à lui.
+export function chainGap(a, b, spacing) {
+  const compactUnion = a?._compact && a._type === 'union' ? a : b?._compact && b._type === 'union' ? b : null
+  if (!compactUnion) return spacing
+  const other = compactUnion === a ? b : a
+  return other?._compact ? 0 : COMPACT_JOIN_GAP
 }
 
 function makePairKey(a, b) {
@@ -259,6 +268,35 @@ export function computeLayout(graphData = null) {
   }
 
   // ----------------------------------------------------------
+  // Conjoints isolés : mariés une seule fois, sans parent ni enfant dans l'arbre.
+  // Dessinés en petit à côté du partenaire (voir COMPACT_* dans constants.js).
+  // Si les deux partenaires sont isolés, seul le second passe en petit.
+  // ----------------------------------------------------------
+  const linkedByFiliation = new Set()
+  normalizedFiliations.forEach(f => {
+    linkedByFiliation.add(f.childId)
+    if (f.parentId) linkedByFiliation.add(f.parentId)
+    const u = f.unionId ? unionsById.get(f.unionId) : null
+    if (u) { linkedByFiliation.add(u.partner1Id); linkedByFiliation.add(u.partner2Id) }
+  })
+  const unionCount = new Map()
+  unions.forEach(u => {
+    for (const pid of [u.partner1Id, u.partner2Id]) unionCount.set(pid, (unionCount.get(pid) || 0) + 1)
+  })
+  const isLoneSpouse = (pid) => !linkedByFiliation.has(pid) && unionCount.get(pid) === 1
+  const compactPartnerOf = new Map() // conjoint isolé → partenaire
+  const compactUnionIds = new Map() // union de conjoint isolé → partenaire
+  unions.forEach(u => {
+    if (!u.partner1Id || !u.partner2Id) return
+    let lone = null, partner = null
+    if (isLoneSpouse(u.partner2Id)) { lone = u.partner2Id; partner = u.partner1Id }
+    else if (isLoneSpouse(u.partner1Id) && !isLoneSpouse(u.partner2Id)) { lone = u.partner1Id; partner = u.partner2Id }
+    if (!lone) return
+    compactPartnerOf.set(lone, partner)
+    compactUnionIds.set(`u-${u.id}`, `p-${partner}`)
+  })
+
+  // ----------------------------------------------------------
   // PHASE 2 : Créer les nœuds du graphe
   // ----------------------------------------------------------
   const allNodes = []
@@ -390,9 +428,11 @@ export function computeLayout(graphData = null) {
       if (key.startsWith('p-')) {
         const person = personByElkId.get(key)
         if (person) {
+          const compactPartner = compactPartnerOf.get(person.id)
           pushNode({
-            id: key, width: PERSON_W, height: PERSON_H,
+            id: key, width: compactPartner ? COMPACT_W : PERSON_W, height: PERSON_H,
             _type: 'person', _data: person, _generation: gen,
+            ...(compactPartner ? { _compact: true, _compactPartner: `p-${compactPartner}` } : {}),
           })
         }
       } else if (key.startsWith('unknown-')) {
@@ -407,7 +447,8 @@ export function computeLayout(graphData = null) {
 
       for (const { unionElkId, otherKey } of neighbors) {
         pushNode({
-          id: unionElkId, width: UNION_W, height: UNION_H,
+          id: unionElkId, width: compactUnionIds.has(unionElkId) ? 0 : UNION_W, height: UNION_H,
+          ...(compactUnionIds.has(unionElkId) ? { _compact: true, _compactPartner: compactUnionIds.get(unionElkId) } : {}),
           _type: 'union',
           _data: unionEntryByElkId.get(unionElkId) || { id: unionElkId },
           _generation: gen,
@@ -513,17 +554,16 @@ export function computeLayout(graphData = null) {
 
   function getComponentWidth(compNodeIds, nodeSpacing) {
     const nodes = compNodeIds.map(id => nodeById.get(id)).filter(Boolean)
-    return nodes.reduce((sum, n) => sum + n.width, 0) + Math.max(0, nodes.length - 1) * nodeSpacing
+    return nodes.reduce((sum, n, i) => sum + n.width + (i ? chainGap(nodes[i - 1], n, nodeSpacing) : 0), 0)
   }
 
   function placeComponentAt(compNodeIds, left, nodeSpacing) {
+    const nodes = compNodeIds.map(id => nodeById.get(id)).filter(Boolean)
     let x = left
-    for (const nodeId of compNodeIds) {
-      const node = nodeById.get(nodeId)
-      if (!node) continue
+    nodes.forEach((node, i) => {
       node.x = x
-      x += node.width + nodeSpacing
-    }
+      x += node.width + chainGap(node, nodes[i + 1], nodeSpacing)
+    })
   }
 
   // Helper : trier avec regroupement des fratries (union-find)
@@ -735,8 +775,29 @@ export function computeLayout(graphData = null) {
 // ============================================================
 // Données aléatoires par nœud (offset, flottement, angle)
 // ============================================================
-export function generateNodeRandomData(children) {
+export function generateNodeRandomData(children, edges = []) {
   const data = new Map()
+  // Enfant d'un renvoi : la pastille « Voir les parents » occupe le haut du portrait, l'orbite reste sur les côtés
+  const renvoiChildren = new Set(edges.filter(e => e._renvoi).map(e => e.targets[0]))
+  const deg = (d) => d * Math.PI / 180
+  // Partenaire d'un conjoint isolé : ses souvenirs en orbite passent du côté opposé au petit portrait
+  const compactSide = new Map()
+  const byId = new Map(children.map(n => [n.id, n]))
+  children.forEach(node => {
+    const partner = node._compact && node._type === 'person' ? byId.get(node._compactPartner) : null
+    if (partner) compactSide.set(partner.id, node.x > partner.x ? 1 : -1)
+  })
+  const orbitAngle = (nodeId, i) => {
+    const side = compactSide.get(nodeId)
+    if (renvoiChildren.has(nodeId)) {
+      const angles = side ? [180, 152, 208] : [175, 5, 150]
+      return deg(side < 0 ? 180 - angles[i] : angles[i])
+    }
+    if (!side) return (3 * Math.PI / 4) + (Math.PI * 1.5 * (i + 0.5) / MAX_ORBIT_MEDIAS)
+    const a = (3 * Math.PI / 4) + (Math.PI * (i + 0.5) / MAX_ORBIT_MEDIAS)
+    return side > 0 ? a : Math.PI - a
+  }
+
   children.forEach(node => {
     const angle = Math.random() * Math.PI * 2
     const radius = Math.random() * JITTER_RADIUS
@@ -752,16 +813,23 @@ export function generateNodeRandomData(children) {
       anchorAngleOffset: (Math.random() - 0.5) * ANGLE_VARIATION * 2,
       labelRotation: (Math.random() - 0.5) * 0.12,
       frameRotation: (Math.random() - 0.5) * 0.15,
-      orbitSlots: Array.from({ length: MAX_ORBIT_MEDIAS }, (_, i) => {
-        const safeArc = Math.PI * 1.5
-        const baseAngle = (3 * Math.PI / 4) + (safeArc * (i + 0.5) / MAX_ORBIT_MEDIAS)
-        return {
-          angle: baseAngle + (Math.random() - 0.5) * 0.5,
-          dist: ORBIT_RADIUS + (Math.random() - 0.5) * 12,
-          rot: (Math.random() - 0.5) * 0.3,
-        }
-      }),
+      // Conjoint isolé : pas d'orbite (ses souvenirs restent dans sa fiche)
+      orbitSlots: node._compact ? [] : Array.from({ length: MAX_ORBIT_MEDIAS }, (_, i) => ({
+        angle: orbitAngle(node.id, i) + (Math.random() - 0.5) * (renvoiChildren.has(node.id) ? 0.2 : 0.5),
+        dist: ORBIT_RADIUS + (Math.random() - 0.5) * 12,
+        rot: (Math.random() - 0.5) * 0.3,
+      })),
     })
+  })
+  // Le petit portrait suit le décalage de son partenaire, sinon l'écart entre eux varie du simple au triple
+  children.forEach(node => {
+    if (!node._compact) return
+    const rdPartner = data.get(node._compactPartner)
+    if (!rdPartner) return
+    const rd = data.get(node.id)
+    rd.offsetX = rdPartner.offsetX
+    rd.offsetY = rdPartner.offsetY
+    rd.anchorAngleOffset = 0
   })
   return data
 }

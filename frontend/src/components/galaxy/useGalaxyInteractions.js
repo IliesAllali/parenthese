@@ -1,6 +1,9 @@
 import { useRef, useCallback } from 'react'
 import { getPersonMedias } from '../../data/mockData'
-import { PERSON_R, MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE } from './constants'
+import { MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE } from './constants'
+import { nodeRadius, renvoiHitAreas } from './renderers'
+
+const hitRenvoi = (x, y) => renvoiHitAreas.find(a => x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1)
 import { getEntranceProgress } from './utils'
 
 const CURSOR_GRAB = 'default'
@@ -128,12 +131,13 @@ export function useGalaxyInteractions({
           }
         }
         if (isOverClickable) break
-        if (Math.sqrt((pos.cx - mouseWorldPosRef.current.x) ** 2 + (pos.cy - mouseWorldPosRef.current.y) ** 2) < PERSON_R) {
+        if (Math.sqrt((pos.cx - mouseWorldPosRef.current.x) ** 2 + (pos.cy - mouseWorldPosRef.current.y) ** 2) < nodeRadius(node)) {
           isOverClickable = true
           newHoveredNode = node.id
           break
         }
       }
+      if (!isOverClickable && hitRenvoi(mouseWorldPosRef.current.x, mouseWorldPosRef.current.y)) isOverClickable = true
       hoveredNodeIdRef.current = newHoveredNode
       hoveredMediaKeyRef.current = newHoveredMedia
 
@@ -265,12 +269,24 @@ export function useGalaxyInteractions({
         if (ns && getEntranceProgress(now - ent.startTime, ns.startMs, ns.duration) < 0.5) continue
       }
       const pos = getAnimatedPos(node, now)
-      if (Math.sqrt((pos.cx - clickX) ** 2 + (pos.cy - clickY) ** 2) < PERSON_R) {
+      if (Math.sqrt((pos.cx - clickX) ** 2 + (pos.cy - clickY) ** 2) < nodeRadius(node)) {
         onPersonSelect(node._data)
         return
       }
     }
-  }, [canvasRef, transformRef, layoutDataRef, nodeRandomDataRef, entranceRef, getAnimatedPos, onPersonSelect, onMediaSelect, annotationHandlers])
+
+    // Renvoi : on glisse vers l'autre extrémité (parents ou enfant), sans dézoomer en dessous de la lecture des prénoms
+    const renvoi = hitRenvoi(clickX, clickY)
+    if (renvoi) {
+      const rect2 = canvasRef.current.getBoundingClientRect()
+      const scale = Math.max(t.scale, 0.8)
+      targetTransformRef.current = {
+        scale,
+        x: rect2.width / 2 - renvoi.targetX * scale,
+        y: rect2.height / 2 - renvoi.targetY * scale,
+      }
+    }
+  }, [canvasRef, transformRef, targetTransformRef, layoutDataRef, nodeRandomDataRef, entranceRef, getAnimatedPos, onPersonSelect, onMediaSelect, annotationHandlers])
 
   return {
     isDragging, isZooming, zoomTimeoutRef, hasDragged,
