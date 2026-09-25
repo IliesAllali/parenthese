@@ -1,8 +1,8 @@
-import type { PrismaClient } from '@prisma/client'
+import type { Prisma } from '@prisma/client'
 
 // Renumérote les souvenirs acceptés d'une personne et met en avant les trois premiers.
 // Les souvenirs en attente de relecture ne comptent pas.
-export async function syncPersonMediaOrder(prisma: PrismaClient, treeId: string, personId: string): Promise<void> {
+export async function syncPersonMediaOrder(prisma: Prisma.TransactionClient, treeId: string, personId: string): Promise<void> {
   const media = await prisma.mediaItem.findMany({
     where: {
       treeId,

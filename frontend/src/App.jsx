@@ -61,6 +61,7 @@ import {
 import './App.css'
 import './styles/pz.css'
 import { setBooting } from './bootSignal.js'
+import { saveContributorName } from './utils/contributorName'
 
 function yearToIsoDate(value) {
   if (value === null || value === undefined || value === '') {
@@ -202,10 +203,14 @@ function buildContributionChangesFromDraft(draft = {}) {
     if (!person || typeof person !== 'object') continue
     if (!person.firstName || !person.lastName) continue
 
+    // Identifiant provisoire : le serveur le remplace par le vrai id pour créer les liens
+    const ref = typeof person.ref === 'string' && person.ref.startsWith('tmp:') ? person.ref : null
+
     changes.push({
       entityType: 'person',
       action: 'create',
       after: {
+        ...(ref ? { ref } : {}),
         firstName: String(person.firstName).trim(),
         lastName: String(person.lastName).trim(),
         birthName: person.birthName ? String(person.birthName).trim() : null,
@@ -213,6 +218,32 @@ function buildContributionChangesFromDraft(draft = {}) {
         deathDate: person.deathDate || null,
       },
     })
+
+    if (!ref) continue
+
+    const linkedParentIds = new Set()
+    for (const rel of Array.isArray(person.relations) ? person.relations : []) {
+      if (!rel?.personId) continue
+      const relatedId = String(rel.personId)
+      if (rel.type === 'child') {
+        linkedParentIds.add(relatedId)
+        changes.push({ entityType: 'parent_child_link', action: 'create', after: { parentPersonId: relatedId, childPersonId: ref, parentageType: 'biologique' } })
+      } else if (rel.type === 'parent') {
+        changes.push({ entityType: 'parent_child_link', action: 'create', after: { parentPersonId: ref, childPersonId: relatedId, parentageType: 'biologique' } })
+      } else if (rel.type === 'spouse') {
+        changes.push({ entityType: 'union', action: 'create', after: { partner1PersonId: relatedId, partner2PersonId: ref, unionType: 'mariage' } })
+      }
+    }
+
+    for (const link of Array.isArray(person.siblingParentLinks) ? person.siblingParentLinks : []) {
+      if (!link?.parentId || linkedParentIds.has(String(link.parentId))) continue
+      linkedParentIds.add(String(link.parentId))
+      changes.push({
+        entityType: 'parent_child_link',
+        action: 'create',
+        after: { parentPersonId: String(link.parentId), childPersonId: ref, viaUnionId: link.unionId || null, parentageType: 'biologique' },
+      })
+    }
   }
 
   const modifiedPersons = draft.modifiedPersons && typeof draft.modifiedPersons === 'object'
@@ -349,10 +380,11 @@ function buildContributionChangesFromDraft(draft = {}) {
 
 function buildContribChangesList(draft = {}) {
   const items = []
-  const addedPersonIds = (Array.isArray(draft.addedPersons) ? draft.addedPersons : []).map(String)
+  const addedPersonEntries = Array.isArray(draft.addedPersons) ? draft.addedPersons : []
+  const addedPersonIds = addedPersonEntries.filter((entry) => typeof entry !== 'object').map(String)
 
-  for (const id of addedPersonIds) {
-    const d = draft.modifiedPersons?.[id] || {}
+  for (const entry of addedPersonEntries) {
+    const d = entry && typeof entry === 'object' ? entry : (draft.modifiedPersons?.[String(entry)] || {})
     const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Nouvelle personne'
     items.push({ entityType: 'person', action: 'create', label: name })
   }
@@ -812,6 +844,10 @@ function App() {
 
   // Panneau ajout personne
   const [addPersonPanelVisible, setAddPersonPanelVisible] = useState(false)
+  // Quitter le mode édition ferme le panneau d'ajout (sinon il réapparaît au retour, vide)
+  useEffect(() => {
+    if (!editMode.isActive) setAddPersonPanelVisible(false)
+  }, [editMode.isActive])
   const [addPersonLoading, setAddPersonLoading] = useState(false)
   const [addPersonError, setAddPersonError] = useState('')
 
@@ -835,7 +871,7 @@ function App() {
       // Un frère ou une sœur reçoit les mêmes parents que la personne choisie :
       // sans parent connu, on s'arrête avant de créer quoi que ce soit.
       const siblingParentLinks = []
-      if (tree.canEditCurrentTree || isDemoMode) {
+      if (Array.isArray(formData.relations)) {
         for (const rel of formData.relations) {
           if (rel.type !== 'sibling') continue
           const links = getSiblingParentLinks(rel.personId, filiations, unions)
@@ -934,14 +970,20 @@ function App() {
         const addedPersons = [
           ...(draft.addedPersons || []),
           {
+            ref: `tmp:${makeLocalId('personne')}`,
             firstName: formData.firstName,
             lastName: formData.lastName,
             birthName: formData.birthName || null,
             birthDate: formData.birthDate || null,
             deathDate: formData.deathDate || null,
+            relations: (formData.relations || []).map((rel) => ({ type: rel.type, personId: rel.personId })),
+            siblingParentLinks,
           },
         ]
         editMode.updateDraft({ addedPersons })
+        // La personne n'apparaît dans l'arbre qu'après relecture : le dire, et fermer le panneau
+        setAddPersonPanelVisible(false)
+        setDraftNotice(`${formData.firstName} est dans vos modifications. Envoyez-les quand vous avez fini.`)
         return
       }
 
@@ -1019,6 +1061,12 @@ function App() {
   const [contribSubmitLoading, setContribSubmitLoading] = useState(false)
   const [contribSubmitError, setContribSubmitError] = useState('')
   const [contribSuccess, setContribSuccess] = useState(false)
+  const [draftNotice, setDraftNotice] = useState('')
+  useEffect(() => {
+    if (!draftNotice) return undefined
+    const timer = setTimeout(() => setDraftNotice(''), 4500)
+    return () => clearTimeout(timer)
+  }, [draftNotice])
 
   // Soumission des modifications
   const handleEditSubmit = useCallback(async () => {
@@ -1114,7 +1162,7 @@ function App() {
     }
   }, [userRole.isAdmin, auth.userAuth.token, tree.treeContext.treeId, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleContribSessionSubmit = useCallback(async ({ comment }) => {
+  const handleContribSessionSubmit = useCallback(async ({ comment, name }) => {
     setContribSubmitLoading(true)
     setContribSubmitError('')
 
@@ -1129,10 +1177,16 @@ function App() {
 
       const now = new Date()
       const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      const userName = auth.userAuth.user?.name || 'Anonyme'
-      const title = `Contribution de ${userName} · ${dateStr}`
+      const contributorName = (name || auth.userAuth.user?.name || '').trim()
+      if (name) saveContributorName(name)
+      const title = `Contribution de ${contributorName || 'la famille'} · ${dateStr}`.slice(0, 120)
 
-      const result = await contrib.handleSubmitContributionSession({ title, comment, changes })
+      const result = await contrib.handleSubmitContributionSession({
+        title,
+        comment: comment || null,
+        ...(contributorName ? { submittedByLabel: contributorName } : {}),
+        changes,
+      })
 
       if (!result?.ok) {
         setContribSubmitError(result?.error || "Erreur lors de l'envoi des contributions")
@@ -2431,13 +2485,17 @@ function App() {
         })()}
         loading={contribSubmitLoading}
         error={contribSubmitError}
+        askName={!auth.userAuth.user?.name}
         onSubmit={handleContribSessionSubmit}
         onCancel={() => setShowContribModal(false)}
       />
       {/* Toast succès contribution */}
+      {draftNotice && !contribSuccess && (
+        <div className="contrib-success-toast" role="status">{draftNotice}</div>
+      )}
       {contribSuccess && (
         <div className="contrib-success-toast" role="status">
-          Contribution envoyée — merci&nbsp;!
+          Contribution envoyée, merci&nbsp;!
         </div>
       )}
       {/* Navbar contextuelle */}

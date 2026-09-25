@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Send, X } from 'lucide-react'
 import './ContributionSessionModal.css'
 import PzBusy from './PzBusy.jsx'
+import { readContributorName } from '../utils/contributorName'
 
 function formatAction(action) {
   if (action === 'create') return 'Ajout'
@@ -23,13 +24,15 @@ function formatAction(action) {
  * @param {Function} props.onSubmit - Handler soumission ({ comment })
  * @param {Function} props.onCancel - Handler annulation
  */
-function ContributionSessionModal({ visible, changes = [], recap = {}, loading = false, error = '', onSubmit, onCancel }) {
+function ContributionSessionModal({ visible, changes = [], recap = {}, loading = false, error = '', askName = true, onSubmit, onCancel }) {
   const [comment, setComment] = useState('')
+  const [name, setName] = useState('')
 
-  // Reset à l'ouverture
+  // Reset à l'ouverture ; le prénom déjà donné sur cet appareil est repris
   useEffect(() => {
     if (visible) {
       setComment('')
+      setName(readContributorName())
     }
   }, [visible])
 
@@ -47,7 +50,8 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSubmit({ comment: comment.trim() })
+    if (askName && !name.trim()) return
+    onSubmit({ comment: comment.trim(), name: name.trim() })
   }
 
   const totalChanges = (recap.added || 0) + (recap.modified || 0) + (recap.deleted || 0)
@@ -94,6 +98,20 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
         )}
 
         <form className="cs-form" onSubmit={handleSubmit}>
+          {askName && (
+            <div className="pz-field">
+              <label htmlFor="cs-name">Votre prénom</label>
+              <input
+                id="cs-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value.slice(0, 120))}
+                placeholder="Pour que la famille sache qui a ajouté quoi"
+                autoComplete="given-name"
+                required
+              />
+            </div>
+          )}
           <div className="pz-field">
             <label htmlFor="cs-comment">
               Un mot pour accompagner <span className="cs-optional">facultatif</span>
@@ -115,7 +133,7 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
             <button type="button" className="pz-btn pz-btn--ghost" onClick={onCancel} disabled={loading}>
               Annuler
             </button>
-            <button type="submit" className="pz-btn pz-btn--primary" disabled={loading}>
+            <button type="submit" className="pz-btn pz-btn--primary" disabled={loading || (askName && !name.trim())}>
               <Send size={16} strokeWidth={2} />
               <PzBusy busy={loading} busyLabel="Envoi en cours">Envoyer mes contributions</PzBusy>
             </button>

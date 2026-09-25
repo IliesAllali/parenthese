@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_BASE_URL } from '../api/client'
+import { persons as treePersons } from '../data/mockData'
 import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
 import './SettingsPanels.css'
 import PzBusy from './PzBusy.jsx'
@@ -71,7 +72,39 @@ function displayVal(v) {
   return String(v)
 }
 
-function getPersonDisplayName(change) {
+// Nom d'une personne citée par un lien : dans l'arbre, ou ajoutée dans la même contribution (id provisoire « tmp: »)
+function nameOfPersonRef(id, sessionChanges = []) {
+  if (!id) return null
+  const key = String(id)
+  if (key.startsWith('tmp:')) {
+    const added = sessionChanges.find((c) => c.entityType === 'person' && c.afterJson?.ref === key)
+    const name = `${added?.afterJson?.firstName || ''} ${added?.afterJson?.lastName || ''}`.trim()
+    return name || 'la nouvelle personne'
+  }
+  const person = treePersons.find((candidate) => String(candidate.id) === key)
+  const name = `${person?.firstName || ''} ${person?.lastName || ''}`.trim()
+  return name || null
+}
+
+function getRelationLabel(change, sessionChanges) {
+  const data = change.afterJson && typeof change.afterJson === 'object' ? change.afterJson : null
+  if (!data) return null
+  if (change.entityType === 'parent_child_link') {
+    const child = nameOfPersonRef(data.childPersonId, sessionChanges)
+    const parent = nameOfPersonRef(data.parentPersonId, sessionChanges)
+    return child && parent ? `${child}, enfant de ${parent}` : null
+  }
+  if (change.entityType === 'union') {
+    const a = nameOfPersonRef(data.partner1PersonId, sessionChanges)
+    const b = nameOfPersonRef(data.partner2PersonId, sessionChanges)
+    return a && b ? `${a} et ${b}` : null
+  }
+  return null
+}
+
+function getPersonDisplayName(change, sessionChanges = []) {
+  const relationLabel = getRelationLabel(change, sessionChanges)
+  if (relationLabel) return relationLabel
   if (change.entityType === 'annotation') {
     const data = change.afterJson || change.after || {}
     return formatAnnotationType(data.type)
@@ -413,7 +446,7 @@ const ContributionPanel = ({
                           const decision = getChangeDecision(session.id, change.id)
                           const isApproved = decision === 'approved'
                           const isRejected = decision === 'rejected'
-                          const personName = getPersonDisplayName(change)
+                          const personName = getPersonDisplayName(change, session.changes || [])
                           const fields = getFieldRows(change)
                           const annPreview = change.entityType === 'annotation' ? getAnnotationPreview(change) : null
                           const mediaPreview = change.entityType === 'media' ? getMediaPreview(change, treeId, mediaToken) : null
