@@ -167,6 +167,20 @@ function formatSessionDate(value) {
   })
 }
 
+// Message d'invitation prêt à envoyer par mail, SMS ou WhatsApp
+function buildInviteText(url, password) {
+  return [
+    'Bonjour à tous,',
+    '',
+    "Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter.",
+    '',
+    `L'arbre est ici ${url}`,
+    `Le mot de passe pour l'ouvrir est ${password}`,
+    '',
+    'Avec le crayon en bas à droite, vous pouvez ajouter une photo, un souvenir ou une personne qui manque.',
+  ].join('\n')
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 const ContributionPanel = ({
@@ -186,13 +200,15 @@ const ContributionPanel = ({
   onClose,
   onRefresh,
   onRotatePasswords,
+  onRememberPassword,
   onReviewSession,
 }) => {
   const [decisionMap, setDecisionMap] = useState({})
   const [collapsedSessions, setCollapsedSessions] = useState(new Set())
   const [confirmApproveAll, setConfirmApproveAll] = useState(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [editingPassword, setEditingPassword] = useState(false)
+  // '' | 'change' (nouveau mot de passe) | 'remember' (arbre d'avant : saisir celui déjà donné)
+  const [passwordMode, setPasswordMode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [inviteLocalError, setInviteLocalError] = useState('')
   const [copyFeedback, setCopyFeedback] = useState('')
@@ -279,10 +295,15 @@ const ContributionPanel = ({
 
   useEffect(() => {
     if (!visible) return
-    setEditingPassword(false)
+    setPasswordMode('')
     setNewPassword('')
     setInviteLocalError('')
   }, [inviteKnownPasswords?.share, visible])
+
+  const knownShare = inviteKnownPasswords?.share || ''
+  const defaultInviteText = knownShare && inviteShareUrl ? buildInviteText(inviteShareUrl, knownShare) : ''
+  const [inviteText, setInviteText] = useState('')
+  useEffect(() => { setInviteText(defaultInviteText) }, [defaultInviteText])
 
   const handleCopy = async (value, label) => {
     const text = String(value || '').trim()
@@ -294,9 +315,15 @@ const ContributionPanel = ({
   const handleSavePassword = async (e) => {
     e.preventDefault()
     setInviteLocalError('')
+    if (passwordMode === 'remember') {
+      if (!newPassword.trim()) return
+      const result = await onRememberPassword?.({ password: newPassword.trim() })
+      if (result?.ok) { setPasswordMode(''); setNewPassword('') }
+      return
+    }
     if (newPassword.trim().length < 8) { setInviteLocalError('Minimum 8 caractères.'); return }
     const result = await onRotatePasswords?.({ password: newPassword.trim() })
-    if (result?.ok) { setEditingPassword(false); setNewPassword('') }
+    if (result?.ok) { setPasswordMode(''); setNewPassword('') }
   }
 
   if (!visible) return null
@@ -334,22 +361,36 @@ const ContributionPanel = ({
               <div className="contrib-invite-passwords">
                 <div className="contrib-role-row">
                   <span className="contrib-role-badge"><strong>Mot de passe</strong><small>pour regarder et ajouter</small></span>
-                  {editingPassword ? (
+                  {passwordMode ? (
                     <form className="contrib-pass-edit-inline" onSubmit={handleSavePassword}>
-                      <input className="contrib-pass-edit-input" type="text" value={newPassword} placeholder="8 caractères minimum" autoFocus autoComplete="off" onChange={(e) => setNewPassword(e.target.value)} />
-                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy></button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingPassword(false); setNewPassword(''); setInviteLocalError('') }}>Annuler</button>
+                      <input className="contrib-pass-edit-input" type="text" value={newPassword} placeholder={passwordMode === 'remember' ? 'Celui déjà donné à la famille' : '8 caractères minimum'} aria-label={passwordMode === 'remember' ? 'Mot de passe actuel' : 'Nouveau mot de passe'} autoFocus autoComplete="off" onChange={(e) => setNewPassword(e.target.value)} />
+                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">{passwordMode === 'remember' ? 'Vérifier' : 'Enregistrer'}</PzBusy></button>
+                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setPasswordMode(''); setNewPassword(''); setInviteLocalError('') }}>Annuler</button>
                     </form>
                   ) : (
                     <>
-                      <button type="button" className={`contrib-pass-reveal${inviteKnownPasswords?.share && !showPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowPassword((v) => !v)} disabled={!inviteKnownPasswords?.share} title={showPassword ? 'Cliquer pour masquer' : 'Cliquer pour révéler'}>{inviteKnownPasswords?.share || 'Inconnu sur cet appareil'}</button>
-                      {inviteKnownPasswords?.share && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(inviteKnownPasswords.share, 'Mot de passe copié')}>Copier</button>}
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setEditingPassword(true)}>{inviteKnownPasswords?.share ? 'Changer' : 'Définir'}</button>
+                      <button type="button" className={`contrib-pass-reveal${knownShare && !showPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowPassword((v) => !v)} disabled={!knownShare} title={showPassword ? 'Cliquer pour masquer' : 'Cliquer pour révéler'}>{knownShare || 'Pas encore enregistré'}</button>
+                      {knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(knownShare, 'Mot de passe copié')}>Copier</button>}
+                      {!knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('remember')}>Saisir l'actuel</button>}
+                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('change')}>Changer</button>
                     </>
                   )}
                 </div>
-                <p className="contrib-pass-hint">Changer le mot de passe oblige les personnes qui ont déjà ouvert l'arbre à saisir le nouveau.</p>
+                <p className="contrib-pass-hint">
+                  {passwordMode === 'remember' || (!knownShare && !passwordMode)
+                    ? "Déjà donné à la famille ? Saisissez-le ici. Il est vérifié puis gardé, rien ne change pour ceux qui ont déjà ouvert l'arbre."
+                    : "Changer le mot de passe oblige les personnes qui ont déjà ouvert l'arbre à saisir le nouveau."}
+                </p>
               </div>
+              {defaultInviteText && (
+                <div className="contrib-invite-message">
+                  <label className="contrib-invite-title" htmlFor="contrib-invite-text">Le message à envoyer</label>
+                  <textarea id="contrib-invite-text" className="contrib-invite-textarea" rows={9} value={inviteText} onChange={(e) => setInviteText(e.target.value)} />
+                  <div className="contrib-invite-message-actions">
+                    <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" onClick={() => handleCopy(inviteText, 'Message copié')}><Copy size={14} strokeWidth={2} />Copier le message</button>
+                  </div>
+                </div>
+              )}
               {(inviteLocalError || inviteError) && <div className="contrib-error">{inviteLocalError || inviteError}</div>}
               {inviteMessage && <div className="contrib-ok">{inviteMessage}</div>}
             </div>

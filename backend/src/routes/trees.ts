@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
+import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
@@ -49,6 +50,10 @@ const patchPasswordsSchema = z
   .refine((value) => Boolean(value.password || value.visitorPassword || value.contributorPassword), {
     message: 'at_least_one_password_required',
   })
+
+const rememberPasswordSchema = z.object({
+  password: z.string().min(1).max(128),
+})
 
 const patchTreeSettingsSchema = z
   .object({
@@ -419,6 +424,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
               contributorHash,
             },
           },
+          ...(parsed.data.visitorPassword === parsed.data.contributorPassword
+            ? { sharePassword: { create: { passwordEnc: encryptSharePassword(parsed.data.visitorPassword) } } }
+            : {}),
           memberships: {
             create: {
               userId: user.userId,
@@ -838,6 +846,73 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ treeId: params.data.id, role })
   })
 
+  // Le mot de passe de partage en vigueur, pour le propriétaire (null si jamais retenu par le serveur)
+  app.get('/trees/:id/access/passwords', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership || !hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const stored = await app.prisma.treeSharePassword.findUnique({ where: { treeId: params.data.id } })
+    return reply.send({ share: decryptSharePassword(stored?.passwordEnc) })
+  })
+
+  // Arbres d'avant : le propriétaire tape le mot de passe déjà donné, le serveur le vérifie et le retient
+  // sans rien changer aux accès (les hash et leur updatedAt ne bougent pas).
+  app.post('/trees/:id/access/passwords/remember', async (request, reply) => {
+    const user = requireUser(request, reply)
+    if (!user) {
+      return
+    }
+
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_tree_id' })
+    }
+
+    const payload = rememberPasswordSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    const membership = await getMembership(app, user.userId, params.data.id)
+    if (!membership || !hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const accessConfig = await app.prisma.treeAccessPasswords.findUnique({ where: { treeId: params.data.id } })
+    if (!accessConfig) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const password = payload.data.password.trim()
+    const matches =
+      (await verifyPassword(password, accessConfig.contributorHash)) ||
+      (await verifyPassword(password, accessConfig.visitorHash))
+    if (!matches) {
+      return reply.code(422).send({ error: 'password_mismatch' })
+    }
+
+    const passwordEnc = encryptSharePassword(password)
+    await app.prisma.treeSharePassword.upsert({
+      where: { treeId: params.data.id },
+      create: { treeId: params.data.id, passwordEnc },
+      update: { passwordEnc, setAt: new Date() },
+    })
+
+    return reply.send({ share: password })
+  })
+
   app.patch('/trees/:id/access/passwords', async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
@@ -890,6 +965,18 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       },
       data,
     })
+
+    // Le mot de passe lisible suit toujours celui en vigueur ; deux mots de passe distincts = plus de valeur unique
+    if (payload.data.password) {
+      const passwordEnc = encryptSharePassword(payload.data.password)
+      await app.prisma.treeSharePassword.upsert({
+        where: { treeId: params.data.id },
+        create: { treeId: params.data.id, passwordEnc },
+        update: { passwordEnc, setAt: new Date() },
+      })
+    } else {
+      await app.prisma.treeSharePassword.deleteMany({ where: { treeId: params.data.id } })
+    }
 
     await app.prisma.auditLog.create({
       data: {
