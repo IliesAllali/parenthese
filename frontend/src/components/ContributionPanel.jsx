@@ -129,12 +129,9 @@ const ContributionPanel = ({
   const [decisionMap, setDecisionMap] = useState({})
   const [collapsedSessions, setCollapsedSessions] = useState(new Set())
   const [confirmApproveAll, setConfirmApproveAll] = useState(null)
-  const [showVisitorPassword, setShowVisitorPassword] = useState(false)
-  const [showContributorPassword, setShowContributorPassword] = useState(false)
-  const [editingVisitorPassword, setEditingVisitorPassword] = useState(false)
-  const [editingContributorPassword, setEditingContributorPassword] = useState(false)
-  const [newVisitorPassword, setNewVisitorPassword] = useState('')
-  const [newContributorPassword, setNewContributorPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
   const [inviteLocalError, setInviteLocalError] = useState('')
   const [copyFeedback, setCopyFeedback] = useState('')
 
@@ -220,12 +217,10 @@ const ContributionPanel = ({
 
   useEffect(() => {
     if (!visible) return
-    setEditingVisitorPassword(false)
-    setEditingContributorPassword(false)
-    setNewVisitorPassword('')
-    setNewContributorPassword('')
+    setEditingPassword(false)
+    setNewPassword('')
     setInviteLocalError('')
-  }, [inviteKnownPasswords?.contributor, inviteKnownPasswords?.visitor, visible])
+  }, [inviteKnownPasswords?.share, visible])
 
   const handleCopy = async (value, label) => {
     const text = String(value || '').trim()
@@ -234,26 +229,12 @@ const ContributionPanel = ({
     catch { setCopyFeedback('Copie indisponible') }
   }
 
-  const handleSaveVisitorPassword = async (e) => {
+  const handleSavePassword = async (e) => {
     e.preventDefault()
     setInviteLocalError('')
-    if (newVisitorPassword.trim().length < 8) { setInviteLocalError('Minimum 8 caractères.'); return }
-    if (inviteKnownPasswords?.contributor && newVisitorPassword.trim() === inviteKnownPasswords.contributor) {
-      setInviteLocalError('Les mots de passe Visiteur et Contributeur doivent être différents.'); return
-    }
-    const result = await onRotatePasswords?.({ visitorPassword: newVisitorPassword.trim(), contributorPassword: '' })
-    if (result?.ok) { setEditingVisitorPassword(false); setNewVisitorPassword('') }
-  }
-
-  const handleSaveContributorPassword = async (e) => {
-    e.preventDefault()
-    setInviteLocalError('')
-    if (newContributorPassword.trim().length < 8) { setInviteLocalError('Minimum 8 caractères.'); return }
-    if (inviteKnownPasswords?.visitor && newContributorPassword.trim() === inviteKnownPasswords.visitor) {
-      setInviteLocalError('Les mots de passe Visiteur et Contributeur doivent être différents.'); return
-    }
-    const result = await onRotatePasswords?.({ visitorPassword: '', contributorPassword: newContributorPassword.trim() })
-    if (result?.ok) { setEditingContributorPassword(false); setNewContributorPassword('') }
+    if (newPassword.trim().length < 8) { setInviteLocalError('Minimum 8 caractères.'); return }
+    const result = await onRotatePasswords?.({ password: newPassword.trim() })
+    if (result?.ok) { setEditingPassword(false); setNewPassword('') }
   }
 
   if (!visible) return null
@@ -289,38 +270,23 @@ const ContributionPanel = ({
                 <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, 'Lien copié')}><Copy size={14} strokeWidth={2} />Copier</button>
               </div>
               <div className="contrib-invite-passwords">
-                {/* Visiteur */}
                 <div className="contrib-role-row">
-                  <span className="contrib-role-badge"><strong>Pour regarder</strong><small>mot de passe visiteur</small></span>
-                  {editingVisitorPassword ? (
-                    <form className="contrib-pass-edit-inline" onSubmit={handleSaveVisitorPassword}>
-                      <input className="contrib-pass-edit-input" type="password" value={newVisitorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewVisitorPassword(e.target.value)} />
+                  <span className="contrib-role-badge"><strong>Mot de passe</strong><small>pour regarder et ajouter</small></span>
+                  {editingPassword ? (
+                    <form className="contrib-pass-edit-inline" onSubmit={handleSavePassword}>
+                      <input className="contrib-pass-edit-input" type="text" value={newPassword} placeholder="8 caractères minimum" autoFocus autoComplete="off" onChange={(e) => setNewPassword(e.target.value)} />
                       <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy></button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingVisitorPassword(false); setNewVisitorPassword(''); setInviteLocalError('') }}>Annuler</button>
+                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingPassword(false); setNewPassword(''); setInviteLocalError('') }}>Annuler</button>
                     </form>
                   ) : (
                     <>
-                      <button type="button" className={`contrib-pass-reveal${inviteKnownPasswords?.visitor && !showVisitorPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowVisitorPassword((v) => !v)} disabled={!inviteKnownPasswords?.visitor} title={showVisitorPassword ? 'Cliquer pour masquer' : 'Cliquer pour révéler'}>{inviteKnownPasswords?.visitor || 'Non défini'}</button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setEditingVisitorPassword(true)}>Éditer</button>
+                      <button type="button" className={`contrib-pass-reveal${inviteKnownPasswords?.share && !showPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowPassword((v) => !v)} disabled={!inviteKnownPasswords?.share} title={showPassword ? 'Cliquer pour masquer' : 'Cliquer pour révéler'}>{inviteKnownPasswords?.share || 'Inconnu sur cet appareil'}</button>
+                      {inviteKnownPasswords?.share && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(inviteKnownPasswords.share, 'Mot de passe copié')}>Copier</button>}
+                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setEditingPassword(true)}>{inviteKnownPasswords?.share ? 'Changer' : 'Définir'}</button>
                     </>
                   )}
                 </div>
-                {/* Contributeur */}
-                <div className="contrib-role-row">
-                  <span className="contrib-role-badge contrib-role-badge--contrib"><strong>Pour ajouter</strong><small>mot de passe contributeur</small></span>
-                  {editingContributorPassword ? (
-                    <form className="contrib-pass-edit-inline" onSubmit={handleSaveContributorPassword}>
-                      <input className="contrib-pass-edit-input" type="password" value={newContributorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewContributorPassword(e.target.value)} />
-                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy></button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingContributorPassword(false); setNewContributorPassword(''); setInviteLocalError('') }}>Annuler</button>
-                    </form>
-                  ) : (
-                    <>
-                      <button type="button" className={`contrib-pass-reveal${inviteKnownPasswords?.contributor && !showContributorPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowContributorPassword((v) => !v)} disabled={!inviteKnownPasswords?.contributor} title={showContributorPassword ? 'Cliquer pour masquer' : 'Cliquer pour révéler'}>{inviteKnownPasswords?.contributor || 'Non défini'}</button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setEditingContributorPassword(true)}>Éditer</button>
-                    </>
-                  )}
-                </div>
+                <p className="contrib-pass-hint">Changer le mot de passe oblige les personnes qui ont déjà ouvert l'arbre à saisir le nouveau.</p>
               </div>
               {(inviteLocalError || inviteError) && <div className="contrib-error">{inviteLocalError || inviteError}</div>}
               {inviteMessage && <div className="contrib-ok">{inviteMessage}</div>}

@@ -41,10 +41,12 @@ const linkAccessSchema = z.object({
 
 const patchPasswordsSchema = z
   .object({
+    // Mot de passe de partage unique : écrit dans les deux colonnes
+    password: z.string().min(8).max(128).optional(),
     visitorPassword: z.string().min(8).max(128).optional(),
     contributorPassword: z.string().min(8).max(128).optional(),
   })
-  .refine((value) => Boolean(value.visitorPassword || value.contributorPassword), {
+  .refine((value) => Boolean(value.password || value.visitorPassword || value.contributorPassword), {
     message: 'at_least_one_password_required',
   })
 
@@ -683,16 +685,17 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: 'tree_not_found' })
       }
 
-      let role: 'visitor' | 'contributor' | null = null
-      if (await verifyPassword(payload.data.password, accessConfig.contributorHash)) {
-        role = 'contributor'
-      } else if (await verifyPassword(payload.data.password, accessConfig.visitorHash)) {
-        role = 'visitor'
-      }
+      // Un seul mot de passe de partage (25/09/2026) : regarder et proposer. Les deux colonnes restent,
+      // les arbres créés avant ont encore deux mots de passe différents, les deux ouvrent en contributeur.
+      const matches =
+        (await verifyPassword(payload.data.password, accessConfig.contributorHash)) ||
+        (await verifyPassword(payload.data.password, accessConfig.visitorHash))
 
-      if (!role) {
+      if (!matches) {
         return reply.code(401).send({ error: 'invalid_password' })
       }
+
+      const role = 'contributor' as const
 
       const token = app.jwt.sign(
         {
@@ -774,7 +777,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: 'invalid_access_token' })
     }
 
-    const role = accessPayload.role === 'contributor' || accessPayload.role === 'visitor' ? accessPayload.role : null
+    // Un jeton « visitor » d'avant le mot de passe unique vaut désormais contributeur
+    const role = accessPayload.role === 'contributor' || accessPayload.role === 'visitor' ? ('contributor' as const) : null
     if (accessPayload.kind !== 'tree_access' || accessPayload.treeId !== params.data.id || !role) {
       return reply.code(401).send({ error: 'invalid_access_token' })
     }
@@ -866,6 +870,12 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const data: { visitorHash?: string; contributorHash?: string } = {}
+    if (payload.data.password) {
+      const shareHash = await hashPassword(payload.data.password)
+      data.visitorHash = shareHash
+      data.contributorHash = shareHash
+    }
+
     if (payload.data.visitorPassword) {
       data.visitorHash = await hashPassword(payload.data.visitorPassword)
     }
@@ -890,8 +900,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         entityType: 'tree_access_passwords',
         entityId: params.data.id,
         payloadJson: {
-          rotatedVisitorPassword: Boolean(payload.data.visitorPassword),
-          rotatedContributorPassword: Boolean(payload.data.contributorPassword),
+          rotatedVisitorPassword: Boolean(payload.data.password || payload.data.visitorPassword),
+          rotatedContributorPassword: Boolean(payload.data.password || payload.data.contributorPassword),
         },
       },
     })
