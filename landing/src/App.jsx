@@ -903,6 +903,11 @@ const GUIDES = [
     title: "Raconter l'histoire de sa famille",
     text: "Par qui commencer, les questions qui font parler, enregistrer plutôt qu'écrire, et où garder ce qu'on a recueilli.",
   },
+  {
+    href: '/arbre-genealogique-a-remplir/',
+    title: 'Arbre généalogique à remplir',
+    text: "Cinq modèles vierges à imprimer en PDF, de trois à cinq générations, avec cases photo ou arbre dessiné. Et comment les remplir.",
+  },
 ]
 
 const readSource = () => new URLSearchParams(window.location.search).get('source') || 'direct'
