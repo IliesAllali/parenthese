@@ -84,6 +84,13 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       findMany: vi.fn(),
     },
+    treeVisit: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     $transaction: vi.fn(),
     $disconnect: vi.fn(),
   },
@@ -434,6 +441,125 @@ describe('Graph routes', () => {
 
     expect(response.statusCode).toBe(200)
     expect(response.json().rootPersonId).toBe('p-1')
+    await app.close()
+  })
+
+  it('records a visit with the visitor first name when the graph opens', async () => {
+    const app = createApp()
+    await app.ready()
+
+    const treeAccessToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:visitor',
+      treeId: 'tree-1',
+      role: 'visitor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: 'p-1' })
+    prismaMock.person.findMany.mockResolvedValue([])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.mediaItem.findMany.mockResolvedValue([])
+    prismaMock.treeVisit.findFirst.mockResolvedValue(null)
+    prismaMock.treeVisit.create.mockResolvedValue({})
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+      headers: {
+        authorization: `Bearer ${treeAccessToken}`,
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Mobile/15E148',
+        'x-visitor-name': encodeURIComponent('Hélène'),
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    await vi.waitFor(() => expect(prismaMock.treeVisit.create).toHaveBeenCalled())
+    const data = prismaMock.treeVisit.create.mock.calls[0][0].data
+    expect(data).toMatchObject({ treeId: 'tree-1', userId: null, accessKind: 'share', visitorName: 'Hélène', device: 'phone' })
+    expect(data.visitorKey).toMatch(/^[0-9a-f]{32}$/)
+    await app.close()
+  })
+
+  it('does not record a second visit for the same visitor within the window', async () => {
+    const app = createApp()
+    await app.ready()
+
+    const treeAccessToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:visitor',
+      treeId: 'tree-1',
+      role: 'visitor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: 'p-1' })
+    prismaMock.person.findMany.mockResolvedValue([])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.mediaItem.findMany.mockResolvedValue([])
+    prismaMock.treeVisit.findFirst.mockResolvedValue({ id: 'v-1', visitorName: 'Hélène' })
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/graph',
+      headers: { authorization: `Bearer ${treeAccessToken}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    await vi.waitFor(() => expect(prismaMock.treeVisit.findFirst).toHaveBeenCalled())
+    expect(prismaMock.treeVisit.create).not.toHaveBeenCalled()
+    await app.close()
+  })
+})
+
+describe('Visit log', () => {
+  it('refuses the visit log to a non-admin member', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeMembership.findUnique.mockResolvedValue({ role: 'member', tree: { deletedAt: null } })
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/visits',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(403)
+    await app.close()
+  })
+
+  it('returns totals without the admin own visits, and recent visits', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeMembership.findUnique.mockResolvedValue({ role: 'owner', tree: { deletedAt: null } })
+    prismaMock.treeVisit.deleteMany.mockResolvedValue({ count: 0 })
+    const now = Date.now()
+    prismaMock.treeVisit.findMany
+      .mockResolvedValueOnce([
+        { visitorKey: 'a', createdAt: new Date(now - 1000) },
+        { visitorKey: 'a', createdAt: new Date(now - 2 * 86400000) },
+        { visitorKey: 'b', createdAt: new Date(now - 10 * 86400000) },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'v-2', createdAt: new Date(now - 1000), accessKind: 'share', visitorName: 'Hélène', device: 'phone', userId: null, user: null },
+        { id: 'v-1', createdAt: new Date(now - 5000), accessKind: 'member', visitorName: null, device: 'desktop', userId: 'user-1', user: { email: 'user@example.com' } },
+      ])
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/visits',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.summary).toEqual({ last7: { visits: 2, visitors: 1 }, last30: { visits: 3, visitors: 2 } })
+    expect(body.recent[0]).toMatchObject({ name: 'Hélène', device: 'phone', isYou: false })
+    expect(body.recent[1]).toMatchObject({ email: 'user@example.com', isYou: true })
+    const totalsWhere = prismaMock.treeVisit.findMany.mock.calls[0][0].where
+    expect(totalsWhere.OR).toEqual([{ userId: null }, { userId: { not: 'user-1' } }])
     await app.close()
   })
 })

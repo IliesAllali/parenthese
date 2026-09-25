@@ -19,6 +19,7 @@ const AccountDashboard = ({
   onLogout,
   onDeleteAccount,
   onBackToAccess,
+  onBackToTree,
   onUseDemo,
 }) => {
   const [mode, setMode] = useState(defaultMode === 'register' ? 'register' : 'login')
@@ -89,9 +90,17 @@ const AccountDashboard = ({
     await onLogin(safeEmail, password)
   }
 
+  // Arrivé depuis un arbre ouvert : une croix y ramène
+  const closeButton = onBackToTree && (
+    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-screen-close" onClick={onBackToTree} aria-label="Revenir à l'arbre">
+      <X size={20} aria-hidden="true" />
+    </button>
+  )
+
   if (!authenticated) {
     return (
       <div className="account-dashboard pz-screen">
+        {closeButton}
         <div className="pz-screen-inner">
           <img src={logoUrl} alt="Parenthèse" className="pz-screen-logo" />
 
@@ -203,6 +212,7 @@ const AccountDashboard = ({
 
   return (
     <div className="account-dashboard pz-screen">
+      {closeButton}
       <div className="pz-screen-inner">
         <img src={logoUrl} alt="Parenthèse" className="pz-screen-logo" />
 

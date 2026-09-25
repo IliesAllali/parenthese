@@ -447,6 +447,8 @@ function App() {
   useEffect(() => { setBooting(tree.bootState === 'loading') }, [tree.bootState])
   // Arbre partagé d'où l'on vient quand on ouvre l'écran compte : on y revient après connexion/création
   const pendingSharedTreeRef = useRef(null)
+  // Écran de compte ouvert depuis un arbre affiché : la croix y ramène
+  const [accountFromTree, setAccountFromTree] = useState(false)
   const refreshTreeAndKeepSelection = useCallback(async (personId, options = {}) => {
     await tree.refreshCurrentTreeGraph({
       relayout: options.relayout !== false,
@@ -2018,10 +2020,18 @@ function App() {
     media.resetMediaManager()
     setAdminPanelVisible(false)
     contrib.resetContribState()
+    setAccountFromTree(tree.bootState === 'ready')
     tree.setBootState('account')
   }
 
+  const handleBackToTree = () => {
+    auth.setAccountError('')
+    setAccountFromTree(false)
+    tree.setBootState('ready')
+  }
+
   const handleBackToAccess = () => {
+    setAccountFromTree(false)
     setTreeNotFound(false)
     auth.setAccountError('')
     setAccountPanelVisible(false)
@@ -2267,6 +2277,7 @@ function App() {
   }
 
   function resetSignedOutState() {
+    setAccountFromTree(false)
     tree.setWizardState({ visible: false, loading: false, error: '' })
     setAccountPanelVisible(false)
     setTreeWizardVisible(false)
@@ -2400,6 +2411,7 @@ function App() {
           onLogout={handleLogout}
           onDeleteAccount={handleDeleteAccount}
           onBackToAccess={handleBackToAccess}
+          onBackToTree={accountFromTree ? handleBackToTree : undefined}
           onUseDemo={handleUseDemo}
         />
       </div>
@@ -2453,7 +2465,9 @@ function App() {
         onClear={search.clearSearch}
         onResultClick={(person) => {
           const fullPerson = persons.find(p => p.id === person.id)
-          if (fullPerson) tree.setSelectedPerson(fullPerson)
+          if (!fullPerson) return
+          tree.setSelectedPerson(fullPerson)
+          galaxyZoomApiRef.current?.focusPerson?.(fullPerson.id)
         }}
       />
       {/* Draft Restore Banner (au reload si draft trouvé) */}

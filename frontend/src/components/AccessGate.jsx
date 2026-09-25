@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import { readContributorName, saveContributorName } from '../utils/contributorName.js'
 
 const AccessGate = ({
   initialTreeId,
@@ -16,6 +17,8 @@ const AccessGate = ({
 }) => {
   const [treeId, setTreeId] = useState(initialTreeId || '')
   const [password, setPassword] = useState('')
+  // Facultatif : la personne qui partage l'arbre voit qui est passé (onglet Visites)
+  const [firstName, setFirstName] = useState(() => readContributorName())
 
   useEffect(() => {
     setTreeId(initialTreeId || '')
@@ -27,6 +30,7 @@ const AccessGate = ({
       return
     }
 
+    saveContributorName(firstName)
     await onSubmit(treeId.trim(), password)
   }
 
@@ -86,6 +90,20 @@ const AccessGate = ({
                   />
                 </div>
               )}
+
+              <div className="pz-field">
+                <label htmlFor="visitorFirstName">Votre prénom</label>
+                <input
+                  id="visitorFirstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  disabled={loading}
+                  autoComplete="given-name"
+                  maxLength={60}
+                />
+                <p className="pz-hint">Facultatif. Il sert à savoir qui est venu voir l'arbre.</p>
+              </div>
 
               <div className="pz-field">
                 <label htmlFor="sharePassword">Mot de passe de partage</label>

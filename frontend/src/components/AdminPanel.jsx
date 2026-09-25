@@ -11,6 +11,7 @@ import {
   updateTreeSettings,
 } from '../api/treeApi'
 import PzBusy from './PzBusy.jsx'
+import TreeVisitsSection from './TreeVisitsSection.jsx'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -272,6 +273,7 @@ const AdminPanel = ({
 
         <div className="pz-tabs" role="tablist">
           <button type="button" role="tab" aria-selected={section === 'tree'} className="pz-tab" onClick={() => setSection('tree')}>Votre arbre</button>
+          <button type="button" role="tab" aria-selected={section === 'visits'} className="pz-tab" onClick={() => setSection('visits')}>Visites</button>
           <button type="button" role="tab" aria-selected={section === 'data'} className="pz-tab" onClick={() => setSection('data')}>Données</button>
           <button type="button" role="tab" aria-selected={section === 'danger'} className="pz-tab" onClick={() => setSection('danger')}>Avancé</button>
         </div>
@@ -283,6 +285,8 @@ const AdminPanel = ({
             <>
               {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
               {successMessage && <div className="pz-success" role="status">{successMessage}</div>}
+
+              {section === 'visits' && <TreeVisitsSection treeId={treeId} authToken={authToken} />}
 
               {section === 'tree' && (
                 <form className="ts-panel" onSubmit={handleSaveTree}>

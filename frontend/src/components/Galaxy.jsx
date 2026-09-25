@@ -135,6 +135,20 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
           targetTransformRef.current = { ...initialTransformRef.current }
         }
       },
+      // Recherche : glisse jusqu'à la personne, dans la partie de l'écran que la fiche ne couvre pas
+      // (fiche à gauche sur ordinateur, 408 px ; par le bas sur téléphone)
+      focusPerson: (personId) => {
+        const canvas = canvasRef.current
+        const node = layoutDataRef.current?.children.find(n => n.id === `p-${personId}`)
+        if (!canvas || !node) return
+        const rect = canvas.getBoundingClientRect()
+        const pos = getAnimatedPos(node, performance.now())
+        const scale = Math.min(MAX_SCALE, Math.max(targetTransformRef.current.scale, 1))
+        const phone = rect.width <= 768
+        const screenX = phone ? rect.width / 2 : (408 + rect.width) / 2
+        const screenY = phone ? rect.height * 0.22 : rect.height / 2
+        targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
+      },
       getScale: () => transformRef.current.scale,
       MIN_SCALE,
       MAX_SCALE,

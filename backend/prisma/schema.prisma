@@ -91,6 +91,7 @@ model User {
   sharedTreeAccesses           UserTreeAccess[]
   submittedContributionSessions ContributionSession[] @relation("ContributionSubmittedBy")
   reviewedContributionSessions ContributionSession[] @relation("ContributionReviewedBy")
+  treeVisits                   TreeVisit[]
   lastOpenedTree               Tree?                 @relation("UserLastOpenedTree", fields: [lastOpenedTreeId], references: [id], onDelete: SetNull)
 
   @@index([lastOpenedAt])
@@ -120,6 +121,7 @@ model Tree {
   contributionSessions ContributionSession[]
   auditLogs            AuditLog[]
   annotations          Annotation[]
+  visits               TreeVisit[]
   lastOpenedByUsers    User[]                @relation("UserLastOpenedTree")
 
   @@index([ownerUserId])
@@ -347,6 +349,25 @@ model AuditLog {
 
   @@index([treeId, createdAt])
   @@map("audit_log")
+}
+
+// Journal des visites d'un arbre, lu par ses administrateurs (onglet Visites).
+// Pas d'adresse IP : visitorKey est une empreinte (arbre + IP + navigateur) qui sert à compter les visiteurs distincts.
+model TreeVisit {
+  id          String   @id @default(cuid())
+  treeId      String
+  userId      String?
+  accessKind  String
+  visitorName String?
+  visitorKey  String
+  device      String
+  createdAt   DateTime @default(now())
+  tree        Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([treeId, createdAt])
+  @@index([treeId, visitorKey, createdAt])
+  @@map("tree_visits")
 }
 
 model WaitlistEntry {
