@@ -4,6 +4,7 @@ import { persons as treePersons } from '../data/mockData'
 import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
 import './SettingsPanels.css'
 import PzBusy from './PzBusy.jsx'
+import { HELP_URL } from './FamilyOnboarding.jsx'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -177,7 +178,8 @@ function buildInviteText(url, password) {
     `L'arbre est ici ${url}`,
     `Le mot de passe pour l'ouvrir est ${password}`,
     '',
-    'Avec le crayon en bas à droite, vous pouvez ajouter une photo, un souvenir ou une personne qui manque.',
+    "En bas de l'écran, vous pouvez ajouter une photo, un souvenir ou une personne qui manque.",
+    `Le mode d'emploi, si besoin ${HELP_URL}`,
   ].join('\n')
 }
 

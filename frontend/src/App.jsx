@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
+import { FamilyWelcome, SouvenirPicker, HELP_URL } from './components/FamilyOnboarding.jsx'
+import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
 import MediaViewer from './components/MediaViewer'
 import MediaManagerPanel from './components/MediaManagerPanel'
 import AdminPanel from './components/AdminPanel'
@@ -523,6 +525,31 @@ function App() {
     authenticated: auth.authenticated,
   })
 
+  // Famille arrivée par le lien (mot de passe de partage, avec ou sans compte)
+  const isFamilyVisitor = userRole.navbarType === 'contributor_anon' || userRole.navbarType === 'contributor_auth'
+  const [familyWelcomeVisible, setFamilyWelcomeVisible] = useState(false)
+  const [souvenirPickerVisible, setSouvenirPickerVisible] = useState(false)
+  const [pendingMediaPersonId, setPendingMediaPersonId] = useState(null)
+
+  useEffect(() => {
+    if (isFamilyVisitor && tree.bootState === 'ready' && !hasSeenFamilyWelcome(tree.treeContext.treeId)) {
+      setFamilyWelcomeVisible(true)
+    }
+  }, [isFamilyVisitor, tree.bootState, tree.treeContext.treeId])
+
+  // La personne choisie dans « Pour qui ? » est sélectionnée : ouvrir ses souvenirs
+  useEffect(() => {
+    if (pendingMediaPersonId == null) return
+    if (String(tree.selectedPerson?.id) !== String(pendingMediaPersonId)) return
+    setPendingMediaPersonId(null)
+    media.handleOpenMediaManager()
+  }, [pendingMediaPersonId, tree.selectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const closeFamilyWelcome = useCallback(() => {
+    markFamilyWelcomeSeen(tree.treeContext.treeId)
+    setFamilyWelcomeVisible(false)
+  }, [tree.treeContext.treeId])
+
   const accountUser = auth.userAuth.user || null
   const linkedSelfPerson = useMemo(() => (
     persons.find((candidate) => String(candidate.id) === String(linkedSelfPersonId)) || null
@@ -838,8 +865,28 @@ function App() {
 
   const handleOpenAddPerson = useCallback(() => {
     setAddPersonError('')
+    // Le panneau d'ajout vit dans le mode édition : la famille y entre sans passer par le crayon
+    if (!editMode.isActive) editMode.activate()
     setAddPersonPanelVisible(true)
-  }, [])
+  }, [editMode.isActive, editMode.activate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // « Ajouter un souvenir » : choisir la personne, puis ouvrir ses souvenirs
+  const handleOpenSouvenirPicker = useCallback(() => {
+    markFamilyWelcomeSeen(tree.treeContext.treeId)
+    setFamilyWelcomeVisible(false)
+    setSouvenirPickerVisible(true)
+  }, [tree.treeContext.treeId])
+
+  const handleSouvenirPick = useCallback((person) => {
+    setSouvenirPickerVisible(false)
+    tree.setSelectedPerson(person)
+    setPendingMediaPersonId(person.id)
+  }, [tree.setSelectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSouvenirPickerAddPerson = useCallback(() => {
+    setSouvenirPickerVisible(false)
+    handleOpenAddPerson()
+  }, [handleOpenAddPerson])
 
   const handleCloseAddPerson = useCallback(() => {
     setAddPersonPanelVisible(false)
@@ -966,9 +1013,13 @@ function App() {
           },
         ]
         editMode.updateDraft({ addedPersons })
-        // La personne n'apparaît dans l'arbre qu'après relecture : le dire, et fermer le panneau
+        // La personne n'apparaît dans l'arbre qu'après envoi : on passe tout de suite à l'envoi
+        // (prénom, un mot), la famille n'a pas à chercher le bouton
         setAddPersonPanelVisible(false)
         setDraftNotice(`${formData.firstName} est dans vos modifications. Envoyez-les quand vous avez fini.`)
+        setContribSubmitError('')
+        setContribChanges(buildContribChangesList(editMode.restoreDraft()))
+        setShowContribModal(true)
         return
       }
 
@@ -1183,7 +1234,8 @@ function App() {
       setShowContribModal(false)
       setContribSubmitError('')
       setContribSuccess(true)
-      setTimeout(() => setContribSuccess(false), 3500)
+      setDraftNotice('')
+      setTimeout(() => setContribSuccess(false), 6000)
     } catch (err) {
       setContribSubmitError(err.message || "Erreur lors de l'envoi des contributions")
     } finally {
@@ -2521,12 +2573,26 @@ function App() {
         onCancel={() => setShowContribModal(false)}
       />
       {/* Toast succès contribution */}
-      {draftNotice && !contribSuccess && (
+      <FamilyWelcome
+        visible={familyWelcomeVisible && !souvenirPickerVisible}
+        treeName={tree.treeContext.treeName}
+        onAddSouvenir={handleOpenSouvenirPicker}
+        onLook={closeFamilyWelcome}
+      />
+      <SouvenirPicker
+        visible={souvenirPickerVisible}
+        persons={persons}
+        rootPersonId={tree.treeContext.rootPersonId}
+        onPick={handleSouvenirPick}
+        onAddPerson={handleSouvenirPickerAddPerson}
+        onClose={() => setSouvenirPickerVisible(false)}
+      />
+      {draftNotice && !contribSuccess && !showContribModal && (
         <div className="contrib-success-toast" role="status">{draftNotice}</div>
       )}
       {contribSuccess && (
         <div className="contrib-success-toast" role="status">
-          Contribution envoyée, merci&nbsp;!
+          Merci, c'est envoyé&nbsp;! Ça apparaîtra dans l'arbre une fois relu.
         </div>
       )}
       {/* Navbar contextuelle */}
@@ -2538,6 +2604,8 @@ function App() {
         activeTreeId={tree.treeContext.treeId}
         onEditClick={handleEditToggle}
         onAddPersonClick={handleOpenAddPerson}
+        onAddSouvenirClick={isFamilyVisitor ? handleOpenSouvenirPicker : undefined}
+        helpUrl={isFamilyVisitor ? HELP_URL : ''}
         onShareClick={userRole.isAdmin ? handleOpenContributionPanel : undefined}
         onTreeSelect={handleOpenTreeFromAccount}
         onCreateTree={handleOpenTreeWizard}
@@ -2573,6 +2641,8 @@ function App() {
         annotationHandlers={editMode.isActive ? annot : null}
         transformReadRef={galaxyTransformReadRef}
         zoomApiRef={galaxyZoomApiRef}
+        focusPersonId={tree.treeContext.rootPersonId}
+        assetRevision={tree.assetRevision}
       />
       <ZoomControl zoomApiRef={galaxyZoomApiRef} />
       {tree.selectedPerson && (
@@ -2581,7 +2651,7 @@ function App() {
           onClose={() => tree.setSelectedPerson(null)}
           onMediaSelect={handleMediaSelectFresh}
           editMode={editMode.isActive}
-          canManageMedia={editMode.isActive && tree.canSubmitContribution}
+          canManageMedia={tree.canSubmitContribution || tree.canEditCurrentTree}
           onManageMedia={media.handleOpenMediaManager}
           onAvatarUpload={tree.canEditCurrentTree ? handlePersonAvatarUpload : undefined}
           onAvatarDelete={tree.canEditCurrentTree ? handlePersonAvatarDelete : undefined}

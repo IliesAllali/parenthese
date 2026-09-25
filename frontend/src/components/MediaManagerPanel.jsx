@@ -15,6 +15,8 @@ const MEDIA_TYPES = [
   { value: 'geojson', label: 'Carte', Icon: MapPin },
   { value: 'gpx', label: 'Trace GPX', Icon: Route },
 ]
+// La famille garde l'essentiel ; carte et trace GPX restent au propriétaire
+const FAMILY_TYPES = ['photo', 'video', 'audio', 'citation', 'document']
 const TYPE_NAMES = { photo: 'Photo', video: 'Vidéo', audio: 'Voix', citation: 'Citation', document: 'Document', geojson: 'Carte', gpx: 'Trace GPX' }
 const TYPE_SHORT = { video: 'Vidéo', audio: 'Voix', citation: '«', document: 'Doc' }
 
@@ -133,7 +135,7 @@ const MediaManagerPanel = ({
     <div className="pz-overlay media-manager-modal-overlay" onClick={handleOverlayClick}>
       <div className="pz-modal pz-modal--wide media-manager-modal-card" role="dialog" aria-modal="true" aria-labelledby="mediaManagerTitle">
         <div className="pz-modal-head">
-          <p className="pz-eyebrow">Souvenirs</p>
+          <p className="pz-eyebrow">{canManage ? 'Souvenirs' : 'Ajouter un souvenir pour'}</p>
           <h1 id="mediaManagerTitle" className="pz-title">{person.firstName} <em>{person.lastName}</em></h1>
         </div>
         <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
@@ -142,9 +144,9 @@ const MediaManagerPanel = ({
 
         <form className="mm-form" onSubmit={handleSubmit}>
           <div className="pz-field">
-            <span className="pz-label" id="mediaUploadTypeLabel">Ajouter</span>
+            <span className="pz-label" id="mediaUploadTypeLabel">{canManage ? 'Ajouter' : 'Que voulez-vous ajouter ?'}</span>
             <div className="mm-types" role="radiogroup" aria-labelledby="mediaUploadTypeLabel">
-              {MEDIA_TYPES.map((type) => (
+              {MEDIA_TYPES.filter((type) => canManage || FAMILY_TYPES.includes(type.value)).map((type) => (
                 <button
                   key={type.value}
                   type="button"
@@ -177,7 +179,7 @@ const MediaManagerPanel = ({
                 <span className="mm-drop-icon" aria-hidden="true"><Upload size={20} strokeWidth={1.8} /></span>
                 <span className="mm-drop-text">
                   <strong>{file ? file.name : 'Choisir un fichier'}</strong>
-                  <span>{file ? 'Cliquez pour en choisir un autre' : `${mediaType === 'photo' ? '5 Mo' : '20 Mo'} au maximum`}</span>
+                  <span>{file ? 'Pour en prendre un autre, touchez ici' : `${mediaType === 'photo' ? '5 Mo' : '20 Mo'} au maximum`}</span>
                 </span>
               </label>
               <input
@@ -216,9 +218,9 @@ const MediaManagerPanel = ({
             </div>
           )}
 
-          <div className="pz-row2">
+          <div className={canManage ? 'pz-row2' : undefined}>
             <div className="pz-field">
-              <label htmlFor="mediaUploadCaption">Titre <span className="mm-optional">facultatif</span></label>
+              <label htmlFor="mediaUploadCaption">{canManage ? 'Titre' : 'Une légende'} <span className="mm-optional">facultatif</span></label>
               <input
                 id="mediaUploadCaption"
                 type="text"
@@ -227,7 +229,7 @@ const MediaManagerPanel = ({
                 placeholder="Été à Quiberon, 1978"
               />
             </div>
-            <div className="pz-field">
+            {canManage && <div className="pz-field">
               <label htmlFor="mediaUploadSource">Source <span className="mm-optional">facultatif</span></label>
               <input
                 id="mediaUploadSource"
@@ -236,7 +238,7 @@ const MediaManagerPanel = ({
                 onChange={(event) => setSource(event.target.value)}
                 placeholder="Album de famille, ou un lien"
               />
-            </div>
+            </div>}
           </div>
 
           {!canManage && (
@@ -267,7 +269,7 @@ const MediaManagerPanel = ({
         <section className="mm-list-wrap">
           <h2 className="pz-eyebrow">{medias.length > 0 ? `Déjà là · ${medias.length}` : 'Déjà là'}</h2>
           {medias.length === 0 ? (
-            <p className="pz-small mm-empty">Pas encore de souvenir. Le premier que vous ajoutez apparaît en tête de sa fiche.</p>
+            <p className="pz-small mm-empty">{canManage ? 'Pas encore de souvenir. Le premier que vous ajoutez apparaît en tête de sa fiche.' : 'Pas encore de souvenir. Le vôtre sera le premier.'}</p>
           ) : (
             <ul className="mm-list">
               {medias.map((media, index) => (

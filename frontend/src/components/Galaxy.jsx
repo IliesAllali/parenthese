@@ -25,9 +25,15 @@ function approach(prev, target, k, eps = 1e-3) {
   return Math.abs(target - next) < eps ? target : next
 }
 const MAX_SCALE = 3.2
+// Ouverture sur la personne de départ quand l'arbre entier serait illisible
+const FOCUS_MIN_READABLE_SCALE = 0.5
+const FOCUS_SCALE = 0.95
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0 }) => {
   const canvasRef = useRef(null)
+  // Lu au calcul du cadrage seulement : changer de personne de départ ne recadre pas une vue en cours
+  const focusPersonIdRef = useRef(focusPersonId)
+  focusPersonIdRef.current = focusPersonId
   const layoutDataRef = useRef(null)
   const [layoutReady, setLayoutReady] = useState(false)
   const transformRef = useRef({ x: 0, y: 0, scale: 1 })
@@ -68,7 +74,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   const markDirty = useCallback(() => { needsRedrawRef.current = true }, [])
   useEffect(() => { needsRedrawRef.current = true })
 
-  const imageCache = useImageCache(graphRevision, markDirty)
+  const imageCache = useImageCache(`${graphRevision}:${assetRevision}`, markDirty)
 
   // Position animée d'un nœud
   const getAnimatedPos = useCallback((node, time) => {
@@ -215,9 +221,21 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       (cssH - padding * 2) / Math.max(graphH, 1),
       maxInitScale,
     )
-    const scale = Math.max(MIN_SCALE, fitScale)
-    const offsetX = (cssW - graphW * scale) / 2 - minX * scale
-    const offsetY = (cssH - graphH * scale) / 2 - minY * scale
+    let scale = Math.max(MIN_SCALE, fitScale)
+    let offsetX = (cssW - graphW * scale) / 2 - minX * scale
+    let offsetY = (cssH - graphH * scale) / 2 - minY * scale
+
+    // Grand arbre : vu en entier, les portraits deviennent des pastilles illisibles.
+    // On ouvre sur la personne de départ, à une taille où l'on reconnaît les visages.
+    const focusId = focusPersonIdRef.current
+    const focusNode = focusId != null
+      ? result.children.find((n) => n._type === 'person' && String(n._data?.id) === String(focusId))
+      : null
+    if (focusNode && fitScale < FOCUS_MIN_READABLE_SCALE) {
+      scale = FOCUS_SCALE
+      offsetX = cssW / 2 - (focusNode.x + focusNode.width / 2) * scale
+      offsetY = cssH * 0.42 - (focusNode.y + focusNode.height / 2) * scale
+    }
 
     const init = { x: offsetX, y: offsetY, scale }
     initialTransformRef.current = init

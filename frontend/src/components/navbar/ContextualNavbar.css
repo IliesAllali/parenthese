@@ -281,3 +281,86 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* ============================================================
+   Famille arrivée par le lien : gestes écrits en toutes lettres
+   ============================================================ */
+.nav-family-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: 500 15.5px/1 var(--pz-sans);
+  color: var(--pz-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 140ms ease, transform 140ms var(--pz-ease);
+}
+.nav-family-btn:active { transform: scale(.97); }
+.nav-family-btn:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .nav-family-btn:hover { background: var(--pz-a50); } }
+.nav-family-btn--primary { background: var(--pz-ink); color: #fff; }
+@media (hover: hover) and (pointer: fine) { .nav-family-btn--primary:hover { background: #3a3530; } }
+.nav-family-btn--more.is-open { background: var(--pz-a100); }
+
+.nav-more-wrapper { position: relative; }
+.nav-more-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  min-width: 260px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
+  border-radius: var(--pz-r-m);
+  box-shadow: var(--pz-shadow-lg);
+  animation: pz-rise 180ms var(--pz-ease) both;
+}
+.nav-more-menu button,
+.nav-more-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: 500 15.5px/1.2 var(--pz-sans);
+  color: var(--pz-ink);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { .nav-more-menu button:hover, .nav-more-menu a:hover { background: var(--pz-a50); } }
+
+@media (max-width: 768px) {
+  /* Sur téléphone, la barre prend toute la largeur : trois cibles larges, icône et mot court */
+  .contextual-navbar--family { left: 12px; right: 12px; }
+  .contextual-navbar--family .navbar-content { justify-content: space-between; gap: 4px; }
+  .contextual-navbar--family .nav-family-btn {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 64px;
+    padding: 8px 6px;
+    border-radius: 22px;
+    font-size: 14px;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+  }
+  .contextual-navbar--family .nav-more-wrapper { flex: 1; display: flex; }
+  .contextual-navbar--family .nav-dropdown-wrapper { margin-left: 0; align-self: center; }
+  /* Le zoom passe au-dessus de la barre pleine largeur */
+  body:has(.contextual-navbar--family) .zoom-control { bottom: 104px; }
+  /* Les messages (merci, ajout) passent au-dessus de la barre, en gros */
+  body:has(.contextual-navbar--family) .contrib-success-toast { bottom: 108px; font-size: 15px; }
+}

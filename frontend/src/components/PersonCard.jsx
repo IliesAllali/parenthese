@@ -38,7 +38,8 @@ const PersonCard = ({
   relationActionSuccess = '',
   relationActionError = '',
 }) => {
-  const [tab, setTab] = useState(() => (getPersonMedias(person.id).length > 0 ? 'medias' : 'infos'))
+  // Souvenirs d'abord quand il y en a, ou quand on peut en ajouter : c'est là qu'est le bouton
+  const [tab, setTab] = useState(() => (getPersonMedias(person.id).length > 0 || canManageMedia ? 'medias' : 'infos'))
 
   // État local pour les modifications en mode édition
   const [edits, setEdits] = useState({})
@@ -242,7 +243,11 @@ const PersonCard = ({
   const renderEditableValue = ({ field, value, placeholder, type = 'text' }) => {
     if (!editMode) {
       const isEmptyValue = value === null || value === undefined || value === ''
-      return <span className="value">{isEmptyValue ? '-' : value}</span>
+      // Une date complète se lit « 22 octobre 1928 », pas « 1928-10-22 »
+      const shown = type === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(value))
+        ? new Date(`${String(value).slice(0, 10)}T00:00:00Z`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+        : value
+      return <span className="value">{isEmptyValue ? '-' : shown}</span>
     }
     return (
       <input
@@ -405,7 +410,7 @@ const PersonCard = ({
             {personMedias.length === 0 && (
               <div className="pc-empty">
                 <p className="pz-sub">Pas encore de souvenir pour {person.firstName}.</p>
-                <p className="pz-small">Une photo, une anecdote, sa voix. Tout le monde peut en ajouter.</p>
+                <p className="pz-small">{canManageMedia ? 'Une photo, une anecdote, sa voix. Vous pouvez ajouter le premier.' : 'Une photo, une anecdote, sa voix.'}</p>
               </div>
             )}
 
@@ -440,7 +445,7 @@ const PersonCard = ({
                     {media.label && <span className="pc-tile-label">{media.label}</span>}
                   </button>
                 ))}
-                {editMode && canManageMedia && (
+                {canManageMedia && (
                   <button type="button" className="pc-tile pc-tile--add" onClick={() => onManageMedia?.()} aria-label="Ajouter des souvenirs">
                     <Plus size={20} strokeWidth={1.8} />
                   </button>
@@ -462,10 +467,10 @@ const PersonCard = ({
               </div>
             )}
 
-            {editMode && canManageMedia && (
-              <button type="button" className="pz-btn pz-btn--soft pz-btn--block" onClick={() => onManageMedia?.()}>
+            {canManageMedia && (
+              <button type="button" className={`pz-btn pz-btn--block ${isAdmin ? 'pz-btn--soft' : 'pz-btn--primary'}`} onClick={() => onManageMedia?.()}>
                 <Plus size={16} strokeWidth={2} />
-                Ajouter ou ranger des souvenirs
+                {isAdmin ? 'Ajouter ou ranger des souvenirs' : 'Ajouter un souvenir'}
               </button>
             )}
           </div>
