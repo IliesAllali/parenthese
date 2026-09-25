@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#FBFAF7" />
+    <!-- Arrivée du logo : une fois par visite, décidée avant le premier affichage (animation dans src/index.css) -->
+    <script>try{if(!sessionStorage.getItem('pz-logo')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('logo-intro');sessionStorage.setItem('pz-logo','1')}}catch(e){}</script>
 
     <title>Parenthèse : l'arbre généalogique vivant de votre famille</title>
     <meta name="description" content="Créez l'arbre généalogique de votre famille en ligne, avec photos, vidéos et voix. Partagez-le en un lien : la famille consulte sans compte et contribue avec un mot de passe." />
