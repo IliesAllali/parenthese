@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { API_BASE_URL } from '../api/client'
 import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
 import './SettingsPanels.css'
 import PzBusy from './PzBusy.jsx'
@@ -18,7 +19,30 @@ function formatEntityType(entityType) {
   if (entityType === 'union') return 'union'
   if (entityType === 'parent_child_link') return 'lien parent-enfant'
   if (entityType === 'annotation') return 'annotation'
+  if (entityType === 'media') return 'souvenir'
   return 'élément'
+}
+
+const MEDIA_TYPE_LABELS = {
+  photo: 'Photo',
+  video: 'Vidéo',
+  audio: 'Voix',
+  document: 'Document',
+  citation: 'Citation',
+  geojson: 'Carte',
+  gpx: 'Trajet',
+}
+
+// Souvenir envoyé par la famille : de quoi juger avant d'accepter
+function getMediaPreview(change, treeId, token) {
+  const data = (change.afterJson && typeof change.afterJson === 'object') ? change.afterJson : {}
+  const label = MEDIA_TYPE_LABELS[data.type] || 'Souvenir'
+  const caption = typeof data.caption === 'string' ? data.caption : ''
+  const isYoutube = data.mimeType === 'video/youtube'
+  const url = change.entityId && treeId && !isYoutube
+    ? `${API_BASE_URL}/trees/${encodeURIComponent(treeId)}/media/${encodeURIComponent(change.entityId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    : null
+  return { type: data.type, label, caption, url, isYoutube }
 }
 
 function formatAnnotationType(type) {
@@ -51,6 +75,10 @@ function getPersonDisplayName(change) {
   if (change.entityType === 'annotation') {
     const data = change.afterJson || change.after || {}
     return formatAnnotationType(data.type)
+  }
+  if (change.entityType === 'media') {
+    const data = change.afterJson || {}
+    return MEDIA_TYPE_LABELS[data.type] || 'Souvenir'
   }
   const data = (change.afterJson && typeof change.afterJson === 'object')
     ? change.afterJson
@@ -110,6 +138,7 @@ function formatSessionDate(value) {
 
 const ContributionPanel = ({
   visible,
+  mediaToken = '',
   treeId,
   canModerate,
   loading,
@@ -366,8 +395,8 @@ const ContributionPanel = ({
                       {/* ── Cartes de changement (collapsibles) ── */}
                       {!isCollapsed && (() => {
                         // Grouper les changements par entityType
-                        const groupOrder = ['person', 'union', 'parent_child_link', 'annotation']
-                        const groupLabels = { person: 'Personnes', union: 'Unions', parent_child_link: 'Liens', annotation: 'Annotations' }
+                        const groupOrder = ['media', 'person', 'union', 'parent_child_link', 'annotation']
+                        const groupLabels = { media: 'Souvenirs', person: 'Personnes', union: 'Unions', parent_child_link: 'Liens', annotation: 'Annotations' }
                         const groupMap = {}
                         for (const ch of (session.changes || [])) {
                           const key = ch.entityType || 'other'
@@ -387,6 +416,7 @@ const ContributionPanel = ({
                           const personName = getPersonDisplayName(change)
                           const fields = getFieldRows(change)
                           const annPreview = change.entityType === 'annotation' ? getAnnotationPreview(change) : null
+                          const mediaPreview = change.entityType === 'media' ? getMediaPreview(change, treeId, mediaToken) : null
 
                           return (
                             <div
@@ -437,6 +467,22 @@ const ContributionPanel = ({
                                   )}
                                   {annPreview.type === 'photo' && !annPreview.url && (
                                     <span className="contrib-ann-text">Photo (aperçu indisponible)</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {mediaPreview && (
+                                <div className="contrib-media-preview">
+                                  {mediaPreview.type === 'photo' && mediaPreview.url && (
+                                    <a href={mediaPreview.url} target="_blank" rel="noreferrer" className="contrib-media-photo">
+                                      <img src={mediaPreview.url} alt={mediaPreview.caption || 'Photo proposée'} onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                                    </a>
+                                  )}
+                                  {mediaPreview.type !== 'photo' && mediaPreview.type !== 'citation' && mediaPreview.url && (
+                                    <a href={mediaPreview.url} target="_blank" rel="noreferrer" className="pz-link">Ouvrir le fichier</a>
+                                  )}
+                                  {mediaPreview.caption && (
+                                    <p className="contrib-media-caption">{mediaPreview.type === 'citation' ? `« ${mediaPreview.caption} »` : mediaPreview.caption}</p>
                                   )}
                                 </div>
                               )}

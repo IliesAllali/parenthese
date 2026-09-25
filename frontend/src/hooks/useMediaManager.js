@@ -4,6 +4,13 @@ import { getPersonMedias } from '../data/mockData'
 import { fileToBase64, getAccountErrorMessage } from '../utils/errorMessages'
 import { getUploadMimeType, resolveUploadMediaType, validateMediaFile } from '../utils/mediaUpload'
 
+// Souvenir envoyé par la famille : en attente de la relecture du propriétaire
+function noticeFor(created) {
+  return created?.status === 'pending'
+    ? "Merci, c'est envoyé. Le souvenir apparaîtra dans la fiche quand la personne qui gère l'arbre l'aura accepté."
+    : ''
+}
+
 export function useMediaManager({
   canEditCurrentTree,
   canSubmitContribution,
@@ -12,7 +19,7 @@ export function useMediaManager({
   refreshCurrentTreeGraph,
   refreshTreeAndKeepSelection,
 }) {
-  const [mediaManagerState, setMediaManagerState] = useState({ visible: false, loading: false, error: '' })
+  const [mediaManagerState, setMediaManagerState] = useState({ visible: false, loading: false, error: '', notice: '' })
 
   const selectedPersonMedias = selectedPerson ? getPersonMedias(selectedPerson.id) : []
 
@@ -23,7 +30,7 @@ export function useMediaManager({
       return
     }
 
-    setMediaManagerState({ visible: true, loading: false, error: '' })
+    setMediaManagerState({ visible: true, loading: false, error: '', notice: '' })
   }
 
   const handleCloseMediaManager = () => {
@@ -59,9 +66,9 @@ export function useMediaManager({
 
     // YouTube video — no file needed
     if (mediaType === 'video' && youtubeUrl) {
-      setMediaManagerState((current) => ({ ...current, loading: true, error: '' }))
+      setMediaManagerState((current) => ({ ...current, loading: true, error: '', notice: '' }))
       try {
-        await uploadPersonMedia(
+        const created = await uploadPersonMedia(
           treeContext.treeId,
           personId,
           {
@@ -74,7 +81,7 @@ export function useMediaManager({
           treeContext.accessToken,
         )
         await refreshAfterMediaMutation(personId)
-        setMediaManagerState((current) => ({ ...current, loading: false, error: '' }))
+        setMediaManagerState((current) => ({ ...current, loading: false, error: '', notice: noticeFor(created) }))
       } catch (error) {
         setMediaManagerState((current) => ({ ...current, loading: false, error: getAccountErrorMessage(error) }))
       }
@@ -97,11 +104,13 @@ export function useMediaManager({
       ...current,
       loading: true,
       error: '',
+      notice: '',
     }))
 
     try {
+      let created = null
       if (resolvedType === 'citation') {
-        await uploadPersonMedia(
+        created = await uploadPersonMedia(
           treeContext.treeId,
           personId,
           {
@@ -114,7 +123,7 @@ export function useMediaManager({
       } else {
         const dataBase64 = await fileToBase64(file)
 
-        await uploadPersonMedia(
+        created = await uploadPersonMedia(
           treeContext.treeId,
           personId,
           {
@@ -136,6 +145,7 @@ export function useMediaManager({
         ...current,
         loading: false,
         error: '',
+        notice: noticeFor(created),
       }))
     } catch (error) {
       setMediaManagerState((current) => ({

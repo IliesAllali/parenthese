@@ -947,6 +947,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       app.prisma.mediaItem.count({
         where: {
           treeId: params.data.id,
+          status: 'approved',
           deletedAt: null,
         },
       }),

@@ -26,6 +26,8 @@ const MediaManagerPanel = ({
   medias,
   loading,
   errorMessage,
+  notice = '',
+  canManage = true,
   onClose,
   onUpload,
   onMove,
@@ -227,6 +229,7 @@ const MediaManagerPanel = ({
           </div>
 
           {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
+          {notice && !errorMessage && <div className="pz-success" role="status">{notice}</div>}
 
           <div className="pz-modal-actions">
             <button type="submit" className="pz-btn pz-btn--primary" disabled={!canUpload}>
@@ -260,7 +263,7 @@ const MediaManagerPanel = ({
                       {media.source && <> · {renderSource(media.source)}</>}
                     </span>
                   </span>
-                  <span className="mm-actions">
+                  {canManage && <span className="mm-actions">
                     <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon" onClick={() => onMove(media.id, -1)} disabled={loading || index === 0} aria-label="Monter">
                       <ArrowUp size={16} aria-hidden="true" />
                     </button>
@@ -270,7 +273,7 @@ const MediaManagerPanel = ({
                     <button type="button" className="pz-btn pz-btn--danger-ghost pz-btn--icon" onClick={() => onDelete(media.id)} disabled={loading} aria-label="Supprimer">
                       <Trash2 size={16} aria-hidden="true" />
                     </button>
-                  </span>
+                  </span>}
                 </li>
               ))}
             </ul>

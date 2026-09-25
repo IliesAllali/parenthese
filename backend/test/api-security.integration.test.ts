@@ -808,30 +808,234 @@ describe('API security and authz', () => {
     await app.close()
   })
 
-  it('forbids non-admin from uploading media', async () => {
+  // Souvenirs de la famille (25/09/2026) : un non-administrateur propose, le propriétaire valide
+  const photoPayload = {
+    type: 'photo',
+    fileName: 'portrait.jpg',
+    mimeType: 'image/jpeg',
+    sizeBytes: 5,
+    dataBase64: Buffer.from('hello').toString('base64'),
+  }
+
+  it('turns a member media upload into a pending contribution', async () => {
     const app = createApp()
     const token = await createUserToken(app)
     prismaMock.treeMembership.findUnique.mockResolvedValue({
       treeId: 'tree-1',
       userId: 'user-1',
       role: 'member',
-      tree: { deletedAt: null, rootPersonId: null },
+      contributionModeOverride: null,
+      tree: { deletedAt: null, rootPersonId: null, settings: { memberContributionPolicy: 'pending' } },
     })
+    prismaMock.person.findFirst.mockResolvedValue({ id: 'person-1', firstName: 'Jeanne' })
 
     const response = await app.inject({
       method: 'POST',
       url: '/trees/tree-1/persons/person-1/media',
       headers: { authorization: `Bearer ${token}` },
-      payload: {
-        type: 'photo',
-        fileName: 'portrait.jpg',
-        mimeType: 'image/jpeg',
-        sizeBytes: 5,
-        dataBase64: Buffer.from('hello').toString('base64'),
-      },
+      payload: photoPayload,
     })
 
-    expect(response.statusCode).toBe(403)
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.mediaItem.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'pending', displayOrder: 0, isFeatured: false }) }),
+    )
+    await app.close()
+  })
+
+  it('lets a share link visitor propose a photo, pending review', async () => {
+    const app = createApp()
+    await app.ready()
+    const shareToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:visitor',
+      treeId: 'tree-1',
+      role: 'visitor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null, settings: { contributorPolicy: 'pending' } })
+    prismaMock.person.findFirst.mockResolvedValue({ id: 'person-1', firstName: 'Jeanne' })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/persons/person-1/media',
+      headers: { authorization: `Bearer ${shareToken}` },
+      payload: { ...photoPayload, submittedByLabel: 'Camille' },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.contributionSession.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'pending',
+          mode: 'tree_access',
+          submittedByLabel: 'Camille',
+          title: 'Souvenir pour Jeanne',
+        }),
+      }),
+    )
+    expect(prismaMock.mediaItem.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'pending', contributionSessionId: 'session-1', uploadedBy: null }),
+      }),
+    )
+    expect(prismaMock.contributionChange.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ entityType: 'media', action: 'create', sessionId: 'session-1' }),
+      }),
+    )
+    await app.close()
+  })
+
+  it('shows a family photo at once when the tree applies contributions directly', async () => {
+    const app = createApp()
+    await app.ready()
+    const shareToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:contributor',
+      treeId: 'tree-1',
+      role: 'contributor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null, settings: { contributorPolicy: 'direct' } })
+    prismaMock.person.findFirst.mockResolvedValue({ id: 'person-1', firstName: 'Jeanne' })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/persons/person-1/media',
+      headers: { authorization: `Bearer ${shareToken}` },
+      payload: photoPayload,
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.mediaItem.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'approved' }) }),
+    )
+    expect(prismaMock.contributionChange.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ entityType: 'media', decision: 'approved' }) }),
+    )
+    await app.close()
+  })
+
+  it('refuses a media upload from a share token of another tree', async () => {
+    const app = createApp()
+    await app.ready()
+    const otherTreeToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-2:contributor',
+      treeId: 'tree-2',
+      role: 'contributor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/persons/person-1/media',
+      headers: { authorization: `Bearer ${otherTreeToken}` },
+      payload: photoPayload,
+    })
+
+    expect(response.statusCode).toBeGreaterThanOrEqual(401)
+    expect(response.statusCode).toBeLessThanOrEqual(403)
+    expect(prismaMock.mediaItem.create).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('rejects media changes submitted through the contribution session route', async () => {
+    const app = createApp()
+    await app.ready()
+    const shareToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:contributor',
+      treeId: 'tree-1',
+      role: 'contributor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions',
+      headers: { authorization: `Bearer ${shareToken}` },
+      payload: { title: 'Tentative', changes: [{ entityType: 'media', action: 'create', entityId: 'media-9' }] },
+    })
+
+    expect(response.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('makes an approved family photo visible at review', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.contributionSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      treeId: 'tree-1',
+      status: 'pending',
+      changes: [
+        { id: 'change-1', entityType: 'media', action: 'create', entityId: 'media-1', beforeJson: null, afterJson: { personId: 'person-1' }, conflictState: 'none' },
+      ],
+    })
+    prismaMock.mediaItem.findFirst.mockResolvedValue({ id: 'media-1', personId: 'person-1' })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions/session-1/review',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { decision: 'approved' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(prismaMock.mediaItem.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'media-1' }, data: expect.objectContaining({ status: 'approved' }) }),
+    )
+    await app.close()
+  })
+
+  it('hides a rejected family photo at review', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.contributionSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      treeId: 'tree-1',
+      status: 'pending',
+      changes: [
+        { id: 'change-1', entityType: 'media', action: 'create', entityId: 'media-1', beforeJson: null, afterJson: { personId: 'person-1' }, conflictState: 'none' },
+      ],
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions/session-1/review',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { decision: 'rejected' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(prismaMock.mediaItem.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'media-1', treeId: 'tree-1' }, data: expect.objectContaining({ status: 'rejected' }) }),
+    )
+    await app.close()
+  })
+
+  it('reviews a session containing a drawing without failing', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.contributionSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      treeId: 'tree-1',
+      status: 'pending',
+      changes: [
+        { id: 'change-1', entityType: 'annotation', action: 'create', entityId: 'annot-1', beforeJson: null, afterJson: { type: 'drawing', x: 0, y: 0 }, conflictState: 'none' },
+      ],
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions/session-1/review',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { decision: 'approved' },
+    })
+
+    expect(response.statusCode).toBe(200)
     await app.close()
   })
 
