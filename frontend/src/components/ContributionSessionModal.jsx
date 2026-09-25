@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Send, X } from 'lucide-react'
 import './ContributionSessionModal.css'
+import PzBusy from './PzBusy.jsx'
 
 function formatAction(action) {
   if (action === 'create') return 'Ajout'
@@ -116,7 +117,7 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
             </button>
             <button type="submit" className="pz-btn pz-btn--primary" disabled={loading}>
               <Send size={16} strokeWidth={2} />
-              {loading ? 'Envoi…' : 'Envoyer mes contributions'}
+              <PzBusy busy={loading} busyLabel="Envoi en cours">Envoyer mes contributions</PzBusy>
             </button>
           </div>
         </form>

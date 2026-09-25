@@ -10,6 +10,7 @@ import {
   updateTree,
   updateTreeSettings,
 } from '../api/treeApi'
+import PzBusy from './PzBusy.jsx'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -311,7 +312,7 @@ const AdminPanel = ({
 
                   <div className="ts-actions">
                     <button type="submit" className="pz-btn pz-btn--primary" disabled={saving}>
-                      {saving ? 'Enregistrement…' : 'Enregistrer'}
+                      <PzBusy busy={saving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy>
                     </button>
                   </div>
 
@@ -368,7 +369,7 @@ const AdminPanel = ({
                         Choisir un fichier
                       </button>
                       <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" onClick={handleImportGedcom} disabled={saving || !gedcomFile}>
-                        {importingGedcom ? 'Import…' : 'Importer'}
+                        <PzBusy busy={importingGedcom} busyLabel="Import en cours">Importer</PzBusy>
                       </button>
                     </div>
                   </div>
@@ -443,7 +444,7 @@ const AdminPanel = ({
                 Annuler
               </button>
               <button type="button" className="pz-btn pz-btn--danger danger-action" onClick={handleDeleteTree} disabled={saving}>
-                {saving ? 'Suppression…' : 'Supprimer définitivement'}
+                <PzBusy busy={saving} busyLabel="Suppression en cours">Supprimer définitivement</PzBusy>
               </button>
             </div>
           </div>

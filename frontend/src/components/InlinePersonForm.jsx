@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import './InlinePersonForm.css'
+import PzBusy from './PzBusy.jsx'
 
 /**
  * Mini-formulaire inline pour créer une personne après drop
@@ -202,7 +203,7 @@ function InlinePersonForm({
             className="inline-person-form-button submit"
             disabled={!isValid || loading}
           >
-            {loading ? 'Création...' : 'Créer'}
+            <PzBusy busy={loading} busyLabel="Création en cours">Créer</PzBusy>
           </button>
         </div>
       </form>

@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, FileText, Image, MapPin, Mic, Plus, Quote, Route, T
 import { getAcceptForMediaType } from '../utils/mediaUpload'
 import GeoMediaThumbnail from './GeoMediaThumbnail'
 import './MediaManagerPanel.css'
+import PzBusy from './PzBusy.jsx'
 
 const MEDIA_TYPES = [
   { value: 'photo', label: 'Photo', Icon: Image },
@@ -230,7 +231,7 @@ const MediaManagerPanel = ({
           <div className="pz-modal-actions">
             <button type="submit" className="pz-btn pz-btn--primary" disabled={!canUpload}>
               <Plus size={16} aria-hidden="true" />
-              {loading ? 'Envoi…' : 'Ajouter ce souvenir'}
+              <PzBusy busy={loading} busyLabel="Envoi du souvenir">Ajouter ce souvenir</PzBusy>
             </button>
           </div>
         </form>

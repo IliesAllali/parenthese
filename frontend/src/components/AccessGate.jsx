@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
+import PzBusy from './PzBusy.jsx'
 
 const AccessGate = ({
   initialTreeId,
@@ -105,7 +106,7 @@ const AccessGate = ({
 
           {!treeNotFound && (
             <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={loading}>
-              {loading ? 'Ouverture…' : "Ouvrir l'arbre"}
+              <PzBusy busy={loading} busyLabel="Ouverture de l'arbre">Ouvrir l'arbre</PzBusy>
             </button>
           )}
 

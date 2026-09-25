@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { analytics } from './analytics.js'
 import { getEntranceProgress, seededFloat } from './heroGraphMath.js'
+import PzMark from './PzMark.jsx'
 
 // ─── Design atoms ─────────────────────────────────────────────────────────────
 
@@ -837,7 +838,10 @@ function InlineDemo() {
               : { minHeight: '52vh', height: '56vw', maxHeight: '720px' }}
           >
             {!loaded && (
-              <div className="demo-wait">{shouldLoad ? 'Chargement de la démo…' : 'Démo interactive'}</div>
+              <div className="demo-wait" role="status">
+                <PzMark state={shouldLoad ? 'loading' : 'rest'} />
+                <span className={shouldLoad ? 'sr-only' : undefined}>{shouldLoad ? 'Chargement de la démo' : 'Démo interactive'}</span>
+              </div>
             )}
 
             <iframe

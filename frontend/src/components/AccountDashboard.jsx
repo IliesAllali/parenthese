@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronRight, KeyRound, LogOut, Plus, Sparkles, X } from 'lucide-react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
+import PzBusy from './PzBusy.jsx'
 
 const AccountDashboard = ({
   authenticated,
@@ -157,7 +158,7 @@ const AccountDashboard = ({
               {errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
 
               <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={!canSubmitAuth}>
-                {loading ? 'Un instant…' : isRegister ? 'Créer mon compte' : 'Se connecter'}
+                <PzBusy busy={loading} busyLabel={isRegister ? 'Création du compte' : 'Connexion'}>{isRegister ? 'Créer mon compte' : 'Se connecter'}</PzBusy>
               </button>
 
               {isRegister && (
@@ -319,7 +320,7 @@ const AccountDashboard = ({
                   Annuler
                 </button>
                 <button type="submit" className="pz-btn pz-btn--danger" disabled={deleting || !deletePassword}>
-                  {deleting ? 'Suppression…' : 'Supprimer définitivement'}
+                  <PzBusy busy={deleting} busyLabel="Suppression en cours">Supprimer définitivement</PzBusy>
                 </button>
               </div>
             </form>

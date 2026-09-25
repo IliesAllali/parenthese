@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import PzBusy from './PzBusy.jsx'
 
 const EMPTY_FORM = {
   selfFirstName: '',
@@ -139,7 +140,7 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
         {errorMessage && <div className="wizard-error">{errorMessage}</div>}
 
         <button type="submit" disabled={!canSubmit}>
-          {loading ? 'Création en cours...' : 'Créer les 3 personnes'}
+          <PzBusy busy={loading} busyLabel="Création en cours">Créer les 3 personnes</PzBusy>
         </button>
 
         <button type="button" className="ghost" onClick={onSkip} disabled={loading}>
