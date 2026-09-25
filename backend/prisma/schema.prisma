@@ -38,6 +38,14 @@ enum ContributionEntityType {
   union
   parent_child_link
   annotation
+  media
+}
+
+// Souvenir envoyé par la famille : en attente jusqu'à la relecture du propriétaire
+enum MediaStatus {
+  approved
+  pending
+  rejected
 }
 
 enum AnnotationType {
@@ -244,6 +252,8 @@ model MediaItem {
   displayOrder Int      @default(1)
   isFeatured  Boolean  @default(false)
   uploadedBy  String?
+  status      MediaStatus @default(approved)
+  contributionSessionId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?

@@ -325,7 +325,7 @@ const PersonCard = ({
               ? <img src={person.photo} alt={`${person.firstName} ${person.lastName || ''}`} />
               : <span className="pc-photo-initials">{initials}</span>}
           </div>
-          {editMode && (
+          {editMode && onAvatarUpload && (
             <div className="pc-photo-actions">
               <input
                 ref={avatarInputRef}

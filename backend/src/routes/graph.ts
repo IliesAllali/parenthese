@@ -116,6 +116,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       app.prisma.mediaItem.findMany({
         where: {
           treeId,
+          status: 'approved',
           deletedAt: null,
         },
         orderBy: [{ personId: 'asc' }, { displayOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],

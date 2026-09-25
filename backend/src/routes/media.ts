@@ -7,7 +7,9 @@ import { z } from 'zod'
 
 import { env } from '../config/env.js'
 import { isUserTokenRevoked } from '../lib/token-revocation.js'
+import { syncPersonMediaOrder } from '../lib/media-order.js'
 import type { AnyJwtPayload, MembershipRole } from '../types/auth.js'
+import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_FILE_BYTES = 20 * 1024 * 1024
@@ -33,6 +35,7 @@ const downloadQuerySchema = z.object({
 })
 
 const uploadBinaryMediaSchema = z.object({
+  submittedByLabel: z.string().trim().min(1).max(120).optional(),
   type: z.enum(['photo', 'video', 'audio', 'document', 'geojson', 'gpx']),
   fileName: z.string().min(1).max(255),
   mimeType: z.string().min(1).max(120),
@@ -43,6 +46,7 @@ const uploadBinaryMediaSchema = z.object({
 })
 
 const uploadCitationMediaSchema = z.object({
+  submittedByLabel: z.string().trim().min(1).max(120).optional(),
   type: z.literal('citation'),
   caption: z.string().trim().min(1).max(2000),
   source: mediaSourceSchema,
@@ -51,6 +55,7 @@ const uploadCitationMediaSchema = z.object({
 const YOUTUBE_URL_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//
 
 const uploadYoutubeVideoSchema = z.object({
+  submittedByLabel: z.string().trim().min(1).max(120).optional(),
   type: z.literal('video'),
   mimeType: z.literal('video/youtube'),
   youtubeUrl: z.string().regex(YOUTUBE_URL_RE),
@@ -165,37 +170,6 @@ function isMimeTypeAllowedForMediaType(type: 'photo' | 'video' | 'audio' | 'docu
     normalizedMimeType === 'text/plain' ||
     normalizedMimeType === 'application/octet-stream'
   )
-}
-
-async function syncPersonMediaOrder(
-  app: FastifyRequest['server'],
-  treeId: string,
-  personId: string,
-): Promise<void> {
-  const media = await app.prisma.mediaItem.findMany({
-    where: {
-      treeId,
-      personId,
-      deletedAt: null,
-    },
-    orderBy: [{ displayOrder: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-    select: {
-      id: true,
-    },
-  })
-
-  for (let index = 0; index < media.length; index += 1) {
-    const item = media[index]
-    await app.prisma.mediaItem.update({
-      where: {
-        id: item.id,
-      },
-      data: {
-        displayOrder: index + 1,
-        isFeatured: index < 3,
-      },
-    })
-  }
 }
 
 async function requireAdminMembership(app: FastifyRequest['server'], userId: string, treeId: string) {
@@ -364,7 +338,8 @@ async function assertTreeReadableByQueryToken(app: FastifyRequest['server'], tre
 
 export const mediaRoutes: FastifyPluginAsync = async (app) => {
   app.post('/trees/:id/persons/:personId/media', async (request, reply) => {
-    if (!request.actor || request.actor.kind !== 'user') {
+    const actor = request.actor
+    if (!actor) {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
@@ -378,10 +353,22 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
     }
 
-    const membership = await requireAdminMembership(app, request.actor.userId, params.data.id)
+    // Administrateur : le souvenir est visible tout de suite. Famille (lien de partage, membre) :
+    // il devient une contribution, visible après relecture sauf si l'arbre applique tout de suite.
+    const membership = actor.kind === 'user' ? await requireAdminMembership(app, actor.userId, params.data.id) : null
+    let contribution: Awaited<ReturnType<typeof resolveSubmissionContext>> | null = null
     if (!membership) {
-      return reply.code(403).send({ error: 'forbidden' })
+      try {
+        contribution = await resolveSubmissionContext(app, actor, params.data.id)
+      } catch (error) {
+        if (error instanceof ContributionRouteError) {
+          return reply.code(error.statusCode).send({ error: error.code })
+        }
+        throw error
+      }
     }
+    const isPending = contribution?.autoStatus === 'pending'
+    const uploaderUserId = actor.kind === 'user' ? actor.userId : null
 
     const person = await app.prisma.person.findFirst({
       where: {
@@ -391,6 +378,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       },
       select: {
         id: true,
+        firstName: true,
       },
     })
 
@@ -398,10 +386,47 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'person_not_found' })
     }
 
+    // Une contribution d'une ligne, créée avant le média pour qu'il la référence
+    const now = new Date()
+    const contributionSession = contribution
+      ? await app.prisma.contributionSession.create({
+          data: {
+            treeId: params.data.id,
+            submittedByUserId: contribution.submittedByUserId,
+            submittedByLabel: payload.data.submittedByLabel?.trim() || contribution.submittedByLabel,
+            mode: contribution.mode,
+            status: contribution.autoStatus,
+            title: `Souvenir pour ${person.firstName}`.slice(0, 120),
+            reviewedAt: contribution.autoStatus === 'approved' ? now : undefined,
+            reviewedBy: contribution.autoStatus === 'approved' ? contribution.submittedByUserId : undefined,
+          },
+        })
+      : null
+
+    const recordContributionChange = async (mediaId: string, after: Record<string, unknown>) => {
+      if (!contributionSession || !contribution) {
+        return
+      }
+      await app.prisma.contributionChange.create({
+        data: {
+          sessionId: contributionSession.id,
+          entityType: 'media',
+          entityId: mediaId,
+          action: 'create',
+          afterJson: { personId: params.data.personId, ...after },
+          decision: contribution.autoStatus === 'approved' ? 'approved' : undefined,
+        },
+      })
+    }
+
+    const auditActor = contribution
+      ? { actorType: contribution.actorType, actorId: contribution.actorId }
+      : { actorType: 'user', actorId: uploaderUserId }
+
     // --- YouTube video (no file upload) ---
     if ('youtubeUrl' in payload.data) {
       const mediaCount = await app.prisma.mediaItem.count({
-        where: { treeId: params.data.id, personId: params.data.personId, deletedAt: null },
+        where: { treeId: params.data.id, personId: params.data.personId, status: 'approved', deletedAt: null },
       })
       const normalizedSource = normalizeOptionalText(payload.data.source)
       const mediaId = randomUUID()
@@ -416,24 +441,28 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
           caption: payload.data.caption ?? null,
           source: normalizedSource,
           sizeBytes: 0,
-          displayOrder: mediaCount + 1,
-          isFeatured: mediaCount < 3,
-          uploadedBy: request.actor.userId,
+          displayOrder: isPending ? 0 : mediaCount + 1,
+          isFeatured: !isPending && mediaCount < 3,
+          uploadedBy: uploaderUserId,
+          status: isPending ? 'pending' : 'approved',
+          contributionSessionId: contributionSession?.id ?? null,
         },
       })
-      await syncPersonMediaOrder(app, params.data.id, params.data.personId)
+      if (!isPending) {
+        await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
+      }
+      await recordContributionChange(mediaId, { type: 'video', mimeType: 'video/youtube', caption: payload.data.caption ?? null })
       await app.prisma.auditLog.create({
         data: {
           treeId: params.data.id,
-          actorType: 'user',
-          actorId: request.actor.userId,
+          ...auditActor,
           action: 'media_uploaded',
           entityType: 'media_item',
           entityId: mediaId,
           payloadJson: { personId: params.data.personId, type: 'video', youtubeUrl: payload.data.youtubeUrl },
         },
       })
-      return reply.code(201).send({ media })
+      return reply.code(201).send({ media, status: media.status })
     }
 
     let fileBuffer: Buffer
@@ -501,6 +530,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       where: {
         treeId: params.data.id,
         personId: params.data.personId,
+        status: 'approved',
         deletedAt: null,
       },
     })
@@ -516,19 +546,24 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         caption: normalizedCaption,
         source: normalizedSource,
         sizeBytes: normalizedSizeBytes,
-        displayOrder: mediaCount + 1,
-        isFeatured: mediaCount < 3,
-        uploadedBy: request.actor.userId,
+        displayOrder: isPending ? 0 : mediaCount + 1,
+        isFeatured: !isPending && mediaCount < 3,
+        uploadedBy: uploaderUserId,
+        status: isPending ? 'pending' : 'approved',
+        contributionSessionId: contributionSession?.id ?? null,
       },
     })
 
-    await syncPersonMediaOrder(app, params.data.id, params.data.personId)
+    if (!isPending) {
+      await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
+    }
+
+    await recordContributionChange(mediaId, { type: payload.data.type, mimeType: normalizedMimeType, caption: normalizedCaption })
 
     await app.prisma.auditLog.create({
       data: {
         treeId: params.data.id,
-        actorType: 'user',
-        actorId: request.actor.userId,
+        ...auditActor,
         action: 'media_uploaded',
         entityType: 'media_item',
         entityId: mediaId,
@@ -541,7 +576,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       },
     })
 
-    return reply.code(201).send({ media })
+    return reply.code(201).send({ media, status: media.status })
   })
 
   app.post('/trees/:id/persons/:personId/avatar', async (request, reply) => {
@@ -717,6 +752,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       where: {
         treeId: params.data.id,
         personId: params.data.personId,
+        status: 'approved',
         deletedAt: null,
       },
       select: {
@@ -751,7 +787,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    await syncPersonMediaOrder(app, params.data.id, params.data.personId)
+    await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
 
     await app.prisma.auditLog.create({
       data: {
@@ -809,7 +845,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'media_not_found' })
     }
 
-    await syncPersonMediaOrder(app, params.data.id, params.data.personId)
+    await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
 
     await app.prisma.auditLog.create({
       data: {

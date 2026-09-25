@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
+import { syncPersonMediaOrder } from '../lib/media-order.js'
 
 import type { Actor, MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
@@ -17,7 +18,7 @@ const sessionParamsSchema = z.object({
 })
 
 const contributionChangeSchema = z.object({
-  entityType: z.enum(['person', 'union', 'parent_child_link', 'annotation']),
+  entityType: z.enum(['person', 'union', 'parent_child_link', 'annotation', 'media']),
   action: z.enum(['create', 'update', 'delete', 'reorder']),
   entityId: z.string().min(1).optional().nullable(),
   before: z.unknown().optional(),
@@ -131,7 +132,7 @@ type ParsedChange = z.infer<typeof contributionChangeSchema>
 
 type TxClient = FastifyInstance['prisma']
 
-class ContributionRouteError extends Error {
+export class ContributionRouteError extends Error {
   statusCode: number
   code: string
 
@@ -245,6 +246,37 @@ async function applyContributionChange(
   change: ParsedChange,
   actorUserId: string | null,
 ): Promise<{ entityId: string | null }> {
+  // Les annotations sont appliquées par le client après la relecture (batchAnnotations) :
+  // rien à faire ici. Avant, elles tombaient dans la branche des liens et faisaient échouer la relecture.
+  if (change.entityType === 'annotation') {
+    return { entityId: change.entityId ?? null }
+  }
+
+  // Souvenir envoyé par la famille : le fichier existe déjà, on le rend visible
+  if (change.entityType === 'media') {
+    if (change.action !== 'create' || !change.entityId) {
+      throw new ContributionRouteError(400, 'unsupported_change_action_for_media')
+    }
+
+    const media = await tx.mediaItem.findFirst({
+      where: { id: change.entityId, treeId, deletedAt: null },
+      select: { personId: true },
+    })
+
+    if (!media) {
+      throw new ContributionRouteError(400, 'invalid_entity_reference')
+    }
+
+    await tx.mediaItem.update({
+      where: { id: change.entityId },
+      // placé après les souvenirs existants, puis renumérotation
+      data: { status: 'approved', displayOrder: 1_000_000 },
+    })
+    await syncPersonMediaOrder(tx, treeId, media.personId)
+
+    return { entityId: change.entityId }
+  }
+
   if (change.entityType === 'person') {
     if (change.action === 'create') {
       if (!isRecord(change.after)) {
@@ -693,10 +725,6 @@ async function applyContributionChange(
     return { entityId: change.entityId }
   }
 
-  if (change.entityType === 'annotation') {
-    return { entityId: change.entityId ?? null }
-  }
-
   throw new ContributionRouteError(400, 'unsupported_change_action_for_link')
 }
 
@@ -801,7 +829,7 @@ async function requireAdminMembership(app: FastifyInstance, actor: Actor, treeId
   return membership
 }
 
-async function resolveSubmissionContext(app: FastifyInstance, actor: Actor, treeId: string) {
+export async function resolveSubmissionContext(app: FastifyInstance, actor: Actor, treeId: string) {
   if (!actor) {
     throw new ContributionRouteError(401, 'authentication_required')
   }
@@ -929,6 +957,10 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
     const payload = createSessionSchema.safeParse(request.body)
     if (!payload.success) {
       return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+
+    if (payload.data.changes.some((change) => change.entityType === 'media')) {
+      return reply.code(400).send({ error: 'media_changes_not_allowed' })
     }
 
     try {
@@ -1126,6 +1158,12 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
 
           approvedCount += 1
         } else {
+          if (change.entityType === 'media' && change.entityId) {
+            await app.prisma.mediaItem.updateMany({
+              where: { id: change.entityId, treeId: params.data.id },
+              data: { status: 'rejected', deletedAt: new Date() },
+            })
+          }
           rejectedCount += 1
         }
 

@@ -2494,8 +2494,8 @@ function App() {
           editMode={editMode.isActive}
           canManageMedia={editMode.isActive && tree.canSubmitContribution}
           onManageMedia={media.handleOpenMediaManager}
-          onAvatarUpload={handlePersonAvatarUpload}
-          onAvatarDelete={handlePersonAvatarDelete}
+          onAvatarUpload={tree.canEditCurrentTree ? handlePersonAvatarUpload : undefined}
+          onAvatarDelete={tree.canEditCurrentTree ? handlePersonAvatarDelete : undefined}
           avatarActionLoading={avatarActionState.loading}
           avatarActionError={avatarActionState.error}
           isAdmin={userRole.isAdmin}
@@ -2521,6 +2521,8 @@ function App() {
         medias={media.selectedPersonMedias}
         loading={media.mediaManagerState.loading}
         errorMessage={media.mediaManagerState.error}
+        notice={media.mediaManagerState.notice}
+        canManage={tree.canEditCurrentTree}
         onClose={media.handleCloseMediaManager}
         onUpload={media.handleUploadPersonMedia}
         onMove={media.handleMovePersonMedia}
@@ -2528,6 +2530,7 @@ function App() {
       />
       <ContributionPanel
         visible={contrib.contribState.visible}
+        mediaToken={tree.treeContext.accessToken || auth.userAuth.token || ''}
         treeId={tree.treeContext.treeId}
         canModerate={tree.canEditCurrentTree}
         loading={contrib.contribState.loading}
