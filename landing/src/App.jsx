@@ -758,7 +758,7 @@ function HeroGraph({ className = '' }) {
       <canvas
         ref={canvasRef}
         className="block w-full h-[40svh] sm:h-[clamp(420px,92vw,560px)]"
-        aria-label="Mini galaxie familiale"
+        aria-label="Arbre de famille animé"
       />
     </div>
   )
