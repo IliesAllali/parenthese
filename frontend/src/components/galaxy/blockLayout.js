@@ -1,4 +1,5 @@
-import { computeLayout, componentOrderPerGen } from './elkLayout'
+import { computeLayout, componentOrderPerGen, chainGap } from './elkLayout'
+import { RENVOI_MIN_DX } from './constants'
 
 // ============================================================
 // Layout par blocs familiaux (Reingold-Tilford adapté aux couples)
@@ -64,16 +65,18 @@ export function computeBlockLayout(graphData = null) {
     return n
   }
 
-  const chainWidth = (chain) => chain.reduce((s, id) => s + byId.get(id).width, 0) + (chain.length - 1) * NODE_SPACING
+  const gapAfter = (chain, i) => chainGap(byId.get(chain[i]), byId.get(chain[i + 1]), NODE_SPACING)
+  const chainWidth = (chain) => chain.reduce((s, id, i) => s + byId.get(id).width + (i < chain.length - 1 ? gapAfter(chain, i) : 0), 0)
   const chainOffsets = (chain) => {
     const offsets = new Map()
     let x = 0
-    for (const id of chain) { offsets.set(id, x); x += byId.get(id).width + NODE_SPACING }
+    chain.forEach((id, i) => { offsets.set(id, x); x += byId.get(id).width + (i < chain.length - 1 ? gapAfter(chain, i) : 0) })
     return offsets
   }
 
   const pos = new Map()
   const placed = new Set()
+  const externalEdges = new Set() // `${union}>${enfant}` : enfant placé sous une autre lignée
 
   // Imbrique des blocs de gauche à droite, génération par génération
   function packBlocks(blocks, gap) {
@@ -106,7 +109,7 @@ export function computeBlockLayout(graphData = null) {
       for (const k of (childrenOfUnion.get(id) || [])) {
         const kc = chainOf.get(k)
         if (!placed.has(kc)) childBlocks.push(buildBlock(kc))
-        else external.push({ kid: k, unionId: id })
+        else { external.push({ kid: k, unionId: id }); externalEdges.add(`${id}>${k}`) }
       }
     }
     const packed = packBlocks(childBlocks, FAMILY_GAP)
@@ -200,6 +203,18 @@ export function computeBlockLayout(graphData = null) {
   let minX = Infinity
   for (const n of nodes) if (pos.has(n.id)) minX = Math.min(minX, pos.get(n.id))
   for (const n of nodes) if (pos.has(n.id)) n.x = pos.get(n.id) - minX
+
+  // Arête longue vers un enfant placé sous l'autre lignée : dessinée en renvoi (voir drawFiliations)
+  // Plusieurs renvois sous la même union : pastilles empilées (_renvoiIndex)
+  const centerX = (id) => byId.get(id).x + byId.get(id).width / 2
+  const renvoisByUnion = new Map()
+  for (const e of result.edges) {
+    const u = e.sources[0], c = e.targets[0]
+    if (!externalEdges.has(`${u}>${c}`) || Math.abs(centerX(u) - centerX(c)) <= RENVOI_MIN_DX) continue
+    e._renvoi = true
+    e._renvoiIndex = renvoisByUnion.get(u) || 0
+    renvoisByUnion.set(u, e._renvoiIndex + 1)
+  }
 
   return result
 }

@@ -7,6 +7,14 @@ export const UNION_H = PERSON_H
 export const UNKNOWN_W = 60
 export const UNKNOWN_H = PERSON_H
 export const UNKNOWN_R = 18
+// Conjoint isolé (marié, sans parent ni enfant dans l'arbre) : petit portrait collé à son partenaire.
+// Il ne prend pas un emplacement de nœud : union de largeur nulle, écart négatif vers le partenaire.
+export const COMPACT_SCALE = 0.6
+export const COMPACT_R = PERSON_R * COMPACT_SCALE
+export const COMPACT_W = 40
+export const COMPACT_JOIN_GAP = -18
+// Filiation qui traverse l'arbre (enfant placé sous l'autre lignée) : renvoi cliquable au lieu du trait
+export const RENVOI_MIN_DX = 360
 export const MAX_ORBIT_MEDIAS = 3
 export const ORBIT_RADIUS = 55
 export const ORBIT_MEDIA_SIZE = 22

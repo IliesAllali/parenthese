@@ -3,7 +3,7 @@ import { __iconNode as mapIconNode } from 'lucide-react/dist/esm/icons/map.js'
 import { __iconNode as mapPinIconNode } from 'lucide-react/dist/esm/icons/map-pin.js'
 import { __iconNode as routeIconNode } from 'lucide-react/dist/esm/icons/route.js'
 import {
-  PERSON_R, UNKNOWN_R, UNION_W, UNION_H,
+  PERSON_R, UNKNOWN_R, UNION_W, UNION_H, COMPACT_R, COMPACT_SCALE,
   MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE,
   COLORS,
   LOD_SHADOW_MIN_SCALE, LOD_DETAIL_MIN_SCALE, LOD_LABEL_FADE_IN, LOD_LABEL_FADE_OUT, CULL_MARGIN,
@@ -15,6 +15,13 @@ import { getEntranceProgress, drawPartialBezier } from './utils'
 // (null = tout dessiner). Un élément hors écran, marge comprise,
 // n'est pas dessiné.
 // ============================================================
+// Rayon d'un nœud : inconnu, conjoint isolé (petit) ou personne
+export function nodeRadius(node) {
+  if (node?._type === 'unknown') return UNKNOWN_R
+  if (node?._compact) return COMPACT_R
+  return PERSON_R
+}
+
 function rectInView(view, minX, minY, maxX, maxY) {
   if (!view) return true
   return maxX >= view.x0 - CULL_MARGIN && minX <= view.x1 + CULL_MARGIN &&
@@ -51,7 +58,7 @@ export function drawBackground(ctx, canvas) {
 // Helper: calcul des points Bézier couple (partagé entre
 // drawCoupleLinks et drawPathHighlight)
 // ============================================================
-function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData) {
+function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData, straight = false) {
   const p1Key = p1Pos._key
   const p2Key = p2Pos._key
   const rd1 = nodeRandomData.get(p1Key)
@@ -65,11 +72,11 @@ function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData) {
   const rdLeft = isP1Left ? rd1 : rd2
   const rdRight = isP1Left ? rd2 : rd1
 
-  const aL = 0 + (rdLeft?.anchorAngleOffset || 0)
+  const aL = straight ? 0 : (rdLeft?.anchorAngleOffset || 0)
   const sLx = leftPos.cx + Math.cos(aL) * leftR
   const sLy = leftPos.cy + Math.sin(aL) * leftR
 
-  const aR = Math.PI + (rdRight?.anchorAngleOffset || 0)
+  const aR = Math.PI + (straight ? 0 : (rdRight?.anchorAngleOffset || 0))
   const sRx = rightPos.cx + Math.cos(aR) * rightR
   const sRy = rightPos.cy + Math.sin(aR) * rightR
 
@@ -79,24 +86,48 @@ function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData) {
   return { sLx, sLy, sRx, sRy, jx, jy }
 }
 
-function computeFiliationCurvePoints(sourcePos, targetPos, childR, anchorAngleOffset = 0) {
-  const sx = sourcePos.cx
-  const sy = sourcePos.cy
-  const angleChild = -Math.PI / 2 + anchorAngleOffset
-  const ex = targetPos.cx + Math.cos(angleChild) * childR
-  const ey = targetPos.cy + Math.sin(angleChild) * childR
-  const dy = ey - sy
+// ============================================================
+// Fil : terracotta clair, union en rond terracotta (le rond du logo).
+// Filiation en accolade souple : l'union descend vers une ligne
+// commune à la fratrie, chaque enfant s'en détache par une courbe.
+// Les virages sont des quadratiques larges, pas des coins.
+// ============================================================
+export const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
+// Ligne de la fratrie : sous les prénoms et années des parents, au-dessus des enfants
+const BUS_DY = 100
+// Rayon horizontal des virages (plafonné à la moitié de l'écart union → enfant)
+const BUS_TURN = 56
 
-  return {
-    sx,
-    sy,
-    ex,
-    ey,
-    cp1x: sx,
-    cp1y: sy + dy * 0.88,
-    cp2x: ex,
-    cp2y: ey - dy * 0.06,
-  }
+function busY(sourceId, sy) {
+  let h = 0
+  for (let i = 0; i < sourceId.length; i++) h = (h * 31 + sourceId.charCodeAt(i)) | 0
+  // Léger décalage par union : deux fratries voisines ne fusionnent pas leurs lignes
+  return sy + BUS_DY + (Math.abs(h) % 3) * 4
+}
+
+function traceBus(ctx, sx, sy, by, ex, ey) {
+  const dx = ex - sx
+  ctx.beginPath()
+  ctx.moveTo(sx, sy)
+  if (Math.abs(dx) < 1) { ctx.lineTo(ex, ey); ctx.stroke(); return }
+  const dir = Math.sign(dx)
+  const turn = Math.min(BUS_TURN, Math.abs(dx) / 2)
+  // Descente de l'union, virage large vers la ligne de la fratrie
+  const drop = Math.min(by - sy, 64)
+  ctx.lineTo(sx, by - drop)
+  ctx.quadraticCurveTo(sx, by, sx + dir * turn, by)
+  // Ligne de la fratrie, puis courbe jusqu'au portrait de l'enfant
+  ctx.lineTo(ex - dir * turn, by)
+  ctx.quadraticCurveTo(ex, by, ex, ey)
+  ctx.stroke()
+}
+
+// Trace une filiation union → enfant. progress < 1 : entrée en fondu
+function traceFiliation(ctx, sourceId, sourcePos, targetPos, childR, progress) {
+  const a = ctx.globalAlpha
+  ctx.globalAlpha = a * progress
+  traceBus(ctx, sourcePos.cx, sourcePos.cy, busY(sourceId, sourcePos.cy), targetPos.cx, targetPos.cy - childR)
+  ctx.globalAlpha = a
 }
 
 // ============================================================
@@ -112,8 +143,8 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
 
     const p1Node = nodeMap.get(p1Key)
     const p2Node = nodeMap.get(p2Key)
-    const p1R = p1Node?._type === 'unknown' ? UNKNOWN_R : PERSON_R
-    const p2R = p2Node?._type === 'unknown' ? UNKNOWN_R : PERSON_R
+    const p1R = nodeRadius(p1Node)
+    const p2R = nodeRadius(p2Node)
 
     // Entrance animation
     let coupleProgress = 1
@@ -129,11 +160,11 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
     const p1PosKeyed = { ...p1Pos, _key: p1Key }
     const p2PosKeyed = { ...p2Pos, _key: p2Key }
     const { sLx, sLy, sRx, sRy, jx, jy } = computeCouplePoints(
-      p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData
+      p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData, nodeMap.get(elkId)?._compact
     )
 
-    ctx.strokeStyle = virtual ? COLORS.linkUnknown : COLORS.link
-    ctx.lineWidth = 0.5
+    ctx.strokeStyle = virtual ? COLORS.linkUnknown : FIL.color
+    ctx.lineWidth = FIL.width
     ctx.setLineDash(virtual ? [4, 4] : [])
     ctx.lineCap = 'round'
     ctx.globalAlpha = coupleProgress
@@ -149,9 +180,72 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
 }
 
 // ============================================================
+// Renvoi : filiation vers un enfant placé sous l'autre lignée.
+// Au lieu d'un trait qui traverse l'arbre, un bout de trait à
+// chaque extrémité et une pastille cliquable qui mène à l'autre.
+// Les zones cliquables de la dernière frame sont lues par
+// useGalaxyInteractions.
+// ============================================================
+export const renvoiHitAreas = []
+const renvoiPills = []
+const RENVOI_FONT = '500 11px "DM Sans", system-ui, sans-serif'
+// Pastilles collées aux personnes : juste sous le couple, juste au-dessus du portrait de l'enfant
+const RENVOI_PARENT_DY = 38
+const RENVOI_CHILD_GAP = 13
+
+function drawRenvoiPill(ctx, { text, cx, cy, target, alpha }) {
+  ctx.save()
+  ctx.font = RENVOI_FONT
+  const w = measureTextCached(ctx, text, 'renvoi').width + 20
+  const h = 20
+  ctx.globalAlpha = alpha
+  ctx.setLineDash([])
+  ctx.fillStyle = '#FCF3EF'
+  ctx.strokeStyle = '#EDB6A4'
+  ctx.lineWidth = 0.75
+  ctx.beginPath()
+  ctx.roundRect(cx - w / 2, cy - h / 2, w, h, h / 2)
+  ctx.fill()
+  ctx.stroke()
+  ctx.fillStyle = '#93402A'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, cx, cy + 0.5)
+  ctx.restore()
+  if (alpha > 0.5) renvoiHitAreas.push({ x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2, ...target })
+}
+
+function drawRenvoi(ctx, edge, sourcePos, targetPos, targetNode, childR, view) {
+  const scale = view?.scale ?? 1
+  const labelAlpha = Math.min(1, Math.max(0, (scale - LOD_LABEL_FADE_OUT) / (LOD_LABEL_FADE_IN - LOD_LABEL_FADE_OUT)))
+  const baseAlpha = ctx.globalAlpha
+
+  // Côté enfant : pastille « Voir les parents » posée sur le haut du portrait (l'orbite évite le haut)
+  const childPillY = targetPos.cy - childR - RENVOI_CHILD_GAP
+  // Côté parents : pastille au prénom de l'enfant juste sous l'union, empilées s'il y en a plusieurs
+  const parentPillY = sourcePos.cy + RENVOI_PARENT_DY + (edge._renvoiIndex || 0) * 24
+
+  if (labelAlpha <= 0) return
+  const firstName = targetNode?._data?.firstName || ''
+  const alpha = baseAlpha * labelAlpha
+  renvoiPills.push(
+    { text: 'Voir les parents', cx: targetPos.cx, cy: childPillY, target: { targetX: sourcePos.cx, targetY: sourcePos.cy }, alpha },
+    { text: firstName ? `Voir ${firstName}` : 'Voir l’enfant', cx: sourcePos.cx, cy: parentPillY, target: { targetX: targetPos.cx, targetY: targetPos.cy }, alpha },
+  )
+}
+
+// Après drawNodes : les pastilles passent au-dessus des portraits et des souvenirs
+export function drawRenvoiPills(ctx) {
+  renvoiPills.forEach(p => drawRenvoiPill(ctx, p))
+  renvoiPills.length = 0
+}
+
+// ============================================================
 // Filiations (Bézier union → enfant)
 // ============================================================
 export function drawFiliations(ctx, edges, posMap, nodeMap, nodeRandomData, entrance, entranceActive, elapsed, view = null) {
+  renvoiHitAreas.length = 0
+  renvoiPills.length = 0
   if (!edges) return
 
   edges.forEach(edge => {
@@ -172,32 +266,30 @@ export function drawFiliations(ctx, edges, posMap, nodeMap, nodeRandomData, entr
     }
 
     const targetNode = nodeMap.get(targetId)
-    const rdChild = nodeRandomData.get(targetId)
     const pType = edge._parentageType || 'biologique'
 
     if (pType === 'adoption') {
       ctx.setLineDash([8, 5])
-      ctx.strokeStyle = COLORS.link
+      ctx.strokeStyle = FIL.color
     } else if (pType === 'inconnu') {
       ctx.setLineDash([3, 3])
       ctx.strokeStyle = COLORS.linkUnknown
     } else {
       ctx.setLineDash([])
-      ctx.strokeStyle = COLORS.link
+      ctx.strokeStyle = FIL.color
     }
-    ctx.lineWidth = 0.5
+    ctx.lineWidth = FIL.width
     ctx.lineCap = 'round'
     ctx.globalAlpha = Math.min(1, edgeProgress * 1.5)
 
-    const childR = targetNode?._type === 'unknown' ? UNKNOWN_R : PERSON_R
-    const { sx, sy, ex, ey, cp1x, cp1y, cp2x, cp2y } = computeFiliationCurvePoints(
-      sourcePos,
-      targetPos,
-      childR,
-      rdChild?.anchorAngleOffset || 0,
-    )
-
-    drawPartialBezier(ctx, sx, sy, cp1x, cp1y, cp2x, cp2y, ex, ey, edgeProgress)
+    const childR = nodeRadius(targetNode)
+    if (edge._renvoi) {
+      drawRenvoi(ctx, edge, sourcePos, targetPos, targetNode, childR, view)
+      ctx.globalAlpha = 1
+      ctx.setLineDash([])
+      return
+    }
+    traceFiliation(ctx, sourceId, sourcePos, targetPos, childR, edgeProgress)
     ctx.globalAlpha = 1
     ctx.setLineDash([])
   })
@@ -233,13 +325,13 @@ export function drawPathHighlight(ctx, {
 
     const p1Node = nodeMap.get(p1Key)
     const p2Node = nodeMap.get(p2Key)
-    const p1R = p1Node?._type === 'unknown' ? UNKNOWN_R : PERSON_R
-    const p2R = p2Node?._type === 'unknown' ? UNKNOWN_R : PERSON_R
+    const p1R = nodeRadius(p1Node)
+    const p2R = nodeRadius(p2Node)
 
     const p1PosKeyed = { ...p1Pos, _key: p1Key }
     const p2PosKeyed = { ...p2Pos, _key: p2Key }
     const { sLx, sLy, sRx, sRy, jx, jy } = computeCouplePoints(
-      p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData
+      p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData, nodeMap.get(elkId)?._compact
     )
 
     ctx.strokeStyle = `rgba(147, 64, 42, ${0.55 + 0.25 * hp})`
@@ -266,22 +358,14 @@ export function drawPathHighlight(ctx, {
       if (!sourcePos || !targetPos) return
 
       const targetNode = nodeMap.get(edge.targets[0])
-      const rdChild = nodeRandomData.get(edge.targets[0])
-      const childR = targetNode?._type === 'unknown' ? UNKNOWN_R : PERSON_R
-      const { sx, sy, ex, ey, cp1x, cp1y, cp2x, cp2y } = computeFiliationCurvePoints(
-        sourcePos,
-        targetPos,
-        childR,
-        rdChild?.anchorAngleOffset || 0,
-      )
-
+      const childR = nodeRadius(targetNode)
       ctx.strokeStyle = `rgba(147, 64, 42, ${0.55 + 0.25 * hp})`
       ctx.lineWidth = 1.5 + 1.5 * hp
       ctx.setLineDash([])
       ctx.lineCap = 'round'
       ctx.globalAlpha = 1
 
-      drawPartialBezier(ctx, sx, sy, cp1x, cp1y, cp2x, cp2y, ex, ey, hp)
+      traceFiliation(ctx, edge.sources[0], sourcePos, targetPos, childR, hp)
     })
   }
 
@@ -293,8 +377,9 @@ export function drawPathHighlight(ctx, {
     if (hp < 0.01) continue
     const pos = posMap.get(nodeId)
     if (!pos) continue
-    const pathGlowR = PERSON_R + 10
-    const pathGlow = ctx.createRadialGradient(pos.cx, pos.cy, PERSON_R * 0.7, pos.cx, pos.cy, pathGlowR)
+    const r = nodeRadius(nodeMap.get(nodeId))
+    const pathGlowR = r + 10
+    const pathGlow = ctx.createRadialGradient(pos.cx, pos.cy, r * 0.7, pos.cx, pos.cy, pathGlowR)
     pathGlow.addColorStop(0, `rgba(147, 64, 42, ${0.12 * hp})`)
     pathGlow.addColorStop(1, 'rgba(147, 64, 42, 0)')
     ctx.fillStyle = pathGlow
@@ -405,17 +490,19 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     ctx.restore()
   }
 
-  // --- Hover scale + entrance scale ---
+  // --- Hover scale + entrance scale (conjoint isolé : en petit) ---
+  const k = node._compact ? COMPACT_SCALE : 1
+  const R = PERSON_R * k
   const hs = hoverScales.get(node.id) || 0
   const entranceScale = 0.3 + nodeProgress * 0.7
-  const personScale = entranceScale * (1 + hs * 0.1)
+  const personScale = entranceScale * (1 + hs * 0.1) * k
 
   // --- Glow sélection ---
   const sg = selectedGlowScales.get(node.id) || 0
   if (sg > 0.001) {
-    const selGlowR = PERSON_R + 24 + sg * 14
+    const selGlowR = R + (24 + sg * 14) * k
     const selAlpha = sg * 0.38 * nodeProgress
-    const selGlow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.3, cx, cy, selGlowR)
+    const selGlow = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, selGlowR)
     selGlow.addColorStop(0, `rgba(210, 105, 74, ${selAlpha})`)
     selGlow.addColorStop(0.5, `rgba(210, 105, 74, ${selAlpha * 0.45})`)
     selGlow.addColorStop(1, 'rgba(210, 105, 74, 0)')
@@ -428,9 +515,9 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   // --- Glow recherche (jaune) ---
   const srch = (searchGlowScales || new Map()).get(node.id) || 0
   if (srch > 0.001) {
-    const searchGlowR = PERSON_R + 28 + srch * 18
+    const searchGlowR = R + (28 + srch * 18) * k
     const searchAlpha = srch * 0.55 * nodeProgress
-    const searchGlow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.25, cx, cy, searchGlowR)
+    const searchGlow = ctx.createRadialGradient(cx, cy, R * 0.25, cx, cy, searchGlowR)
     searchGlow.addColorStop(0, `rgba(210, 105, 74, ${searchAlpha})`)
     searchGlow.addColorStop(0.5, `rgba(210, 105, 74, ${searchAlpha * 0.55})`)
     searchGlow.addColorStop(1, 'rgba(210, 105, 74, 0)')
@@ -443,9 +530,9 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
 
   // --- Halo glow ---
   if (withDetail) {
-    const glowR = PERSON_R + 12 + hs * 6
+    const glowR = R + (12 + hs * 6) * k
     const glowAlpha = (person.isAlive ? 0.15 + hs * 0.1 : 0.08 + hs * 0.06) * nodeProgress
-    const glow = ctx.createRadialGradient(cx, cy, PERSON_R * 0.6, cx, cy, glowR)
+    const glow = ctx.createRadialGradient(cx, cy, R * 0.6, cx, cy, glowR)
     glow.addColorStop(0, `rgba(147, 64, 42, ${glowAlpha})`)
     glow.addColorStop(1, 'rgba(147, 64, 42, 0)')
     ctx.fillStyle = glow
@@ -482,6 +569,8 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   ctx.globalAlpha = nodeProgress * labelAlpha
   ctx.translate(cx, cy + labelOffsetY)
   ctx.rotate(labelRot)
+  // Libellés du petit portrait : un peu réduits, pas autant que le portrait pour rester lisibles
+  if (node._compact) ctx.scale(0.85, 0.85)
 
   ctx.font = '400 13px "Newsreader", Georgia, serif'
   ctx.textAlign = 'center'
@@ -934,9 +1023,9 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       drawPersonNode(ctx, node, pos, nodeProgress, renderState)
     } else if (node._type === 'union') {
       ctx.globalAlpha = nodeProgress
-      ctx.fillStyle = COLORS.link
+      ctx.fillStyle = FIL.dot
       ctx.beginPath()
-      ctx.arc(cx, cy, 2 * nodeProgress, 0, Math.PI * 2)
+      ctx.arc(cx, cy, FIL.dotR * nodeProgress, 0, Math.PI * 2)
       ctx.fill()
       ctx.globalAlpha = 1
     } else if (node._type === 'unknown') {

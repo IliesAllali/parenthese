@@ -8,7 +8,7 @@ import { computeBlockLayout } from './galaxy/blockLayout'
 // Placement par blocs familiaux par défaut (mesures : tools/layout-bench). ?layout=sugiyama = placement Sugiyama.
 const USE_BLOCK_LAYOUT = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('layout') !== 'sugiyama'
 import { findPathBFS } from './galaxy/pathfinding'
-import { drawBackground, drawCoupleLinks, drawFiliations, drawAnnotations, drawPathHighlight, drawNodes } from './galaxy/renderers'
+import { drawBackground, drawCoupleLinks, drawFiliations, drawAnnotations, drawPathHighlight, drawNodes, drawRenvoiPills } from './galaxy/renderers'
 import { annotations as annotationData } from '../data/mockData'
 import { useImageCache } from './galaxy/useImageCache'
 import { useGalaxyInteractions } from './galaxy/useGalaxyInteractions'
@@ -209,7 +209,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     initialTransformRef.current = init
     transformRef.current = init
     targetTransformRef.current = init
-    nodeRandomDataRef.current = generateNodeRandomData(result.children)
+    nodeRandomDataRef.current = generateNodeRandomData(result.children, result.edges)
 
     // Construire le schedule d'animation d'entrée
     const genGroups = new Map()
@@ -530,6 +530,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
         entrance, entranceActive, elapsed,
         view,
       })
+      drawRenvoiPills(ctx)
       // Annotations dessinées APRES les noeuds pour que stickers/texte soient au-dessus
       // Annotations : ancrer aux personnes proches pour qu'elles suivent le layout
       const personPosMap = new Map()
