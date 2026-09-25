@@ -884,6 +884,11 @@ const APP_SIGNUP_URL = 'https://app.parenthese.io/?account=register&source=landi
 
 const GUIDES = [
   {
+    href: '/comment-faire-un-arbre-genealogique/',
+    title: 'Comment faire un arbre généalogique',
+    text: "Partir de soi, interroger les aînés, trouver les actes gratuitement en mairie et aux archives, puis faire compléter la famille.",
+  },
+  {
     href: '/application-arbre-genealogique/',
     title: "Quelle application d'arbre généalogique choisir ?",
     text: 'Geneanet, MyHeritage, Filae, FamilySearch, Parenthèse. Rechercher des ancêtres et garder une mémoire vivante ne sont pas le même besoin.',
