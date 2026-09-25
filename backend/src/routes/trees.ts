@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
+import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
 import type { MembershipRole } from '../types/auth.js'
@@ -695,9 +696,12 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
 
       // Un seul mot de passe de partage (25/09/2026) : regarder et proposer. Les deux colonnes restent,
       // les arbres créés avant ont encore deux mots de passe différents, les deux ouvrent en contributeur.
-      const matches =
-        (await verifyPassword(payload.data.password, accessConfig.contributorHash)) ||
-        (await verifyPassword(payload.data.password, accessConfig.visitorHash))
+      // Apostrophe typographique ou espace finale ajoutées par un clavier de téléphone : acceptées (password-variants.ts)
+      const matches = await matchSharePassword(
+        payload.data.password,
+        [accessConfig.contributorHash, accessConfig.visitorHash],
+        verifyPassword,
+      )
 
       if (!matches) {
         return reply.code(401).send({ error: 'invalid_password' })
@@ -895,11 +899,13 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'tree_not_found' })
     }
 
-    const password = payload.data.password.trim()
-    const matches =
-      (await verifyPassword(password, accessConfig.contributorHash)) ||
-      (await verifyPassword(password, accessConfig.visitorHash))
-    if (!matches) {
+    // On garde la variante exacte qui correspond au hash, c'est elle que la famille doit recevoir
+    const password = await matchSharePassword(
+      payload.data.password,
+      [accessConfig.contributorHash, accessConfig.visitorHash],
+      verifyPassword,
+    )
+    if (!password) {
       return reply.code(422).send({ error: 'password_mismatch' })
     }
 

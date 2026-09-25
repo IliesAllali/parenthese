@@ -605,6 +605,38 @@ describe('API security and authz', () => {
     await app.close()
   })
 
+  it('accepts the share password typed with a phone apostrophe and a trailing space', async () => {
+    const { hashPassword } = await import('../src/lib/auth')
+    const app = createApp()
+    await app.ready()
+
+    const hash = await hashPassword("Lavenuedel'Avenir")
+    prismaMock.treeAccessPasswords.findUnique.mockResolvedValue({
+      treeId: 'tree-1',
+      visitorHash: hash,
+      contributorHash: hash,
+      updatedAt: new Date('2026-02-11T10:00:00.000Z'),
+      tree: { deletedAt: null },
+    })
+
+    for (const typed of ['Lavenuedel’Avenir', "Lavenuedel'Avenir ", 'Lavenuedel’Avenir ']) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/trees/tree-1/access/unlock',
+        payload: { password: typed },
+      })
+      expect(response.statusCode, JSON.stringify(typed)).toBe(200)
+    }
+
+    const wrong = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/access/unlock',
+      payload: { password: 'lavenuedel’avenir' },
+    })
+    expect(wrong.statusCode).toBe(401)
+    await app.close()
+  })
+
   it('still rejects a wrong share password', async () => {
     const { hashPassword } = await import('../src/lib/auth')
     const app = createApp()
