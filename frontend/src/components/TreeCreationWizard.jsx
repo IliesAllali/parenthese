@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ImagePlus } from 'lucide-react'
 import './TreeCreationWizard.css'
+import PzBusy from './PzBusy.jsx'
 
 const INITIAL_STATE = {
   treeName: '',
@@ -186,7 +187,7 @@ function TreeCreationWizard({
                 Retour
               </button>
               <button type="submit" className="pz-btn pz-btn--primary" disabled={!canCreate}>
-                {loading ? 'Création en cours…' : 'Créer mon arbre'}
+                <PzBusy busy={loading} busyLabel="Création de l'arbre">Créer mon arbre</PzBusy>
               </button>
             </div>
           </form>

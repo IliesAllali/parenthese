@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { UserPlus, X, Search, ChevronDown } from 'lucide-react'
 import './AddPersonPanel.css'
+import PzBusy from './PzBusy.jsx'
 
 /**
  * Panneau slide-in gauche pour ajouter une personne
@@ -299,7 +300,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           </button>
           <button type="submit" className="pz-btn pz-btn--primary" disabled={!isValid || loading}>
             <UserPlus size={16} strokeWidth={2} />
-            {loading ? 'Ajout…' : 'Ajouter cette personne'}
+            <PzBusy busy={loading} busyLabel="Ajout en cours">Ajouter cette personne</PzBusy>
           </button>
         </div>
       </form>

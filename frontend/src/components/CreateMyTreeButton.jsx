@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import './CreateMyTreeButton.css'
+import PzBusy from './PzBusy.jsx'
 
 function normalizeSlug(input) {
   return input
@@ -78,7 +79,7 @@ const CreateMyTreeButton = ({ onCreateTree, loading }) => {
               )}
               {error && <div className="cmt-error">{error}</div>}
               <button type="submit" className="cmt-btn-create" disabled={!canSubmit}>
-                {loading ? 'Création…' : 'Créer l\'arbre'}
+                <PzBusy busy={loading} busyLabel="Création de l'arbre">Créer l'arbre</PzBusy>
               </button>
             </form>
           </div>

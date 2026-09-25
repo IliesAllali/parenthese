@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
 import './SettingsPanels.css'
+import PzBusy from './PzBusy.jsx'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -294,7 +295,7 @@ const ContributionPanel = ({
                   {editingVisitorPassword ? (
                     <form className="contrib-pass-edit-inline" onSubmit={handleSaveVisitorPassword}>
                       <input className="contrib-pass-edit-input" type="password" value={newVisitorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewVisitorPassword(e.target.value)} />
-                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}>{inviteSaving ? '...' : 'Enregistrer'}</button>
+                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy></button>
                       <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingVisitorPassword(false); setNewVisitorPassword(''); setInviteLocalError('') }}>Annuler</button>
                     </form>
                   ) : (
@@ -310,7 +311,7 @@ const ContributionPanel = ({
                   {editingContributorPassword ? (
                     <form className="contrib-pass-edit-inline" onSubmit={handleSaveContributorPassword}>
                       <input className="contrib-pass-edit-input" type="password" value={newContributorPassword} placeholder="Nouveau MDP (8+ car.)" autoFocus onChange={(e) => setNewContributorPassword(e.target.value)} />
-                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}>{inviteSaving ? '...' : 'Enregistrer'}</button>
+                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy></button>
                       <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setEditingContributorPassword(false); setNewContributorPassword(''); setInviteLocalError('') }}>Annuler</button>
                     </form>
                   ) : (
@@ -519,7 +520,7 @@ const ContributionPanel = ({
                                     onClick={() => applyDecisions(session.id, session.changes)}
                                     disabled={isReviewing}
                                   >
-                                    {isReviewing ? 'Un instant…' : `Appliquer mes choix${summary.pending > 0 ? `, ${summary.pending} sans réponse ser${summary.pending > 1 ? 'ont refusées' : 'a refusée'}` : ''}`}
+                                    <PzBusy busy={isReviewing} busyLabel="Application en cours">{`Appliquer mes choix${summary.pending > 0 ? `, ${summary.pending} sans réponse ser${summary.pending > 1 ? 'ont refusées' : 'a refusée'}` : ''}`}</PzBusy>
                                   </button>
                                   <div className="contrib-session-quick">
                                     {confirmApproveAll === session.id ? (
@@ -549,7 +550,7 @@ const ContributionPanel = ({
                                       onClick={() => setConfirmApproveAll(session.id)}
                                       disabled={isReviewing}
                                     >
-                                      {isReviewing ? 'Un instant…' : 'Tout accepter'}
+                                      <PzBusy busy={isReviewing} busyLabel="Application en cours">Tout accepter</PzBusy>
                                     </button>
                                   )}
                                   <button type="button" className="contrib-quick-btn" onClick={() => onReviewSession(session.id, { decision: 'rejected' })} disabled={isReviewing}>Tout refuser</button>

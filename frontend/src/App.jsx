@@ -60,6 +60,7 @@ import {
 } from './utils/analytics'
 import './App.css'
 import './styles/pz.css'
+import { setBooting } from './bootSignal.js'
 
 function yearToIsoDate(value) {
   if (value === null || value === undefined || value === '') {
@@ -429,6 +430,7 @@ function writeInvitePasswordsToStorage(treeId, passwords) {
 function App() {
   const auth = useAuth()
   const tree = useTreeAccess()
+  useEffect(() => { setBooting(tree.bootState === 'loading') }, [tree.bootState])
   // Arbre partagé d'où l'on vient quand on ouvre l'écran compte : on y revient après connexion/création
   const pendingSharedTreeRef = useRef(null)
   const refreshTreeAndKeepSelection = useCallback(async (personId, options = {}) => {
@@ -2296,9 +2298,7 @@ function App() {
 
   if (tree.bootState === 'loading') {
     return (
-      <div className="app app-loading">
-        <div className="loading-card">Chargement de l'arbre généalogique...</div>
-      </div>
+      <div className="app app-loading" />
     )
   }
 

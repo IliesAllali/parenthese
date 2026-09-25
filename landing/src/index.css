@@ -133,7 +133,22 @@ em.s { font-style: italic; font-weight: 300; }
 /* démo */
 .sec-demo { background: var(--a50); }
 .demo-frame { position: relative; max-width: 1120px; width: 100%; margin-inline: auto; border-radius: var(--r-l); overflow: hidden; border: 1px solid var(--trait-l); background: var(--papier); box-shadow: var(--ombre); }
-.demo-wait { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: var(--papier); font: 500 14px var(--sans); color: var(--doux); }
+.demo-wait { position: absolute; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 14px; background: var(--papier); font: 500 14px var(--sans); color: var(--doux); }
+.demo-wait .pz-mark { width: 56px; height: auto; }
+
+/* le rond qui attend : il se divise en trois points qui respirent (motion validée le 25/09/2026) */
+.pz-mark { display: block; overflow: visible; }
+.pz-mark-par path { fill: var(--encre); stroke: var(--encre); stroke-width: 48.1; stroke-linejoin: round; }
+.pz-mark-c { fill: var(--a500); transform-box: fill-box; transform-origin: center; }
+.pz-mark-p { transition: transform 420ms var(--ease-out); }
+.pz-mark-s { transform-box: fill-box; transform-origin: center; transition: transform 420ms var(--ease-out); }
+.pz-mark.is-loading .pz-mark-p0 { transform: translateX(-300px); }
+.pz-mark.is-loading .pz-mark-p2 { transform: translateX(300px); }
+.pz-mark.is-loading .pz-mark-s { transform: scale(.27); }
+.pz-mark.is-loading .pz-mark-c { animation: pz-souffle 1200ms ease-in-out 420ms infinite; }
+.pz-mark.is-loading .pz-mark-p1 .pz-mark-c { animation-delay: 580ms; }
+.pz-mark.is-loading .pz-mark-p2 .pz-mark-c { animation-delay: 740ms; }
+@keyframes pz-souffle { 0%, 100% { opacity: 1; transform: none; } 50% { opacity: .32; transform: scale(.78); } }
 .demo-enter { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; cursor: pointer; background: linear-gradient(180deg, rgba(251,250,247,0) 0%, rgba(42,38,34,.14) 100%); }
 
 /* pour qui */
@@ -176,7 +191,10 @@ em.s { font-style: italic; font-weight: 300; }
   html { scroll-behavior: auto; }
   .rise { animation: none; }
   [data-reveal] { opacity: 1; transform: none; transition: none; }
+  .pz-mark-p, .pz-mark-s { transition-duration: 1ms; }
+  .pz-mark.is-loading .pz-mark-c { animation-name: pz-fade-pulse; }
 }
+@keyframes pz-fade-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {

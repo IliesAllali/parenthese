@@ -3,6 +3,7 @@ import { Save, Trash2, Plus, X, Search, Check, Play } from 'lucide-react'
 import { getParents, getChildren, getPersonUnions, getPersonMedias, filiations, persons, unions } from '../data/mockData'
 import GeoMediaThumbnail from './GeoMediaThumbnail'
 import './PersonCard.css'
+import PzBusy from './PzBusy.jsx'
 
 const TYPE_LABELS = {
   photo: 'Photo',
@@ -655,7 +656,7 @@ const PersonCard = ({
                 disabled={(!hasChanges && !saveSuccess) || saving}
                 onClick={handleSave}
               >
-                {saveSuccess ? (<><Check size={16} strokeWidth={2.5} />Enregistré</>) : (<><Save size={16} strokeWidth={2} />{saving ? 'Enregistrement…' : 'Enregistrer'}</>)}
+                {saveSuccess ? (<><Check size={16} strokeWidth={2.5} />Enregistré</>) : (<PzBusy busy={saving} busyLabel="Enregistrement en cours"><Save size={16} strokeWidth={2} />Enregistrer</PzBusy>)}
               </button>
             </>
           )}
