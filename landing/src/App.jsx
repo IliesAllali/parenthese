@@ -755,10 +755,10 @@ function HeroGraph({ className = '' }) {
   }, [])
 
   return (
-    <div ref={containerRef} className={`relative w-full max-w-2xl mx-auto lg:mx-0 ${className}`} data-reveal data-hero-galaxy>
+    <div ref={containerRef} className={`relative w-full max-w-2xl mx-auto lg:mx-0 hero-graph ${className}`} data-reveal data-hero-galaxy>
       <canvas
         ref={canvasRef}
-        className="block w-full h-[40svh] sm:h-[clamp(420px,92vw,560px)]"
+        className="block w-full h-[40svh] sm:h-[clamp(420px,92vw,560px)] lg:h-[clamp(560px,46vw,700px)]"
         aria-label="Arbre de famille animé"
       />
     </div>

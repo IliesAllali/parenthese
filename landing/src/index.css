@@ -87,6 +87,10 @@ em.s { font-style: italic; font-weight: 300; }
 .hero-txt { display: grid; gap: 24px; justify-items: start; }
 .hero-txt .t-d1 { max-width: 17ch; font-size: clamp(40px, 4.6vw, 64px); line-height: 1.04; }
 .hero-txt .lede { max-width: 44ch; }
+/* Le visuel du hero déborde sur la marge droite, jamais au-delà de l'écran (24px de garde pour la barre de défilement) */
+@media (min-width: 1024px) {
+  .hero-graph { max-width: none; margin-left: -40px; width: calc(100% + 40px + var(--gut) + max(0px, (100vw - 1200px) / 2) - 24px); }
+}
 .ctas { display: flex; gap: 10px; flex-wrap: wrap; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
