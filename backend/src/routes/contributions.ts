@@ -807,7 +807,8 @@ async function resolveSubmissionContext(app: FastifyInstance, actor: Actor, tree
   }
 
   if (actor.kind === 'tree_access') {
-    if (actor.treeId !== treeId || actor.role !== 'contributor') {
+    // Mot de passe unique : tout accès partagé peut proposer, y compris les jetons « visitor » d'avant
+    if (actor.treeId !== treeId) {
       throw new ContributionRouteError(403, 'forbidden')
     }
 
@@ -902,7 +903,7 @@ async function resolveSubmissionContext(app: FastifyInstance, actor: Actor, tree
     },
   })
 
-  if (!shared || shared.tree.deletedAt || shared.role !== 'contributor') {
+  if (!shared || shared.tree.deletedAt) {
     throw new ContributionRouteError(403, 'forbidden')
   }
 

@@ -570,6 +570,109 @@ describe('API security and authz', () => {
     await app.close()
   })
 
+  // Mot de passe de partage unique (25/09/2026)
+  it('opens as contributor with the old visitor password', async () => {
+    const { hashPassword } = await import('../src/lib/auth')
+    const app = createApp()
+    await app.ready()
+
+    prismaMock.treeAccessPasswords.findUnique.mockResolvedValue({
+      treeId: 'tree-1',
+      visitorHash: await hashPassword('regarder-seulement'),
+      contributorHash: await hashPassword('ajouter-aussi'),
+      updatedAt: new Date('2026-02-11T10:00:00.000Z'),
+      tree: { deletedAt: null },
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/access/unlock',
+      payload: { password: 'regarder-seulement' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json().role).toBe('contributor')
+    const payload = (app as any).jwt.decode(response.json().token)
+    expect(payload.role).toBe('contributor')
+    await app.close()
+  })
+
+  it('still rejects a wrong share password', async () => {
+    const { hashPassword } = await import('../src/lib/auth')
+    const app = createApp()
+    await app.ready()
+
+    prismaMock.treeAccessPasswords.findUnique.mockResolvedValue({
+      treeId: 'tree-1',
+      visitorHash: await hashPassword('regarder-seulement'),
+      contributorHash: await hashPassword('ajouter-aussi'),
+      updatedAt: new Date('2026-02-11T10:00:00.000Z'),
+      tree: { deletedAt: null },
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/access/unlock',
+      payload: { password: 'pas-le-bon' },
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+
+  it('lets an older visitor access token submit a contribution', async () => {
+    const app = createApp()
+    await app.ready()
+
+    const visitorToken = (app as any).jwt.sign({
+      kind: 'tree_access',
+      sub: 'tree:tree-1:visitor',
+      treeId: 'tree-1',
+      role: 'visitor',
+      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+    })
+
+    prismaMock.tree.findFirst.mockResolvedValue({
+      id: 'tree-1',
+      rootPersonId: null,
+      settings: { contributorPolicy: 'pending' },
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions',
+      headers: { authorization: `Bearer ${visitorToken}` },
+      payload: {
+        title: 'Ajout depuis un ancien accès visiteur',
+        changes: [
+          { entityType: 'person', action: 'create', after: { firstName: 'Alice', lastName: 'Martin' } },
+        ],
+      },
+    })
+
+    expect(response.statusCode).toBe(201)
+    await app.close()
+  })
+
+  it('writes the single share password into both hashes', async () => {
+    const { verifyPassword } = await import('../src/lib/auth')
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { password: 'un-seul-mot-de-passe' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const data = prismaMock.treeAccessPasswords.update.mock.calls.at(-1)?.[0]?.data
+    expect(data.visitorHash).toBe(data.contributorHash)
+    expect(await verifyPassword('un-seul-mot-de-passe', data.contributorHash)).toBe(true)
+    await app.close()
+  })
+
   it('allows admin to list pending contribution sessions', async () => {
     const app = createApp()
     const token = await createUserToken(app)

@@ -8,22 +8,20 @@ export const TREE_ID_FROM_ENV = (import.meta.env.VITE_TREE_ID || '').trim()
 
 const TOKEN_STORAGE_PREFIX = 'tree_access_token_'
 
+// Mot de passe de partage unique (25/09/2026) : tout accès partagé peut proposer.
+// Les jetons et accès « visitor » d'avant valent contributeur.
 function normalizeRole(role) {
-  return String(role || '').trim().toLowerCase()
+  const value = String(role || '').trim().toLowerCase()
+  return value === 'visitor' ? 'contributor' : value
 }
 
 export function getTreeTokenStorageKey(treeId) {
   return `${TOKEN_STORAGE_PREFIX}${treeId}`
 }
 
-// Rôle porté par un jeton d'accès partagé (payload JWT, sans vérification : le serveur tranche)
-export function readTreeAccessRole(token) {
-  try {
-    const payload = JSON.parse(atob(String(token).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return payload?.role === 'contributor' ? 'contributor' : 'visitor'
-  } catch {
-    return 'visitor'
-  }
+// Rôle d'un jeton d'accès partagé : toujours contributeur depuis le mot de passe unique (le serveur tranche)
+export function readTreeAccessRole() {
+  return 'contributor'
 }
 
 export function getSlugFromPathname() {
