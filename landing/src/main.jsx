@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { analytics } from './analytics.js'
@@ -9,8 +9,14 @@ const deferInit = () => analytics.init()
 if ('requestIdleCallback' in window) window.requestIdleCallback(deferInit, { timeout: 3000 })
 else window.setTimeout(deferInit, 1500)
 
-createRoot(document.getElementById('root')).render(
+const container = document.getElementById('root')
+const app = (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 )
+
+// En production le HTML est prérendu (scripts/prerender.mjs) : on l'hydrate.
+// En développement (vite dev) la racine est vide : rendu client classique.
+if (container.hasChildNodes()) hydrateRoot(container, app)
+else createRoot(container).render(app)
