@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { analytics } from './analytics.js'
 import { getEntranceProgress, seededFloat } from './heroGraphMath.js'
 import PzMark from './PzMark.jsx'
+import LogoLockup from './LogoLockup.jsx'
 
 // ─── Design atoms ─────────────────────────────────────────────────────────────
 
@@ -771,7 +772,7 @@ function Header({ onCta, elevated }) {
   return (
     <header className={`site-nav${elevated ? ' is-elevated' : ''}`}>
       <div className="wrap nav-in">
-        <a href="/" aria-label="Parenthèse, accueil"><Logo height={22} /></a>
+        <a href="/" aria-label="Parenthèse, accueil"><LogoLockup height={22} /></a>
         <nav aria-label="Sections">
           <a href="#comment">Comment ça marche</a>
           <a href="#demo">Un exemple</a>
