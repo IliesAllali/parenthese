@@ -9,8 +9,11 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
     `edit-mode-border ${isAdmin ? 'edit-mode-border--admin' : 'edit-mode-border--contributor'}`
   ), [isAdmin])
 
-  const toastLabel = isAdmin ? "Vous modifiez l'arbre" : 'Vous proposez des modifications'
-  const submitLabel = isAdmin ? "Mettre à jour l'arbre" : 'Envoyer les modifications'
+  // Libellés courts : ils doivent tenir sur un téléphone à côté du bouton
+  const toastLabel = isAdmin ? "Vous modifiez l'arbre" : 'Vos propositions'
+  const submitLabel = isAdmin ? "Mettre à jour l'arbre" : 'Envoyer mes ajouts'
+  // La famille ne voit le bouton d'envoi que lorsqu'il y a quelque chose à envoyer
+  const showSubmit = Boolean(onSubmit) && (isAdmin || hasDraft)
 
   if (!active) return null
 
@@ -22,7 +25,7 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
         <span className="edit-mode-toast-dot" aria-hidden="true" />
         <span className="edit-mode-toast-text">{toastLabel}</span>
 
-        {onSubmit && (
+        {showSubmit && (
           <button
             type="button"
             className="pz-btn pz-btn--primary pz-btn--sm edit-mode-submit"

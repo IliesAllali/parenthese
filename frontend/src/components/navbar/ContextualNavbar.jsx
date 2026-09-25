@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   Edit3, Share2, User, UserPlus,
-  X, MousePointer2, Pencil, Type, Star, Trash2, Image,
+  X, MousePointer2, Pencil, Type, Star, Trash2, Image, ImagePlus, MoreHorizontal, HelpCircle,
 } from 'lucide-react'
 import NavButton from './NavButton'
 import AvatarMenu from './AvatarMenu'
@@ -32,6 +32,8 @@ function ContextualNavbar({
   activeTreeName = '',
   onEditClick,
   onAddPersonClick,
+  onAddSouvenirClick,
+  helpUrl = '',
   onShareClick,
   onTreeSelect,
   onCreateTree,
@@ -43,6 +45,8 @@ function ContextualNavbar({
 }) {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false)
   const [annotPanel, setAnnotPanel] = useState(null)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreRef = useRef(null)
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   )
@@ -62,6 +66,9 @@ function ContextualNavbar({
     function handleClickOutside(event) {
       if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target)) {
         setAvatarMenuOpen(false)
+      }
+      if (moreRef.current && !moreRef.current.contains(event.target)) {
+        setMoreOpen(false)
       }
     }
 
@@ -83,6 +90,7 @@ function ContextualNavbar({
     function handleEscape(event) {
       if (event.key === 'Escape') {
         setAvatarMenuOpen(false)
+        setMoreOpen(false)
         setAnnotPanel(null)
       }
     }
@@ -120,6 +128,47 @@ function ContextualNavbar({
       setAnnotPanel(null)
     }
   }
+
+  // Famille arrivée par le lien : les deux gestes utiles écrits en toutes lettres, le reste dans « Plus »
+  const isFamily = (navbarType === 'contributor_anon' || navbarType === 'contributor_auth') && Boolean(onAddSouvenirClick)
+  const renderFamilyButtons = () => (
+    <>
+      <button type="button" className="nav-family-btn nav-family-btn--primary" onClick={onAddSouvenirClick}>
+        <ImagePlus size={20} strokeWidth={2} aria-hidden="true" />
+        <span>Ajouter un souvenir</span>
+      </button>
+      <button type="button" className="nav-family-btn" onClick={onAddPersonClick}>
+        <UserPlus size={20} strokeWidth={2} aria-hidden="true" />
+        <span>Ajouter une personne</span>
+      </button>
+      <div ref={moreRef} className="nav-more-wrapper">
+        <button type="button" className={`nav-family-btn nav-family-btn--more${moreOpen ? ' is-open' : ''}`} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-haspopup="menu">
+          <MoreHorizontal size={20} strokeWidth={2} aria-hidden="true" />
+          <span>Plus</span>
+        </button>
+        {moreOpen && (
+          <div className="nav-more-menu" role="menu">
+            <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onEditClick?.() }}>
+              <Pencil size={18} strokeWidth={2} aria-hidden="true" />
+              Dessiner ou écrire sur l'arbre
+            </button>
+            {helpUrl && (
+              <a role="menuitem" href={helpUrl} target="_blank" rel="noopener" onClick={() => setMoreOpen(false)}>
+                <HelpCircle size={18} strokeWidth={2} aria-hidden="true" />
+                Le mode d'emploi
+              </a>
+            )}
+            {!authenticated && (
+              <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); handleCreateAccountClick() }}>
+                <User size={18} strokeWidth={2} aria-hidden="true" />
+                Créer un compte
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  )
 
   const renderButtons = () => {
     switch (navbarType) {
@@ -243,7 +292,7 @@ function ContextualNavbar({
   return (
     <nav
       ref={navRef}
-      className={`contextual-navbar${showMobileAnnot ? ' contextual-navbar--annot-mobile' : ''}${annotationTools?.isDragging ? ' contextual-navbar--dragging' : ''}`}
+      className={`contextual-navbar${isFamily && !editModeActive ? ' contextual-navbar--family' : ''}${showMobileAnnot ? ' contextual-navbar--annot-mobile' : ''}${annotationTools?.isDragging ? ' contextual-navbar--dragging' : ''}`}
     >
       {showMobileAnnot && annotPanel && (
         <div className="navbar-annot-panel">
@@ -334,7 +383,7 @@ function ContextualNavbar({
           </>
         ) : (
           <>
-            {renderButtons()}
+            {isFamily && !editModeActive ? renderFamilyButtons() : renderButtons()}
 
             {authenticated && (
               <div ref={avatarMenuRef} className="nav-dropdown-wrapper">

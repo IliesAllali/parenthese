@@ -50,6 +50,11 @@ strong { font-weight: 600; }
 .note { padding: 18px 22px; border-left: 3px solid var(--a500); background: var(--a50); border-radius: 0 14px 14px 0; margin: 24px 0; }
 .note p:last-child { margin-bottom: 0; }
 
+/* Captures d'écran de téléphone (mode d'emploi) */
+.shots { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0 28px; }
+.shots figure { margin: 0; flex: 0 1 250px; }
+.shots img { display: block; width: 100%; height: auto; border-radius: 26px; border: 1px solid var(--trait); box-shadow: 0 10px 30px rgba(42, 38, 34, .08); }
+
 table { width: 100%; border-collapse: collapse; margin: 16px 0 28px; font-size: 15px; line-height: 1.5; }
 th, td { text-align: left; vertical-align: top; padding: 12px 10px; border-bottom: 1px solid var(--trait); }
 th { font: 500 12px/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--doux); border-bottom-color: var(--a300); }
@@ -76,6 +81,7 @@ footer a { color: inherit; text-decoration: none; }
 footer a:hover { color: var(--encre); }
 
 @media (max-width: 600px) {
+  .shots figure { flex-basis: calc(50% - 10px); }
   body { font-size: 16px; }
   main { padding-top: 40px; }
   .lead { font-size: 18px; }

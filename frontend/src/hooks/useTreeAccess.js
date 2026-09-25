@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { API_BASE_URL } from '../api/client'
 import { fetchTreeGraph, unlockTreeAccess } from '../api/treeApi'
 import { loadGraphData, persons as graphPersons, resetToDemoData } from '../data/mockData'
@@ -48,6 +48,11 @@ export function useTreeAccess() {
   const [selectedMedia, setSelectedMedia] = useState(null)
   const [wizardState, setWizardState] = useState({ visible: false, loading: false, error: '' })
   const [graphRevision, setGraphRevision] = useState(0)
+  // Change à chaque chargement des données, même sans nouveau placement : l'arbre y charge les images manquantes
+  const [assetRevision, setAssetRevision] = useState(0)
+  // Horodatage des portraits stable pendant la session : un rechargement ne force pas à tout retélécharger.
+  // Il ne change que lorsqu'un portrait change (envoi d'une nouvelle photo).
+  const avatarCacheBustRef = useRef(Date.now())
 
   const canEditCurrentTree = useMemo(() => {
     const role = normalizeRole(treeContext.role)
@@ -63,8 +68,10 @@ export function useTreeAccess() {
     loadGraphData(graphPayload.graph, {
       authToken: token,
       apiBaseUrl: API_BASE_URL,
-      avatarCacheBust: Date.now(),
+      avatarCacheBust: options.avatarCacheBust ?? avatarCacheBustRef.current,
     })
+    if (options.avatarCacheBust) avatarCacheBustRef.current = options.avatarCacheBust
+    setAssetRevision((current) => current + 1)
     if (options.relayout !== false) {
       setGraphRevision((current) => current + 1)
     }
@@ -72,7 +79,9 @@ export function useTreeAccess() {
     const rootPerson = preferredRootPersonId
       ? graphPersons.find((person) => String(person.id) === String(preferredRootPersonId)) || null
       : null
-    setSelectedPerson(rootPerson)
+    // Par le lien de partage, la famille arrive sur l'arbre et sa carte d'accueil, pas sur une fiche ouverte
+    const openedByShareLink = (options.accessMode ?? '') === 'share'
+    setSelectedPerson(openedByShareLink ? null : rootPerson)
     setSelectedMedia(null)
 
     setTreeContext((current) => ({
@@ -188,6 +197,7 @@ export function useTreeAccess() {
   return {
     treeContext, setTreeContext,
     bootState, setBootState,
+    assetRevision,
     gateLoading, gateError, setGateError,
     selectedPerson, setSelectedPerson,
     selectedMedia, setSelectedMedia,
