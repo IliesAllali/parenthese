@@ -3,6 +3,7 @@ import { uploadPersonMedia, reorderPersonMedia, deletePersonMedia } from '../api
 import { getPersonMedias } from '../data/mockData'
 import { fileToBase64, getAccountErrorMessage } from '../utils/errorMessages'
 import { getUploadMimeType, resolveUploadMediaType, validateMediaFile } from '../utils/mediaUpload'
+import { saveContributorName } from '../utils/contributorName'
 
 // Souvenir envoyé par la famille : en attente de la relecture du propriétaire
 function noticeFor(created) {
@@ -57,10 +58,15 @@ export function useMediaManager({
     mediaType,
     citationText = '',
     youtubeUrl = null,
+    submittedByLabel = null,
   }) => {
     if (!canUploadMedia || !selectedPerson || !treeContext.treeId || !treeContext.accessToken) {
       return
     }
+
+    // Prénom de la personne qui propose (famille), retenu pour la fois suivante
+    const byLabel = submittedByLabel ? { submittedByLabel } : {}
+    if (submittedByLabel) saveContributorName(submittedByLabel)
 
     const personId = selectedPerson.id
 
@@ -77,6 +83,7 @@ export function useMediaManager({
             youtubeUrl,
             caption: caption || null,
             source,
+            ...byLabel,
           },
           treeContext.accessToken,
         )
@@ -117,6 +124,7 @@ export function useMediaManager({
             type: 'citation',
             caption: resolvedCitationText,
             source,
+            ...byLabel,
           },
           treeContext.accessToken,
         )
@@ -134,6 +142,7 @@ export function useMediaManager({
             dataBase64,
             caption,
             source,
+            ...byLabel,
           },
           treeContext.accessToken,
         )

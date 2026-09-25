@@ -175,7 +175,15 @@ function ContextualNavbar({
               icon={<Edit3 size={20} strokeWidth={2} />}
               label="Contribuer à l'arbre"
               onClick={onEditClick}
+              active={editModeActive}
             />
+            {editModeActive && (
+              <NavButton
+                icon={<UserPlus size={20} strokeWidth={2} />}
+                label="Ajouter une personne"
+                onClick={onAddPersonClick}
+              />
+            )}
             <NavButton
               icon={<User size={20} strokeWidth={2} />}
               label="Créer un compte"

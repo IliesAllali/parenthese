@@ -28,7 +28,8 @@ const contributionChangeSchema = z.object({
 
 const createSessionSchema = z.object({
   title: z.string().min(2).max(120),
-  submittedByLabel: z.string().min(1).max(120).optional(),
+  submittedByLabel: z.string().trim().min(1).max(120).optional(),
+  comment: z.string().trim().max(500).optional().nullable(),
   changes: z.array(contributionChangeSchema).min(1),
 })
 
@@ -130,7 +131,43 @@ type ContributionStatus = 'pending' | 'approved' | 'rejected'
 
 type ParsedChange = z.infer<typeof contributionChangeSchema>
 
-type TxClient = FastifyInstance['prisma']
+type TxClient = Prisma.TransactionClient
+
+// Identifiants provisoires : une personne ajoutée dans une contribution porte `ref: "tmp:…"`,
+// ses liens (union, parent-enfant) y font référence ; remplacés par le vrai id à l'application.
+type RefMap = Map<string, string>
+const TEMP_REF_PREFIX = 'tmp:'
+const REF_FIELDS = ['partner1PersonId', 'partner2PersonId', 'parentPersonId', 'childPersonId', 'viaUnionId'] as const
+
+function resolveTempRefs(after: Record<string, unknown>, refs: RefMap): Record<string, unknown> {
+  const resolved: Record<string, unknown> = { ...after }
+  for (const field of REF_FIELDS) {
+    const value = resolved[field]
+    if (typeof value === 'string' && value.startsWith(TEMP_REF_PREFIX)) {
+      const realId = refs.get(value)
+      if (!realId) {
+        throw new ContributionRouteError(400, 'unresolved_reference')
+      }
+      resolved[field] = realId
+    }
+  }
+  return resolved
+}
+
+function recordTempRef(after: unknown, createdId: string, refs: RefMap) {
+  if (isRecord(after) && typeof after.ref === 'string' && after.ref.startsWith(TEMP_REF_PREFIX)) {
+    refs.set(after.ref, createdId)
+  }
+}
+
+// Personnes d'abord, puis unions, puis liens : un lien vers une personne ajoutée s'applique après elle
+const ENTITY_ORDER: Record<string, number> = { person: 0, union: 1, parent_child_link: 2, media: 3, annotation: 4 }
+function byApplicationOrder<T extends { entityType: string; action: string }>(changes: T[]): T[] {
+  const rank = (change: T) => (ENTITY_ORDER[change.entityType] ?? 9) * 10 + (change.action === 'create' ? 0 : 1)
+  return changes.map((change, index) => ({ change, index }))
+    .sort((a, b) => rank(a.change) - rank(b.change) || a.index - b.index)
+    .map(({ change }) => change)
+}
 
 export class ContributionRouteError extends Error {
   statusCode: number
@@ -245,6 +282,7 @@ async function applyContributionChange(
   treeId: string,
   change: ParsedChange,
   actorUserId: string | null,
+  refs: RefMap = new Map(),
 ): Promise<{ entityId: string | null }> {
   // Les annotations sont appliquées par le client après la relecture (batchAnnotations) :
   // rien à faire ici. Avant, elles tombaient dans la branche des liens et faisaient échouer la relecture.
@@ -310,6 +348,7 @@ async function applyContributionChange(
         },
       })
 
+      recordTempRef(change.after, created.id, refs)
       return { entityId: created.id }
     }
 
@@ -385,7 +424,7 @@ async function applyContributionChange(
         throw new ContributionRouteError(400, 'invalid_change_after')
       }
 
-      const parsed = unionCreateSchema.safeParse(change.after)
+      const parsed = unionCreateSchema.safeParse(resolveTempRefs(change.after, refs))
       if (!parsed.success) {
         throw new ContributionRouteError(400, 'invalid_change_after')
       }
@@ -420,6 +459,7 @@ async function applyContributionChange(
         },
       })
 
+      recordTempRef(change.after, created.id, refs)
       return { entityId: created.id }
     }
 
@@ -551,7 +591,7 @@ async function applyContributionChange(
       throw new ContributionRouteError(400, 'invalid_change_after')
     }
 
-    const parsed = linkCreateSchema.safeParse(change.after)
+    const parsed = linkCreateSchema.safeParse(resolveTempRefs(change.after, refs))
     if (!parsed.success) {
       throw new ContributionRouteError(400, 'invalid_change_after')
     }
@@ -966,59 +1006,67 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
     try {
       const context = await resolveSubmissionContext(app, request.actor, params.data.id)
       const now = new Date()
-      const session = await app.prisma.contributionSession.create({
-        data: {
-          treeId: params.data.id,
-          submittedByUserId: context.submittedByUserId,
-          submittedByLabel: payload.data.submittedByLabel?.trim() || context.submittedByLabel,
-          mode: context.mode,
-          status: context.autoStatus,
-          title: payload.data.title.trim(),
-          reviewedAt: context.autoStatus === 'approved' ? now : undefined,
-          reviewedBy: context.autoStatus === 'approved' ? context.submittedByUserId : undefined,
-        },
-      })
 
-      const createdChanges = []
-
-      for (const change of payload.data.changes) {
-        let effectiveEntityId = change.entityId ?? null
-
-        if (context.autoStatus === 'approved') {
-          const applied = await applyContributionChange(app.prisma, params.data.id, change, context.submittedByUserId)
-          effectiveEntityId = applied.entityId
-        }
-
-        const createdChange = await app.prisma.contributionChange.create({
+      // Tout ou rien : une erreur au milieu n'applique rien
+      const { session, createdChanges } = await app.prisma.$transaction(async (tx) => {
+        const session = await tx.contributionSession.create({
           data: {
-            sessionId: session.id,
-            entityType: change.entityType,
-            entityId: effectiveEntityId,
-            action: change.action,
-            beforeJson: toPrismaJson(change.before),
-            afterJson: toPrismaJson(change.after),
-            conflictState: change.conflictState ?? 'none',
-            decision: context.autoStatus === 'approved' ? 'approved' : undefined,
+            treeId: params.data.id,
+            submittedByUserId: context.submittedByUserId,
+            submittedByLabel: payload.data.submittedByLabel?.trim() || context.submittedByLabel,
+            comment: payload.data.comment?.trim() || null,
+            mode: context.mode,
+            status: context.autoStatus,
+            title: payload.data.title.trim(),
+            reviewedAt: context.autoStatus === 'approved' ? now : undefined,
+            reviewedBy: context.autoStatus === 'approved' ? context.submittedByUserId : undefined,
           },
         })
 
-        createdChanges.push(createdChange)
-      }
+        const refs: RefMap = new Map()
+        const createdChanges = []
 
-      await app.prisma.auditLog.create({
-        data: {
-          treeId: params.data.id,
-          actorType: context.actorType,
-          actorId: context.actorId,
-          action: 'contribution_session_submitted',
-          entityType: 'contribution_session',
-          entityId: session.id,
-          payloadJson: {
-            status: context.autoStatus,
-            changesCount: createdChanges.length,
+        for (const change of byApplicationOrder(payload.data.changes)) {
+          let effectiveEntityId = change.entityId ?? null
+
+          if (context.autoStatus === 'approved') {
+            const applied = await applyContributionChange(tx, params.data.id, change, context.submittedByUserId, refs)
+            effectiveEntityId = applied.entityId
+          }
+
+          const createdChange = await tx.contributionChange.create({
+            data: {
+              sessionId: session.id,
+              entityType: change.entityType,
+              entityId: effectiveEntityId,
+              action: change.action,
+              beforeJson: toPrismaJson(change.before),
+              afterJson: toPrismaJson(change.after),
+              conflictState: change.conflictState ?? 'none',
+              decision: context.autoStatus === 'approved' ? 'approved' : undefined,
+            },
+          })
+
+          createdChanges.push(createdChange)
+        }
+
+        await tx.auditLog.create({
+          data: {
+            treeId: params.data.id,
+            actorType: context.actorType,
+            actorId: context.actorId,
+            action: 'contribution_session_submitted',
+            entityType: 'contribution_session',
+            entityId: session.id,
+            payloadJson: {
+              status: context.autoStatus,
+              changesCount: createdChanges.length,
+            },
           },
-        },
-      })
+        })
+
+        return { session, createdChanges }
+      }, { timeout: 30_000 })
 
       return reply.code(201).send({
         session,
@@ -1119,93 +1167,108 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
         explicitDecisions.set(changeDecision.changeId, changeDecision.decision)
       }
 
-      let approvedCount = 0
-      let rejectedCount = 0
-      let conflictCount = 0
+      const { updatedSession, approvedCount, rejectedCount, conflictCount, status } = await app.prisma.$transaction(async (tx) => {
+        let approvedCount = 0
+        let rejectedCount = 0
+        let conflictCount = 0
+        const refs: RefMap = new Map()
 
-      for (const change of session.changes) {
-        let decision = explicitDecisions.get(change.id) ?? payload.data.decision
+        for (const change of byApplicationOrder(session.changes)) {
+          let decision = explicitDecisions.get(change.id) ?? payload.data.decision
 
-        const hasConflict = await detectConflict(app.prisma, params.data.id, {
-          entityType: change.entityType,
-          action: change.action,
-          entityId: change.entityId,
-          beforeJson: change.beforeJson,
-        })
-
-        if (hasConflict && change.conflictState !== 'needs_review') {
-          await app.prisma.contributionChange.update({
-            where: { id: change.id },
-            data: { conflictState: 'needs_review' },
+          const hasConflict = await detectConflict(tx, params.data.id, {
+            entityType: change.entityType,
+            action: change.action,
+            entityId: change.entityId,
+            beforeJson: change.beforeJson,
           })
-          conflictCount += 1
-        }
 
-        if (decision === 'approved') {
-          await applyContributionChange(
-            app.prisma,
-            params.data.id,
-            {
-              entityType: change.entityType,
-              action: change.action,
-              entityId: change.entityId,
-              before: change.beforeJson,
-              after: change.afterJson,
-              conflictState: change.conflictState,
-            },
-            membership.userId,
-          )
-
-          approvedCount += 1
-        } else {
-          if (change.entityType === 'media' && change.entityId) {
-            await app.prisma.mediaItem.updateMany({
-              where: { id: change.entityId, treeId: params.data.id },
-              data: { status: 'rejected', deletedAt: new Date() },
+          if (hasConflict && change.conflictState !== 'needs_review') {
+            await tx.contributionChange.update({
+              where: { id: change.id },
+              data: { conflictState: 'needs_review' },
             })
+            conflictCount += 1
           }
-          rejectedCount += 1
+
+          if (decision === 'approved') {
+            try {
+              await applyContributionChange(
+                tx,
+                params.data.id,
+                {
+                  entityType: change.entityType,
+                  action: change.action,
+                  entityId: change.entityId,
+                  before: change.beforeJson,
+                  after: change.afterJson,
+                  conflictState: change.conflictState,
+                },
+                membership.userId,
+                refs,
+              )
+              approvedCount += 1
+            } catch (error) {
+              // Lien vers une personne ajoutée mais refusée : le lien est écarté, pas la relecture
+              if (error instanceof ContributionRouteError && error.code === 'unresolved_reference') {
+                decision = 'rejected'
+                rejectedCount += 1
+              } else {
+                throw error
+              }
+            }
+          } else {
+            if (change.entityType === 'media' && change.entityId) {
+              await tx.mediaItem.updateMany({
+                where: { id: change.entityId, treeId: params.data.id },
+                data: { status: 'rejected', deletedAt: new Date() },
+              })
+            }
+            rejectedCount += 1
+          }
+
+          await tx.contributionChange.update({
+            where: {
+              id: change.id,
+            },
+            data: {
+              decision,
+            },
+          })
         }
 
-        await app.prisma.contributionChange.update({
+        const status: ContributionStatus = approvedCount > 0 ? 'approved' : 'rejected'
+
+        const updatedSession = await tx.contributionSession.update({
           where: {
-            id: change.id,
+            id: session.id,
           },
           data: {
-            decision,
+            status,
+            reviewedAt: new Date(),
+            reviewedBy: membership.userId,
           },
         })
-      }
 
-      const status: ContributionStatus = approvedCount > 0 ? 'approved' : 'rejected'
-
-      const updatedSession = await app.prisma.contributionSession.update({
-        where: {
-          id: session.id,
-        },
-        data: {
-          status,
-          reviewedAt: new Date(),
-          reviewedBy: membership.userId,
-        },
-      })
-
-      await app.prisma.auditLog.create({
-        data: {
-          treeId: params.data.id,
-          actorType: 'user',
-          actorId: membership.userId,
-          action: 'contribution_session_reviewed',
-          entityType: 'contribution_session',
-          entityId: session.id,
-          payloadJson: {
-            approvedCount,
-            rejectedCount,
-            conflictCount,
-            finalStatus: status,
+        await tx.auditLog.create({
+          data: {
+            treeId: params.data.id,
+            actorType: 'user',
+            actorId: membership.userId,
+            action: 'contribution_session_reviewed',
+            entityType: 'contribution_session',
+            entityId: session.id,
+            payloadJson: {
+              approvedCount,
+              rejectedCount,
+              conflictCount,
+              finalStatus: status,
+            },
           },
-        },
-      })
+        })
+
+        return { updatedSession, approvedCount, rejectedCount, conflictCount, status }
+      }, { timeout: 30_000 })
 
       return reply.send({
         session: updatedSession,

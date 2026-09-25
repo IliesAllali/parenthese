@@ -673,6 +673,117 @@ describe('API security and authz', () => {
     await app.close()
   })
 
+  // Contributions fiables (25/09/2026) : mot d'accompagnement, liens d'une personne ajoutée
+  const signShareToken = (app: any) => app.jwt.sign({
+    kind: 'tree_access',
+    sub: 'tree:tree-1:contributor',
+    treeId: 'tree-1',
+    role: 'contributor',
+    accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
+  })
+
+  it('stores the contributor first name and comment', async () => {
+    const app = createApp()
+    await app.ready()
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null, settings: { contributorPolicy: 'pending' } })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions',
+      headers: { authorization: `Bearer ${signShareToken(app)}` },
+      payload: {
+        title: 'Contribution de Camille',
+        submittedByLabel: 'Camille',
+        comment: "J'ai ajouté mon cousin",
+        changes: [{ entityType: 'person', action: 'create', after: { firstName: 'Léon', lastName: 'Martin' } }],
+      },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.contributionSession.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ submittedByLabel: 'Camille', comment: "J'ai ajouté mon cousin" }) }),
+    )
+    await app.close()
+  })
+
+  it('links a person added in the same contribution, even when the link comes first', async () => {
+    const app = createApp()
+    await app.ready()
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null, settings: { contributorPolicy: 'direct' } })
+    prismaMock.person.create.mockResolvedValue({ id: 'person-new' })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions',
+      headers: { authorization: `Bearer ${signShareToken(app)}` },
+      payload: {
+        title: 'Un enfant pour Alice',
+        changes: [
+          { entityType: 'parent_child_link', action: 'create', after: { parentPersonId: 'person-1', childPersonId: 'tmp:léon', parentageType: 'biologique' } },
+          { entityType: 'person', action: 'create', after: { ref: 'tmp:léon', firstName: 'Léon', lastName: 'Martin' } },
+        ],
+      },
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(prismaMock.parentChildLink.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ parentPersonId: 'person-1', childPersonId: 'person-new' }) }),
+    )
+    expect(prismaMock.$transaction).toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('drops the link of a rejected new person instead of failing the review', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.contributionSession.findFirst.mockResolvedValue({
+      id: 'session-1',
+      treeId: 'tree-1',
+      status: 'pending',
+      changes: [
+        { id: 'change-link', entityType: 'parent_child_link', action: 'create', entityId: null, beforeJson: null, afterJson: { parentPersonId: 'person-1', childPersonId: 'tmp:léon' }, conflictState: 'none' },
+        { id: 'change-person', entityType: 'person', action: 'create', entityId: null, beforeJson: null, afterJson: { ref: 'tmp:léon', firstName: 'Léon', lastName: 'Martin' }, conflictState: 'none' },
+      ],
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions/session-1/review',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        decision: 'approved',
+        changeDecisions: [{ changeId: 'change-person', decision: 'rejected' }],
+      },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(prismaMock.parentChildLink.create).not.toHaveBeenCalled()
+    expect(prismaMock.contributionChange.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'change-link' }, data: { decision: 'rejected' } }),
+    )
+    await app.close()
+  })
+
+  it('refuses a link to an unknown provisional person at submission', async () => {
+    const app = createApp()
+    await app.ready()
+    prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', rootPersonId: null, settings: { contributorPolicy: 'direct' } })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/trees/tree-1/contributions/sessions',
+      headers: { authorization: `Bearer ${signShareToken(app)}` },
+      payload: {
+        title: 'Lien orphelin',
+        changes: [{ entityType: 'parent_child_link', action: 'create', after: { parentPersonId: 'person-1', childPersonId: 'tmp:personne' } }],
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toBe('unresolved_reference')
+    await app.close()
+  })
+
   it('allows admin to list pending contribution sessions', async () => {
     const app = createApp()
     const token = await createUserToken(app)

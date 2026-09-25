@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { readContributorName } from '../utils/contributorName'
 import { ArrowDown, ArrowUp, FileText, Image, MapPin, Mic, Plus, Quote, Route, Trash2, Upload, Video, X } from 'lucide-react'
 import { getAcceptForMediaType } from '../utils/mediaUpload'
 import GeoMediaThumbnail from './GeoMediaThumbnail'
@@ -40,11 +41,20 @@ const MediaManagerPanel = ({
   const [citationText, setCitationText] = useState('')
   const [videoMode, setVideoMode] = useState('file') // 'file' | 'youtube'
   const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [contributorName, setContributorName] = useState(() => readContributorName())
+  // Le panneau est monté dès le départ : relire le prénom à chaque ouverture (il a pu être donné entre-temps)
+  useEffect(() => {
+    if (visible) setContributorName((current) => current || readContributorName())
+  }, [visible])
 
   const isCitation = mediaType === 'citation'
   const isYoutubeVideo = mediaType === 'video' && videoMode === 'youtube'
   const canUpload = useMemo(() => {
     if (loading) {
+      return false
+    }
+
+    if (!canManage && !contributorName.trim()) {
       return false
     }
 
@@ -57,7 +67,7 @@ const MediaManagerPanel = ({
     }
 
     return Boolean(file)
-  }, [citationText, file, isCitation, isYoutubeVideo, loading, youtubeUrl])
+  }, [canManage, citationText, contributorName, file, isCitation, isYoutubeVideo, loading, youtubeUrl])
   const fileAccept = useMemo(() => getAcceptForMediaType(mediaType), [mediaType])
 
   if (!visible || !person) {
@@ -77,6 +87,7 @@ const MediaManagerPanel = ({
       mediaType,
       citationText: citationText.trim(),
       youtubeUrl: isYoutubeVideo ? youtubeUrl.trim() : null,
+      submittedByLabel: canManage ? null : contributorName.trim(),
     })
     setFile(null)
     setCaption('')
@@ -227,6 +238,20 @@ const MediaManagerPanel = ({
               />
             </div>
           </div>
+
+          {!canManage && (
+            <div className="pz-field">
+              <label htmlFor="mm-contributor-name">Votre prénom</label>
+              <input
+                id="mm-contributor-name"
+                type="text"
+                value={contributorName}
+                onChange={(e) => setContributorName(e.target.value.slice(0, 120))}
+                placeholder="Pour que la famille sache qui l'a ajouté"
+                autoComplete="given-name"
+              />
+            </div>
+          )}
 
           {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
           {notice && !errorMessage && <div className="pz-success" role="status">{notice}</div>}
