@@ -1,6 +1,6 @@
 # Déploiement de parenthese.io
 
-Ce document concerne l'instance hébergée par Ilies Allali. Pour installer Parenthèse chez vous, suivez plutôt la section « Auto-héberger » du README (Docker).
+Ce document concerne l'instance hébergée par Ilies Allali. Pour installer Parenthèse chez vous, suivez plutôt la section « Auto-héberger » du [README](../README.fr.md) (Docker).
 
 ## Principe
 
