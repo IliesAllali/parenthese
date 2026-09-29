@@ -4,22 +4,23 @@ import DrawingOptions from './DrawingOptions'
 import TextOptions from './TextOptions'
 import StickerPicker from './StickerPicker'
 import SizeOptions from './SizeOptions'
+import { t } from '../../i18n/index.js'
 import './AnnotationToolbar.css'
 
 const TOOLS = [
-  { id: 'pointer', label: 'Sélection', Icon: MousePointer2 },
-  { id: 'drawing', label: 'Dessin', Icon: Pencil },
-  { id: 'text', label: 'Texte', Icon: Type },
-  { id: 'sticker', label: 'Sticker', Icon: Star },
-  { id: 'photo', label: 'Photo', Icon: Image },
+  { id: 'pointer', label: t('Sélection'), Icon: MousePointer2 },
+  { id: 'drawing', label: t('Dessin'), Icon: Pencil },
+  { id: 'text', label: t('Texte'), Icon: Type },
+  { id: 'sticker', label: t('Sticker'), Icon: Star },
+  { id: 'photo', label: t('Photo'), Icon: Image },
 ]
 
 const RESIZABLE_TYPES = ['sticker', 'text', 'photo']
 
 function getSizeConfig(annotationType) {
-  if (annotationType === 'sticker') return { min: 20, max: 120, label: 'Taille' }
-  if (annotationType === 'text')    return { min: 10, max: 60,  label: 'Taille' }
-  if (annotationType === 'photo')   return { min: 50, max: 500, label: 'Taille' }
+  if (annotationType === 'sticker') return { min: 20, max: 120, label: t('Taille') }
+  if (annotationType === 'text')    return { min: 10, max: 60,  label: t('Taille') }
+  if (annotationType === 'photo')   return { min: 50, max: 500, label: t('Taille') }
   return null
 }
 
@@ -105,7 +106,7 @@ export default function AnnotationToolbar({
           className={`annotation-toolbar__btn annotation-toolbar__btn--delete${isDragging ? ' annotation-toolbar__btn--drag-target' : ''}${isOverTrash ? ' annotation-toolbar__btn--drag-over' : ''}`}
           onClick={onDelete}
           disabled={!selectedAnnotationId && !isDragging}
-          title="Supprimer"
+          title={t('Supprimer')}
           data-annotation-trash=""
         >
           <Trash2 size={isOverTrash ? 24 : 20} strokeWidth={2} />

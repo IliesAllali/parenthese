@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
 import './EditModeOverlay.css'
+import { t } from '../i18n/index.js'
 
 function EditModeOverlay({ active, hasDraft, role = 'contributor', onDeactivate, onSubmit }) {
   const isAdmin = role === 'admin'
@@ -9,8 +10,8 @@ function EditModeOverlay({ active, hasDraft, role = 'contributor', onDeactivate,
     `edit-mode-border ${isAdmin ? 'edit-mode-border--admin' : 'edit-mode-border--contributor'}`
   ), [isAdmin])
 
-  const toastLabel = isAdmin ? 'Mode edition actif' : 'Mode contribution actif'
-  const submitLabel = isAdmin ? 'Mettre a jour l\'arbre' : 'Envoyer les modifications'
+  const toastLabel = isAdmin ? t('Mode édition actif') : t('Mode contribution actif')
+  const submitLabel = isAdmin ? t("Mettre à jour l'arbre") : t('Envoyer les modifications')
 
   if (!active) return null
 
@@ -27,7 +28,7 @@ function EditModeOverlay({ active, hasDraft, role = 'contributor', onDeactivate,
             className={`edit-mode-submit ${isAdmin ? 'edit-mode-submit--admin' : ''}`}
             onClick={onSubmit}
             disabled={!hasDraft}
-            title={hasDraft ? submitLabel : 'Aucune modification a soumettre'}
+            title={hasDraft ? submitLabel : t('Aucune modification à soumettre')}
           >
             {submitLabel}
           </button>
@@ -37,7 +38,7 @@ function EditModeOverlay({ active, hasDraft, role = 'contributor', onDeactivate,
           type="button"
           className="edit-mode-toast-close"
           onClick={onDeactivate}
-          aria-label="Quitter le mode edition"
+          aria-label={t('Quitter le mode édition')}
         >
           <X size={16} strokeWidth={2} />
         </button>

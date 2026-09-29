@@ -1,0 +1,15 @@
+// Dictionnaire anglais, découpé par zone de l'interface.
+import app from './app.js'
+import arbre from './arbre.js'
+import fiche from './fiche.js'
+import contribution from './contribution.js'
+import compte from './compte.js'
+
+export default {
+  ...app,
+  ...arbre,
+  ...fiche,
+  ...contribution,
+  ...compte,
+}
+

@@ -4,16 +4,24 @@ import { getParents, getChildren, getPersonUnions, getPersonMedias, filiations, 
 import GeoMediaThumbnail from './GeoMediaThumbnail'
 import './PersonCard.css'
 import PzBusy from './PzBusy.jsx'
+import { t, dateLocale } from '../i18n/index.js'
 
 const TYPE_LABELS = {
-  photo: 'Photo',
-  video: 'Vidéo',
-  audio: 'Audio',
-  document: 'Document',
-  citation: 'Citation',
-  geojson: 'Carte GPS',
-  gpx: 'Trace GPX',
+  photo: t('Photo'),
+  video: t('Vidéo'),
+  audio: t('Audio'),
+  document: t('Document'),
+  citation: t('Citation'),
+  geojson: t('Carte GPS'),
+  gpx: t('Trace GPX'),
 }
+
+// Type d'union affiché (la valeur stockée reste l'enum français)
+const UNION_TYPE_LABELS = {
+  mariage: t('mariage'),
+  union: t('union'),
+}
+const unionTypeLabel = (type) => UNION_TYPE_LABELS[type] || type
 
 // Hauteurs fixes de l'onde du lecteur vocal (pas d'aléatoire au rendu)
 const VOICE_WAVE = [40, 64, 48, 82, 58, 92, 70, 46, 68, 86, 52, 74, 42, 62, 88, 56, 46, 72, 84, 50, 64, 42]
@@ -206,16 +214,16 @@ const PersonCard = ({
       if (union) {
         const p1 = persons.find(p => p.id === union.partner1Id)
         const p2 = persons.find(p => p.id === union.partner2Id)
-        return `${p1?.firstName || '?'} + ${p2?.firstName || '?'} (${union.unionType})`
+        return `${p1?.firstName || '?'} + ${p2?.firstName || '?'} (${unionTypeLabel(union.unionType)})`
       }
     }
 
     if (preferredFiliation.parentId && parentsList.length <= 1) {
       const parent = persons.find(p => p.id === preferredFiliation.parentId)
       if (preferredFiliation.parentageType === 'inconnu') {
-        return `${parent?.firstName || '?'} (parent unique, autre parent inconnu)`
+        return t('{name} (parent unique, autre parent inconnu)', { name: parent?.firstName || '?' })
       }
-      return `${parent?.firstName || '?'} (parent unique)`
+      return t('{name} (parent unique)', { name: parent?.firstName || '?' })
     }
     return null
   }
@@ -245,7 +253,7 @@ const PersonCard = ({
       const isEmptyValue = value === null || value === undefined || value === ''
       // Une date complète se lit « 22 octobre 1928 », pas « 1928-10-22 »
       const shown = type === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(value))
-        ? new Date(`${String(value).slice(0, 10)}T00:00:00Z`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+        ? new Date(`${String(value).slice(0, 10)}T00:00:00Z`).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
         : value
       return <span className="value">{isEmptyValue ? '-' : shown}</span>
     }
@@ -275,7 +283,7 @@ const PersonCard = ({
     if (!person.isAlive && died) parts.push(died)
     return parts.join(' – ')
   })()
-  const ageLabel = age === null ? null : person.isAlive ? `${age} ans` : `${age} ans au décès`
+  const ageLabel = age === null ? null : person.isAlive ? t('{age} ans', { age }) : t('{age} ans au décès', { age })
 
   const renderRelationRow = (target, relationType, meta) => (
     <div key={`${relationType}-${target?.id}`} className="pc-rel-row">
@@ -287,7 +295,7 @@ const PersonCard = ({
       <button
         type="button"
         className="pz-btn pz-btn--ghost pz-btn--icon pc-rel-remove"
-        aria-label={`Retirer ${target?.firstName}`}
+        aria-label={t('Retirer {name}', { name: target?.firstName })}
         onClick={() => handleRelationRemove(target.id, relationType)}
         disabled={relationActionLoading}
       >
@@ -316,9 +324,9 @@ const PersonCard = ({
   )
 
   return (
-    <div className={`person-card ${editMode ? 'person-card--edit-mode' : ''}`} role="dialog" aria-label={`Fiche de ${person.firstName} ${person.lastName || ''}`}>
+    <div className={`person-card ${editMode ? 'person-card--edit-mode' : ''}`} role="dialog" aria-label={t('Fiche de {name}', { name: `${person.firstName} ${person.lastName || ''}` })}>
       <span className="pc-grab" aria-hidden="true" />
-      <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-close" onClick={onClose} aria-label="Fermer la fiche">
+      <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-close" onClick={onClose} aria-label={t('Fermer la fiche')}>
         <X size={18} strokeWidth={2} />
       </button>
 
@@ -341,11 +349,11 @@ const PersonCard = ({
                 disabled={avatarActionLoading}
               />
               <button type="button" className="pc-photo-btn" onClick={() => avatarInputRef.current?.click()} disabled={avatarActionLoading}>
-                {person.photo ? 'Changer' : 'Ajouter une photo'}
+                {person.photo ? t('Changer') : t('Ajouter une photo')}
               </button>
               {person.photo && (
                 <button type="button" className="pc-photo-btn pc-photo-btn--danger" onClick={() => onAvatarDelete?.(person.id)} disabled={avatarActionLoading}>
-                  Retirer
+                  {t('Retirer')}
                 </button>
               )}
             </div>
@@ -360,16 +368,16 @@ const PersonCard = ({
                 className="pc-input pc-input--name"
                 value={getEditValue('firstName', person.firstName)}
                 onChange={(e) => handleFieldChange('firstName', e.target.value)}
-                placeholder="Prénom"
-                aria-label="Prénom"
+                placeholder={t('Prénom')}
+                aria-label={t('Prénom')}
               />
               <input
                 type="text"
                 className="pc-input pc-input--name pc-input--last"
                 value={getEditValue('lastName', person.lastName)}
                 onChange={(e) => handleFieldChange('lastName', e.target.value)}
-                placeholder="Nom"
-                aria-label="Nom"
+                placeholder={t('Nom')}
+                aria-label={t('Nom')}
               />
             </div>
           ) : (
@@ -379,7 +387,7 @@ const PersonCard = ({
           )}
           {!editMode && lifeLine && <p className="pc-life">{lifeLine}</p>}
           <div className="pc-chips">
-            {editMode && <span className="pz-tag pz-tag--accent pz-tag--dot">Édition</span>}
+            {editMode && <span className="pz-tag pz-tag--accent pz-tag--dot">{t('Édition')}</span>}
             {!editMode && ageLabel && <span className="pz-tag">{ageLabel}</span>}
             {!editMode && person.profession && <span className="pz-tag">{person.profession}</span>}
           </div>
@@ -391,14 +399,14 @@ const PersonCard = ({
       {/* ── Onglets ── */}
       <div className="pz-tabs pc-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'medias'} className="pz-tab" onClick={() => setTab('medias')}>
-          Souvenirs{personMedias.length > 0 ? ` · ${personMedias.length}` : ''}
+          {t('Souvenirs')}{personMedias.length > 0 ? ` · ${personMedias.length}` : ''}
         </button>
         <button type="button" role="tab" aria-selected={tab === 'infos'} className="pz-tab" onClick={() => setTab('infos')}>
-          Infos
+          {t('Infos')}
         </button>
         {editMode && (
           <button type="button" role="tab" aria-selected={tab === 'relations'} className="pz-tab" onClick={() => setTab('relations')}>
-            Liens
+            {t('Liens')}
           </button>
         )}
       </div>
@@ -409,8 +417,8 @@ const PersonCard = ({
           <div className="pc-souvenirs">
             {personMedias.length === 0 && (
               <div className="pc-empty">
-                <p className="pz-sub">Pas encore de souvenir pour {person.firstName}.</p>
-                <p className="pz-small">{canManageMedia ? 'Une photo, une anecdote, sa voix. Vous pouvez ajouter le premier.' : 'Une photo, une anecdote, sa voix.'}</p>
+                <p className="pz-sub">{t('Pas encore de souvenir pour {name}.', { name: person.firstName })}</p>
+                <p className="pz-small">{canManageMedia ? t('Une photo, une anecdote, sa voix. Vous pouvez ajouter le premier.') : t('Une photo, une anecdote, sa voix.')}</p>
               </div>
             )}
 
@@ -425,7 +433,7 @@ const PersonCard = ({
               <button key={media.id} type="button" className="pc-voice" onClick={() => onMediaSelect?.(media, person)}>
                 <span className="pc-voice-play" aria-hidden="true"><Play size={13} fill="currentColor" strokeWidth={0} /></span>
                 <span className="pc-voice-wave" aria-hidden="true">{VOICE_WAVE.map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}</span>
-                <span className="pc-voice-label">{media.label || 'Enregistrement'}</span>
+                <span className="pc-voice-label">{media.label || t('Enregistrement')}</span>
               </button>
             ))}
 
@@ -446,7 +454,7 @@ const PersonCard = ({
                   </button>
                 ))}
                 {canManageMedia && (
-                  <button type="button" className="pc-tile pc-tile--add" onClick={() => onManageMedia?.()} aria-label="Ajouter des souvenirs">
+                  <button type="button" className="pc-tile pc-tile--add" onClick={() => onManageMedia?.()} aria-label={t('Ajouter des souvenirs')}>
                     <Plus size={20} strokeWidth={1.8} />
                   </button>
                 )}
@@ -470,7 +478,7 @@ const PersonCard = ({
             {canManageMedia && (
               <button type="button" className={`pz-btn pz-btn--block ${isAdmin ? 'pz-btn--soft' : 'pz-btn--primary'}`} onClick={() => onManageMedia?.()}>
                 <Plus size={16} strokeWidth={2} />
-                {isAdmin ? 'Ajouter ou ranger des souvenirs' : 'Ajouter un souvenir'}
+                {isAdmin ? t('Ajouter ou ranger des souvenirs') : t('Ajouter un souvenir')}
               </button>
             )}
           </div>
@@ -480,65 +488,65 @@ const PersonCard = ({
         {tab === 'infos' && (
           <div className="pc-infos">
             <section className="pc-section">
-              <h3 className="pz-eyebrow">État civil</h3>
+              <h3 className="pz-eyebrow">{t('État civil')}</h3>
               <div className="pc-rows">
                 <div className="pc-row">
-                  <span className="pc-label">Naissance</span>
-                  {renderEditableValue({ field: 'birthYear', value: person.birthDate || person.birthYear, placeholder: 'Date de naissance', type: 'date' })}
+                  <span className="pc-label">{t('Naissance')}</span>
+                  {renderEditableValue({ field: 'birthYear', value: person.birthDate || person.birthYear, placeholder: t('Date de naissance'), type: 'date' })}
                 </div>
                 {(person.birthPlace || editMode) && (
                   <div className="pc-row">
-                    <span className="pc-label">Lieu</span>
-                    {renderEditableValue({ field: 'birthPlace', value: person.birthPlace || '', placeholder: 'Lieu de naissance' })}
+                    <span className="pc-label">{t('Lieu')}</span>
+                    {renderEditableValue({ field: 'birthPlace', value: person.birthPlace || '', placeholder: t('Lieu de naissance') })}
                   </div>
                 )}
                 {(person.birthName || editMode) && (
                   <div className="pc-row">
-                    <span className="pc-label">Nom de naissance</span>
-                    {renderEditableValue({ field: 'birthName', value: person.birthName || '', placeholder: 'Nom de naissance' })}
+                    <span className="pc-label">{t('Nom de naissance')}</span>
+                    {renderEditableValue({ field: 'birthName', value: person.birthName || '', placeholder: t('Nom de naissance') })}
                   </div>
                 )}
                 {editMode && (
                   <div className="pc-row">
-                    <span className="pc-label">Statut</span>
+                    <span className="pc-label">{t('Statut')}</span>
                     <button
                       type="button"
                       className={`pc-alive ${getEditValue('isAlive', person.isAlive) ? 'is-alive' : 'is-deceased'}`}
                       onClick={() => handleFieldChange('isAlive', !getEditValue('isAlive', person.isAlive))}
                     >
                       <span className="pc-alive-dot" />
-                      {getEditValue('isAlive', person.isAlive) ? 'En vie' : 'Décédé(e)'}
+                      {getEditValue('isAlive', person.isAlive) ? t('En vie') : t('Décédé(e)')}
                     </button>
                   </div>
                 )}
                 {(!getEditValue('isAlive', person.isAlive) || (!editMode && !person.isAlive)) && (
                   <div className="pc-row">
-                    <span className="pc-label">Décès</span>
-                    {renderEditableValue({ field: 'deathYear', value: person.deathDate || person.deathYear || '', placeholder: 'Date de décès', type: 'date' })}
+                    <span className="pc-label">{t('Décès')}</span>
+                    {renderEditableValue({ field: 'deathYear', value: person.deathDate || person.deathYear || '', placeholder: t('Date de décès'), type: 'date' })}
                   </div>
                 )}
                 {!editMode && (
                   <div className="pc-row">
-                    <span className="pc-label">Âge</span>
+                    <span className="pc-label">{t('Âge')}</span>
                     <span className="value">{ageLabel || '-'}</span>
                   </div>
                 )}
                 {(person.region || editMode) && (
                   <div className="pc-row">
-                    <span className="pc-label">Région</span>
-                    {renderEditableValue({ field: 'region', value: person.region || '', placeholder: 'Région' })}
+                    <span className="pc-label">{t('Région')}</span>
+                    {renderEditableValue({ field: 'region', value: person.region || '', placeholder: t('Région') })}
                   </div>
                 )}
                 {(person.nationality || editMode) && (
                   <div className="pc-row">
-                    <span className="pc-label">Nationalité</span>
-                    {renderEditableValue({ field: 'nationality', value: person.nationality || '', placeholder: 'Nationalité' })}
+                    <span className="pc-label">{t('Nationalité')}</span>
+                    {renderEditableValue({ field: 'nationality', value: person.nationality || '', placeholder: t('Nationalité') })}
                   </div>
                 )}
                 {(person.profession || editMode) && (
                   <div className="pc-row">
-                    <span className="pc-label">Métier</span>
-                    {renderEditableValue({ field: 'profession', value: person.profession || '', placeholder: 'Métier' })}
+                    <span className="pc-label">{t('Métier')}</span>
+                    {renderEditableValue({ field: 'profession', value: person.profession || '', placeholder: t('Métier') })}
                   </div>
                 )}
               </div>
@@ -546,28 +554,28 @@ const PersonCard = ({
 
             {!editMode && (parentsList.length > 0 || personUnions.length > 0 || childrenList.length > 0) && (
               <section className="pc-section">
-                <h3 className="pz-eyebrow">Famille</h3>
+                <h3 className="pz-eyebrow">{t('Famille')}</h3>
                 <div className="pc-rows">
                   {parentsList.length > 0 && (
                     <div className="pc-row">
-                      <span className="pc-label">Parents</span>
-                      <span className="value">{getParentageLabel() || parentsList.map(p => `${p.firstName} ${p.lastName}`).join(' et ')}</span>
+                      <span className="pc-label">{t('Parents')}</span>
+                      <span className="value">{getParentageLabel() || parentsList.map(p => `${p.firstName} ${p.lastName}`).join(t(' et '))}</span>
                     </div>
                   )}
                   {preferredFiliation && preferredFiliation.parentageType !== 'biologique' && parentsList.length <= 1 && (
                     <div className="pc-row">
-                      <span className="pc-label">Filiation</span>
-                      <span className="value">{preferredFiliation.parentageType === 'adoption' ? 'Adoption' : 'Parent inconnu'}</span>
+                      <span className="pc-label">{t('Filiation')}</span>
+                      <span className="value">{preferredFiliation.parentageType === 'adoption' ? t('Adoption') : t('Parent inconnu')}</span>
                     </div>
                   )}
                   {personUnions.length > 0 && (
                     <div className="pc-row">
-                      <span className="pc-label">{personUnions.length > 1 ? 'Unions' : 'Union'}</span>
+                      <span className="pc-label">{personUnions.length > 1 ? t('Unions') : t('Union')}</span>
                       <span className="value">
                         {personUnions.map(u => {
                           const partnerId = u.partner1Id === person.id ? u.partner2Id : u.partner1Id
                           const partner = persons.find(p => p.id === partnerId)
-                          const yearRange = u.startYear ? (u.endYear ? `${u.startYear}–${u.endYear}` : `depuis ${u.startYear}`) : ''
+                          const yearRange = u.startYear ? (u.endYear ? `${u.startYear}–${u.endYear}` : t('depuis {year}', { year: u.startYear })) : ''
                           return `${partner?.firstName || '?'} ${partner?.lastName || ''}${yearRange ? ` (${yearRange})` : ''}`
                         }).join(', ')}
                       </span>
@@ -575,7 +583,7 @@ const PersonCard = ({
                   )}
                   {childrenList.length > 0 && (
                     <div className="pc-row">
-                      <span className="pc-label">Enfants</span>
+                      <span className="pc-label">{t('Enfants')}</span>
                       <span className="value">{childrenList.map(c => c.firstName).join(', ')}</span>
                     </div>
                   )}
@@ -585,13 +593,13 @@ const PersonCard = ({
 
             {(person.note || editMode) && (
               <section className="pc-section">
-                <h3 className="pz-eyebrow">Notes</h3>
+                <h3 className="pz-eyebrow">{t('Notes')}</h3>
                 {editMode ? (
                   <textarea
                     className="pc-input pc-note-input"
                     value={getEditValue('note', person.note || '')}
                     onChange={(e) => handleFieldChange('note', e.target.value)}
-                    placeholder="Une anecdote, un trait de caractère, ce qu'on se raconte à son sujet"
+                    placeholder={t("Une anecdote, un trait de caractère, ce qu'on se raconte à son sujet")}
                     rows={3}
                   />
                 ) : (
@@ -607,30 +615,30 @@ const PersonCard = ({
           <div className="pc-infos">
             {(relationActionLoading || relationActionSuccess || relationActionError) && (
               <div className={relationActionError ? 'pz-error pc-inline-msg' : relationActionSuccess ? 'pz-success pc-inline-msg' : 'pc-inline-msg pc-inline-msg--loading'}>
-                {relationActionLoading ? 'Mise à jour des liens…' : relationActionError || relationActionSuccess}
+                {relationActionLoading ? t('Mise à jour des liens…') : relationActionError || relationActionSuccess}
               </div>
             )}
 
             <section className="pc-section">
-              <h3 className="pz-eyebrow">Parents</h3>
-              {parentsList.length > 0 ? parentsList.map(p => renderRelationRow(p, 'parent')) : <p className="pc-rel-empty">Aucun parent pour l'instant</p>}
-              {renderRelationAdd('parent', 'Ajouter un parent', 'Rechercher un parent')}
+              <h3 className="pz-eyebrow">{t('Parents')}</h3>
+              {parentsList.length > 0 ? parentsList.map(p => renderRelationRow(p, 'parent')) : <p className="pc-rel-empty">{t("Aucun parent pour l'instant")}</p>}
+              {renderRelationAdd('parent', t('Ajouter un parent'), t('Rechercher un parent'))}
             </section>
 
             <section className="pc-section">
-              <h3 className="pz-eyebrow">Conjoint·e·s</h3>
+              <h3 className="pz-eyebrow">{t('Conjoint·e·s')}</h3>
               {personUnions.length > 0 ? personUnions.map(u => {
                 const partnerId = u.partner1Id === person.id ? u.partner2Id : u.partner1Id
                 const partner = persons.find(p => p.id === partnerId)
-                return renderRelationRow(partner || { id: partnerId, firstName: '?' }, 'spouse', u.unionType)
-              }) : <p className="pc-rel-empty">Aucun·e conjoint·e</p>}
-              {renderRelationAdd('spouse', 'Ajouter un·e conjoint·e', 'Rechercher un·e conjoint·e')}
+                return renderRelationRow(partner || { id: partnerId, firstName: '?' }, 'spouse', unionTypeLabel(u.unionType))
+              }) : <p className="pc-rel-empty">{t('Aucun·e conjoint·e')}</p>}
+              {renderRelationAdd('spouse', t('Ajouter un·e conjoint·e'), t('Rechercher un·e conjoint·e'))}
             </section>
 
             <section className="pc-section">
-              <h3 className="pz-eyebrow">Enfants</h3>
-              {childrenList.length > 0 ? childrenList.map(c => renderRelationRow(c, 'child')) : <p className="pc-rel-empty">Aucun enfant</p>}
-              {renderRelationAdd('child', 'Ajouter un enfant', 'Rechercher un enfant')}
+              <h3 className="pz-eyebrow">{t('Enfants')}</h3>
+              {childrenList.length > 0 ? childrenList.map(c => renderRelationRow(c, 'child')) : <p className="pc-rel-empty">{t('Aucun enfant')}</p>}
+              {renderRelationAdd('child', t('Ajouter un enfant'), t('Rechercher un enfant'))}
             </section>
           </div>
         )}
@@ -641,10 +649,10 @@ const PersonCard = ({
         <footer className="pc-foot">
           {showDeleteConfirm ? (
             <div className="pc-delete-confirm">
-              <span>Supprimer {person.firstName} de l'arbre ?</span>
+              <span>{t("Supprimer {name} de l'arbre ?", { name: person.firstName })}</span>
               <div className="pc-delete-actions">
-                <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => setShowDeleteConfirm(false)}>Annuler</button>
-                <button type="button" className="pz-btn pz-btn--danger pz-btn--sm" onClick={handleDelete}>Supprimer</button>
+                <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => setShowDeleteConfirm(false)}>{t('Annuler')}</button>
+                <button type="button" className="pz-btn pz-btn--danger pz-btn--sm" onClick={handleDelete}>{t('Supprimer')}</button>
               </div>
             </div>
           ) : (
@@ -652,7 +660,7 @@ const PersonCard = ({
               {isAdmin && (
                 <button type="button" className="pz-btn pz-btn--danger-ghost pz-btn--sm" onClick={() => setShowDeleteConfirm(true)}>
                   <Trash2 size={15} strokeWidth={2} />
-                  Supprimer
+                  {t('Supprimer')}
                 </button>
               )}
               <button
@@ -661,7 +669,7 @@ const PersonCard = ({
                 disabled={(!hasChanges && !saveSuccess) || saving}
                 onClick={handleSave}
               >
-                {saveSuccess ? (<><Check size={16} strokeWidth={2.5} />Enregistré</>) : (<PzBusy busy={saving} busyLabel="Enregistrement en cours"><Save size={16} strokeWidth={2} />Enregistrer</PzBusy>)}
+                {saveSuccess ? (<><Check size={16} strokeWidth={2.5} />{t('Enregistré')}</>) : (<PzBusy busy={saving} busyLabel={t('Enregistrement en cours')}><Save size={16} strokeWidth={2} />{t('Enregistrer')}</PzBusy>)}
               </button>
             </>
           )}
@@ -699,7 +707,7 @@ const RelationSearchInline = forwardRef(function RelationSearchInline(
             }
           }}
         />
-        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-search-close" onClick={onClose} aria-label="Fermer la recherche">
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-search-close" onClick={onClose} aria-label={t('Fermer la recherche')}>
           <X size={15} strokeWidth={2} />
         </button>
       </div>
@@ -718,7 +726,7 @@ const RelationSearchInline = forwardRef(function RelationSearchInline(
           ))}
         </ul>
       ) : query ? (
-        <p className="pc-rel-empty">Aucune personne ne correspond</p>
+        <p className="pc-rel-empty">{t('Aucune personne ne correspond')}</p>
       ) : null}
     </div>
   )

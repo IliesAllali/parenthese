@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import './InlinePersonForm.css'
 import PzBusy from './PzBusy.jsx'
+import { t } from '../i18n/index.js'
 
 /**
  * Mini-formulaire inline pour créer une personne après drop
@@ -81,18 +82,18 @@ function InlinePersonForm({
 
   // Labels type lien
   const linkLabels = {
-    child: 'Enfant de',
-    spouse: 'Conjoint de',
-    sibling: 'Frère·Sœur de',
+    child: (name) => t('Enfant de {name}', { name }),
+    spouse: (name) => t('Conjoint de {name}', { name }),
+    sibling: (name) => t('Frère·Sœur de {name}', { name }),
   }
 
   const linkTitle = {
-    child: 'Nouvel enfant',
-    spouse: 'Nouveau conjoint',
-    sibling: 'Nouveau frère/sœur',
+    child: t('Nouvel enfant'),
+    spouse: t('Nouveau conjoint'),
+    sibling: t('Nouveau frère/sœur'),
   }
 
-  const title = linkType ? linkTitle[linkType] : 'Nouvelle personne'
+  const title = linkType ? linkTitle[linkType] : t('Nouvelle personne')
 
   return (
     <>
@@ -119,7 +120,7 @@ function InlinePersonForm({
             type="button"
             className="inline-person-form-close"
             onClick={onCancel}
-            aria-label="Fermer"
+            aria-label={t('Fermer')}
           >
             <X size={18} strokeWidth={2} />
           </button>
@@ -128,7 +129,7 @@ function InlinePersonForm({
         {/* Badge lien */}
         {linkType && linkedPerson && (
           <div className={`inline-person-form-badge ${linkType}`}>
-            {linkLabels[linkType]} {linkedPerson.person?.firstName} {linkedPerson.person?.lastName}
+            {linkLabels[linkType]?.([linkedPerson.person?.firstName, linkedPerson.person?.lastName].filter(Boolean).join(' '))}
           </div>
         )}
 
@@ -136,13 +137,13 @@ function InlinePersonForm({
         <div className="inline-person-form-fields">
           <div className="inline-person-form-field">
             <label className="inline-person-form-label">
-              Prénom <span className="required">*</span>
+              {t('Prénom')} <span className="required">*</span>
             </label>
             <input
               ref={firstInputRef}
               type="text"
               className="inline-person-form-input"
-              placeholder="Jean"
+              placeholder={t('Jean')}
               value={formData.firstName}
               onChange={(e) => handleChange('firstName', e.target.value)}
               disabled={loading}
@@ -150,11 +151,11 @@ function InlinePersonForm({
           </div>
 
           <div className="inline-person-form-field">
-            <label className="inline-person-form-label">Nom</label>
+            <label className="inline-person-form-label">{t('Nom')}</label>
             <input
               type="text"
               className="inline-person-form-input"
-              placeholder="Dupont"
+              placeholder={t('Dupont')}
               value={formData.lastName}
               onChange={(e) => handleChange('lastName', e.target.value)}
               disabled={loading}
@@ -163,7 +164,7 @@ function InlinePersonForm({
 
           <div className="inline-person-form-row">
             <div className="inline-person-form-field">
-              <label className="inline-person-form-label">Date naissance</label>
+              <label className="inline-person-form-label">{t('Date naissance')}</label>
               <input
                 type="text"
                 className="inline-person-form-input"
@@ -175,7 +176,7 @@ function InlinePersonForm({
             </div>
 
             <div className="inline-person-form-field">
-              <label className="inline-person-form-label">Lieu naissance</label>
+              <label className="inline-person-form-label">{t('Lieu naissance')}</label>
               <input
                 type="text"
                 className="inline-person-form-input"
@@ -196,14 +197,14 @@ function InlinePersonForm({
             onClick={onCancel}
             disabled={loading}
           >
-            Annuler
+            {t('Annuler')}
           </button>
           <button
             type="submit"
             className="inline-person-form-button submit"
             disabled={!isValid || loading}
           >
-            <PzBusy busy={loading} busyLabel="Création en cours">Créer</PzBusy>
+            <PzBusy busy={loading} busyLabel={t('Création en cours')}>{t('Créer')}</PzBusy>
           </button>
         </div>
       </form>

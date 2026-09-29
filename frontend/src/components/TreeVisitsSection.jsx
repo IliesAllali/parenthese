@@ -1,31 +1,28 @@
 import { useEffect, useState } from 'react'
 import { listTreeVisits } from '../api/treeApi'
+import { dateLocale, t } from '../i18n/index.js'
 
 // Onglet Visites des paramètres de l'arbre : qui est venu, combien de fois.
 // Le journal est tenu par le serveur à chaque ouverture de l'arbre (backend/src/lib/tree-visits.ts).
 
-const DEVICE_LABEL = { phone: 'téléphone', tablet: 'tablette', desktop: 'ordinateur' }
-const ACCESS_LABEL = { share: 'avec le lien', member: 'membre', shared_account: 'avec son compte' }
+const DEVICE_LABEL = { phone: t('téléphone'), tablet: t('tablette'), desktop: t('ordinateur') }
+const ACCESS_LABEL = { share: t('avec le lien'), member: t('membre'), shared_account: t('avec son compte') }
 
 function visitorLabel(visit) {
-  if (visit.isYou) return 'Vous'
+  if (visit.isYou) return t('Vous')
   if (visit.name) return visit.name
   if (visit.email) return visit.email.split('@')[0]
-  return 'Un visiteur'
+  return t('Un visiteur')
 }
 
 function whenLabel(value) {
   const date = new Date(value)
-  const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  const time = date.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   const days = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000)
-  if (days === 0) return `aujourd'hui à ${time}`
-  if (days === 1) return `hier à ${time}`
-  return `${date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} à ${time}`
-}
-
-function plural(n, one, many) {
-  return `${n} ${n > 1 ? many : one}`
+  if (days === 0) return t("aujourd'hui à {time}", { time })
+  if (days === 1) return t('hier à {time}', { time })
+  return t('{date} à {time}', { date: date.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' }), time })
 }
 
 const TreeVisitsSection = ({ treeId, authToken }) => {
@@ -36,31 +33,31 @@ const TreeVisitsSection = ({ treeId, authToken }) => {
     setState({ loading: true, error: '', data: null })
     listTreeVisits(treeId, authToken)
       .then((data) => { if (active) setState({ loading: false, error: '', data }) })
-      .catch(() => { if (active) setState({ loading: false, error: 'Impossible de charger les visites.', data: null }) })
+      .catch(() => { if (active) setState({ loading: false, error: t('Impossible de charger les visites.'), data: null }) })
     return () => { active = false }
   }, [treeId, authToken])
 
-  if (state.loading) return <p className="pz-small ts-loading">Chargement…</p>
+  if (state.loading) return <p className="pz-small ts-loading">{t('Chargement…')}</p>
   if (state.error) return <div className="pz-error" role="alert">{state.error}</div>
 
   const { summary, recent } = state.data
   return (
     <div className="ts-panel tv">
       <div className="tv-stats">
-        {[['7 derniers jours', summary.last7], ['30 derniers jours', summary.last30]].map(([label, s]) => (
+        {[[t('7 derniers jours'), summary.last7], [t('30 derniers jours'), summary.last30]].map(([label, s]) => (
           <div key={label} className="tv-stat">
             <p className="pz-eyebrow">{label}</p>
-            <p className="tv-stat-value">{plural(s.visits, 'visite', 'visites')}</p>
-            <p className="pz-small">{plural(s.visitors, 'personne', 'personnes')}</p>
+            <p className="tv-stat-value">{s.visits > 1 ? t('{n} visites', { n: s.visits }) : t('{n} visite', { n: s.visits })}</p>
+            <p className="pz-small">{s.visitors > 1 ? t('{n} personnes', { n: s.visitors }) : t('{n} personne', { n: s.visitors })}</p>
           </div>
         ))}
       </div>
-      <p className="pz-hint">Vos propres visites ne sont pas comptées. Le prénom apparaît quand le visiteur l'a donné en ouvrant l'arbre.</p>
+      <p className="pz-hint">{t("Vos propres visites ne sont pas comptées. Le prénom apparaît quand le visiteur l'a donné en ouvrant l'arbre.")}</p>
 
       <div className="tv-list">
-        <p className="pz-eyebrow">Dernières visites</p>
+        <p className="pz-eyebrow">{t('Dernières visites')}</p>
         {recent.length === 0 ? (
-          <p className="pz-small">Aucune visite pour l'instant. Le journal a commencé le 25 septembre 2026.</p>
+          <p className="pz-small">{t("Aucune visite pour l'instant. Le journal a commencé le 25 septembre 2026.")}</p>
         ) : (
           <ul>
             {recent.map((visit) => (

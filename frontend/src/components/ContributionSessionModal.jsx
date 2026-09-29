@@ -3,12 +3,13 @@ import { Send, X } from 'lucide-react'
 import './ContributionSessionModal.css'
 import PzBusy from './PzBusy.jsx'
 import { readContributorName } from '../utils/contributorName'
+import { t } from '../i18n/index.js'
 
 function formatAction(action) {
-  if (action === 'create') return 'Ajout'
-  if (action === 'update') return 'Modification'
-  if (action === 'delete') return 'Suppression'
-  return 'Changement'
+  if (action === 'create') return t('Ajout')
+  if (action === 'update') return t('Modification')
+  if (action === 'delete') return t('Suppression')
+  return t('Changement')
 }
 
 /**
@@ -58,6 +59,8 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
 
   if (!visible) return null
 
+  const [titleBefore, titleAfter] = t('Envoyer vos {em}').split('{em}')
+
   return (
     <div className="pz-overlay" onClick={onCancel}>
       <div
@@ -67,21 +70,21 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
         aria-labelledby="contrib-session-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onCancel} aria-label="Fermer">
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onCancel} aria-label={t('Fermer')}>
           <X size={18} strokeWidth={2} />
         </button>
 
         <div className="pz-modal-head">
-          <p className="pz-eyebrow">Votre contribution</p>
-          <h2 id="contrib-session-title" className="pz-title">Envoyer vos <em>modifications</em></h2>
-          <p className="pz-sub">La personne qui gère l'arbre les relit, puis elles apparaissent pour toute la famille.</p>
+          <p className="pz-eyebrow">{t('Votre contribution')}</p>
+          <h2 id="contrib-session-title" className="pz-title">{titleBefore}<em>{t('modifications')}</em>{titleAfter}</h2>
+          <p className="pz-sub">{t("La personne qui gère l'arbre les relit, puis elles apparaissent pour toute la famille.")}</p>
         </div>
 
         {totalChanges > 0 && (
           <div className="cs-recap">
-            {recap.added > 0 && <span className="pz-tag cs-tag cs-tag--added">{recap.added} ajout{recap.added > 1 ? 's' : ''}</span>}
-            {recap.modified > 0 && <span className="pz-tag cs-tag cs-tag--modified">{recap.modified} modification{recap.modified > 1 ? 's' : ''}</span>}
-            {recap.deleted > 0 && <span className="pz-tag cs-tag cs-tag--deleted">{recap.deleted} suppression{recap.deleted > 1 ? 's' : ''}</span>}
+            {recap.added > 0 && <span className="pz-tag cs-tag cs-tag--added">{recap.added > 1 ? t('{n} ajouts', { n: recap.added }) : t('{n} ajout', { n: recap.added })}</span>}
+            {recap.modified > 0 && <span className="pz-tag cs-tag cs-tag--modified">{recap.modified > 1 ? t('{n} modifications', { n: recap.modified }) : t('{n} modification', { n: recap.modified })}</span>}
+            {recap.deleted > 0 && <span className="pz-tag cs-tag cs-tag--deleted">{recap.deleted > 1 ? t('{n} suppressions', { n: recap.deleted }) : t('{n} suppression', { n: recap.deleted })}</span>}
           </div>
         )}
 
@@ -100,13 +103,13 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
         <form className="cs-form" onSubmit={handleSubmit}>
           {askName && (
             <div className="pz-field">
-              <label htmlFor="cs-name">Votre prénom</label>
+              <label htmlFor="cs-name">{t('Votre prénom')}</label>
               <input
                 id="cs-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value.slice(0, 120))}
-                placeholder="Pour que la famille sache qui a ajouté quoi"
+                placeholder={t('Pour que la famille sache qui a ajouté quoi')}
                 autoComplete="given-name"
                 required
               />
@@ -114,13 +117,13 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
           )}
           <div className="pz-field">
             <label htmlFor="cs-comment">
-              Un mot pour accompagner <span className="cs-optional">facultatif</span>
+              {t('Un mot pour accompagner')} <span className="cs-optional">{t('facultatif')}</span>
             </label>
             <textarea
               id="cs-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value.slice(0, 500))}
-              placeholder="Par exemple, j'ai ajouté les photos du mariage de mes grands-parents"
+              placeholder={t("Par exemple, j'ai ajouté les photos du mariage de mes grands-parents")}
               rows={3}
               maxLength={500}
             />
@@ -131,11 +134,11 @@ function ContributionSessionModal({ visible, changes = [], recap = {}, loading =
 
           <div className="pz-modal-actions">
             <button type="button" className="pz-btn pz-btn--ghost" onClick={onCancel} disabled={loading}>
-              Annuler
+              {t('Annuler')}
             </button>
             <button type="submit" className="pz-btn pz-btn--primary" disabled={loading || (askName && !name.trim())}>
               <Send size={16} strokeWidth={2} />
-              <PzBusy busy={loading} busyLabel="Envoi en cours">Envoyer mes contributions</PzBusy>
+              <PzBusy busy={loading} busyLabel={t('Envoi en cours')}>{t('Envoyer mes contributions')}</PzBusy>
             </button>
           </div>
         </form>

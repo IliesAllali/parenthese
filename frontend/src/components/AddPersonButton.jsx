@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { Plus, Baby, Heart, Users, MapPin } from 'lucide-react'
 import './AddPersonButton.css'
+import { t } from '../i18n/index.js'
 
 /**
  * Bouton FAB draggable pour ajouter une personne
@@ -45,12 +46,12 @@ function AddPersonButton({ isDragging, dragPosition, onDragStart, linkType }) {
     : {}
 
   // Message tooltip selon linkType
-  let tooltipText = 'Glisser pour ajouter une personne'
+  let tooltipText = t('Glisser pour ajouter une personne')
   if (isDragging) {
-    if (linkType === 'child') tooltipText = 'Ajouter un enfant'
-    else if (linkType === 'spouse') tooltipText = 'Ajouter un conjoint'
-    else if (linkType === 'sibling') tooltipText = 'Ajouter un frère/sœur'
-    else tooltipText = 'Relâcher pour créer'
+    if (linkType === 'child') tooltipText = t('Ajouter un enfant')
+    else if (linkType === 'spouse') tooltipText = t('Ajouter un conjoint')
+    else if (linkType === 'sibling') tooltipText = t('Ajouter un frère/sœur')
+    else tooltipText = t('Relâcher pour créer')
   }
 
   return (
@@ -61,7 +62,7 @@ function AddPersonButton({ isDragging, dragPosition, onDragStart, linkType }) {
         className={`add-person-button ${isDragging ? 'dragging' : ''} ${entering ? 'entering' : ''}`}
         style={style}
         onMouseDown={handleMouseDown}
-        aria-label="Ajouter une personne"
+        aria-label={t('Ajouter une personne')}
       >
         <span className="add-person-button-icon"><Plus size={28} strokeWidth={1.5} /></span>
         <span className="add-person-button-tooltip">{tooltipText}</span>
@@ -70,10 +71,10 @@ function AddPersonButton({ isDragging, dragPosition, onDragStart, linkType }) {
       {/* Hint pendant drag */}
       {isDragging && (
         <div className="add-person-drag-hint">
-          {linkType === 'child' && <><Baby size={16} strokeWidth={2} /> Enfant</>}
-          {linkType === 'spouse' && <><Heart size={16} strokeWidth={2} /> Conjoint</>}
-          {linkType === 'sibling' && <><Users size={16} strokeWidth={2} /> Frère·Sœur</>}
-          {!linkType && <><MapPin size={16} strokeWidth={2} /> Positionnez la personne</>}
+          {linkType === 'child' && <><Baby size={16} strokeWidth={2} /> {t('Enfant')}</>}
+          {linkType === 'spouse' && <><Heart size={16} strokeWidth={2} /> {t('Conjoint')}</>}
+          {linkType === 'sibling' && <><Users size={16} strokeWidth={2} /> {t('Frère·Sœur')}</>}
+          {!linkType && <><MapPin size={16} strokeWidth={2} /> {t('Positionnez la personne')}</>}
         </div>
       )}
     </>

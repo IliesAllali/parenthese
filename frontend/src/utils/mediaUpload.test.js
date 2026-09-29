@@ -32,7 +32,7 @@ describe('mediaUpload utils', () => {
   })
 
   it('validates media size constraints', () => {
-    expect(validateMediaFile(null, 'photo')).toBe('Selectionnez un fichier.')
+    expect(validateMediaFile(null, 'photo')).toBe('Sélectionnez un fichier.')
     expect(validateMediaFile({ size: 0 }, 'photo')).toBe('Fichier invalide.')
     expect(validateMediaFile({ size: 25 * 1024 * 1024 }, 'document')).toBe('Fichier trop volumineux (max 20 Mo).')
     expect(validateMediaFile({ size: 6 * 1024 * 1024 }, 'photo')).toBe('Image trop volumineuse (max 5 Mo).')

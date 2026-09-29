@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import { t } from '../../i18n/index.js'
 import './TextInputOverlay.css'
 
 export default function TextInputOverlay({
@@ -48,7 +49,7 @@ export default function TextInputOverlay({
         ref={inputRef}
         className="text-input-overlay__input"
         type="text"
-        placeholder="Saisir du texte..."
+        placeholder={t('Saisir du texte...')}
         style={{
           color: currentStyle.color,
           fontSize: currentStyle.fontSize,

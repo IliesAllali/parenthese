@@ -1,8 +1,19 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import LanguageSwitch from './navbar/LanguageSwitch'
+import { t } from '../i18n/index.js'
 import { readContributorName, saveContributorName } from '../utils/contributorName.js'
+
+// Phrase traduite d'un bloc : les passages entre astérisques passent en <em>, {slot} reçoit un nœud.
+function richText(text, slotNode = null) {
+  return text.split(/(\{slot\})/).flatMap((chunk, chunkIndex) => (
+    chunk === '{slot}'
+      ? [<Fragment key={`s${chunkIndex}`}>{slotNode}</Fragment>]
+      : chunk.split('*').map((part, index) => (index % 2 ? <em key={`${chunkIndex}-${index}`}>{part}</em> : part))
+  ))
+}
 
 const AccessGate = ({
   initialTreeId,
@@ -44,20 +55,20 @@ const AccessGate = ({
 
         <form className="pz-card pz-screen-card" onSubmit={handleSubmit}>
           <div className="pz-auth-head">
-            <p className="pz-eyebrow">Arbre partagé</p>
+            <p className="pz-eyebrow">{t('Arbre partagé')}</p>
             {treeNotFound ? (
-              <h1 className="pz-title">Cet arbre est <em>introuvable</em></h1>
+              <h1 className="pz-title">{richText(t('Cet arbre est *introuvable*'))}</h1>
             ) : (
               <h1 className="pz-title">
-                {treeName ? <>Ouvrir <em>{treeName}</em></> : <>Ouvrir un arbre <em>partagé</em></>}
+                {treeName ? richText(t('Ouvrir {slot}'), <em>{treeName}</em>) : richText(t('Ouvrir un arbre *partagé*'))}
               </h1>
             )}
             <p className="pz-sub">
               {treeNotFound
-                ? "Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé."
+                ? t("Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé.")
                 : treeName
-                  ? 'Entrez le mot de passe reçu avec le lien. Pas besoin de compte pour regarder.'
-                  : "Entrez le code et le mot de passe reçus avec votre lien de partage."}
+                  ? t('Entrez le mot de passe reçu avec le lien. Pas besoin de compte pour regarder.')
+                  : t('Entrez le code et le mot de passe reçus avec votre lien de partage.')}
             </p>
           </div>
 
@@ -67,7 +78,7 @@ const AccessGate = ({
                 <span className="pz-gate-mono" aria-hidden="true">{ownerLabel.trim().charAt(0).toUpperCase()}</span>
               )}
               <div className="pz-gate-owner-text">
-                {ownerLabel && <p className="access-gate-tree-meta pz-small">Partagé par <strong>{ownerLabel}</strong></p>}
+                {ownerLabel && <p className="access-gate-tree-meta pz-small">{richText(t('Partagé par {slot}'), <strong>{ownerLabel}</strong>)}</p>}
                 {treeDescription && <p className="pz-small">{treeDescription}</p>}
               </div>
             </div>
@@ -77,14 +88,14 @@ const AccessGate = ({
             <div className="pz-auth-form">
               {!initialTreeId && (
                 <div className="pz-field">
-                  <label htmlFor="treeId">Code de l'arbre</label>
+                  <label htmlFor="treeId">{t("Code de l'arbre")}</label>
                   <input
                     id="treeId"
                     type="text"
                     value={treeId}
                     onChange={(event) => setTreeId(event.target.value)}
                     disabled={loading}
-                    placeholder="Il commence souvent par cm"
+                    placeholder={t('Il commence souvent par cm')}
                     autoComplete="off"
                     required
                   />
@@ -92,7 +103,7 @@ const AccessGate = ({
               )}
 
               <div className="pz-field">
-                <label htmlFor="visitorFirstName">Votre prénom</label>
+                <label htmlFor="visitorFirstName">{t('Votre prénom')}</label>
                 <input
                   id="visitorFirstName"
                   type="text"
@@ -102,11 +113,11 @@ const AccessGate = ({
                   autoComplete="given-name"
                   maxLength={60}
                 />
-                <p className="pz-hint">Facultatif. Il sert à savoir qui est venu voir l'arbre.</p>
+                <p className="pz-hint">{t("Facultatif. Il sert à savoir qui est venu voir l'arbre.")}</p>
               </div>
 
               <div className="pz-field">
-                <label htmlFor="sharePassword">Mot de passe de partage</label>
+                <label htmlFor="sharePassword">{t('Mot de passe de partage')}</label>
                 <input
                   id="sharePassword"
                   type="password"
@@ -124,13 +135,13 @@ const AccessGate = ({
 
           {!treeNotFound && (
             <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={loading}>
-              <PzBusy busy={loading} busyLabel="Ouverture de l'arbre">Ouvrir l'arbre</PzBusy>
+              <PzBusy busy={loading} busyLabel={t("Ouverture de l'arbre")}>{t("Ouvrir l'arbre")}</PzBusy>
             </button>
           )}
 
           {treeNotFound && onUseAccount && (
             <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={() => onUseAccount('register')} disabled={loading}>
-              Créer mon arbre
+              {t('Créer mon arbre')}
             </button>
           )}
         </form>
@@ -138,13 +149,15 @@ const AccessGate = ({
         {onUseAccount && !treeNotFound && (
           <div className="pz-account-foot">
             <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onUseAccount('login')} disabled={loading}>
-              Se connecter avec un compte
+              {t('Se connecter avec un compte')}
             </button>
             <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onUseAccount('register')} disabled={loading}>
-              Créer un compte
+              {t('Créer un compte')}
             </button>
           </div>
         )}
+
+        <LanguageSwitch className="pz-lang--screen" />
       </div>
     </div>
   )

@@ -1,22 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
 import {
   Edit3, Share2, User, UserPlus,
-  X, MousePointer2, Pencil, Type, Star, Trash2, Image, ImagePlus, MoreHorizontal, HelpCircle,
+  X, MousePointer2, Pencil, Type, Star, Trash2, Image, ImagePlus, MoreHorizontal, HelpCircle, Globe,
 } from 'lucide-react'
 import NavButton from './NavButton'
 import AvatarMenu from './AvatarMenu'
+import LanguageSwitch from './LanguageSwitch'
 import DrawingOptions from '../annotations/DrawingOptions'
 import TextOptions from '../annotations/TextOptions'
 import StickerPicker from '../annotations/StickerPicker'
 import { toJourneyRole, toOpaqueTreeId, trackAppEvent } from '../../utils/analytics'
+import { t } from '../../i18n/index.js'
 import './ContextualNavbar.css'
 
 const ANNOT_TOOLS = [
-  { id: 'pointer', label: 'Sélection', Icon: MousePointer2 },
-  { id: 'drawing', label: 'Dessin', Icon: Pencil },
-  { id: 'text', label: 'Texte', Icon: Type },
-  { id: 'sticker', label: 'Sticker', Icon: Star },
-  { id: 'photo', label: 'Photo', Icon: Image },
+  { id: 'pointer', label: t('Sélection'), Icon: MousePointer2 },
+  { id: 'drawing', label: t('Dessin'), Icon: Pencil },
+  { id: 'text', label: t('Texte'), Icon: Type },
+  { id: 'sticker', label: t('Sticker'), Icon: Star },
+  { id: 'photo', label: t('Photo'), Icon: Image },
 ]
 
 function ContextualNavbar({
@@ -135,34 +137,43 @@ function ContextualNavbar({
     <>
       <button type="button" className="nav-family-btn nav-family-btn--primary" onClick={onAddSouvenirClick}>
         <ImagePlus size={20} strokeWidth={2} aria-hidden="true" />
-        <span>Ajouter un souvenir</span>
+        <span>{t('Ajouter un souvenir')}</span>
       </button>
       <button type="button" className="nav-family-btn" onClick={onAddPersonClick}>
         <UserPlus size={20} strokeWidth={2} aria-hidden="true" />
-        <span>Ajouter une personne</span>
+        <span>{t('Ajouter une personne')}</span>
       </button>
       <div ref={moreRef} className="nav-more-wrapper">
         <button type="button" className={`nav-family-btn nav-family-btn--more${moreOpen ? ' is-open' : ''}`} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-haspopup="menu">
           <MoreHorizontal size={20} strokeWidth={2} aria-hidden="true" />
-          <span>Plus</span>
+          <span>{t('Plus')}</span>
         </button>
         {moreOpen && (
           <div className="nav-more-menu" role="menu">
             <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onEditClick?.() }}>
               <Pencil size={18} strokeWidth={2} aria-hidden="true" />
-              Dessiner ou écrire sur l'arbre
+              {t("Dessiner ou écrire sur l'arbre")}
             </button>
             {helpUrl && (
               <a role="menuitem" href={helpUrl} target="_blank" rel="noopener" onClick={() => setMoreOpen(false)}>
                 <HelpCircle size={18} strokeWidth={2} aria-hidden="true" />
-                Le mode d'emploi
+                {t("Le mode d'emploi")}
               </a>
             )}
             {!authenticated && (
               <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); handleCreateAccountClick() }}>
                 <User size={18} strokeWidth={2} aria-hidden="true" />
-                Créer un compte
+                {t('Créer un compte')}
               </button>
+            )}
+            {!authenticated && (
+              <div className="pz-lang-row">
+                <span className="pz-lang-row-label">
+                  <Globe size={18} strokeWidth={2} aria-hidden="true" />
+                  <span>{t('Langue')}</span>
+                </span>
+                <LanguageSwitch />
+              </div>
             )}
           </div>
         )}
@@ -177,20 +188,20 @@ function ContextualNavbar({
           <>
             <NavButton
               icon={<Edit3 size={20} strokeWidth={2} />}
-              label="Modifier l'arbre"
+              label={t("Modifier l'arbre")}
               onClick={onEditClick}
               active={editModeActive}
             />
             {editModeActive && (
               <NavButton
                 icon={<UserPlus size={20} strokeWidth={2} />}
-                label="Ajouter une personne"
+                label={t('Ajouter une personne')}
                 onClick={onAddPersonClick}
               />
             )}
             <NavButton
               icon={<Share2 size={20} strokeWidth={2} />}
-              label="Contributions"
+              label={t('Contributions')}
               onClick={onShareClick}
               badge={pendingContributions}
               badgeColor={pendingContributions > 0 ? 'orange' : null}
@@ -203,14 +214,14 @@ function ContextualNavbar({
           <>
             <NavButton
               icon={<Edit3 size={20} strokeWidth={2} />}
-              label="Contribuer"
+              label={t('Contribuer')}
               onClick={onEditClick}
               active={editModeActive}
             />
             {editModeActive && (
               <NavButton
                 icon={<UserPlus size={20} strokeWidth={2} />}
-                label="Ajouter une personne"
+                label={t('Ajouter une personne')}
                 onClick={onAddPersonClick}
               />
             )}
@@ -222,20 +233,20 @@ function ContextualNavbar({
           <>
             <NavButton
               icon={<Edit3 size={20} strokeWidth={2} />}
-              label="Contribuer à l'arbre"
+              label={t("Contribuer à l'arbre")}
               onClick={onEditClick}
               active={editModeActive}
             />
             {editModeActive && (
               <NavButton
                 icon={<UserPlus size={20} strokeWidth={2} />}
-                label="Ajouter une personne"
+                label={t('Ajouter une personne')}
                 onClick={onAddPersonClick}
               />
             )}
             <NavButton
               icon={<User size={20} strokeWidth={2} />}
-              label="Créer un compte"
+              label={t('Créer un compte')}
               onClick={handleCreateAccountClick}
             />
           </>
@@ -246,12 +257,12 @@ function ContextualNavbar({
           <>
             <NavButton
               icon={<User size={20} strokeWidth={2} />}
-              label="Créer un compte"
+              label={t('Créer un compte')}
               onClick={handleCreateAccountClick}
             />
             <NavButton
               icon={<Edit3 size={20} strokeWidth={2} />}
-              label="Contribuer (mot de passe contribution requis)"
+              label={t('Contribuer (mot de passe contribution requis)')}
               onClick={onEditClick}
               disabled
             />
@@ -264,13 +275,13 @@ function ContextualNavbar({
             <>
               <NavButton
                 icon={<Edit3 size={20} strokeWidth={2} />}
-                label="Modifier la démo"
+                label={t('Modifier la démo')}
                 onClick={onEditClick}
                 active={editModeActive}
               />
               <NavButton
                 icon={<User size={20} strokeWidth={2} />}
-                label={authenticated ? 'Mon compte' : 'Se connecter'}
+                label={authenticated ? t('Mon compte') : t('Se connecter')}
                 onClick={() => onProfileClick?.(authenticated ? 'login' : 'register')}
               />
             </>
@@ -280,7 +291,7 @@ function ContextualNavbar({
         return (
           <NavButton
             icon={<User size={20} strokeWidth={2} />}
-            label="Se connecter"
+            label={t('Se connecter')}
             onClick={() => onProfileClick?.('login')}
           />
         )
@@ -339,8 +350,8 @@ function ContextualNavbar({
             <button
               className="nav-annot-exit"
               onClick={onEditClick}
-              aria-label="Quitter l'édition"
-              title="Quitter l'édition"
+              aria-label={t("Quitter l'édition")}
+              title={t("Quitter l'édition")}
             >
               <X size={18} strokeWidth={2.5} />
             </button>
@@ -365,8 +376,8 @@ function ContextualNavbar({
               className={`nav-annot-btn nav-annot-btn--trash${annotationTools.isDragging ? ' nav-annot-btn--drag-target' : ''}${annotationTools.isOverTrash ? ' nav-annot-btn--drag-over' : ''}`}
               onClick={annotationTools.onDelete}
               disabled={!annotationTools.selectedAnnotationId && !annotationTools.isDragging}
-              aria-label="Supprimer"
-              title="Supprimer"
+              aria-label={t('Supprimer')}
+              title={t('Supprimer')}
               data-annotation-trash=""
             >
               <Trash2 size={annotationTools.isOverTrash ? 22 : 18} strokeWidth={2} />
@@ -375,8 +386,8 @@ function ContextualNavbar({
             <button
               className="nav-annot-btn nav-annot-btn--add"
               onClick={onAddPersonClick}
-              aria-label="Ajouter une personne"
-              title="Ajouter une personne"
+              aria-label={t('Ajouter une personne')}
+              title={t('Ajouter une personne')}
             >
               <UserPlus size={18} strokeWidth={2} />
             </button>
@@ -385,6 +396,9 @@ function ContextualNavbar({
           <>
             {isFamily && !editModeActive ? renderFamilyButtons() : renderButtons()}
 
+            {/* Hors connexion, pas de menu du compte : le choix de la langue vit dans la barre (ou dans « Plus » pour la famille) */}
+            {!authenticated && !(isFamily && !editModeActive) && <LanguageSwitch className="pz-lang--nav" />}
+
             {authenticated && (
               <div ref={avatarMenuRef} className="nav-dropdown-wrapper">
                 <div
@@ -392,7 +406,7 @@ function ContextualNavbar({
                   onClick={() => setAvatarMenuOpen(!avatarMenuOpen)}
                   role="button"
                   tabIndex={0}
-                  aria-label="Menu compte"
+                  aria-label={t('Menu compte')}
                 >
                   {userAvatarPhoto ? (
                     <img className="nav-avatar-photo" src={userAvatarPhoto} alt="" />

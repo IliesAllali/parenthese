@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.js'
 import './TextOptions.css'
 
 const COLORS = [
@@ -6,17 +7,17 @@ const COLORS = [
 ]
 
 const FONT_SIZES = [
-  { value: 14, label: 'Petit' },
-  { value: 18, label: 'Normal' },
-  { value: 24, label: 'Grand' },
-  { value: 32, label: 'Très grand' },
+  { value: 14, label: t('Petit') },
+  { value: 18, label: t('Normal') },
+  { value: 24, label: t('Grand') },
+  { value: 32, label: t('Très grand') },
 ]
 
 export default function TextOptions({ currentStyle, onStyleChange }) {
   return (
     <div className="text-options">
       <div className="text-options__section">
-        <span className="text-options__label">Couleur</span>
+        <span className="text-options__label">{t('Couleur')}</span>
         <div className="text-options__colors">
           {COLORS.map((color) => (
             <button
@@ -31,7 +32,7 @@ export default function TextOptions({ currentStyle, onStyleChange }) {
       </div>
 
       <div className="text-options__section">
-        <span className="text-options__label">Taille</span>
+        <span className="text-options__label">{t('Taille')}</span>
         <div className="text-options__sizes">
           {FONT_SIZES.map((fs) => (
             <button
@@ -55,7 +56,7 @@ export default function TextOptions({ currentStyle, onStyleChange }) {
           <span className="text-options__toggle-track">
             <span className="text-options__toggle-thumb" />
           </span>
-          <span className="text-options__toggle-label">Stabilo</span>
+          <span className="text-options__toggle-label">{t('Stabilo')}</span>
         </label>
       </div>
     </div>

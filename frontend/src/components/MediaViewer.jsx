@@ -8,6 +8,7 @@ import {
   parseGpxMapText,
 } from '../utils/geoMedia'
 import './MediaViewer.css'
+import { t } from '../i18n/index.js'
 
 const HTTP_URL_RE = /^https?:\/\/\S+$/i
 
@@ -67,7 +68,7 @@ const MediaViewer = ({ media, person, onClose }) => {
         }
       } catch {
         if (!cancelled) {
-          setMapState({ loading: false, error: 'Impossible de visualiser cette carte.', data: null })
+          setMapState({ loading: false, error: t('Impossible de visualiser cette carte.'), data: null })
         }
       }
     }
@@ -96,27 +97,27 @@ const MediaViewer = ({ media, person, onClose }) => {
   )
 
   const typeLabels = useMemo(() => ({
-    photo: 'Photo',
-    video: 'Vidéo',
-    audio: 'Voix',
-    document: 'Document',
-    citation: 'Citation',
-    geojson: 'Carte GPS',
-    gpx: 'Trace GPX',
+    photo: t('Photo'),
+    video: t('Vidéo'),
+    audio: t('Voix'),
+    document: t('Document'),
+    citation: t('Citation'),
+    geojson: t('Carte GPS'),
+    gpx: t('Trace GPX'),
   }), [])
 
   const renderPhoto = () => {
     if (!mediaUrl) {
       return (
         <div className="media-document-container">
-          <div className="media-document-text">Photo non disponible</div>
+          <div className="media-document-text">{t('Photo non disponible')}</div>
         </div>
       )
     }
 
     return (
       <div className="media-photo-frame">
-        <img src={mediaUrl} alt={media?.label || 'Photo'} />
+        <img src={mediaUrl} alt={media?.label || t('Photo')} />
       </div>
     )
   }
@@ -125,7 +126,7 @@ const MediaViewer = ({ media, person, onClose }) => {
     if (!mediaUrl) {
       return (
         <div className="media-video-container">
-          <div className="media-video-text">Video non disponible</div>
+          <div className="media-video-text">{t('Vidéo non disponible')}</div>
         </div>
       )
     }
@@ -138,7 +139,7 @@ const MediaViewer = ({ media, person, onClose }) => {
       if (!videoId) {
         return (
           <div className="media-video-container">
-            <div className="media-video-text">Lien YouTube invalide</div>
+            <div className="media-video-text">{t('Lien YouTube invalide')}</div>
           </div>
         )
       }
@@ -148,7 +149,7 @@ const MediaViewer = ({ media, person, onClose }) => {
           <iframe
             className="media-video-player media-video-player--youtube"
             src={embedUrl}
-            title={media?.label || 'Vidéo YouTube'}
+            title={media?.label || t('Vidéo YouTube')}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
@@ -171,7 +172,7 @@ const MediaViewer = ({ media, person, onClose }) => {
               <div className="media-audio-hole" />
             </div>
           </div>
-          <div className="media-audio-text">Audio non disponible</div>
+          <div className="media-audio-text">{t('Audio non disponible')}</div>
         </>
       )
     }
@@ -193,7 +194,7 @@ const MediaViewer = ({ media, person, onClose }) => {
               <div key={index} className="media-document-line" />
             ))}
           </div>
-          <div className="media-document-text">Document non disponible</div>
+          <div className="media-document-text">{t('Document non disponible')}</div>
         </div>
       )
     }
@@ -204,11 +205,11 @@ const MediaViewer = ({ media, person, onClose }) => {
           <iframe
             className="media-document-pdf"
             src={mediaUrl}
-            title={media?.label || 'Document PDF'}
+            title={media?.label || t('Document PDF')}
           />
           <div className="media-document-actions">
             <a className="media-document-download" href={mediaUrl} target="_blank" rel="noreferrer">
-              Ouvrir le PDF dans un nouvel onglet
+              {t('Ouvrir le PDF dans un nouvel onglet')}
             </a>
           </div>
         </div>
@@ -223,10 +224,10 @@ const MediaViewer = ({ media, person, onClose }) => {
             <div key={index} className="media-document-line" />
           ))}
         </div>
-        <div className="media-document-text">Apercu limite pour ce format</div>
+        <div className="media-document-text">{t('Aperçu limité pour ce format')}</div>
         <div className="media-document-actions">
           <a className="media-document-download" href={mediaUrl} target="_blank" rel="noreferrer">
-            Telecharger / ouvrir le document
+            {t('Télécharger / ouvrir le document')}
           </a>
         </div>
       </div>
@@ -237,7 +238,7 @@ const MediaViewer = ({ media, person, onClose }) => {
     if (!mediaUrl) {
       return (
         <div className="media-map-viewer">
-          <div className="media-map-status">Fichier cartographique non disponible.</div>
+          <div className="media-map-status">{t('Fichier cartographique non disponible.')}</div>
         </div>
       )
     }
@@ -245,7 +246,7 @@ const MediaViewer = ({ media, person, onClose }) => {
     if (mapState.loading) {
       return (
         <div className="media-map-viewer">
-          <div className="media-map-status">Chargement de la carte...</div>
+          <div className="media-map-status">{t('Chargement de la carte...')}</div>
         </div>
       )
     }
@@ -253,10 +254,10 @@ const MediaViewer = ({ media, person, onClose }) => {
     if (mapState.error || !mapState.data) {
       return (
         <div className="media-map-viewer">
-          <div className="media-map-status">{mapState.error || 'Visualisation indisponible.'}</div>
+          <div className="media-map-status">{mapState.error || t('Visualisation indisponible.')}</div>
           <div className="media-map-actions">
             <a className="media-map-open" href={mediaUrl} target="_blank" rel="noreferrer">
-              Ouvrir le fichier
+              {t('Ouvrir le fichier')}
             </a>
           </div>
         </div>
@@ -270,7 +271,7 @@ const MediaViewer = ({ media, person, onClose }) => {
             <iframe
               className="media-map-embed"
               src={openStreetMapEmbedUrl}
-              title="Carte OpenStreetMap"
+              title={t('Carte OpenStreetMap')}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
@@ -280,7 +281,7 @@ const MediaViewer = ({ media, person, onClose }) => {
               viewBox={`0 0 ${mapState.data.width} ${mapState.data.height}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label="Apercu cartographique du media"
+              aria-label={t('Aperçu cartographique du média')}
             >
               <defs>
                 <pattern id={mapGridId} width="22" height="22" patternUnits="userSpaceOnUse">
@@ -314,20 +315,20 @@ const MediaViewer = ({ media, person, onClose }) => {
         </div>
 
         <div className="media-map-meta">
-          <span>{mapState.data.stats.pathCount} trace(s)</span>
-          <span>{mapState.data.stats.pointCount} point(s)</span>
-          <span>{mapState.data.stats.vertexCount} coordonnee(s)</span>
-          {focusLabel && <span>Centre: {focusLabel}</span>}
+          <span>{t('{n} trace(s)', { n: mapState.data.stats.pathCount })}</span>
+          <span>{t('{n} point(s)', { n: mapState.data.stats.pointCount })}</span>
+          <span>{t('{n} coordonnee(s)', { n: mapState.data.stats.vertexCount })}</span>
+          {focusLabel && <span>{t('Centre : {coords}', { coords: focusLabel })}</span>}
         </div>
 
         <div className="media-map-actions">
           {openStreetMapUrl && (
             <a className="media-map-open" href={openStreetMapUrl} target="_blank" rel="noreferrer">
-              Ouvrir dans OpenStreetMap
+              {t('Ouvrir dans OpenStreetMap')}
             </a>
           )}
           <a className="media-map-open" href={mediaUrl} target="_blank" rel="noreferrer">
-            Ouvrir le fichier source
+            {t('Ouvrir le fichier source')}
           </a>
         </div>
       </div>
@@ -350,7 +351,7 @@ const MediaViewer = ({ media, person, onClose }) => {
       case 'citation':
         return (
             <blockquote className="media-citation-container">
-              <p className="media-citation-text">« {media?.label || 'Citation sans texte'} »</p>
+              <p className="media-citation-text">« {media?.label || t('Citation sans texte')} »</p>
             </blockquote>
         )
       default:
@@ -366,13 +367,13 @@ const MediaViewer = ({ media, person, onClose }) => {
         className={`media-viewer-card media-viewer-card--${mediaType}`}
         role="dialog"
         aria-modal="true"
-        aria-label={media?.label || typeLabels[mediaType] || 'Souvenir'}
+        aria-label={media?.label || typeLabels[mediaType] || t('Souvenir')}
       >
         <button
           type="button"
           className="pz-btn pz-btn--ghost pz-btn--icon media-viewer-close"
           onClick={onClose}
-          aria-label="Fermer le souvenir"
+          aria-label={t('Fermer le souvenir')}
         >
           <X size={18} strokeWidth={2.25} />
         </button>
@@ -399,7 +400,7 @@ const MediaViewer = ({ media, person, onClose }) => {
           </div>
           {mediaSource && (
             <p className="mv-source">
-              Source{' '}
+              {t('Source')}{' '}
               {isMediaSourceUrl ? (
                 <a href={mediaSource} target="_blank" rel="noreferrer">{mediaSource}</a>
               ) : (

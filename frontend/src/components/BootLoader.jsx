@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useBooting } from '../bootSignal.js'
 import PzMark from './PzMark.jsx'
+import { t } from '../i18n/index.js'
 
 // N'apparaît que si l'attente dépasse SHOW_AFTER, reste au moins MIN_VISIBLE pour ne pas
 // clignoter, puis les points se rejoignent et l'écran s'efface sur ce qui est prêt dessous.
@@ -43,7 +44,7 @@ export default function BootLoader() {
   return (
     <div className={`pz-boot${phase === 'out' ? ' is-out' : ''}`} role="status">
       <PzMark state={markState} />
-      <span className="pz-sr">{booting ? "Ouverture de l'arbre" : 'Arbre prêt'}</span>
+      <span className="pz-sr">{booting ? t("Ouverture de l'arbre") : t('Arbre prêt')}</span>
     </div>
   )
 }

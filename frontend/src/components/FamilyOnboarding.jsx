@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
-
-export const HELP_URL = 'https://parenthese.io/aide/'
+import { t } from '../i18n/index.js'
+import { HELP_URL } from '../utils/siteLinks.js'
 
 // Carte d'accueil de la famille qui arrive par le lien : ce qu'on peut faire, en deux phrases
 export function FamilyWelcome({ visible, treeName, onAddSouvenir, onLook }) {
@@ -15,25 +15,27 @@ export function FamilyWelcome({ visible, treeName, onAddSouvenir, onLook }) {
 
   if (!visible) return null
 
+  const [welcomeBefore, welcomeAfter] = t('Bienvenue dans {name}').split('{name}')
+
   return (
     <div className="pz-overlay fo-overlay">
       <div className="pz-modal fo-welcome" role="dialog" aria-modal="true" aria-labelledby="foWelcomeTitle">
-        <p className="pz-eyebrow">Arbre partagé</p>
+        <p className="pz-eyebrow">{t('Arbre partagé')}</p>
         <h1 id="foWelcomeTitle" className="pz-title fo-title">
-          Bienvenue dans <em>{treeName || "l'arbre de la famille"}</em>
+          {welcomeBefore}<em>{treeName || t("l'arbre de la famille")}</em>{welcomeAfter}
         </h1>
-        <p className="fo-lead">Touchez un portrait pour voir ses photos et ses souvenirs.</p>
-        <p className="fo-lead">Vous en avez à partager&nbsp;? Ajoutez-les ici, toute la famille pourra les voir.</p>
+        <p className="fo-lead">{t('Touchez un portrait pour voir ses photos et ses souvenirs.')}</p>
+        <p className="fo-lead">{t('Vous en avez à partager ? Ajoutez-les ici, toute la famille pourra les voir.')}</p>
         <div className="fo-actions">
           <button type="button" className="pz-btn pz-btn--primary fo-big" onClick={onAddSouvenir}>
             <ImagePlus size={20} strokeWidth={2} aria-hidden="true" />
-            Ajouter un souvenir
+            {t('Ajouter un souvenir')}
           </button>
           <button type="button" className="pz-btn pz-btn--ghost fo-big" onClick={onLook}>
-            Regarder l'arbre
+            {t("Regarder l'arbre")}
           </button>
         </div>
-        <a className="fo-help" href={HELP_URL} target="_blank" rel="noopener">Besoin d'aide&nbsp;? Le mode d'emploi pas à pas</a>
+        <a className="fo-help" href={HELP_URL} target="_blank" rel="noopener">{t("Besoin d'aide ? Le mode d'emploi pas à pas")}</a>
       </div>
     </div>
   )
@@ -56,10 +58,10 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
   useEffect(() => {
     if (!visible) return undefined
     setQuery('')
-    const t = window.setTimeout(() => inputRef.current?.focus(), 120)
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 120)
     const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
     document.addEventListener('keydown', onKey)
-    return () => { window.clearTimeout(t); document.removeEventListener('keydown', onKey) }
+    return () => { window.clearTimeout(timer); document.removeEventListener('keydown', onKey) }
   }, [visible, onClose])
 
   const results = useMemo(() => {
@@ -81,14 +83,16 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
 
   if (!visible) return null
 
+  const [whoBefore, whoAfter] = t('Pour {who} ?').split('{who}')
+
   return (
     <div className="pz-overlay fo-overlay" onClick={() => onClose?.()}>
       <div className="pz-modal fo-picker" role="dialog" aria-modal="true" aria-labelledby="foPickerTitle" onClick={(e) => e.stopPropagation()}>
         <div className="pz-modal-head">
-          <p className="pz-eyebrow">Ajouter un souvenir</p>
-          <h1 id="foPickerTitle" className="pz-title fo-title">Pour <em>qui</em>&nbsp;?</h1>
+          <p className="pz-eyebrow">{t('Ajouter un souvenir')}</p>
+          <h1 id="foPickerTitle" className="pz-title fo-title">{whoBefore}<em>{t('qui')}</em>{whoAfter}</h1>
         </div>
-        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} aria-hidden="true" />
         </button>
 
@@ -99,14 +103,14 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tapez un prénom"
-            aria-label="Prénom de la personne"
+            placeholder={t('Tapez un prénom')}
+            aria-label={t('Prénom de la personne')}
             autoComplete="off"
             enterKeyHint="search"
           />
         </label>
 
-        {!query.trim() && results.length > 0 && <p className="fo-hint">Ou choisissez ici</p>}
+        {!query.trim() && results.length > 0 && <p className="fo-hint">{t('Ou choisissez ici')}</p>}
 
         <ul className="fo-list">
           {results.map((person) => (
@@ -125,13 +129,13 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
         </ul>
 
         {query.trim() && results.length === 0 && (
-          <p className="fo-empty">Personne ne s'appelle «&nbsp;{query.trim()}&nbsp;» dans l'arbre.</p>
+          <p className="fo-empty">{t("Personne ne s'appelle « {name} » dans l'arbre.", { name: query.trim() })}</p>
         )}
 
         {onAddPerson && (
           <button type="button" className="fo-add-person" onClick={onAddPerson}>
             <UserPlus size={18} strokeWidth={2} aria-hidden="true" />
-            La personne n'est pas dans l'arbre&nbsp;? Ajoutez-la
+            {t("La personne n'est pas dans l'arbre ? Ajoutez-la")}
           </button>
         )}
       </div>

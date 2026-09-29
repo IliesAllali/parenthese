@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { buildProjectedMapData, parseGeoJsonMapText, parseGpxMapText } from '../utils/geoMedia'
 import './GeoMediaThumbnail.css'
+import { t } from '../i18n/index.js'
 
 const thumbCache = new Map()
 
@@ -96,7 +97,7 @@ const GeoMediaThumbnail = ({ media, className = '' }) => {
         viewBox={`0 0 ${state.data.width} ${state.data.height}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label="Miniature cartographique"
+        aria-label={t('Miniature cartographique')}
       >
         <defs>
           <pattern id={gridId} width="18" height="18" patternUnits="userSpaceOnUse">

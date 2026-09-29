@@ -1,4 +1,6 @@
-import { Check, ChevronRight, LogOut, Plus, Settings } from 'lucide-react'
+import { Check, ChevronRight, Globe, LogOut, Plus, Settings } from 'lucide-react'
+import { t } from '../../i18n/index.js'
+import LanguageSwitch from './LanguageSwitch'
 import './AvatarMenu.css'
 
 function AvatarMenu({
@@ -19,10 +21,10 @@ function AvatarMenu({
     trees.find((entry) => String(entry.id) === String(activeTreeId))?.name
     || activeTreeName
     || trees[0]?.name
-    || 'Aucun arbre'
+    || t('Aucun arbre')
   )
 
-  const displayName = linkedPersonName || userDisplayName || 'Mon compte'
+  const displayName = linkedPersonName || userDisplayName || t('Mon compte')
 
   return (
     <div className="avatar-menu account-menu pz-menu" role="menu">
@@ -30,13 +32,13 @@ function AvatarMenu({
         <span className="am-head-mono" aria-hidden="true">{displayName.trim().charAt(0).toUpperCase()}</span>
         <span className="am-head-text">
           <strong>{displayName}</strong>
-          <span>{userEmail || 'Mon compte'}</span>
+          <span>{userEmail || t('Mon compte')}</span>
         </span>
         <ChevronRight size={16} aria-hidden="true" className="am-head-chevron" />
       </button>
 
       <div className="pz-menu-sep" />
-      <p className="pz-menu-label">{hasSeveralTrees ? 'Vos arbres' : 'Arbre ouvert'}</p>
+      <p className="pz-menu-label">{hasSeveralTrees ? t('Vos arbres') : t('Arbre ouvert')}</p>
 
       {hasSeveralTrees ? (
         trees.map((tree) => {
@@ -64,19 +66,27 @@ function AvatarMenu({
 
       <button type="button" role="menuitem" className="pz-menu-item" onClick={onCreateTree}>
         <Plus size={16} aria-hidden="true" />
-        <span>Créer un nouvel arbre</span>
+        <span>{t('Créer un nouvel arbre')}</span>
       </button>
 
       <div className="pz-menu-sep" />
 
+      <div className="pz-lang-row">
+        <span className="pz-lang-row-label">
+          <Globe size={16} aria-hidden="true" />
+          <span>{t('Langue')}</span>
+        </span>
+        <LanguageSwitch />
+      </div>
+
       <button type="button" role="menuitem" className="pz-menu-item" onClick={onSettings}>
         <Settings size={16} aria-hidden="true" />
-        <span>Paramètres de l'arbre</span>
+        <span>{t("Paramètres de l'arbre")}</span>
       </button>
 
       <button type="button" role="menuitem" className="pz-menu-item pz-menu-item--danger" onClick={onLogout}>
         <LogOut size={16} aria-hidden="true" />
-        <span>Déconnexion</span>
+        <span>{t('Déconnexion')}</span>
       </button>
     </div>
   )

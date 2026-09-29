@@ -121,7 +121,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: {}, formErrors: ['Something went wrong'] } },
-    })).toBe('Erreur formulaire: Something went wrong')
+    })).toBe('Erreur formulaire : Something went wrong')
   })
 
   it('returns generic 400 message for non-validation errors', () => {

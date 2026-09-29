@@ -3,34 +3,37 @@
 // Compatible with the current Galaxy frontend.
 // ============================================================
 
+import { t } from '../i18n/index.js'
+
+// Démo : noms et lieux restent français, les textes descriptifs sont traduits.
 export let persons = [
-  { id: 1, firstName: 'Jean', lastName: 'Dupont', birthYear: 1890, deathYear: 1965, isAlive: false, photo: '/demo/jean.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Menuisier', nationality: 'Française', note: 'Patriarche de la famille' },
-  { id: 2, firstName: 'Marie', lastName: 'Martin', birthYear: 1895, deathYear: 1970, isAlive: false, photo: '/demo/marie.webp', frameType: 'round', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Couturière', note: 'Atelier de couture rue du Commerce' },
-  { id: 3, firstName: 'Robert', lastName: 'Dupont', birthYear: 1920, deathYear: 1995, isAlive: false, photo: '/demo/robert.webp', frameType: 'rect', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Instituteur', note: 'A enseigné 35 ans à l\'école communale' },
-  { id: 4, firstName: 'André', lastName: 'Dupont', birthYear: 1923, deathYear: 2000, isAlive: false, photo: '/demo/andre.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Charpentier' },
-  { id: 5, firstName: 'Simone', lastName: 'Petit', birthYear: 1925, deathYear: 2010, isAlive: false, photo: '/demo/simone.webp', frameType: 'round', birthPlace: 'Guéret', region: 'Creuse', profession: 'Infirmière' },
-  { id: 9, firstName: 'Isabelle', lastName: 'Bernard', birthYear: 1928, isAlive: true, photo: '/demo/isabelle.webp', frameType: 'rect', birthPlace: 'Fort-de-France', region: 'Martinique', profession: 'Sage-femme', note: 'Doyenne de la famille, vit à Brive' },
-  { id: 6, firstName: 'Jacques', lastName: 'Dupont', birthYear: 1945, deathYear: 2015, isAlive: false, photo: '/demo/jacques.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Journaliste', note: 'Reporter au Populaire du Centre' },
-  { id: 7, firstName: 'Philippe', lastName: 'Dupont', birthYear: 1948, isAlive: true, photo: '/demo/philippe.webp', frameType: 'round', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: 'Pharmacien' },
-  { id: 8, firstName: 'Sophie', lastName: 'Dupont', birthYear: 1960, isAlive: true, photo: '/demo/sophie.webp', frameType: 'rect', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Architecte', note: 'Cabinet d’architecture à Bordeaux' },
-  { id: 10, firstName: 'Thomas', lastName: 'Dupont', birthYear: 1962, isAlive: true, photo: '/demo/thomas.webp', frameType: 'polaroid', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: 'Vétérinaire' },
-  { id: 11, firstName: 'Claire', lastName: 'Dupont', birthYear: 1955, isAlive: true, photo: '/demo/claire.webp', birthPlace: 'Paris', region: 'Ile-de-France', profession: 'Enseignante' },
+  { id: 1, firstName: 'Jean', lastName: 'Dupont', birthYear: 1890, deathYear: 1965, isAlive: false, photo: '/demo/jean.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: t('Menuisier'), nationality: t('Française'), note: t('Patriarche de la famille') },
+  { id: 2, firstName: 'Marie', lastName: 'Martin', birthYear: 1895, deathYear: 1970, isAlive: false, photo: '/demo/marie.webp', frameType: 'round', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: t('Couturière'), note: t('Atelier de couture rue du Commerce') },
+  { id: 3, firstName: 'Robert', lastName: 'Dupont', birthYear: 1920, deathYear: 1995, isAlive: false, photo: '/demo/robert.webp', frameType: 'rect', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: t('Instituteur'), note: t("A enseigné 35 ans à l'école communale") },
+  { id: 4, firstName: 'André', lastName: 'Dupont', birthYear: 1923, deathYear: 2000, isAlive: false, photo: '/demo/andre.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: t('Charpentier') },
+  { id: 5, firstName: 'Simone', lastName: 'Petit', birthYear: 1925, deathYear: 2010, isAlive: false, photo: '/demo/simone.webp', frameType: 'round', birthPlace: 'Guéret', region: 'Creuse', profession: t('Infirmière') },
+  { id: 9, firstName: 'Isabelle', lastName: 'Bernard', birthYear: 1928, isAlive: true, photo: '/demo/isabelle.webp', frameType: 'rect', birthPlace: 'Fort-de-France', region: 'Martinique', profession: t('Sage-femme'), note: t('Doyenne de la famille, vit à Brive') },
+  { id: 6, firstName: 'Jacques', lastName: 'Dupont', birthYear: 1945, deathYear: 2015, isAlive: false, photo: '/demo/jacques.webp', frameType: 'polaroid', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: t('Journaliste'), note: t('Reporter au Populaire du Centre') },
+  { id: 7, firstName: 'Philippe', lastName: 'Dupont', birthYear: 1948, isAlive: true, photo: '/demo/philippe.webp', frameType: 'round', birthPlace: 'Limoges', region: 'Haute-Vienne', profession: t('Pharmacien') },
+  { id: 8, firstName: 'Sophie', lastName: 'Dupont', birthYear: 1960, isAlive: true, photo: '/demo/sophie.webp', frameType: 'rect', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: t('Architecte'), note: t('Cabinet d’architecture à Bordeaux') },
+  { id: 10, firstName: 'Thomas', lastName: 'Dupont', birthYear: 1962, isAlive: true, photo: '/demo/thomas.webp', frameType: 'polaroid', birthPlace: 'Brive-la-Gaillarde', region: 'Corrèze', profession: t('Vétérinaire') },
+  { id: 11, firstName: 'Claire', lastName: 'Dupont', birthYear: 1955, isAlive: true, photo: '/demo/claire.webp', birthPlace: 'Paris', region: 'Ile-de-France', profession: t('Enseignante') },
 ]
 
 export let medias = [
-  { id: 'm1', personId: 1, type: 'photo', url: '/demo/souvenir-mariage-1918-thumb.webp', urlHd: '/demo/souvenir-mariage-1918.webp', label: 'Mariage 1918' },
-  { id: 'm2', personId: 1, type: 'photo', url: '/demo/souvenir-atelier-thumb.webp', urlHd: '/demo/souvenir-atelier.webp', label: 'Atelier de menuiserie' },
-  { id: 'm3', personId: 1, type: 'video', url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', mimeType: 'video/youtube', label: 'Témoignage filmé 1960' },
-  { id: 'm4', personId: 2, type: 'photo', url: '/demo/souvenir-jeunesse-thumb.webp', urlHd: '/demo/souvenir-jeunesse.webp', label: 'Jeunesse' },
-  { id: 'm5', personId: 2, type: 'photo', url: '/demo/souvenir-portrait-famille-thumb.webp', urlHd: '/demo/souvenir-portrait-famille.webp', label: 'Portrait de famille' },
-  { id: 'm6', personId: 3, type: 'photo', url: '/demo/souvenir-service-militaire-thumb.webp', urlHd: '/demo/souvenir-service-militaire.webp', label: 'Service militaire' },
-  { id: 'm7', personId: 3, type: 'video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', mimeType: 'video/youtube', label: 'Mariage Simone 1943' },
-  { id: 'm8', personId: 3, type: 'photo', url: '/demo/souvenir-annees-70-thumb.webp', urlHd: '/demo/souvenir-annees-70.webp', label: 'Années 70' },
-  { id: 'm9', personId: 8, type: 'photo', url: '/demo/souvenir-diplome-thumb.webp', urlHd: '/demo/souvenir-diplome.webp', label: 'Diplôme' },
-  { id: 'm10', personId: 8, type: 'photo', url: '/demo/souvenir-plan-cabinet-thumb.webp', urlHd: '/demo/souvenir-plan-cabinet.webp', label: 'Plan du cabinet 1985' },
-  { id: 'm11', personId: 10, type: 'video', url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE', mimeType: 'video/youtube', label: 'Anniversaire 2020' },
-  { id: 'm12', personId: 6, type: 'photo', url: '/demo/souvenir-redaction-thumb.webp', urlHd: '/demo/souvenir-redaction.webp', label: 'En rédaction' },
-  { id: 'm13', personId: 6, type: 'video', url: 'https://www.youtube.com/watch?v=ScMzIvxBSi4', mimeType: 'video/youtube', label: 'Interview archive radio' },
+  { id: 'm1', personId: 1, type: 'photo', url: '/demo/souvenir-mariage-1918-thumb.webp', urlHd: '/demo/souvenir-mariage-1918.webp', label: t('Mariage 1918') },
+  { id: 'm2', personId: 1, type: 'photo', url: '/demo/souvenir-atelier-thumb.webp', urlHd: '/demo/souvenir-atelier.webp', label: t('Atelier de menuiserie') },
+  { id: 'm3', personId: 1, type: 'video', url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', mimeType: 'video/youtube', label: t('Témoignage filmé 1960') },
+  { id: 'm4', personId: 2, type: 'photo', url: '/demo/souvenir-jeunesse-thumb.webp', urlHd: '/demo/souvenir-jeunesse.webp', label: t('Jeunesse') },
+  { id: 'm5', personId: 2, type: 'photo', url: '/demo/souvenir-portrait-famille-thumb.webp', urlHd: '/demo/souvenir-portrait-famille.webp', label: t('Portrait de famille') },
+  { id: 'm6', personId: 3, type: 'photo', url: '/demo/souvenir-service-militaire-thumb.webp', urlHd: '/demo/souvenir-service-militaire.webp', label: t('Service militaire') },
+  { id: 'm7', personId: 3, type: 'video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', mimeType: 'video/youtube', label: t('Mariage Simone 1943') },
+  { id: 'm8', personId: 3, type: 'photo', url: '/demo/souvenir-annees-70-thumb.webp', urlHd: '/demo/souvenir-annees-70.webp', label: t('Années 70') },
+  { id: 'm9', personId: 8, type: 'photo', url: '/demo/souvenir-diplome-thumb.webp', urlHd: '/demo/souvenir-diplome.webp', label: t('Diplôme') },
+  { id: 'm10', personId: 8, type: 'photo', url: '/demo/souvenir-plan-cabinet-thumb.webp', urlHd: '/demo/souvenir-plan-cabinet.webp', label: t('Plan du cabinet 1985') },
+  { id: 'm11', personId: 10, type: 'video', url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE', mimeType: 'video/youtube', label: t('Anniversaire 2020') },
+  { id: 'm12', personId: 6, type: 'photo', url: '/demo/souvenir-redaction-thumb.webp', urlHd: '/demo/souvenir-redaction.webp', label: t('En rédaction') },
+  { id: 'm13', personId: 6, type: 'video', url: 'https://www.youtube.com/watch?v=ScMzIvxBSi4', mimeType: 'video/youtube', label: t('Interview archive radio') },
 ]
 
 export let unions = [
@@ -101,7 +104,7 @@ function mapRemotePersonToLocal(person, current = null) {
 
   return {
     id: person?.id ?? current?.id,
-    firstName: person?.firstName || current?.firstName || 'Inconnu',
+    firstName: person?.firstName || current?.firstName || t('Inconnu'),
     lastName: person?.lastName || current?.lastName || '',
     birthName: person?.birthName ?? current?.birthName ?? null,
     birthYear,
@@ -205,7 +208,7 @@ export function loadGraphData(graph, options = {}) {
         type: media.type || 'photo',
         url: mediaUrl,
         urlHd: mediaUrl,
-        label: media.caption || `Media ${index + 1}`,
+        label: media.caption || t('Média {n}', { n: index + 1 }),
         source: media.source || null,
         displayOrder: Number.isFinite(media.displayOrder) ? media.displayOrder : index + 1,
         isFeatured: Boolean(media.isFeatured),

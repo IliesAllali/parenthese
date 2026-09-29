@@ -1,68 +1,70 @@
+import { t } from '../i18n/index.js'
+
 export function getShareErrorMessage(error) {
   if (error?.status === 401) {
-    return 'Mot de passe invalide ou accès expiré.'
+    return t('Mot de passe invalide ou accès expiré.')
   }
 
   if (error?.status === 404) {
-    return 'Arbre introuvable.'
+    return t('Arbre introuvable.')
   }
 
   if (error?.status === 429) {
-    return 'Trop de tentatives. Réessayez dans une minute.'
+    return t('Trop de tentatives. Réessayez dans une minute.')
   }
 
-  return 'Connexion backend impossible. Vérifiez API/DB puis réessayez.'
+  return t('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
 }
 
 export function getAccountDeletionErrorMessage(error) {
   if (error?.status === 403) {
-    return 'Mot de passe incorrect.'
+    return t('Mot de passe incorrect.')
   }
 
   if (error?.status === 401) {
-    return 'Session expirée. Reconnectez-vous puis réessayez.'
+    return t('Session expirée. Reconnectez-vous puis réessayez.')
   }
 
   if (error?.status === 400) {
-    return 'Saisissez votre mot de passe actuel.'
+    return t('Saisissez votre mot de passe actuel.')
   }
 
   if (error?.status === 429) {
-    return 'Trop de tentatives. Réessayez dans une minute.'
+    return t('Trop de tentatives. Réessayez dans une minute.')
   }
 
-  return 'Impossible de supprimer le compte pour le moment. Réessayez plus tard.'
+  return t('Impossible de supprimer le compte pour le moment. Réessayez plus tard.')
 }
 
 export function getAccountErrorMessage(error) {
   const errorCode = error?.payload?.error || error?.message || ''
 
   if (errorCode === 'image_too_large') {
-    return 'Image trop volumineuse (maximum 5 Mo).'
+    return t('Image trop volumineuse (maximum 5 Mo).')
   }
 
   if (errorCode === 'invalid_avatar_mime_type') {
-    return "Format d'avatar invalide. Utilisez une image."
+    return t("Format d'avatar invalide. Utilisez une image.")
   }
 
   if (errorCode === 'size_mismatch' || errorCode === 'invalid_base64_data' || errorCode === 'empty_media_file') {
-    return 'Le fichier média envoyé est invalide.'
+    return t('Le fichier média envoyé est invalide.')
   }
 
   if (errorCode === 'invalid_media_mime_type') {
-    return 'Le format de fichier ne correspond pas au type de média choisi.'
+    return t('Le format de fichier ne correspond pas au type de média choisi.')
   }
 
   if (errorCode === 'citation_text_required') {
-    return 'Ajoutez le texte de la citation.'
+    return t('Ajoutez le texte de la citation.')
   }
 
   if (errorCode === 'database_error' || (error?.status === 500 && error?.payload?.error === 'database_error')) {
-    return "Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API."
+    return t("Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API.")
   }
 
   if (error?.status === 503 && error?.message === 'database_unavailable') {
-    return 'Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.'
+    return t('Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.')
   }
 
   if (error?.status === 400) {
@@ -71,15 +73,15 @@ export function getAccountErrorMessage(error) {
       const formErrors = error?.payload?.details?.formErrors || []
 
       if (fieldErrors.slug?.length) {
-        return 'Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.'
+        return t('Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
       }
 
       if (fieldErrors.name?.length) {
-        return "Nom d'arbre invalide : entre 2 et 120 caractères."
+        return t("Nom d'arbre invalide : entre 2 et 120 caractères.")
       }
 
       if (fieldErrors.visitorPassword?.length || fieldErrors.contributorPassword?.length) {
-        return 'Mots de passe invalides : entre 8 et 128 caractères.'
+        return t('Mots de passe invalides : entre 8 et 128 caractères.')
       }
 
       const firstField = Object.keys(fieldErrors)[0]
@@ -88,34 +90,34 @@ export function getAccountErrorMessage(error) {
       }
 
       if (Array.isArray(formErrors) && formErrors.length > 0) {
-        return `Erreur formulaire: ${formErrors[0]}`
+        return t('Erreur formulaire : {error}', { error: formErrors[0] })
       }
     }
 
-    return 'Données invalides. Vérifiez les champs.'
+    return t('Données invalides. Vérifiez les champs.')
   }
 
   if (error?.status === 401) {
-    return 'Session invalide ou identifiants incorrects.'
+    return t('Session invalide ou identifiants incorrects.')
   }
 
   if (error?.status === 403) {
-    return 'Accès refusé pour cet arbre.'
+    return t('Accès refusé pour cet arbre.')
   }
 
   if (error?.status === 404) {
-    return 'Ressource introuvable.'
+    return t('Ressource introuvable.')
   }
 
   if (error?.status === 409) {
-    return 'Conflit détecté (email ou slug déjà utilisé).'
+    return t('Conflit détecté (email ou slug déjà utilisé).')
   }
 
   if (error?.status === 429) {
-    return 'Trop de tentatives. Réessayez dans une minute.'
+    return t('Trop de tentatives. Réessayez dans une minute.')
   }
 
-  return "Erreur backend. Vérifiez que l'API et la base sont lancées."
+  return t("Erreur backend. Vérifiez que l'API et la base sont lancées.")
 }
 
 export function fileToBase64(file) {

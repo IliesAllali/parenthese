@@ -12,6 +12,7 @@ import {
 } from '../api/treeApi'
 import PzBusy from './PzBusy.jsx'
 import TreeVisitsSection from './TreeVisitsSection.jsx'
+import { t } from '../i18n/index.js'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -83,7 +84,7 @@ const AdminPanel = ({
       })
       .catch(() => {
         if (!active) return
-        setErrorMessage("Impossible de charger les paramètres de cet arbre.")
+        setErrorMessage(t('Impossible de charger les paramètres de cet arbre.'))
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -105,11 +106,11 @@ const AdminPanel = ({
       // Un seul réglage pour la famille, avec ou sans compte
       await updateTreeSettings(treeId, { contributorPolicy: nextPolicy, memberContributionPolicy: nextPolicy }, authToken)
       setSuccessMessage(nextPolicy === 'direct'
-        ? 'Les modifications de la famille sont désormais appliquées directement.'
-        : 'Vous validez désormais chaque proposition de la famille.')
+        ? t('Les modifications de la famille sont désormais appliquées directement.')
+        : t('Vous validez désormais chaque proposition de la famille.'))
     } catch {
       setContributionPolicy(previous)
-      setErrorMessage("Impossible d'enregistrer ce réglage.")
+      setErrorMessage(t("Impossible d'enregistrer ce réglage."))
     } finally {
       setSavingPolicy(false)
     }
@@ -121,7 +122,7 @@ const AdminPanel = ({
 
     const nextName = treeName.trim()
     if (nextName.length < 2) {
-      setErrorMessage("Le nom de l'arbre est trop court.")
+      setErrorMessage(t("Le nom de l'arbre est trop court."))
       return
     }
 
@@ -139,7 +140,7 @@ const AdminPanel = ({
       const slugWillChange = normalized && normalized !== tree.slug
       if (slugWillChange) {
         const confirmSlugUpdate = window.confirm(
-          'Souhaitez-vous mettre à jour aussi le lien de partage avec ce nouveau nom ?',
+          t('Souhaitez-vous mettre à jour aussi le lien de partage avec ce nouveau nom ?'),
         )
         if (confirmSlugUpdate) {
           payload.slug = normalized
@@ -150,9 +151,9 @@ const AdminPanel = ({
       setTree(updated)
       setTreeName(updated?.name || nextName)
       setTreeDescription(updated?.description || '')
-      setSuccessMessage('Modifications enregistrées.')
+      setSuccessMessage(t('Modifications enregistrées.'))
     } catch {
-      setErrorMessage("Impossible d'enregistrer les modifications.")
+      setErrorMessage(t("Impossible d'enregistrer les modifications."))
     } finally {
       setSaving(false)
     }
@@ -173,7 +174,7 @@ const AdminPanel = ({
       link.click()
       URL.revokeObjectURL(url)
     } catch {
-      setErrorMessage('Échec du téléchargement GEDCOM.')
+      setErrorMessage(t('Échec du téléchargement GEDCOM.'))
     } finally {
       setSaving(false)
     }
@@ -199,7 +200,7 @@ const AdminPanel = ({
     try {
       const fileContent = await readFileAsText(gedcomFile)
       if (!fileContent.trim()) {
-        setErrorMessage("Le fichier GEDCOM est vide.")
+        setErrorMessage(t('Le fichier GEDCOM est vide.'))
         return
       }
 
@@ -209,7 +210,11 @@ const AdminPanel = ({
       const linksCreated = Number(result?.linksCreated || 0)
 
       setSuccessMessage(
-        `Import GEDCOM terminé : ${personsCreated} personnes, ${unionsCreated} unions, ${linksCreated} filiations.`,
+        t('Import GEDCOM terminé : {persons} personnes, {unions} unions, {links} filiations.', {
+          persons: personsCreated,
+          unions: unionsCreated,
+          links: linksCreated,
+        }),
       )
       setGedcomFile(null)
       if (gedcomInputRef.current) {
@@ -217,7 +222,7 @@ const AdminPanel = ({
       }
       await onGedcomImported?.(result)
     } catch {
-      setErrorMessage("Impossible d'importer ce fichier GEDCOM.")
+      setErrorMessage(t("Impossible d'importer ce fichier GEDCOM."))
     } finally {
       setImportingGedcom(false)
       setSaving(false)
@@ -227,7 +232,7 @@ const AdminPanel = ({
   const handleDeleteTree = async () => {
     if (!treeId || !authToken || saving || !tree) return
     if (deleteConfirmName.trim() !== tree.name) {
-      setErrorMessage('Le nom saisi ne correspond pas.')
+      setErrorMessage(t('Le nom saisi ne correspond pas.'))
       return
     }
 
@@ -241,7 +246,7 @@ const AdminPanel = ({
       onTreeDeleted?.(treeId)
       onClose?.()
     } catch {
-      setErrorMessage('Impossible de supprimer cet arbre.')
+      setErrorMessage(t('Impossible de supprimer cet arbre.'))
     } finally {
       setSaving(false)
     }
@@ -264,23 +269,23 @@ const AdminPanel = ({
         aria-labelledby="treeSettingsTitle"
       >
         <div className="pz-modal-head">
-          <p className="pz-eyebrow">Paramètres de l'arbre</p>
-          <h1 id="treeSettingsTitle" className="pz-title">{tree?.name || 'Votre arbre'}</h1>
+          <p className="pz-eyebrow">{t("Paramètres de l'arbre")}</p>
+          <h1 id="treeSettingsTitle" className="pz-title">{tree?.name || t('Votre arbre')}</h1>
         </div>
-        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label="Fermer">
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} aria-hidden="true" />
         </button>
 
         <div className="pz-tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={section === 'tree'} className="pz-tab" onClick={() => setSection('tree')}>Votre arbre</button>
-          <button type="button" role="tab" aria-selected={section === 'visits'} className="pz-tab" onClick={() => setSection('visits')}>Visites</button>
-          <button type="button" role="tab" aria-selected={section === 'data'} className="pz-tab" onClick={() => setSection('data')}>Données</button>
-          <button type="button" role="tab" aria-selected={section === 'danger'} className="pz-tab" onClick={() => setSection('danger')}>Avancé</button>
+          <button type="button" role="tab" aria-selected={section === 'tree'} className="pz-tab" onClick={() => setSection('tree')}>{t('Votre arbre')}</button>
+          <button type="button" role="tab" aria-selected={section === 'visits'} className="pz-tab" onClick={() => setSection('visits')}>{t('Visites')}</button>
+          <button type="button" role="tab" aria-selected={section === 'data'} className="pz-tab" onClick={() => setSection('data')}>{t('Données')}</button>
+          <button type="button" role="tab" aria-selected={section === 'danger'} className="pz-tab" onClick={() => setSection('danger')}>{t('Avancé')}</button>
         </div>
 
         <div className="ts-content">
           {loading ? (
-            <p className="pz-small ts-loading">Chargement…</p>
+            <p className="pz-small ts-loading">{t('Chargement…')}</p>
           ) : (
             <>
               {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
@@ -291,7 +296,7 @@ const AdminPanel = ({
               {section === 'tree' && (
                 <form className="ts-panel" onSubmit={handleSaveTree}>
                   <div className="pz-field">
-                    <label htmlFor="settingsTreeName">Nom de l'arbre</label>
+                    <label htmlFor="settingsTreeName">{t("Nom de l'arbre")}</label>
                     <input
                       id="settingsTreeName"
                       type="text"
@@ -303,26 +308,26 @@ const AdminPanel = ({
                   </div>
 
                   <div className="pz-field">
-                    <label htmlFor="settingsTreeDescription">Description <span className="ts-optional">facultatif</span></label>
+                    <label htmlFor="settingsTreeDescription">{t('Description')} <span className="ts-optional">{t('facultatif')}</span></label>
                     <input
                       id="settingsTreeDescription"
                       type="text"
                       value={treeDescription}
                       maxLength={500}
                       onChange={(event) => setTreeDescription(event.target.value)}
-                      placeholder="Quelques mots pour accueillir la famille"
+                      placeholder={t('Quelques mots pour accueillir la famille')}
                     />
                   </div>
 
                   <div className="ts-actions">
                     <button type="submit" className="pz-btn pz-btn--primary" disabled={saving}>
-                      <PzBusy busy={saving} busyLabel="Enregistrement en cours">Enregistrer</PzBusy>
+                      <PzBusy busy={saving} busyLabel={t('Enregistrement en cours')}>{t('Enregistrer')}</PzBusy>
                     </button>
                   </div>
 
                   <fieldset className="ts-policy" disabled={savingPolicy}>
-                    <legend className="pz-eyebrow">Contributions de la famille</legend>
-                    <p className="pz-small">Ce que deviennent les ajouts et corrections faits avec le mot de passe de contribution.</p>
+                    <legend className="pz-eyebrow">{t('Contributions de la famille')}</legend>
+                    <p className="pz-small">{t('Ce que deviennent les ajouts et corrections faits avec le mot de passe de contribution.')}</p>
                     <label className={`ts-choice ${contributionPolicy === 'pending' ? 'is-active' : ''}`}>
                       <input
                         type="radio"
@@ -332,8 +337,8 @@ const AdminPanel = ({
                         onChange={() => handlePolicyChange('pending')}
                       />
                       <span className="ts-choice-text">
-                        <strong>Je valide chaque proposition</strong>
-                        <small>Rien n'apparaît dans l'arbre avant votre accord.</small>
+                        <strong>{t('Je valide chaque proposition')}</strong>
+                        <small>{t("Rien n'apparaît dans l'arbre avant votre accord.")}</small>
                       </span>
                     </label>
                     <label className={`ts-choice ${contributionPolicy === 'direct' ? 'is-active' : ''}`}>
@@ -345,8 +350,8 @@ const AdminPanel = ({
                         onChange={() => handlePolicyChange('direct')}
                       />
                       <span className="ts-choice-text">
-                        <strong>Les modifications s'appliquent tout de suite</strong>
-                        <small>La famille modifie l'arbre sans attendre. Vous gardez l'historique.</small>
+                        <strong>{t("Les modifications s'appliquent tout de suite")}</strong>
+                        <small>{t("La famille modifie l'arbre sans attendre. Vous gardez l'historique.")}</small>
                       </span>
                     </label>
                   </fieldset>
@@ -357,8 +362,8 @@ const AdminPanel = ({
                 <div className="ts-panel">
                   <div className="ts-row">
                     <div className="ts-row-text">
-                      <strong>Importer un fichier GEDCOM</strong>
-                      <p className="pz-small">Ajoute les personnes et les liens du fichier à cet arbre.</p>
+                      <strong>{t('Importer un fichier GEDCOM')}</strong>
+                      <p className="pz-small">{t('Ajoute les personnes et les liens du fichier à cet arbre.')}</p>
                       {gedcomFile && <span className="pz-tag pz-tag--accent ts-file">{gedcomFile.name}</span>}
                     </div>
                     <div className="ts-row-actions">
@@ -370,35 +375,35 @@ const AdminPanel = ({
                         onChange={(event) => setGedcomFile(event.target.files?.[0] || null)}
                       />
                       <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" onClick={() => gedcomInputRef.current?.click()} disabled={saving}>
-                        Choisir un fichier
+                        {t('Choisir un fichier')}
                       </button>
                       <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" onClick={handleImportGedcom} disabled={saving || !gedcomFile}>
-                        <PzBusy busy={importingGedcom} busyLabel="Import en cours">Importer</PzBusy>
+                        <PzBusy busy={importingGedcom} busyLabel={t('Import en cours')}>{t('Importer')}</PzBusy>
                       </button>
                     </div>
                   </div>
 
                   <div className="ts-row">
                     <div className="ts-row-text">
-                      <strong>Télécharger en GEDCOM</strong>
-                      <p className="pz-small">Le format standard, lisible par les autres logiciels d'arbre.</p>
+                      <strong>{t('Télécharger en GEDCOM')}</strong>
+                      <p className="pz-small">{t("Le format standard, lisible par les autres logiciels d'arbre.")}</p>
                     </div>
                     <div className="ts-row-actions">
                       <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" onClick={handleExportGedcom} disabled={saving}>
                         <Download size={15} aria-hidden="true" />
-                        Télécharger .ged
+                        {t('Télécharger .ged')}
                       </button>
                     </div>
                   </div>
 
                   <div className="ts-row ts-row--muted">
                     <div className="ts-row-text">
-                      <strong>Sauvegarde complète</strong>
-                      <p className="pz-small">Toutes les données et les médias. Bientôt disponible.</p>
+                      <strong>{t('Sauvegarde complète')}</strong>
+                      <p className="pz-small">{t('Toutes les données et les médias. Bientôt disponible.')}</p>
                     </div>
                     <div className="ts-row-actions">
                       <button type="button" className="pz-btn pz-btn--secondary pz-btn--sm" disabled>
-                        Télécharger .zip
+                        {t('Télécharger .zip')}
                       </button>
                     </div>
                   </div>
@@ -409,12 +414,12 @@ const AdminPanel = ({
                 <div className="ts-panel">
                   <div className="ts-danger">
                     <div className="ts-row-text">
-                      <strong>Supprimer cet arbre</strong>
-                      <p className="pz-small">Toutes les personnes, les souvenirs et les médias sont effacés, pour toute la famille. C'est définitif.</p>
+                      <strong>{t('Supprimer cet arbre')}</strong>
+                      <p className="pz-small">{t("Toutes les personnes, les souvenirs et les médias sont effacés, pour toute la famille. C'est définitif.")}</p>
                     </div>
                     <button type="button" className="pz-btn pz-btn--danger pz-btn--sm danger-action" onClick={() => setShowDeleteModal(true)}>
                       <Trash2 size={15} aria-hidden="true" />
-                      Supprimer cet arbre
+                      {t('Supprimer cet arbre')}
                     </button>
                   </div>
                 </div>
@@ -428,12 +433,12 @@ const AdminPanel = ({
         <div className="pz-overlay ts-delete-overlay" onClick={(event) => { event.stopPropagation(); if (!saving) setShowDeleteModal(false) }}>
           <div className="pz-modal settings-delete-modal" role="dialog" aria-modal="true" aria-labelledby="treeDeleteTitle" onClick={(event) => event.stopPropagation()}>
             <div className="pz-modal-head">
-              <p className="pz-eyebrow">Dernière vérification</p>
-              <h3 id="treeDeleteTitle" className="pz-title">Supprimer « {tree?.name} »</h3>
-              <p className="pz-sub">Tapez le nom exact de l'arbre pour confirmer.</p>
+              <p className="pz-eyebrow">{t('Dernière vérification')}</p>
+              <h3 id="treeDeleteTitle" className="pz-title">{t('Supprimer « {name} »', { name: tree?.name ?? '' })}</h3>
+              <p className="pz-sub">{t("Tapez le nom exact de l'arbre pour confirmer.")}</p>
             </div>
             <div className="pz-field">
-              <label htmlFor="treeDeleteConfirm">Nom de l'arbre</label>
+              <label htmlFor="treeDeleteConfirm">{t("Nom de l'arbre")}</label>
               <input
                 id="treeDeleteConfirm"
                 type="text"
@@ -445,10 +450,10 @@ const AdminPanel = ({
             </div>
             <div className="pz-modal-actions">
               <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setShowDeleteModal(false)} disabled={saving}>
-                Annuler
+                {t('Annuler')}
               </button>
               <button type="button" className="pz-btn pz-btn--danger danger-action" onClick={handleDeleteTree} disabled={saving}>
-                <PzBusy busy={saving} busyLabel="Suppression en cours">Supprimer définitivement</PzBusy>
+                <PzBusy busy={saving} busyLabel={t('Suppression en cours')}>{t('Supprimer définitivement')}</PzBusy>
               </button>
             </div>
           </div>

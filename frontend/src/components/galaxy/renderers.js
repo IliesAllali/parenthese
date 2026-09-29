@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.js'
 import { getPersonById, getPersonMedias } from '../../data/mockData'
 import { __iconNode as mapIconNode } from 'lucide-react/dist/esm/icons/map.js'
 import { __iconNode as mapPinIconNode } from 'lucide-react/dist/esm/icons/map-pin.js'
@@ -232,8 +233,8 @@ function drawRenvoi(ctx, edge, sourcePos, targetPos, targetNode, childR, view) {
   const firstName = targetNode?._data?.firstName || ''
   const alpha = baseAlpha * labelAlpha
   renvoiPills.push(
-    { text: 'Voir les parents', cx: targetPos.cx, cy: childPillY, target: { targetX: sourcePos.cx, targetY: sourcePos.cy }, alpha },
-    { text: firstName ? `Voir ${firstName}` : 'Voir l’enfant', cx: sourcePos.cx, cy: parentPillY, target: { targetX: targetPos.cx, targetY: targetPos.cy }, alpha },
+    { text: t('Voir les parents'), cx: targetPos.cx, cy: childPillY, target: { targetX: sourcePos.cx, targetY: sourcePos.cy }, alpha },
+    { text: firstName ? t('Voir {firstName}', { firstName }) : t('Voir l’enfant'), cx: sourcePos.cx, cy: parentPillY, target: { targetX: targetPos.cx, targetY: targetPos.cy }, alpha },
   )
 }
 
@@ -1057,7 +1058,7 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
 
       ctx.font = '400 italic 10px "Newsreader", Georgia, serif'
       ctx.textBaseline = 'top'
-      ctx.fillText('Inconnu', 0, UNKNOWN_R + 4)
+      ctx.fillText(t('Inconnu'), 0, UNKNOWN_R + 4)
       ctx.restore()
     }
   })

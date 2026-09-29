@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { t } from '../i18n/index.js'
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -34,10 +35,10 @@ class ErrorBoundary extends Component {
           textAlign: 'center',
         }}>
           <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-            Une erreur inattendue est survenue
+            {t('Une erreur inattendue est survenue')}
           </h1>
           <p style={{ color: '#6b645d', marginBottom: '1.5rem', maxWidth: '400px' }}>
-            L application a rencontre un probleme. Vous pouvez essayer de recharger ou revenir a l ecran precedent.
+            {t("L'application a rencontré un problème. Vous pouvez essayer de recharger ou revenir à l'écran précédent.")}
           </p>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
@@ -53,7 +54,7 @@ class ErrorBoundary extends Component {
                 fontSize: '0.9rem',
               }}
             >
-              Reessayer
+              {t('Réessayer')}
             </button>
             <button
               type="button"
@@ -68,7 +69,7 @@ class ErrorBoundary extends Component {
                 fontSize: '0.9rem',
               }}
             >
-              Recharger la page
+              {t('Recharger la page')}
             </button>
           </div>
           {this.state.error && (

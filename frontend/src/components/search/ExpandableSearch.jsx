@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 import SearchResultsDropdown from './SearchResultsDropdown'
 import './ExpandableSearch.css'
+import { t } from '../../i18n/index.js'
 
 /**
  * Recherche expandable haut-droite
@@ -104,7 +105,7 @@ function ExpandableSearch({
           type="button"
           className="search-icon-button"
           onClick={handleExpand}
-          aria-label="Rechercher une personne"
+          aria-label={t('Rechercher une personne')}
         >
           <span className="search-icon"><Search size={22} strokeWidth={2} /></span>
         </button>
@@ -117,17 +118,17 @@ function ExpandableSearch({
               ref={inputRef}
               type="text"
               className="search-input"
-              placeholder="Un prénom, un nom, une ville"
+              placeholder={t('Un prénom, un nom, une ville')}
               value={query}
               onChange={handleInputChange}
               onFocus={() => setResultsHidden(false)}
-              aria-label="Rechercher une personne"
+              aria-label={t('Rechercher une personne')}
             />
             <button
               type="button"
               className="search-close-button"
               onClick={handleCollapse}
-              aria-label="Fermer la recherche"
+              aria-label={t('Fermer la recherche')}
             >
               <X size={16} strokeWidth={2} />
             </button>

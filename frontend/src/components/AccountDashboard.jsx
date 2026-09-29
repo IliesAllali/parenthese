@@ -1,8 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { ChevronRight, KeyRound, LogOut, Plus, Sparkles, X } from 'lucide-react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import LanguageSwitch from './navbar/LanguageSwitch'
+import { t } from '../i18n/index.js'
+import { PRIVACY_URL } from '../utils/siteLinks.js'
+
+// Phrase traduite d'un bloc : les passages entre astérisques passent en <em>, {slot} reçoit un nœud.
+function richText(text, slotNode = null) {
+  return text.split(/(\{slot\})/).flatMap((chunk, chunkIndex) => (
+    chunk === '{slot}'
+      ? [<Fragment key={`s${chunkIndex}`}>{slotNode}</Fragment>]
+      : chunk.split('*').map((part, index) => (index % 2 ? <em key={`${chunkIndex}-${index}`}>{part}</em> : part))
+  ))
+}
 
 const AccountDashboard = ({
   authenticated,
@@ -92,7 +104,7 @@ const AccountDashboard = ({
 
   // Arrivé depuis un arbre ouvert : une croix y ramène
   const closeButton = onBackToTree && (
-    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-screen-close" onClick={onBackToTree} aria-label="Revenir à l'arbre">
+    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-screen-close" onClick={onBackToTree} aria-label={t("Revenir à l'arbre")}>
       <X size={20} aria-hidden="true" />
     </button>
   )
@@ -106,24 +118,24 @@ const AccountDashboard = ({
 
           <div className="pz-card pz-screen-card pz-auth">
             <div className="pz-auth-head">
-              <h1 className="pz-title">{isRegister ? <>Créez votre <em>compte</em></> : <>Retrouvez votre <em>famille</em></>}</h1>
+              <h1 className="pz-title">{isRegister ? richText(t('Créez votre *compte*')) : richText(t('Retrouvez votre *famille*'))}</h1>
               <p className="pz-sub">
                 {isRegister
-                  ? 'Gratuit, et ça le restera. Un prénom, un email, un mot de passe, et vous pouvez commencer.'
-                  : 'Connectez-vous pour ouvrir vos arbres et ajouter des souvenirs.'}
+                  ? t('Gratuit, et ça le restera. Un prénom, un email, un mot de passe, et vous pouvez commencer.')
+                  : t('Connectez-vous pour ouvrir vos arbres et ajouter des souvenirs.')}
               </p>
             </div>
 
             {pendingTreeName && (
               <p className="account-pending-tree pz-auth-note">
-                Vous reviendrez ensuite sur l'arbre « {pendingTreeName} », rattaché à votre compte.
+                {t("Vous reviendrez ensuite sur l'arbre « {name} », rattaché à votre compte.", { name: pendingTreeName })}
               </p>
             )}
 
             <form className="pz-auth-form" onSubmit={handleAuthSubmit}>
               {isRegister && (
                 <div className="pz-field">
-                  <label htmlFor="accountFirstName">Prénom</label>
+                  <label htmlFor="accountFirstName">{t('Prénom')}</label>
                   <input
                     id="accountFirstName"
                     type="text"
@@ -138,12 +150,12 @@ const AccountDashboard = ({
               )}
 
               <div className="pz-field">
-                <label htmlFor="accountEmail">Email</label>
+                <label htmlFor="accountEmail">{t('Email')}</label>
                 <input
                   id="accountEmail"
                   type="email"
                   autoComplete="email"
-                  placeholder="camille@exemple.fr"
+                  placeholder={t('camille@exemple.fr')}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
@@ -151,7 +163,7 @@ const AccountDashboard = ({
               </div>
 
               <div className="pz-field">
-                <label htmlFor="accountPassword">Mot de passe</label>
+                <label htmlFor="accountPassword">{t('Mot de passe')}</label>
                 <input
                   id="accountPassword"
                   type="password"
@@ -161,27 +173,28 @@ const AccountDashboard = ({
                   minLength={8}
                   required
                 />
-                {isRegister && <p className="pz-hint">8 caractères minimum.</p>}
+                {isRegister && <p className="pz-hint">{t('8 caractères minimum.')}</p>}
               </div>
 
               {errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
 
               <button type="submit" className="pz-btn pz-btn--primary pz-btn--block" disabled={!canSubmitAuth}>
-                <PzBusy busy={loading} busyLabel={isRegister ? 'Création du compte' : 'Connexion'}>{isRegister ? 'Créer mon compte' : 'Se connecter'}</PzBusy>
+                <PzBusy busy={loading} busyLabel={isRegister ? t('Création du compte') : t('Connexion')}>{isRegister ? t('Créer mon compte') : t('Se connecter')}</PzBusy>
               </button>
 
               {isRegister && (
                 <p className="pz-small pz-auth-legal">
-                  En créant un compte, vous acceptez{' '}
-                  <a href="https://parenthese.io/donnees-et-vie-privee/" target="_blank" rel="noopener noreferrer">
-                    la façon dont Parenthèse traite vos données
-                  </a>
-                  .
+                  {richText(
+                    t('En créant un compte, vous acceptez {slot}.'),
+                    <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+                      {t('la façon dont Parenthèse traite vos données')}
+                    </a>,
+                  )}
                 </p>
               )}
             </form>
 
-            <div className="pz-divider">ou</div>
+            <div className="pz-divider">{t('ou')}</div>
 
             <button
               type="button"
@@ -190,21 +203,23 @@ const AccountDashboard = ({
               disabled={loading}
             >
               <KeyRound size={16} aria-hidden="true" />
-              Ouvrir un arbre partagé avec moi
+              {t('Ouvrir un arbre partagé avec moi')}
             </button>
           </div>
 
           <p className="pz-auth-switch pz-small">
-            {isRegister ? 'Vous avez déjà un compte ?' : 'Pas encore de compte ?'}{' '}
+            {isRegister ? t('Vous avez déjà un compte ?') : t('Pas encore de compte ?')}{' '}
             <button
               type="button"
               className="pz-link account-signup-toggle"
               onClick={() => setMode(isRegister ? 'login' : 'register')}
               disabled={loading}
             >
-              {isRegister ? 'Me connecter' : 'Créer un compte'}
+              {isRegister ? t('Me connecter') : t('Créer un compte')}
             </button>
           </p>
+
+          <LanguageSwitch className="pz-lang--screen" />
         </div>
       </div>
     )
@@ -218,8 +233,8 @@ const AccountDashboard = ({
 
         <div className="pz-card pz-screen-card">
           <div className="pz-auth-head">
-            <h1 className="pz-title">Vos <em>arbres</em></h1>
-            <p className="pz-sub">Ouvrez un arbre, ou commencez celui d'une autre branche de la famille.</p>
+            <h1 className="pz-title">{richText(t('Vos *arbres*'))}</h1>
+            <p className="pz-sub">{t("Ouvrez un arbre, ou commencez celui d'une autre branche de la famille.")}</p>
           </div>
 
           {errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
@@ -227,8 +242,8 @@ const AccountDashboard = ({
           <div className="tree-list pz-tree-list">
             {trees.length === 0 ? (
               <div className="tree-empty pz-tree-empty">
-                <p className="pz-sub">Aucun arbre pour le moment.</p>
-                <p className="pz-small">Commencez par le vôtre, il suffit d'un prénom.</p>
+                <p className="pz-sub">{t('Aucun arbre pour le moment.')}</p>
+                <p className="pz-small">{t("Commencez par le vôtre, il suffit d'un prénom.")}</p>
               </div>
             ) : (
               trees.map((tree) => {
@@ -242,7 +257,7 @@ const AccountDashboard = ({
                   >
                     <span className="pz-tree-mono" aria-hidden="true">{(tree.name || '?').trim().charAt(0).toUpperCase()}</span>
                     <span className="tree-name pz-tree-name">{tree.name}</span>
-                    {isActive && <span className="pz-tag pz-tag--accent">Ouvert</span>}
+                    {isActive && <span className="pz-tag pz-tag--accent">{t('Ouvert')}</span>}
                     <ChevronRight size={18} aria-hidden="true" className="pz-tree-chevron" />
                   </button>
                 )
@@ -252,18 +267,18 @@ const AccountDashboard = ({
 
           <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={onStartTreeWizard} disabled={loading}>
             <Plus size={17} aria-hidden="true" />
-            Créer un nouvel arbre
+            {t('Créer un nouvel arbre')}
           </button>
 
           <div className="account-actions pz-account-actions">
             <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onBackToAccess} disabled={loading}>
               <KeyRound size={15} aria-hidden="true" />
-              Accès par mot de passe partagé
+              {t('Accès par mot de passe partagé')}
             </button>
             {onUseDemo && (
               <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onUseDemo} disabled={loading}>
                 <Sparkles size={15} aria-hidden="true" />
-                Essayer la démo
+                {t('Essayer la démo')}
               </button>
             )}
           </div>
@@ -272,11 +287,11 @@ const AccountDashboard = ({
         <div className="pz-account-foot">
           <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onLogout} disabled={loading}>
             <LogOut size={15} aria-hidden="true" />
-            Déconnexion
+            {t('Déconnexion')}
           </button>
           {onDeleteAccount && (
             <button type="button" className="pz-btn pz-btn--danger-ghost pz-btn--sm account-delete-link" onClick={openDeleteModal} disabled={loading}>
-              Supprimer mon compte
+              {t('Supprimer mon compte')}
             </button>
           )}
         </div>
@@ -292,25 +307,24 @@ const AccountDashboard = ({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="pz-modal-head">
-              <p className="pz-eyebrow">Compte</p>
-              <h3 id="accountDeleteTitle" className="pz-title">Supprimer mon compte</h3>
-              <p className="pz-sub">Cette suppression est définitive, elle ne pourra pas être annulée.</p>
+              <p className="pz-eyebrow">{t('Compte')}</p>
+              <h3 id="accountDeleteTitle" className="pz-title">{t('Supprimer mon compte')}</h3>
+              <p className="pz-sub">{t('Cette suppression est définitive, elle ne pourra pas être annulée.')}</p>
             </div>
-            <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={closeDeleteModal} aria-label="Fermer" disabled={deleting}>
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={closeDeleteModal} aria-label={t('Fermer')} disabled={deleting}>
               <X size={18} aria-hidden="true" />
             </button>
             <ul className="pz-delete-list">
-              <li>Votre compte et votre adresse email sont effacés.</li>
+              <li>{t('Votre compte et votre adresse email sont effacés.')}</li>
               <li>
-                Les arbres que vous avez créés sont supprimés avec toutes leurs personnes et tous leurs médias,
-                pour toute la famille qui y avait accès.
+                {t('Les arbres que vous avez créés sont supprimés avec toutes leurs personnes et tous leurs médias, pour toute la famille qui y avait accès.')}
               </li>
-              <li>Les arbres partagés avec vous restent à leurs propriétaires. Vous n'y aurez simplement plus accès.</li>
+              <li>{t("Les arbres partagés avec vous restent à leurs propriétaires. Vous n'y aurez simplement plus accès.")}</li>
             </ul>
 
             <form className="pz-auth-form" onSubmit={handleDeleteSubmit}>
               <div className="pz-field">
-                <label htmlFor="accountDeletePassword">Mot de passe actuel</label>
+                <label htmlFor="accountDeletePassword">{t('Mot de passe actuel')}</label>
                 <input
                   id="accountDeletePassword"
                   type="password"
@@ -327,10 +341,10 @@ const AccountDashboard = ({
 
               <div className="pz-modal-actions">
                 <button type="button" className="pz-btn pz-btn--ghost" onClick={closeDeleteModal} disabled={deleting}>
-                  Annuler
+                  {t('Annuler')}
                 </button>
                 <button type="submit" className="pz-btn pz-btn--danger" disabled={deleting || !deletePassword}>
-                  <PzBusy busy={deleting} busyLabel="Suppression en cours">Supprimer définitivement</PzBusy>
+                  <PzBusy busy={deleting} busyLabel={t('Suppression en cours')}>{t('Supprimer définitivement')}</PzBusy>
                 </button>
               </div>
             </form>

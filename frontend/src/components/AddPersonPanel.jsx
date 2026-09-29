@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { UserPlus, X, Search, ChevronDown } from 'lucide-react'
 import './AddPersonPanel.css'
 import PzBusy from './PzBusy.jsx'
+import { t } from '../i18n/index.js'
+
+// Titre traduit d'un bloc : le passage entre <em> et </em> garde son italique
+function withEmphasis(text) {
+  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
+  return <>{before}<em>{emphasized}</em>{after}</>
+}
 
 /**
  * Panneau slide-in gauche pour ajouter une personne
@@ -134,10 +141,16 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   const isValid = firstName.trim().length > 0
 
   const relationTypeLabels = {
-    parent: 'Parent de',
-    child: 'Enfant de',
-    spouse: 'Conjoint·e de',
-    sibling: 'Frère·Sœur de',
+    parent: t('Parent de'),
+    child: t('Enfant de'),
+    spouse: t('Conjoint·e de'),
+    sibling: t('Frère·Sœur de'),
+  }
+  const relationTypeTabs = {
+    parent: t('Parent'),
+    child: t('Enfant'),
+    spouse: t('Conjoint·e'),
+    sibling: t('Frère·Sœur'),
   }
 
   return (
@@ -150,10 +163,10 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     >
       <div className="apn-head">
         <div className="pz-modal-head">
-          <p className="pz-eyebrow">Nouvelle fiche</p>
-          <h2 id="addPersonTitle" className="pz-title">Ajouter <em>quelqu'un</em></h2>
+          <p className="pz-eyebrow">{t('Nouvelle fiche')}</p>
+          <h2 id="addPersonTitle" className="pz-title">{withEmphasis(t("Ajouter <em>quelqu'un</em>"))}</h2>
         </div>
-        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon apn-close" onClick={onClose} aria-label="Fermer">
+        <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon apn-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} strokeWidth={2} />
         </button>
       </div>
@@ -162,7 +175,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
         <div className="apn-scroll">
           <div className="pz-row2">
             <div className="pz-field">
-              <label htmlFor="ap-firstName">Prénom</label>
+              <label htmlFor="ap-firstName">{t('Prénom')}</label>
               <input
                 ref={firstNameRef}
                 id="ap-firstName"
@@ -170,56 +183,56 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                 className={touched.firstName && !firstName.trim() ? 'apn-input--error' : ''}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, firstName: true }))}
-                placeholder="Marie"
+                onBlur={() => setTouched((prev) => ({ ...prev, firstName: true }))}
+                placeholder={t('Marie')}
                 autoComplete="off"
                 aria-invalid={touched.firstName && !firstName.trim()}
               />
             </div>
             <div className="pz-field">
-              <label htmlFor="ap-lastName">Nom</label>
+              <label htmlFor="ap-lastName">{t('Nom')}</label>
               <input
                 id="ap-lastName"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Dupont"
+                placeholder={t('Dupont')}
                 autoComplete="off"
               />
             </div>
           </div>
           {touched.firstName && !firstName.trim() && (
-            <p className="apn-error-text">Il faut au moins un prénom.</p>
+            <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
           )}
 
           <div className="pz-field">
-            <label htmlFor="ap-birthName">Nom de naissance <span className="apn-optional">si différent</span></label>
+            <label htmlFor="ap-birthName">{t('Nom de naissance')} <span className="apn-optional">{t('si différent')}</span></label>
             <input
               id="ap-birthName"
               type="text"
               value={birthName}
               onChange={(e) => setBirthName(e.target.value)}
-              placeholder="Martin"
+              placeholder={t('Martin')}
               autoComplete="off"
             />
           </div>
 
           <div className="pz-row2">
             <div className="pz-field">
-              <label htmlFor="ap-birthDate">Naissance</label>
+              <label htmlFor="ap-birthDate">{t('Naissance')}</label>
               <input id="ap-birthDate" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
             </div>
             <div className="pz-field">
-              <label htmlFor="ap-deathDate">Décès</label>
+              <label htmlFor="ap-deathDate">{t('Décès')}</label>
               <input id="ap-deathDate" type="date" value={deathDate} onChange={(e) => setDeathDate(e.target.value)} />
             </div>
           </div>
 
           <section className="apn-section">
-            <h3 className="pz-eyebrow">Place dans la famille</h3>
+            <h3 className="pz-eyebrow">{t('Place dans la famille')}</h3>
 
-            <div className="pz-tabs apn-types" role="radiogroup" aria-label="Type de lien">
-              {Object.entries(relationTypeLabels).map(([type, label]) => (
+            <div className="pz-tabs apn-types" role="radiogroup" aria-label={t('Type de lien')}>
+              {Object.entries(relationTypeTabs).map(([type, label]) => (
                 <button
                   key={type}
                   type="button"
@@ -228,7 +241,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                   className={`pz-tab ${selectedRelationType === type ? 'is-active' : ''}`}
                   onClick={() => setSelectedRelationType(type)}
                 >
-                  {label.replace(/ de$/, '')}
+                  {label}
                 </button>
               ))}
             </div>
@@ -246,7 +259,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                     setRelationDropdownOpen(true)
                   }}
                   onFocus={() => setRelationDropdownOpen(true)}
-                  placeholder="Chercher dans l'arbre"
+                  placeholder={t("Chercher dans l'arbre")}
                   autoComplete="off"
                 />
                 <ChevronDown size={15} strokeWidth={2} className="apn-search-chevron" />
@@ -281,7 +294,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                       type="button"
                       className="pz-btn pz-btn--ghost pz-btn--icon apn-link-remove"
                       onClick={() => handleRemoveRelation(rel.personId)}
-                      aria-label={`Retirer ${rel.personName}`}
+                      aria-label={t('Retirer {name}', { name: rel.personName })}
                     >
                       <X size={14} strokeWidth={2.2} />
                     </button>
@@ -296,11 +309,11 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
 
         <div className="apn-actions">
           <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose}>
-            Annuler
+            {t('Annuler')}
           </button>
           <button type="submit" className="pz-btn pz-btn--primary" disabled={!isValid || loading}>
             <UserPlus size={16} strokeWidth={2} />
-            <PzBusy busy={loading} busyLabel="Ajout en cours">Ajouter cette personne</PzBusy>
+            <PzBusy busy={loading} busyLabel={t('Ajout en cours')}>{t('Ajouter cette personne')}</PzBusy>
           </button>
         </div>
       </form>
