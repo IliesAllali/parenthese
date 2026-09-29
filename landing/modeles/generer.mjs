@@ -1,6 +1,8 @@
-// Génère les modèles PDF A4 et leurs aperçus WebP pour /arbre-genealogique-a-remplir/.
+// Génère les modèles PDF A4 et leurs aperçus WebP pour /arbre-genealogique-a-remplir/ (français)
+// et /en/printable-family-tree/ (anglais).
 //
-//   node modeles/generer.mjs            (depuis landing/)
+//   node modeles/generer.mjs            (depuis landing/, les deux langues)
+//   node modeles/generer.mjs dessine    (seulement les modèles dont le nom de fichier contient « dessine »)
 //
 // Playwright n'est pas une dépendance de la landing : le script le cherche dans node_modules,
 // puis dans le dossier indiqué par PLAYWRIGHT_DIR (ex. D:/Commercial/tools/web-qa/node_modules).
@@ -22,7 +24,11 @@ function chargerPlaywright() {
   throw new Error('Playwright introuvable. Définir PLAYWRIGHT_DIR vers un node_modules qui le contient.')
 }
 
-const OUT = fileURLToPath(new URL('../public/arbre-genealogique-a-remplir/', import.meta.url))
+// Une sortie par langue : dossier de la page et nom de fichier de chaque modèle
+const LANGUES = [
+  { lang: 'fr', out: fileURLToPath(new URL('../public/arbre-genealogique-a-remplir/', import.meta.url)), nom: (m) => m.slug },
+  { lang: 'en', out: fileURLToPath(new URL('../public/en/printable-family-tree/', import.meta.url)), nom: (m) => m.en },
+]
 const APERCU_LARGEUR = 720
 
 // Recale chaque trait d'écriture juste après son libellé, une fois les polices chargées
@@ -37,16 +43,17 @@ function ajusterTraits() {
 
 async function main() {
   const { chromium } = chargerPlaywright()
-  mkdirSync(OUT, { recursive: true })
   const browser = await chromium.launch({ channel: 'chrome' })
   const ctx = await browser.newContext({ deviceScaleFactor: 2 })
   const page = await ctx.newPage()
   const convert = await ctx.newPage()
   const seul = process.argv[2]
 
-  for (const m of MODELES) {
-    if (seul && !m.slug.includes(seul)) continue
-    const html = m.build()
+  for (const { lang, out, nom } of LANGUES) for (const m of MODELES) {
+    const slug = nom(m)
+    if (seul && !slug.includes(seul)) continue
+    mkdirSync(out, { recursive: true })
+    const html = m.build(lang)
     const [wmm, hmm] = m.portrait ? [210, 297] : [297, 210]
     await page.setViewportSize({ width: Math.ceil(wmm * 96 / 25.4), height: Math.ceil(hmm * 96 / 25.4) })
     await page.setContent(html, { waitUntil: 'networkidle' })
@@ -60,10 +67,10 @@ async function main() {
       await document.fonts.ready
       return document.fonts.check('400 12px "DM Sans"') && document.fonts.check('400 12px "Newsreader"')
     })
-    if (!ok) throw new Error(`Polices non chargées pour ${m.slug}`)
+    if (!ok) throw new Error(`Polices non chargées pour ${slug}`)
     await page.evaluate(ajusterTraits)
 
-    const pdf = `${OUT}${m.slug}.pdf`
+    const pdf = `${out}${slug}.pdf`
     await page.pdf({ path: pdf, preferCSSPageSize: true, printBackground: true })
 
     // Aperçu : capture de la feuille, réduite et encodée en WebP par le canvas de Chromium
@@ -81,8 +88,8 @@ async function main() {
       return { url: c.toDataURL('image/webp', 0.86), w: c.width, h: c.height }
     }, { b64: png.toString('base64'), largeur: APERCU_LARGEUR })
     const webp = Buffer.from(dataUrl.url.split(',')[1], 'base64')
-    writeFileSync(`${OUT}${m.slug}.webp`, webp)
-    console.log(`${m.slug}  pdf ok  apercu ${dataUrl.w}x${dataUrl.h} ${Math.round(webp.length / 1024)} Ko`)
+    writeFileSync(`${out}${slug}.webp`, webp)
+    console.log(`${lang}  ${slug}  pdf ok  apercu ${dataUrl.w}x${dataUrl.h} ${Math.round(webp.length / 1024)} Ko`)
   }
   await browser.close()
 }

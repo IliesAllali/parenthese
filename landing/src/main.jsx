@@ -3,6 +3,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { analytics } from './analytics.js'
+import { localeFromPath } from './i18n.js'
 
 // PostHog après le premier rendu : les événements émis avant sont mis en file et envoyés à l'init
 const deferInit = () => analytics.init()
@@ -12,7 +13,7 @@ else window.setTimeout(deferInit, 1500)
 const container = document.getElementById('root')
 const app = (
   <StrictMode>
-    <App />
+    <App locale={localeFromPath(window.location.pathname)} />
   </StrictMode>
 )
 
