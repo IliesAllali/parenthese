@@ -1,14 +1,14 @@
-## Ce que change cette PR
+## What this PR changes
 
 
 
-## Pourquoi
+## Why
 
-<!-- Lien vers l'issue si elle existe, par exemple : Closes #12 -->
+<!-- Link to the issue if there is one, for example: Closes #12 -->
 
-## Vérifications
+## Checks
 
-- [ ] Tests, lint et builds passent en local (voir CONTRIBUTING.md)
-- [ ] Les textes visibles sont en français
-- [ ] Une migration Prisma accompagne tout changement de schéma
-- [ ] Capture d'écran jointe si l'interface change
+- [ ] Tests, lint and builds pass locally (see CONTRIBUTING.md)
+- [ ] New visible text goes through `t()` with its English entry
+- [ ] A Prisma migration comes with any schema change
+- [ ] Screenshot attached if the interface changes

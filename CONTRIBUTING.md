@@ -1,21 +1,23 @@
-# Contribuer à Parenthèse
+# Contributing to Parenthèse
 
-Parenthèse est maintenu par une seule personne. Les retours sont les bienvenus, et quelques repères font gagner du temps à tout le monde.
+[Version française](CONTRIBUTING.fr.md)
 
-## Avant d'écrire du code
+Parenthèse is maintained by one person. Feedback is welcome, and a few pointers save everyone time. You can write in English or in French.
 
-- Un bug ou une idée : ouvrez une issue avec le modèle correspondant.
-- Une faille de sécurité : pas d'issue publique, suivez [SECURITY.md](SECURITY.md).
-- Pour tout changement plus large qu'une correction, parlez-en d'abord dans une issue. Une pull request non discutée peut être refusée, même soignée.
-- Préférez de petites pull requests ciblées : un sujet par PR, un diff qui se relit en quelques minutes.
+## Before writing code
 
-## Lancer le projet en local
+- A bug or an idea: open an issue with the matching template.
+- A security issue: no public issue, follow [SECURITY.md](SECURITY.md).
+- For any change bigger than a fix, talk about it in an issue first. A pull request that wasn't discussed may be declined, even a careful one.
+- Prefer small, focused pull requests: one topic per PR, a diff that can be reviewed in a few minutes.
 
-Tout est dans la section « Développer » du [README](README.fr.md).
+## Running the project locally
+
+Everything is in the "Development" section of the [README](README.md).
 
 ## Tests
 
-Avant d'ouvrir une pull request, faites passer ce que vérifie la CI :
+Before opening a pull request, run what the CI checks:
 
 ```bash
 npm --prefix frontend ci && npm --prefix frontend run lint && npm --prefix frontend test && npm --prefix frontend run build
@@ -23,16 +25,16 @@ npm --prefix landing ci && npm --prefix landing test && npm --prefix landing run
 npm --prefix backend ci && npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix backend test
 ```
 
-La CI vérifie aussi que les migrations Prisma s'appliquent sur une base vide et reproduisent exactement `backend/prisma/schema.prisma`. Toute modification du schéma s'accompagne donc d'une migration (`npm --prefix backend run prisma:migrate`).
+The CI also checks that the Prisma migrations apply to an empty database and reproduce `backend/prisma/schema.prisma` exactly. Any schema change therefore comes with a migration (`npm --prefix backend run prisma:migrate`).
 
-Si vous touchez à Docker ou à nginx, lancez `docker compose up -d --build` puis `bash tools/docker-smoke.sh http://localhost`.
+If you touch Docker or nginx, run `docker compose up -d --build` then `bash tools/docker-smoke.sh http://localhost`.
 
 ## Conventions
 
-- L'interface est en français : libellés, messages, textes d'aide.
-- Pas de nouvelle dépendance lourde (framework, bibliothèque d'interface, service externe) sans en avoir discuté dans une issue.
-- La promesse du README tient : pas de publicité, et aucune mesure d'audience activée par défaut sur une instance auto-hébergée.
+- The interface is in French and English. Every visible text goes through `t()` from `frontend/src/i18n/index.js`, with the French text as the key and its English entry in `frontend/src/i18n/en/`. A test fails if an English entry is missing.
+- No new heavy dependency (framework, UI library, external service) without discussing it in an issue.
+- The README promise holds: no ads, and no analytics turned on by default on a self-hosted instance.
 
-## Licence
+## License
 
-Parenthèse est publié sous [PolyForm Noncommercial 1.0.0](LICENSE). En proposant une contribution, vous acceptez qu'elle soit publiée sous cette même licence.
+Parenthèse is published under [PolyForm Noncommercial 1.0.0](LICENSE). By submitting a contribution, you agree that it is published under the same license.

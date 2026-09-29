@@ -1,25 +1,25 @@
 ---
 name: Bug
-about: Quelque chose ne fonctionne pas comme prévu
+about: Something doesn't work as expected
 labels: bug
 ---
 
-<!-- L'issue est publique : ne mettez ni noms, ni dates, ni captures d'une galaxie familiale réelle. -->
+<!-- This issue is public: no names, dates or screenshots from a real family tree. Vous pouvez écrire en français. -->
 
-## Ce qui se passe
-
-
-
-## Ce qui devrait se passer
+## What happens
 
 
 
-## Pour reproduire
+## What should happen
+
+
+
+## To reproduce
 
 1.
 2.
 
-## Contexte
+## Context
 
-- Où : parenthese.io, ou instance auto-hébergée (commit ou date de mise à jour)
-- Navigateur et appareil :
+- Where: parenthese.io, or a self-hosted instance (commit or update date)
+- Browser and device:
