@@ -1,27 +1,29 @@
-# Sécurité
+# Security
 
-## Signaler une faille
+[Version française](SECURITY.fr.md)
 
-Ne décrivez jamais une faille dans une issue, une discussion ou une pull request : tout y est public.
+## Reporting a vulnerability
 
-Deux canaux privés :
+Never describe a vulnerability in an issue, a discussion or a pull request: everything there is public.
 
-- l'onglet **Security** de ce dépôt GitHub, bouton « Report a vulnerability » ;
-- un email à pro.allali.ilies@gmail.com.
+Two private channels:
 
-Indiquez si possible ce qui est touché (adresse, route de l'API, fichier), les étapes pour reproduire et l'impact que vous constatez. Un rapport court et précis suffit.
+- the **Security** tab of this GitHub repository, "Report a vulnerability" button;
+- an email to pro.allali.ilies@gmail.com.
 
-## Périmètre
+If you can, say what is affected (address, API route, file), the steps to reproduce and the impact you observe. A short, precise report is enough. English or French, as you prefer.
 
-- L'instance publique [parenthese.io](https://parenthese.io) : le site, l'application et son API.
-- Le code de ce dépôt, y compris la configuration d'auto-hébergement (`docker-compose.yml`, images Docker, configuration nginx).
+## Scope
 
-Une instance auto-hébergée par quelqu'un d'autre relève de son administrateur. Si la faille vient du code, elle est dans le périmètre.
+- The public instance [parenthese.io](https://parenthese.io): the website, the app and its API.
+- The code in this repository, including the self-hosting setup (`docker-compose.yml`, Docker images, nginx configuration).
 
-Sur parenthese.io, testez uniquement avec votre propre compte et vos propres galaxies. N'accédez pas aux données d'autres familles, et pas de déni de service ni de tests automatisés massifs.
+A self-hosted instance run by someone else is the responsibility of its administrator. If the vulnerability comes from the code, it is in scope.
 
-## Délai de réponse
+On parenthese.io, test only with your own account and your own trees. Do not access other families' data, and no denial of service or large automated tests.
 
-Parenthèse est maintenu par une seule personne. Vous recevrez un accusé de réception dès que possible, en général sous une semaine. Les failles graves passent avant tout le reste. Une fois le correctif publié, la faille peut être décrite publiquement, en laissant aux auto-hébergeurs le temps de mettre à jour.
+## Response time
 
-Seule la dernière version de la branche `main` reçoit des correctifs.
+Parenthèse is maintained by one person. You will get an acknowledgment as soon as possible, usually within a week. Serious vulnerabilities come before everything else. Once the fix is published, the vulnerability can be described publicly, leaving self-hosters time to update.
+
+Only the latest version of the `main` branch receives fixes.

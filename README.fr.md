@@ -143,7 +143,7 @@ npm --prefix backend test
 
 ## Contribuer
 
-Issues et petites pull requests ciblées sont les bienvenues : la marche à suivre, les tests à faire passer et les conventions sont dans [CONTRIBUTING.md](CONTRIBUTING.md). Pour une faille de sécurité, pas d'issue publique : voir [SECURITY.md](SECURITY.md).
+Issues et petites pull requests ciblées sont les bienvenues : la marche à suivre, les tests à faire passer et les conventions sont dans [CONTRIBUTING.fr.md](CONTRIBUTING.fr.md). Pour une faille de sécurité, pas d'issue publique : voir [SECURITY.fr.md](SECURITY.fr.md).
 
 ## Licence
 

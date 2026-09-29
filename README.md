@@ -153,7 +153,7 @@ npm --prefix backend test
 
 ## Contributing
 
-Issues and small, focused pull requests are welcome. The steps, the tests to pass and the conventions are in [CONTRIBUTING.md](CONTRIBUTING.md) (in French). For a security issue, no public issue please, see [SECURITY.md](SECURITY.md).
+Issues and small, focused pull requests are welcome. The steps, the tests to pass and the conventions are in [CONTRIBUTING.md](CONTRIBUTING.md). For a security issue, no public issue please, see [SECURITY.md](SECURITY.md).
 
 ## License
 

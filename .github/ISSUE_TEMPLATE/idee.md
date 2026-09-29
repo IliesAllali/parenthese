@@ -1,15 +1,17 @@
 ---
-name: Idée
-about: Proposer une amélioration ou une nouvelle fonctionnalité
+name: Idea
+about: Suggest an improvement or a new feature
 labels: enhancement
 ---
 
-## Le besoin
+<!-- Vous pouvez écrire en français. -->
 
-<!-- Ce que vous cherchez à faire, et ce qui bloque aujourd'hui. -->
+## The need
+
+<!-- What you are trying to do, and what gets in the way today. -->
 
 
 
-## Une piste
+## A possible approach
 
-<!-- Facultatif : comment vous l'imagineriez. -->
+<!-- Optional: how you would picture it. -->
