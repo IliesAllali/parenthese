@@ -3,6 +3,8 @@
  * vers le format attendu par le composant Galaxy
  */
 
+import { t } from '../i18n/index.js'
+
 /**
  * Convertit une date ISO (YYYY-MM-DD) en année
  * @param {string | null} isoDate - Date au format ISO
@@ -88,7 +90,7 @@ export function adaptGraphForGalaxy(apiGraph, _treeId) {
     type: m.type,
     url: m.type === 'photo' ? `/api${m.urlPath}` : null,
     urlHd: m.type === 'photo' ? `/api${m.urlPath}` : null,
-    label: m.caption || `Média ${m.displayOrder}`,
+    label: m.caption || t('Média {n}', { n: m.displayOrder }),
     source: m.source || null,
     displayOrder: m.displayOrder,
     isFeatured: m.isFeatured,

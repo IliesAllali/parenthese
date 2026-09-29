@@ -1,4 +1,5 @@
 import { Trees } from 'lucide-react'
+import { t } from '../../i18n/index.js'
 import './TreeDropdown.css'
 
 /**
@@ -13,16 +14,16 @@ import './TreeDropdown.css'
  */
 function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
   // Séparer arbres par type
-  const myTrees = trees.filter(t => t.role === 'owner' || t.role === 'admin')
-  const sharedTrees = trees.filter(t => t.role !== 'owner' && t.role !== 'admin')
-  const mockTree = trees.find(t => t.isMockTree)
+  const myTrees = trees.filter((tree) => tree.role === 'owner' || tree.role === 'admin')
+  const sharedTrees = trees.filter((tree) => tree.role !== 'owner' && tree.role !== 'admin')
+  const mockTree = trees.find((tree) => tree.isMockTree)
 
   return (
     <div className="tree-dropdown">
       {/* Mes arbres */}
       {myTrees.length > 0 && (
         <div className="tree-dropdown-section">
-          <div className="tree-dropdown-section-title">Mes arbres</div>
+          <div className="tree-dropdown-section-title">{t('Mes arbres')}</div>
           {myTrees.map(tree => (
             <button
               key={tree.id}
@@ -40,7 +41,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
               <div className="tree-dropdown-item-info">
                 <div className="tree-dropdown-item-name">{tree.name}</div>
                 <div className="tree-dropdown-item-role">
-                  {tree.role === 'owner' ? 'Propriétaire' : 'Admin'}
+                  {tree.role === 'owner' ? t('Propriétaire') : t('Admin')}
                 </div>
               </div>
             </button>
@@ -51,7 +52,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
       {/* Arbres partagés */}
       {sharedTrees.length > 0 && (
         <div className="tree-dropdown-section">
-          <div className="tree-dropdown-section-title">Arbres partagés</div>
+          <div className="tree-dropdown-section-title">{t('Arbres partagés')}</div>
           {sharedTrees.map(tree => (
             <button
               key={tree.id}
@@ -69,7 +70,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
               <div className="tree-dropdown-item-info">
                 <div className="tree-dropdown-item-name">{tree.name}</div>
                 <div className="tree-dropdown-item-role">
-                  {tree.role === 'contributor' ? 'Contributeur' : 'Visiteur'}
+                  {tree.role === 'contributor' ? t('Contributeur') : t('Visiteur')}
                 </div>
               </div>
             </button>
@@ -80,7 +81,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
       {/* Arbre mock */}
       {mockTree && (
         <div className="tree-dropdown-section">
-          <div className="tree-dropdown-section-title">Exemple</div>
+          <div className="tree-dropdown-section-title">{t('Exemple')}</div>
           <button
             type="button"
             className={`tree-dropdown-item ${mockTree.id === activeTreeId ? 'active' : ''}`}
@@ -91,7 +92,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
             </div>
             <div className="tree-dropdown-item-info">
               <div className="tree-dropdown-item-name">{mockTree.name}</div>
-              <div className="tree-dropdown-item-role">Arbre exemple</div>
+              <div className="tree-dropdown-item-role">{t('Arbre exemple')}</div>
             </div>
           </button>
         </div>
@@ -105,7 +106,7 @@ function TreeDropdown({ trees = [], activeTreeId, onSelect, onCreate }) {
           onClick={onCreate}
         >
           <span className="tree-dropdown-create-icon">+</span>
-          <span>Créer un nouvel arbre</span>
+          <span>{t('Créer un nouvel arbre')}</span>
         </button>
       </div>
     </div>

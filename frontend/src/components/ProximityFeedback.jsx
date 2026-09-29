@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js'
 import './ProximityFeedback.css'
 
 /**
@@ -22,9 +23,9 @@ function ProximityFeedback({ visible, dragPosition, closestPerson, linkType }) {
 
   // Labels
   const linkLabels = {
-    child: 'Enfant',
-    spouse: 'Conjoint',
-    sibling: 'Frère·Sœur',
+    child: t('Enfant'),
+    spouse: t('Conjoint'),
+    sibling: t('Frère·Sœur'),
   }
 
   return (
@@ -51,7 +52,7 @@ function ProximityFeedback({ visible, dragPosition, closestPerson, linkType }) {
           transform: 'translate(-50%, -50%)',
         }}
       >
-        {linkLabels[linkType] || 'Lien'}
+        {linkLabels[linkType] || t('Lien')}
       </div>
 
       {/* Glow sur personne proche */}

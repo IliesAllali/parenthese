@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
 import './EditModeOverlay.css'
+import { t } from '../i18n/index.js'
 
 function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, onSubmit }) {
   const isAdmin = role === 'admin'
@@ -10,8 +11,8 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
   ), [isAdmin])
 
   // Libellés courts : ils doivent tenir sur un téléphone à côté du bouton
-  const toastLabel = isAdmin ? "Vous modifiez l'arbre" : 'Vos propositions'
-  const submitLabel = isAdmin ? "Mettre à jour l'arbre" : 'Envoyer mes ajouts'
+  const toastLabel = isAdmin ? t("Vous modifiez l'arbre") : t('Vos propositions')
+  const submitLabel = isAdmin ? t("Mettre à jour l'arbre") : t('Envoyer mes ajouts')
   // La famille ne voit le bouton d'envoi que lorsqu'il y a quelque chose à envoyer
   const showSubmit = Boolean(onSubmit) && (isAdmin || hasDraft)
 
@@ -31,7 +32,7 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
             className="pz-btn pz-btn--primary pz-btn--sm edit-mode-submit"
             onClick={onSubmit}
             disabled={!hasDraft}
-            title={hasDraft ? submitLabel : "Aucune modification à envoyer pour l'instant"}
+            title={hasDraft ? submitLabel : t("Aucune modification à envoyer pour l'instant")}
           >
             {submitLabel}
           </button>
@@ -41,7 +42,7 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
           type="button"
           className="pz-btn pz-btn--ghost pz-btn--icon edit-mode-toast-close"
           onClick={onDeactivate}
-          aria-label="Quitter le mode édition"
+          aria-label={t('Quitter le mode édition')}
         >
           <X size={17} strokeWidth={2} />
         </button>

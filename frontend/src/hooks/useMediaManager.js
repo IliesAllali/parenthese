@@ -4,11 +4,12 @@ import { getPersonMedias } from '../data/mockData'
 import { fileToBase64, getAccountErrorMessage } from '../utils/errorMessages'
 import { getUploadMimeType, resolveUploadMediaType, validateMediaFile } from '../utils/mediaUpload'
 import { saveContributorName } from '../utils/contributorName'
+import { t } from '../i18n/index.js'
 
 // Souvenir envoyé par la famille : en attente de la relecture du propriétaire
 function noticeFor(created) {
   return created?.status === 'pending'
-    ? "Merci, c'est envoyé. Le souvenir apparaîtra dans la fiche quand la personne qui gère l'arbre l'aura accepté."
+    ? t("Merci, c'est envoyé. Le souvenir apparaîtra dans la fiche quand la personne qui gère l'arbre l'aura accepté.")
     : ''
 }
 

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
-import { FamilyWelcome, SouvenirPicker, HELP_URL } from './components/FamilyOnboarding.jsx'
+import { FamilyWelcome, SouvenirPicker } from './components/FamilyOnboarding.jsx'
+import { HELP_URL } from './utils/siteLinks.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
 import MediaViewer from './components/MediaViewer'
 import MediaManagerPanel from './components/MediaManagerPanel'
@@ -19,6 +20,7 @@ import ContributionSessionModal from './components/ContributionSessionModal'
 import { ContextualNavbar } from './components/navbar'
 import ZoomControl from './components/ZoomControl'
 import { ExpandableSearch } from './components/search'
+import { t, dateLocale } from './i18n/index.js'
 import {
   createParentChildLink,
   deleteParentChildLink,
@@ -389,39 +391,39 @@ function buildContribChangesList(draft = {}) {
 
   for (const entry of addedPersonEntries) {
     const d = entry && typeof entry === 'object' ? entry : (draft.modifiedPersons?.[String(entry)] || {})
-    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Nouvelle personne'
+    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || t('Nouvelle personne')
     items.push({ entityType: 'person', action: 'create', label: name })
   }
 
   for (const [id, d] of Object.entries(draft.modifiedPersons || {})) {
     if (addedPersonIds.includes(String(id))) continue
-    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || 'Personne'
+    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || t('Personne')
     items.push({ entityType: 'person', action: 'update', label: name })
   }
 
   for (let i = 0; i < (draft.deletedPersons || []).length; i++) {
-    items.push({ entityType: 'person', action: 'delete', label: 'Personne' })
+    items.push({ entityType: 'person', action: 'delete', label: t('Personne') })
   }
 
   const annData = Array.isArray(draft.annotationsData) ? draft.annotationsData : []
   const addedAnnIds = new Set(Array.isArray(draft.addedAnnotations) ? draft.addedAnnotations : [])
   const modifiedAnnIds = new Set(Array.isArray(draft.modifiedAnnotations) ? draft.modifiedAnnotations : [])
   const deletedAnnCount = (Array.isArray(draft.deletedAnnotations) ? draft.deletedAnnotations : []).length
-  const annTypeLabel = (t) => ({ sticker: 'Sticker', drawing: 'Dessin', text: 'Texte', photo: 'Photo' }[t] || 'Annotation')
+  const annTypeLabel = (type) => ({ sticker: t('Sticker'), drawing: t('Dessin'), text: t('Texte'), photo: t('Photo') }[type] || t('Annotation'))
 
   for (const ann of annData) {
     if (addedAnnIds.has(ann.id)) items.push({ entityType: 'annotation', action: 'create', label: annTypeLabel(ann.type) })
     else if (modifiedAnnIds.has(ann.id)) items.push({ entityType: 'annotation', action: 'update', label: annTypeLabel(ann.type) })
   }
   for (let i = 0; i < deletedAnnCount; i++) {
-    items.push({ entityType: 'annotation', action: 'delete', label: 'Annotation' })
+    items.push({ entityType: 'annotation', action: 'delete', label: t('Annotation') })
   }
 
   for (let i = 0; i < (draft.addedRelations || []).length; i++) {
-    items.push({ entityType: 'relation', action: 'create', label: 'Relation' })
+    items.push({ entityType: 'relation', action: 'create', label: t('Relation') })
   }
   for (let i = 0; i < (draft.removedRelations || []).length; i++) {
-    items.push({ entityType: 'relation', action: 'delete', label: 'Relation' })
+    items.push({ entityType: 'relation', action: 'delete', label: t('Relation') })
   }
 
   return items
@@ -570,10 +572,10 @@ function App() {
 
     const email = accountUser?.email || ''
     if (!email) {
-      return 'Compte'
+      return t('Compte')
     }
 
-    return String(email).split('@')[0] || 'Compte'
+    return String(email).split('@')[0] || t('Compte')
   }, [accountUser?.email, accountUser?.firstName, accountUser?.name, linkedSelfPerson])
 
   const accountEmail = accountUser?.email || ''
@@ -774,9 +776,9 @@ function App() {
       )
 
       // Compute world-space view center so the photo appears in the middle of the screen
-      const t = galaxyTransformReadRef.current?.current || { x: 0, y: 0, scale: 1 }
-      const worldX = (window.innerWidth / 2 - t.x) / t.scale
-      const worldY = (window.innerHeight / 2 - t.y) / t.scale
+      const view = galaxyTransformReadRef.current?.current || { x: 0, y: 0, scale: 1 }
+      const worldX = (window.innerWidth / 2 - view.x) / view.scale
+      const worldY = (window.innerHeight / 2 - view.y) / view.scale
 
       // Get natural dimensions from the file
       const img = new Image()
@@ -909,8 +911,10 @@ function App() {
           const links = getSiblingParentLinks(rel.personId, filiations, unions)
           if (links.length === 0) {
             const sibling = persons.find((person) => String(person.id) === String(rel.personId))
-            const siblingName = [sibling?.firstName, sibling?.lastName].filter(Boolean).join(' ') || 'cette personne'
-            setAddPersonError(`Ajoutez d'abord un parent à ${siblingName} pour pouvoir lui rattacher un frère ou une sœur.`)
+            const siblingName = [sibling?.firstName, sibling?.lastName].filter(Boolean).join(' ')
+            setAddPersonError(siblingName
+              ? t("Ajoutez d'abord un parent à {name} pour pouvoir lui rattacher un frère ou une sœur.", { name: siblingName })
+              : t("Ajoutez d'abord un parent à cette personne pour pouvoir lui rattacher un frère ou une sœur."))
             return
           }
           siblingParentLinks.push(...links)
@@ -1016,7 +1020,7 @@ function App() {
         // La personne n'apparaît dans l'arbre qu'après envoi : on passe tout de suite à l'envoi
         // (prénom, un mot), la famille n'a pas à chercher le bouton
         setAddPersonPanelVisible(false)
-        setDraftNotice(`${formData.firstName} est dans vos modifications. Envoyez-les quand vous avez fini.`)
+        setDraftNotice(t('{name} est dans vos modifications. Envoyez-les quand vous avez fini.', { name: formData.firstName }))
         setContribSubmitError('')
         setContribChanges(buildContribChangesList(editMode.restoreDraft()))
         setShowContribModal(true)
@@ -1085,7 +1089,7 @@ function App() {
 
       await tree.refreshCurrentTreeGraph()
     } catch (err) {
-      setAddPersonError(err.message || "Erreur lors de l'ajout de la personne")
+      setAddPersonError(err.message || t("Erreur lors de l'ajout de la personne"))
     } finally {
       setAddPersonLoading(false)
     }
@@ -1207,15 +1211,17 @@ function App() {
       const changes = buildContributionChangesFromDraft(draft)
 
       if (changes.length === 0) {
-        setContribSubmitError('Aucune modification à soumettre.')
+        setContribSubmitError(t('Aucune modification à soumettre.'))
         return
       }
 
       const now = new Date()
-      const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const dateStr = now.toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit', year: 'numeric' })
       const contributorName = (name || auth.userAuth.user?.name || '').trim()
       if (name) saveContributorName(name)
-      const title = `Contribution de ${contributorName || 'la famille'} · ${dateStr}`.slice(0, 120)
+      const title = (contributorName
+        ? t('Contribution de {name} · {date}', { name: contributorName, date: dateStr })
+        : t('Contribution de la famille · {date}', { date: dateStr })).slice(0, 120)
 
       const result = await contrib.handleSubmitContributionSession({
         title,
@@ -1225,7 +1231,7 @@ function App() {
       })
 
       if (!result?.ok) {
-        setContribSubmitError(result?.error || "Erreur lors de l'envoi des contributions")
+        setContribSubmitError(result?.error || t("Erreur lors de l'envoi des contributions"))
         return
       }
 
@@ -1237,7 +1243,7 @@ function App() {
       setDraftNotice('')
       setTimeout(() => setContribSuccess(false), 6000)
     } catch (err) {
-      setContribSubmitError(err.message || "Erreur lors de l'envoi des contributions")
+      setContribSubmitError(err.message || t("Erreur lors de l'envoi des contributions"))
     } finally {
       setContribSubmitLoading(false)
     }
@@ -1301,7 +1307,7 @@ function App() {
   const handleContributionPasswordRemember = useCallback(async ({ password }) => {
     const accessToken = auth.userAuth.token || tree.treeContext.accessToken
     if (!tree.treeContext.treeId || !accessToken) {
-      return { ok: false, error: 'Session invalide.' }
+      return { ok: false, error: t('Session invalide.') }
     }
 
     setContribInviteState((current) => ({ ...current, loading: true, error: '', message: '' }))
@@ -1312,12 +1318,12 @@ function App() {
         knownPasswords: { share: result?.share || '' },
         loading: false,
         error: '',
-        message: "C'est bien lui. Rien ne change pour la famille.",
+        message: t("C'est bien lui. Rien ne change pour la famille."),
       }))
       return { ok: true }
     } catch (error) {
       const message = error?.status === 422
-        ? "Ce n'est pas le mot de passe actuel de l'arbre."
+        ? t("Ce n'est pas le mot de passe actuel de l'arbre.")
         : getAccountErrorMessage(error)
       setContribInviteState((current) => ({ ...current, loading: false, error: message, message: '' }))
       return { ok: false, error: message }
@@ -1326,17 +1332,17 @@ function App() {
 
   const handleContributionPasswordRotate = useCallback(async ({ password }) => {
     if (!tree.treeContext.treeId) {
-      return { ok: false, error: 'Arbre introuvable.' }
+      return { ok: false, error: t('Arbre introuvable.') }
     }
 
     const accessToken = tree.treeContext.accessToken || auth.userAuth.token
     if (!accessToken) {
-      return { ok: false, error: 'Session invalide.' }
+      return { ok: false, error: t('Session invalide.') }
     }
 
     const nextPassword = String(password || '').trim()
     if (nextPassword.length < 8) {
-      return { ok: false, error: 'Minimum 8 caractères.' }
+      return { ok: false, error: t('Minimum 8 caractères.') }
     }
 
     if (nextPassword === contribInviteState.knownPasswords.share) {
@@ -1344,7 +1350,7 @@ function App() {
         ...current,
         loading: false,
         error: '',
-        message: "C'est déjà le mot de passe actuel.",
+        message: t("C'est déjà le mot de passe actuel."),
       }))
       return { ok: true }
     }
@@ -1367,7 +1373,7 @@ function App() {
         knownPasswords: storedPasswords,
         loading: false,
         error: '',
-        message: 'Mot de passe changé. Envoyez le nouveau à la famille.',
+        message: t('Mot de passe changé. Envoyez le nouveau à la famille.'),
       }))
       return { ok: true }
     } catch (error) {
@@ -1601,7 +1607,7 @@ function App() {
       }
 
       if (!relationAdded) {
-        setRelationFeedback({ loading: false, success: '', error: 'Lien déjà présent' })
+        setRelationFeedback({ loading: false, success: '', error: t('Lien déjà présent') })
         return
       }
 
@@ -1609,7 +1615,7 @@ function App() {
       const addedRelations = [...(draft.addedRelations || []), { sourcePersonId, targetPersonId, relationType }]
       editMode.updateDraft({ addedRelations })
       tree.bumpGraphRevision()
-      setRelationFeedback({ loading: false, success: 'Lien familial ajouté (démo locale)', error: '' })
+      setRelationFeedback({ loading: false, success: t('Lien familial ajouté (démo locale)'), error: '' })
       return
     }
 
@@ -1617,7 +1623,7 @@ function App() {
       const draft = editMode.restoreDraft()
       const addedRelations = [...(draft.addedRelations || []), { sourcePersonId, targetPersonId, relationType }]
       editMode.updateDraft({ addedRelations })
-      setRelationFeedback({ loading: false, success: 'Lien ajouté à la contribution', error: '' })
+      setRelationFeedback({ loading: false, success: t('Lien ajouté à la contribution'), error: '' })
       return
     }
 
@@ -1655,7 +1661,7 @@ function App() {
       editMode.updateDraft({ addedRelations })
 
       await refreshTreeAndKeepSelection(sourcePersonId, { relayout: true })
-      setRelationFeedback({ loading: false, success: 'Lien familial ajouté', error: '' })
+      setRelationFeedback({ loading: false, success: t('Lien familial ajouté'), error: '' })
     } catch (err) {
       setRelationFeedback({ loading: false, success: '', error: getAccountErrorMessage(err) })
       console.error('Failed to add relation:', err)
@@ -1701,7 +1707,7 @@ function App() {
       }
 
       if (!relationRemoved) {
-        setRelationFeedback({ loading: false, success: '', error: 'Relation introuvable pour suppression' })
+        setRelationFeedback({ loading: false, success: '', error: t('Relation introuvable pour suppression') })
         return
       }
 
@@ -1709,7 +1715,7 @@ function App() {
       const removedRelations = [...(draft.removedRelations || []), { sourcePersonId, targetPersonId, relationType }]
       editMode.updateDraft({ removedRelations })
       tree.bumpGraphRevision()
-      setRelationFeedback({ loading: false, success: 'Lien familial supprimé (démo locale)', error: '' })
+      setRelationFeedback({ loading: false, success: t('Lien familial supprimé (démo locale)'), error: '' })
       return
     }
 
@@ -1717,7 +1723,7 @@ function App() {
       const draft = editMode.restoreDraft()
       const removedRelations = [...(draft.removedRelations || []), { sourcePersonId, targetPersonId, relationType }]
       editMode.updateDraft({ removedRelations })
-      setRelationFeedback({ loading: false, success: 'Suppression de lien ajoutée à la contribution', error: '' })
+      setRelationFeedback({ loading: false, success: t('Suppression de lien ajoutée à la contribution'), error: '' })
       return
     }
 
@@ -1772,7 +1778,7 @@ function App() {
       }
 
       if (!relationRemoved) {
-        setRelationFeedback({ loading: false, success: '', error: 'Relation introuvable pour suppression' })
+        setRelationFeedback({ loading: false, success: '', error: t('Relation introuvable pour suppression') })
         return
       }
 
@@ -1781,7 +1787,7 @@ function App() {
       editMode.updateDraft({ removedRelations })
 
       await refreshTreeAndKeepSelection(sourcePersonId, { relayout: true })
-      setRelationFeedback({ loading: false, success: 'Lien familial supprimé', error: '' })
+      setRelationFeedback({ loading: false, success: t('Lien familial supprimé'), error: '' })
     } catch (err) {
       setRelationFeedback({ loading: false, success: '', error: getAccountErrorMessage(err) })
       console.error('Failed to remove relation:', err)
@@ -1898,7 +1904,7 @@ function App() {
           tree.setTreeContext(buildEmptyTreeContext())
           const notFound = error?.status === 404 || error?.payload?.error === 'tree_not_found'
           setTreeNotFound(notFound)
-          tree.setGateError(notFound ? "Cet arbre n'existe pas." : 'Impossible de résoudre ce lien de partage.')
+          tree.setGateError(notFound ? t("Cet arbre n'existe pas.") : t('Impossible de résoudre ce lien de partage.'))
           return
         }
       }
@@ -1957,7 +1963,7 @@ function App() {
               await openAccountTree(trees[0], userToken, { promptWizard: true })
               return
             } catch {
-              auth.setAccountError("Aucun arbre accessible n'a pu être chargé automatiquement.")
+              auth.setAccountError(t("Aucun arbre accessible n'a pu être chargé automatiquement."))
             }
             tree.setBootState('account')
             return
@@ -2216,7 +2222,7 @@ function App() {
   const handleCreateTreeFromWizard = async (payload) => {
     const token = auth.userAuth.token
     if (!token) {
-      return 'Session invalide ou expirée. Reconnectez-vous.'
+      return t('Session invalide ou expirée. Reconnectez-vous.')
     }
 
     setTreeWizardLoading(true)
@@ -2480,10 +2486,10 @@ function App() {
       {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
       {treeWelcomeVisible && (
         <div className="tree-created-prompt" role="status">
-          <strong>Votre arbre est cree.</strong>
-          Ajoutez un proche pour commencer - votre mere, votre pere, un frere. Il suffit d un prenom.
-          <button type="button" onClick={() => setTreeWelcomeVisible(false)} aria-label="Fermer">
-            Fermer
+          <strong>{t('Votre arbre est créé.')}</strong>
+          {t("Ajoutez un proche pour commencer, comme votre mère, votre père ou un frère. Il suffit d'un prénom.")}
+          <button type="button" onClick={() => setTreeWelcomeVisible(false)} aria-label={t('Fermer')}>
+            {t('Fermer')}
           </button>
         </div>
       )}
@@ -2493,7 +2499,7 @@ function App() {
           type="button"
           className="empty-tree-add"
           onClick={() => { editMode.activate(); handleOpenAddPerson() }}
-          aria-label="Ajouter une première personne"
+          aria-label={t('Ajouter une première personne')}
         >
           <svg className="empty-tree-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
@@ -2501,8 +2507,8 @@ function App() {
             <line x1="8" y1="12" x2="16" y2="12" />
           </svg>
           <div className="empty-tree-add-body">
-            <span className="empty-tree-add-title">Ajouter une personne</span>
-            <span className="empty-tree-add-hint">Commencer l'arbre</span>
+            <span className="empty-tree-add-title">{t('Ajouter une personne')}</span>
+            <span className="empty-tree-add-hint">{t("Commencer l'arbre")}</span>
           </div>
           <svg className="empty-tree-add-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="6 4 10 8 6 12" />
@@ -2592,7 +2598,7 @@ function App() {
       )}
       {contribSuccess && (
         <div className="contrib-success-toast" role="status">
-          Merci, c'est envoyé&nbsp;! Ça apparaîtra dans l'arbre une fois relu.
+          {t("Merci, c'est envoyé ! Ça apparaîtra dans l'arbre une fois relu.")}
         </div>
       )}
       {/* Navbar contextuelle */}

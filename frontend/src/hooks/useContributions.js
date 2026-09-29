@@ -6,6 +6,7 @@ import {
   batchAnnotations,
 } from '../api/treeApi'
 import { getAccountErrorMessage } from '../utils/errorMessages'
+import { t } from '../i18n/index.js'
 
 const EMPTY_CONTRIB_STATE = {
   visible: false,
@@ -86,7 +87,7 @@ export function useContributions({ canEditCurrentTree, canSubmitContribution, tr
 
   const handleSubmitContributionSession = async (payload) => {
     if (!treeContext.treeId || !treeContext.accessToken || !canSubmitContribution) {
-      return { ok: false, error: 'Soumission non autorisee.' }
+      return { ok: false, error: t('Soumission non autorisée.') }
     }
 
     setContribState((current) => ({

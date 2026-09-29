@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import './CreateMyTreeButton.css'
 import PzBusy from './PzBusy.jsx'
+import { t } from '../i18n/index.js'
 
 function normalizeSlug(input) {
   return input
@@ -36,7 +37,7 @@ const CreateMyTreeButton = ({ onCreateTree, loading }) => {
     setError('')
     const result = await onCreateTree(name.trim())
     if (result !== null && result !== undefined) {
-      setError(typeof result === 'string' ? result : 'Erreur lors de la création. Essayez un autre nom.')
+      setError(typeof result === 'string' ? result : t('Erreur lors de la création. Essayez un autre nom.'))
     }
   }
 
@@ -44,22 +45,22 @@ const CreateMyTreeButton = ({ onCreateTree, loading }) => {
     <>
       {!open && (
         <button className="cmt-pill" type="button" onClick={handleOpen}>
-          Créer mon arbre
+          {t('Créer mon arbre')}
         </button>
       )}
 
       {open && (
         <div className="cmt-panel">
           <div className="cmt-panel-header">
-            <span className="cmt-panel-title">Créer votre arbre dès maintenant</span>
-            <button type="button" className="cmt-panel-close" onClick={handleClose} aria-label="Fermer">
+            <span className="cmt-panel-title">{t('Créer votre arbre dès maintenant')}</span>
+            <button type="button" className="cmt-panel-close" onClick={handleClose} aria-label={t('Fermer')}>
               ✕
             </button>
           </div>
           <div className="cmt-panel-body">
             <form onSubmit={handleSubmit}>
               <label className="cmt-label" htmlFor="firstTreeName">
-                Nom de la famille
+                {t('Nom de la famille')}
               </label>
               <input
                 id="firstTreeName"
@@ -69,17 +70,17 @@ const CreateMyTreeButton = ({ onCreateTree, loading }) => {
                 maxLength={120}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex : Famille Martin"
+                placeholder={t('Ex : Famille Martin')}
                 required
               />
               {slug && (
                 <div className="cmt-slug-preview">
-                  Adresse : <code>{slug}</code>
+                  {t('Adresse :')} <code>{slug}</code>
                 </div>
               )}
               {error && <div className="cmt-error">{error}</div>}
               <button type="submit" className="cmt-btn-create" disabled={!canSubmit}>
-                <PzBusy busy={loading} busyLabel="Création de l'arbre">Créer l'arbre</PzBusy>
+                <PzBusy busy={loading} busyLabel={t("Création de l'arbre")}>{t("Créer l'arbre")}</PzBusy>
               </button>
             </form>
           </div>

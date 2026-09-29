@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ImagePlus } from 'lucide-react'
 import './TreeCreationWizard.css'
 import PzBusy from './PzBusy.jsx'
+import { t } from '../i18n/index.js'
 
 const INITIAL_STATE = {
   treeName: '',
@@ -9,6 +10,12 @@ const INITIAL_STATE = {
   selfLastName: '',
   selfBirthYear: '',
   photoFile: null,
+}
+
+// Titre traduit d'un bloc : le passage entre <em> et </em> garde son italique
+function withEmphasis(text) {
+  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
+  return <>{before}<em>{emphasized}</em>{after}</>
 }
 
 function TreeCreationWizard({
@@ -77,21 +84,21 @@ function TreeCreationWizard({
   return (
     <div className="pz-overlay tree-wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="treeWizardTitle">
       <div className="pz-modal tree-wizard-card">
-        <div className="tw-steps" aria-label={`Étape ${step} sur 2`}>
+        <div className="tw-steps" aria-label={t('Étape {step} sur 2', { step })}>
           <span className={`tw-step ${step >= 1 ? 'is-on' : ''}`} />
           <span className={`tw-step ${step >= 2 ? 'is-on' : ''}`} />
-          <span className="pz-small">Étape {step} sur 2</span>
+          <span className="pz-small">{t('Étape {step} sur 2', { step })}</span>
         </div>
 
         {step === 1 ? (
           <>
             <div className="pz-modal-head">
-              <h2 id="treeWizardTitle" className="pz-title">Comment s'appelle <em>votre famille</em> ?</h2>
-              <p className="pz-sub">Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.</p>
+              <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t("Comment s'appelle <em>votre famille</em> ?"))}</h2>
+              <p className="pz-sub">{t("Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.")}</p>
             </div>
 
             <div className="pz-field">
-              <label htmlFor="wizardTreeName">Nom de la famille</label>
+              <label htmlFor="wizardTreeName">{t('Nom de la famille')}</label>
               <input
                 id="wizardTreeName"
                 type="text"
@@ -100,30 +107,30 @@ function TreeCreationWizard({
                 value={form.treeName}
                 onChange={(event) => updateField('treeName', event.target.value)}
                 onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handleContinue() } }}
-                placeholder="Famille Martin"
+                placeholder={t('Famille Martin')}
                 required
               />
             </div>
 
             <div className="pz-modal-actions">
               <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
-                Fermer
+                {t('Fermer')}
               </button>
               <button type="button" className="pz-btn pz-btn--primary" onClick={handleContinue} disabled={!canContinue}>
-                Continuer
+                {t('Continuer')}
               </button>
             </div>
           </>
         ) : (
           <form onSubmit={handleCreate} className="tw-form">
             <div className="pz-modal-head">
-              <h2 id="treeWizardTitle" className="pz-title">Commencez <em>par vous</em></h2>
-              <p className="pz-sub">L'arbre « {form.treeName.trim()} » démarre avec votre fiche. Vous ajouterez les autres ensuite.</p>
+              <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Commencez <em>par vous</em>'))}</h2>
+              <p className="pz-sub">{t("L'arbre « {name} » démarre avec votre fiche. Vous ajouterez les autres ensuite.", { name: form.treeName.trim() })}</p>
             </div>
 
             <div className="pz-row2">
               <div className="pz-field">
-                <label htmlFor="wizardSelfFirstName">Votre prénom</label>
+                <label htmlFor="wizardSelfFirstName">{t('Votre prénom')}</label>
                 <input
                   id="wizardSelfFirstName"
                   type="text"
@@ -135,7 +142,7 @@ function TreeCreationWizard({
                 />
               </div>
               <div className="pz-field">
-                <label htmlFor="wizardSelfLastName">Votre nom</label>
+                <label htmlFor="wizardSelfLastName">{t('Votre nom')}</label>
                 <input
                   id="wizardSelfLastName"
                   type="text"
@@ -149,7 +156,7 @@ function TreeCreationWizard({
             </div>
 
             <div className="pz-field">
-              <label htmlFor="wizardSelfBirthYear">Année de naissance <span className="tw-optional">facultatif</span></label>
+              <label htmlFor="wizardSelfBirthYear">{t('Année de naissance')} <span className="tw-optional">{t('facultatif')}</span></label>
               <input
                 id="wizardSelfBirthYear"
                 type="number"
@@ -163,12 +170,12 @@ function TreeCreationWizard({
             </div>
 
             <div className="pz-field">
-              <span className="pz-label">Votre photo <span className="tw-optional">facultatif</span></span>
+              <span className="pz-label">{t('Votre photo')} <span className="tw-optional">{t('facultatif')}</span></span>
               <label htmlFor="wizardSelfPhoto" className="tw-photo">
                 <span className="tw-photo-icon" aria-hidden="true"><ImagePlus size={20} strokeWidth={1.8} /></span>
                 <span className="tw-photo-text">
-                  <strong>{form.photoFile ? form.photoFile.name : 'Choisir une photo'}</strong>
-                  <span>{form.photoFile ? 'Cliquez pour en choisir une autre' : 'Un portrait où l\'on voit bien votre visage'}</span>
+                  <strong>{form.photoFile ? form.photoFile.name : t('Choisir une photo')}</strong>
+                  <span>{form.photoFile ? t('Cliquez pour en choisir une autre') : t("Un portrait où l'on voit bien votre visage")}</span>
                 </span>
               </label>
               <input
@@ -184,10 +191,10 @@ function TreeCreationWizard({
 
             <div className="pz-modal-actions">
               <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setStep(1)} disabled={loading}>
-                Retour
+                {t('Retour')}
               </button>
               <button type="submit" className="pz-btn pz-btn--primary" disabled={!canCreate}>
-                <PzBusy busy={loading} busyLabel="Création de l'arbre">Créer mon arbre</PzBusy>
+                <PzBusy busy={loading} busyLabel={t("Création de l'arbre")}>{t('Créer mon arbre')}</PzBusy>
               </button>
             </div>
           </form>

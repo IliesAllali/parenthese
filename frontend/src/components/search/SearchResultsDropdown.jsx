@@ -1,4 +1,14 @@
 import './SearchResultsDropdown.css'
+import { t } from '../../i18n/index.js'
+
+// Raison du match renvoyée par usePersonSearch (valeur française), traduite à l'affichage
+const REASON_LABELS = {
+  Nom: t('Nom'),
+  Profession: t('Profession'),
+  Lieu: t('Lieu'),
+  Date: t('Date'),
+  Contenu: t('Contenu'),
+}
 
 /**
  * Dropdown de résultats de recherche
@@ -25,7 +35,7 @@ function SearchResultsDropdown({
     return (
       <div className="search-results-dropdown">
         <div className="search-result-empty">
-          Personne ne s'appelle « {query} » dans cet arbre
+          {t("Personne ne s'appelle « {query} » dans cet arbre", { query })}
         </div>
       </div>
     )
@@ -61,7 +71,7 @@ function SearchResultsDropdown({
               </div>
               <div className="search-result-meta">
                 {person.birthYear && <span className="search-result-year">{person.birthYear}{person.deathYear ? `–${person.deathYear}` : ''}</span>}
-                {reason && reason.toLowerCase() !== 'nom' && <span className="search-result-badge">{reason}</span>}
+                {reason && reason.toLowerCase() !== 'nom' && <span className="search-result-badge">{REASON_LABELS[reason] || reason}</span>}
                 {matchDetail && matchDetail !== `${person.firstName} ${person.lastName}` && (
                   <span className="search-result-match-detail">{matchDetail}</span>
                 )}
@@ -73,7 +83,7 @@ function SearchResultsDropdown({
 
       {results.length > 10 && (
         <div className="search-results-footer">
-          {results.length - 10} autres résultats, précisez la recherche
+          {t('{n} autres résultats, précisez la recherche', { n: results.length - 10 })}
         </div>
       )}
     </div>

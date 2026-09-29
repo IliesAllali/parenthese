@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { ZoomIn, ZoomOut } from 'lucide-react'
+import { t } from '../i18n/index.js'
 import './ZoomControl.css'
 
 const TRACK_HEIGHT = 120
@@ -138,7 +139,7 @@ export default function ZoomControl({ zoomApiRef }) {
       <button
         className="zoom-button"
         onClick={stepZoom}
-        aria-label="Contrôle du zoom"
+        aria-label={t('Contrôle du zoom')}
       >
         <ZoomIn size={20} strokeWidth={1.5} className="zoom-btn-icon" />
       </button>

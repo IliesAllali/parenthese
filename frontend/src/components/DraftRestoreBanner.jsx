@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import './DraftRestoreBanner.css'
+import { t } from '../i18n/index.js'
 
 /**
  * Formatage relatif du timestamp
@@ -13,10 +14,10 @@ function formatRelativeTime(timestamp) {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return "il y a quelques secondes"
-  if (minutes < 60) return `il y a ${minutes} minute${minutes > 1 ? 's' : ''}`
-  if (hours < 24) return `il y a ${hours} heure${hours > 1 ? 's' : ''}`
-  return `il y a ${days} jour${days > 1 ? 's' : ''}`
+  if (minutes < 1) return t('il y a quelques secondes')
+  if (minutes < 60) return minutes > 1 ? t('il y a {n} minutes', { n: minutes }) : t('il y a {n} minute', { n: minutes })
+  if (hours < 24) return hours > 1 ? t('il y a {n} heures', { n: hours }) : t('il y a {n} heure', { n: hours })
+  return days > 1 ? t('il y a {n} jours', { n: days }) : t('il y a {n} jour', { n: days })
 }
 
 /**
@@ -40,7 +41,7 @@ function DraftRestoreBanner({ visible, draftTimestamp, onRestore, onDiscard }) {
     <div className="draft-restore-banner" role="alert" aria-live="polite">
       <div className="draft-restore-content">
         <span className="draft-restore-text">
-          Des modifications non enregistrées vous attendent
+          {t('Des modifications non enregistrées vous attendent')}
           {timeAgo && <span className="draft-restore-time">{timeAgo}</span>}
         </span>
 
@@ -51,7 +52,7 @@ function DraftRestoreBanner({ visible, draftTimestamp, onRestore, onDiscard }) {
             onClick={onRestore}
           >
             <RotateCcw size={14} strokeWidth={2} />
-            Restaurer
+            {t('Restaurer')}
           </button>
 
           <button
@@ -60,7 +61,7 @@ function DraftRestoreBanner({ visible, draftTimestamp, onRestore, onDiscard }) {
             onClick={onDiscard}
           >
             <Trash2 size={14} strokeWidth={2} />
-            Ignorer
+            {t('Ignorer')}
           </button>
         </div>
       </div>

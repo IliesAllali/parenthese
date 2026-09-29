@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import PzBusy from './PzBusy.jsx'
+import { t } from '../i18n/index.js'
 
 const EMPTY_FORM = {
   selfFirstName: '',
@@ -67,18 +68,18 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
         <div className="wizard-persons">
 
           <div className="wizard-person">
-            <div className="wizard-person-label wizard-person-label--self">Vous</div>
+            <div className="wizard-person-label wizard-person-label--self">{t('Vous')}</div>
             <div className="wizard-person-fields">
               <input
                 type="text"
-                placeholder="Prénom"
+                placeholder={t('Prénom')}
                 value={form.selfFirstName}
                 onChange={(e) => updateField('selfFirstName', e.target.value)}
                 required
               />
               <input
                 type="text"
-                placeholder="Nom"
+                placeholder={t('Nom')}
                 value={form.selfLastName}
                 onChange={(e) => updateField('selfLastName', e.target.value)}
                 required
@@ -87,7 +88,7 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
             <input
               className="wizard-year"
               type="number"
-              placeholder="Année de naissance (optionnel)"
+              placeholder={t('Année de naissance (optionnel)')}
               min="1000"
               max="2999"
               value={form.selfBirthYear}
@@ -96,18 +97,18 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
           </div>
 
           <div className="wizard-person">
-            <div className="wizard-person-label">Parent 1</div>
+            <div className="wizard-person-label">{t('Parent 1')}</div>
             <div className="wizard-person-fields">
               <input
                 type="text"
-                placeholder="Prénom"
+                placeholder={t('Prénom')}
                 value={form.parent1FirstName}
                 onChange={(e) => updateField('parent1FirstName', e.target.value)}
                 required
               />
               <input
                 type="text"
-                placeholder="Nom"
+                placeholder={t('Nom')}
                 value={form.parent1LastName}
                 onChange={(e) => updateField('parent1LastName', e.target.value)}
                 required
@@ -116,18 +117,18 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
           </div>
 
           <div className="wizard-person">
-            <div className="wizard-person-label">Parent 2</div>
+            <div className="wizard-person-label">{t('Parent 2')}</div>
             <div className="wizard-person-fields">
               <input
                 type="text"
-                placeholder="Prénom"
+                placeholder={t('Prénom')}
                 value={form.parent2FirstName}
                 onChange={(e) => updateField('parent2FirstName', e.target.value)}
                 required
               />
               <input
                 type="text"
-                placeholder="Nom"
+                placeholder={t('Nom')}
                 value={form.parent2LastName}
                 onChange={(e) => updateField('parent2LastName', e.target.value)}
                 required
@@ -140,11 +141,11 @@ const InitialTreeWizard = ({ loading, errorMessage, onSubmit, onSkip }) => {
         {errorMessage && <div className="wizard-error">{errorMessage}</div>}
 
         <button type="submit" disabled={!canSubmit}>
-          <PzBusy busy={loading} busyLabel="Création en cours">Créer les 3 personnes</PzBusy>
+          <PzBusy busy={loading} busyLabel={t('Création en cours')}>{t('Créer les 3 personnes')}</PzBusy>
         </button>
 
         <button type="button" className="ghost" onClick={onSkip} disabled={loading}>
-          Plus tard
+          {t('Plus tard')}
         </button>
 
       </form>

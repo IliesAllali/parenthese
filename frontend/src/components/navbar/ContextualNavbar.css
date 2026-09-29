@@ -364,3 +364,6 @@
   /* Les messages (merci, ajout) passent au-dessus de la barre, en gros */
   body:has(.contextual-navbar--family) .contrib-success-toast { bottom: 108px; font-size: 15px; }
 }
+
+/* Choix de la langue dans le menu « Plus » de la famille : même gabarit que les autres lignes */
+.nav-more-menu .pz-lang-row { min-height: 48px; padding-left: 14px; font-size: 15.5px; }

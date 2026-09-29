@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react'
+import { t } from '../../i18n/index.js'
 import './DropTrashZone.css'
 
 export default function DropTrashZone({ visible, isOver }) {
@@ -14,7 +15,7 @@ export default function DropTrashZone({ visible, isOver }) {
         />
       </div>
       <span className="drop-trash-zone__label">
-        {isOver ? 'Relâcher pour supprimer' : 'Glisser ici pour supprimer'}
+        {isOver ? t('Relâcher pour supprimer') : t('Glisser ici pour supprimer')}
       </span>
     </div>
   )

@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.js'
 import './DrawingOptions.css'
 
 const COLORS = [
@@ -6,16 +7,16 @@ const COLORS = [
 ]
 
 const BRUSH_WIDTHS = [
-  { value: 2, label: 'Fin' },
-  { value: 5, label: 'Moyen' },
-  { value: 10, label: 'Epais' },
+  { value: 2, label: t('Fin') },
+  { value: 5, label: t('Moyen') },
+  { value: 10, label: t('Épais') },
 ]
 
 export default function DrawingOptions({ currentStyle, onStyleChange }) {
   return (
     <div className="drawing-options">
       <div className="drawing-options__section">
-        <span className="drawing-options__label">Couleur</span>
+        <span className="drawing-options__label">{t('Couleur')}</span>
         <div className="drawing-options__colors">
           {COLORS.map((color) => (
             <button
@@ -30,7 +31,7 @@ export default function DrawingOptions({ currentStyle, onStyleChange }) {
       </div>
 
       <div className="drawing-options__section">
-        <span className="drawing-options__label">Epaisseur</span>
+        <span className="drawing-options__label">{t('Épaisseur')}</span>
         <div className="drawing-options__widths">
           {BRUSH_WIDTHS.map((bw) => (
             <button

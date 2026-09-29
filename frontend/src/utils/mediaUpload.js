@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js'
+
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 export const MAX_FILE_BYTES = 20 * 1024 * 1024
 
@@ -66,23 +68,23 @@ export function getUploadMimeType(file, mediaType) {
 export function validateMediaFile(file, mediaType, options = {}) {
   if (mediaType === 'citation') {
     const citationText = String(options.citationText || '').trim()
-    return citationText ? '' : 'Saisissez le texte de la citation.'
+    return citationText ? '' : t('Saisissez le texte de la citation.')
   }
 
   if (!file) {
-    return 'Selectionnez un fichier.'
+    return t('Sélectionnez un fichier.')
   }
 
   if (!Number.isFinite(file.size) || file.size <= 0) {
-    return 'Fichier invalide.'
+    return t('Fichier invalide.')
   }
 
   if (file.size > MAX_FILE_BYTES) {
-    return 'Fichier trop volumineux (max 20 Mo).'
+    return t('Fichier trop volumineux (max 20 Mo).')
   }
 
   if (mediaType === 'photo' && file.size > MAX_IMAGE_BYTES) {
-    return 'Image trop volumineuse (max 5 Mo).'
+    return t('Image trop volumineuse (max 5 Mo).')
   }
 
   return ''

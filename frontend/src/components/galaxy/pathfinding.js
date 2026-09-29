@@ -1,4 +1,5 @@
 import { coupleBarMeta } from './elkLayout'
+import { t } from '../../i18n/index.js'
 
 // ============================================================
 // BFS — chemin le plus court entre deux personnes
@@ -91,49 +92,49 @@ export function computeRelationshipLabel(edgePath) {
   }
 
   // Conjoint direct
-  if (hasSpouse && ups === 0 && downs === 0) return 'Conjoint(e)'
+  if (hasSpouse && ups === 0 && downs === 0) return t('Conjoint(e)')
 
   // In-laws courants
   if (hasSpouse) {
-    if (ups === 1 && downs === 0) return 'Beau-parent'
-    if (ups === 0 && downs === 1) return 'Bel-enfant'
-    if (ups === 1 && downs === 1) return 'Beau-frère/sœur'
+    if (ups === 1 && downs === 0) return t('Beau-parent')
+    if (ups === 0 && downs === 1) return t('Bel-enfant')
+    if (ups === 1 && downs === 1) return t('Beau-frère/sœur')
   }
 
   // Ascendants directs
   let label = ''
   if (downs === 0 && ups > 0) {
-    if (ups === 1) label = 'Parent'
-    else if (ups === 2) label = 'Grand-parent'
-    else if (ups === 3) label = 'Arrière-grand-parent'
-    else label = `Aïeul(e) ${ups}e gén.`
+    if (ups === 1) label = t('Parent')
+    else if (ups === 2) label = t('Grand-parent')
+    else if (ups === 3) label = t('Arrière-grand-parent')
+    else label = t('Aïeul(e) {n}e gén.', { n: ups })
   }
   // Descendants directs
   else if (ups === 0 && downs > 0) {
-    if (downs === 1) label = 'Enfant'
-    else if (downs === 2) label = 'Petit-enfant'
-    else if (downs === 3) label = 'Arrière-petit-enfant'
-    else label = `Descendant(e) ${downs}e gén.`
+    if (downs === 1) label = t('Enfant')
+    else if (downs === 2) label = t('Petit-enfant')
+    else if (downs === 3) label = t('Arrière-petit-enfant')
+    else label = t('Descendant(e) {n}e gén.', { n: downs })
   }
   // Fratrie
-  else if (ups === 1 && downs === 1) { label = 'Frère/Sœur' }
+  else if (ups === 1 && downs === 1) { label = t('Frère/Sœur') }
   // Oncle / Tante
-  else if (ups === 2 && downs === 1) { label = 'Oncle/Tante' }
-  else if (ups === 3 && downs === 1) { label = 'Grand-oncle/tante' }
+  else if (ups === 2 && downs === 1) { label = t('Oncle/Tante') }
+  else if (ups === 3 && downs === 1) { label = t('Grand-oncle/tante') }
   // Neveu / Nièce
-  else if (ups === 1 && downs === 2) { label = 'Neveu/Nièce' }
-  else if (ups === 1 && downs === 3) { label = 'Petit-neveu/nièce' }
+  else if (ups === 1 && downs === 2) { label = t('Neveu/Nièce') }
+  else if (ups === 1 && downs === 3) { label = t('Petit-neveu/nièce') }
   // Cousins
   else if (ups >= 2 && downs >= 2) {
     const degree = Math.min(ups, downs) - 1
     const removed = Math.abs(ups - downs)
-    if (degree === 1 && removed === 0) label = 'Cousin(e) germain(e)'
-    else if (degree === 1) label = 'Petit-cousin(e)'
-    else if (removed === 0) label = `Cousin(e) ${degree}e degré`
-    else label = `Cousin(e) éloigné(e)`
+    if (degree === 1 && removed === 0) label = t('Cousin(e) germain(e)')
+    else if (degree === 1) label = t('Petit-cousin(e)')
+    else if (removed === 0) label = t('Cousin(e) {n}e degré', { n: degree })
+    else label = t('Cousin(e) éloigné(e)')
   }
-  else { label = `${ups + downs} liens` }
+  else { label = t('{n} liens', { n: ups + downs }) }
 
-  if (hasSpouse && label) label += ' par alliance'
+  if (hasSpouse && label) label = t('{label} par alliance', { label })
   return label
 }
