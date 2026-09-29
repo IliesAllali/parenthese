@@ -3,6 +3,7 @@ import { analytics } from './analytics.js'
 import { getEntranceProgress, seededFloat } from './heroGraphMath.js'
 import PzMark from './PzMark.jsx'
 import LogoLockup from './LogoLockup.jsx'
+import { COPY, withAppQuery } from './i18n.js'
 
 // ─── Design atoms ─────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ const WAVE = [38, 62, 48, 80, 56, 92, 70, 44, 66, 86, 52, 74, 40, 60, 90, 58, 46
 
 // ─── Mini graphe hero (noeuds interactifs) ───────────────────────────────────
 
-function HeroGraph({ className = '' }) {
+function HeroGraph({ className = '', label }) {
   const canvasRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -760,7 +761,7 @@ function HeroGraph({ className = '' }) {
       <canvas
         ref={canvasRef}
         className="block w-full h-[40svh] sm:h-[clamp(420px,92vw,560px)] lg:h-[clamp(480px,36vw,560px)]"
-        aria-label="Arbre de famille animé"
+        aria-label={label}
       />
     </div>
   )
@@ -768,17 +769,17 @@ function HeroGraph({ className = '' }) {
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function Header({ onCta, elevated }) {
+function Header({ t, onCta, elevated }) {
   return (
     <header className={`site-nav${elevated ? ' is-elevated' : ''}`}>
       <div className="wrap nav-in">
-        <a href="/" aria-label="Parenthèse, accueil"><LogoLockup height={22} /></a>
+        <a href={t.home} aria-label={t.logoHome}><LogoLockup height={22} /></a>
         <nav aria-label="Sections">
-          <a href="#comment">Comment ça marche</a>
-          <a href="#demo">Un exemple</a>
-          <a href="/donnees-et-vie-privee/">Vie privée</a>
+          <a href="#comment">{t.nav.how}</a>
+          <a href="#demo">{t.nav.demo}</a>
+          {t.nav.privacy && <a href={t.privacyHref}>{t.nav.privacy}</a>}
         </nav>
-        <button type="button" onClick={onCta} className="btn p sm">Créer mon arbre</button>
+        <button type="button" onClick={onCta} className="btn p sm">{t.cta}</button>
       </div>
     </header>
   )
@@ -786,7 +787,7 @@ function Header({ onCta, elevated }) {
 
 // ─── Démo inline ──────────────────────────────────────────────────────────────
 
-function InlineDemo() {
+function InlineDemo({ t, locale }) {
   const [active, setActive] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [shouldLoad, setShouldLoad] = useState(false)
@@ -826,9 +827,9 @@ function InlineDemo() {
     <section id="demo" ref={sectionRef} className="sec sec-demo">
       <div className="wrap sec-in">
         <div className="head c" data-reveal>
-          <span className="eyebrow">Un exemple</span>
-          <h2 className="t-d2">Un arbre généalogique <em className="s">avec photos, à explorer</em></h2>
-          <p className="lede">Cliquez sur un visage pour ouvrir sa fiche. C'est un arbre de démonstration, sans compte à créer.</p>
+          <span className="eyebrow">{t.demo.eyebrow}</span>
+          <h2 className="t-d2">{t.demo.title[0]}<em className="s">{t.demo.title[1]}</em></h2>
+          <p className="lede">{t.demo.lede}</p>
         </div>
 
         <div className="demo-frame" data-reveal>
@@ -841,13 +842,13 @@ function InlineDemo() {
             {!loaded && (
               <div className="demo-wait" role="status">
                 <PzMark state={shouldLoad ? 'loading' : 'rest'} />
-                <span className={shouldLoad ? 'sr-only' : undefined}>{shouldLoad ? 'Chargement de la démo' : 'Démo interactive'}</span>
+                <span className={shouldLoad ? 'sr-only' : undefined}>{shouldLoad ? t.demo.loading : t.demo.idle}</span>
               </div>
             )}
 
             <iframe
-              src={shouldLoad ? 'https://app.parenthese.io/?embed' : undefined}
-              title="Démo Parenthèse"
+              src={shouldLoad ? withAppQuery('https://app.parenthese.io/?embed', locale) : undefined}
+              title={t.demo.frameTitle}
               loading="lazy"
               className="w-full h-full border-0"
               sandbox="allow-scripts allow-same-origin"
@@ -870,9 +871,9 @@ function InlineDemo() {
                 onClick={() => setActive(true)}
                 onKeyDown={(e) => e.key === 'Enter' && setActive(true)}
                 className="demo-enter"
-                aria-label="Entrer dans la démo"
+                aria-label={t.demo.enter}
               >
-                <span className="btn w">Entrer dans la démo</span>
+                <span className="btn w">{t.demo.enter}</span>
               </div>
             )}
           </div>
@@ -887,42 +888,11 @@ function InlineDemo() {
 // Les CTA mènent à la création de compte dans l'app
 const APP_SIGNUP_URL = 'https://app.parenthese.io/?account=register&source=landing'
 
-const GUIDES = [
-  {
-    href: '/comment-faire-un-arbre-genealogique/',
-    title: 'Comment faire un arbre généalogique',
-    text: "Partir de soi, interroger les aînés, trouver les actes gratuitement en mairie et aux archives, puis faire compléter la famille.",
-  },
-  {
-    href: '/application-arbre-genealogique/',
-    title: "Quelle application d'arbre généalogique choisir ?",
-    text: 'Geneanet, MyHeritage, Filae, FamilySearch, Parenthèse. Rechercher des ancêtres et garder une mémoire vivante ne sont pas le même besoin.',
-  },
-  {
-    href: '/arbre-genealogique-avec-photos/',
-    title: 'Faire un arbre généalogique avec des photos',
-    text: 'Rassembler, numériser avec un téléphone, nommer et dater, puis ajouter les vidéos et les voix.',
-  },
-  {
-    href: '/cousinade/',
-    title: 'Organiser une cousinade',
-    text: 'Retrouver toutes les branches, fixer la date, collecter les souvenirs le jour même, et garder une trace que tout le monde retrouve.',
-  },
-  {
-    href: '/raconter-histoire-de-famille/',
-    title: "Raconter l'histoire de sa famille",
-    text: "Par qui commencer, les questions qui font parler, enregistrer plutôt qu'écrire, et où garder ce qu'on a recueilli.",
-  },
-  {
-    href: '/arbre-genealogique-a-remplir/',
-    title: 'Arbre généalogique à remplir',
-    text: "Cinq modèles vierges à imprimer en PDF, de trois à cinq générations, avec cases photo ou arbre dessiné. Et comment les remplir.",
-  },
-]
 
 const readSource = () => new URLSearchParams(window.location.search).get('source') || 'direct'
 
-export default function App() {
+export default function App({ locale = 'fr' }) {
+  const t = COPY[locale]
   const [headerElevated, setHeaderElevated] = useState(false)
   const [sharedReturnUrl, setSharedReturnUrl] = useState('')
   const scrollMilestonesRef = useRef({ half: false, full: false })
@@ -936,6 +906,7 @@ export default function App() {
     source: readSource(),
     referrer: document.referrer || 'none',
     viewport: window.innerWidth < 768 ? 'mobile' : 'desktop',
+    lang: locale,
     ...extra,
   })
 
@@ -1008,51 +979,46 @@ export default function App() {
   const goToSignup = (placement = 'hero') => {
     analytics.capture('hero_cta_clicked', buildEventProps({ placement }))
     analytics.capture('signup_cta_clicked', buildEventProps({ placement }))
-    window.location.assign(APP_SIGNUP_URL)
+    window.location.assign(withAppQuery(APP_SIGNUP_URL, locale))
   }
 
   return (
     <div className="min-h-screen">
 
-      <Header onCta={() => goToSignup('header')} elevated={headerElevated} />
+      <Header t={t} onCta={() => goToSignup('header')} elevated={headerElevated} />
       <main>
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="hero">
         <div className="wrap hero-in">
-          <HeroGraph className="order-1 lg:order-2" />
+          <HeroGraph className="order-1 lg:order-2" label={t.heroCanvas} />
 
           <div className="hero-txt order-2 lg:order-1">
-            <span className="pill rise"><i />Arbre généalogique gratuit, en ligne</span>
+            <span className="pill rise"><i />{t.hero.pill}</span>
             <h1 className="t-d1 rise" style={{ animationDelay: '80ms' }}>
-              L'histoire de votre famille, racontée par ceux qui <em className="s">l'ont vécue</em>
+              {t.hero.title[0]}<em className="s">{t.hero.title[1]}</em>
             </h1>
             <p className="lede rise" style={{ animationDelay: '160ms' }}>
-              {source === 'app-shared'
-                ? "Vous venez de découvrir Parenthèse à travers le lien d'une famille. Créez la vôtre en quelques minutes."
-                : "Créez l'arbre généalogique de votre famille en ligne, avec des photos, des voix et des souvenirs. Un lien suffit pour que toute la famille le consulte."}
+              {source === 'app-shared' ? t.hero.ledeShared : t.hero.lede}
             </p>
             <div className="ctas rise" style={{ animationDelay: '240ms' }}>
-              <button type="button" onClick={() => goToSignup('hero')} className="btn p">Créer mon arbre</button>
-              <a href="#demo" className="btn s">Voir un arbre</a>
+              <button type="button" onClick={() => goToSignup('hero')} className="btn p">{t.cta}</button>
+              <a href="#demo" className="btn s">{t.hero.secondary}</a>
             </div>
           </div>
         </div>
       </section>
 
       <div className="trust">
-        <span>Gratuit, et le restera</span>
-        <span>Lecture par lien, sans compte</span>
-        <span>Code ouvert</span>
-        <span>Vos données restent les vôtres</span>
+        {t.trust.map((item) => <span key={item}>{item}</span>)}
       </div>
 
       {/* ─── COMMENT ÇA MARCHE ─────────────────────────────────────── */}
       <section id="comment" className="sec">
         <div className="wrap sec-in">
           <div className="head c" data-reveal>
-            <span className="eyebrow">Comment ça marche</span>
-            <h2 className="t-d2">Créer un arbre généalogique, <em className="s">en trois gestes</em></h2>
+            <span className="eyebrow">{t.how.eyebrow}</span>
+            <h2 className="t-d2">{t.how.title[0]}<em className="s">{t.how.title[1]}</em></h2>
           </div>
           <div className="steps" data-reveal>
             <div className="card step">
@@ -1064,8 +1030,8 @@ export default function App() {
                   <span className="yr">1941</span>
                 </div>
               </div>
-              <h3 className="t-h3">Ajoutez un visage</h3>
-              <p className="t-small">Un prénom, une photo si vous en avez une. Le reste peut attendre.</p>
+              <h3 className="t-h3">{t.how.steps[0].title}</h3>
+              <p className="t-small">{t.how.steps[0].text}</p>
             </div>
             <div className="card step">
               <span className="num">2</span>
@@ -1078,76 +1044,76 @@ export default function App() {
                   <span>1:42</span>
                 </div>
               </div>
-              <h3 className="t-h3">Racontez</h3>
-              <p className="t-small">Une anecdote, une photo de vacances, sa voix au téléphone. Chacun ajoute ce qu'il sait.</p>
+              <h3 className="t-h3">{t.how.steps[1].title}</h3>
+              <p className="t-small">{t.how.steps[1].text}</p>
             </div>
             <div className="card step">
               <span className="num">3</span>
               <div className="vis">
-                <div className="toast"><b style={{ backgroundImage: 'url(/hero/photos/marc-56.webp)' }} />Marc a ouvert l'arbre</div>
+                <div className="toast"><b style={{ backgroundImage: 'url(/hero/photos/marc-56.webp)' }} />{t.how.toast}</div>
               </div>
-              <h3 className="t-h3">Partagez le lien</h3>
-              <p className="t-small">La famille ouvre l'arbre depuis un message. Pas de compte, pas d'appli à installer.</p>
+              <h3 className="t-h3">{t.how.steps[2].title}</h3>
+              <p className="t-small">{t.how.steps[2].text}</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ─── DÉMO INLINE ────────────────────────────────────────────── */}
-      <InlineDemo />
+      <InlineDemo t={t} locale={locale} />
 
       {/* ─── POUR QUI ───────────────────────────────────────────────── */}
       <section className="sec">
         <div className="wrap sec-in">
           <div className="quote" data-reveal>
             <div className="head">
-              <span className="eyebrow">Pour qui</span>
-              <h2 className="t-d2">Du petit-fils de 8 ans <em className="s">à la grand-mère de 80</em></h2>
-              <p className="lede">Parenthèse se lit comme un album de famille. On reconnaît un visage, on clique, on écoute.</p>
+              <span className="eyebrow">{t.who.eyebrow}</span>
+              <h2 className="t-d2">{t.who.title[0]}<em className="s">{t.who.title[1]}</em></h2>
+              <p className="lede">{t.who.lede}</p>
             </div>
             <div className="gens" aria-hidden="true">
-              <figure><div className="ph" style={{ '--s': 74, backgroundImage: 'url(/hero/photos/lya-14.webp)' }} /><figcaption>Lya, 14 ans</figcaption></figure>
-              <figure><div className="ph" style={{ '--s': 96, backgroundImage: 'url(/hero/photos/women-44.webp)' }} /><figcaption>Camille, 39 ans</figcaption></figure>
-              <figure><div className="ph" style={{ '--s': 118, backgroundImage: 'url(/hero/photos/marc-56.webp)' }} /><figcaption>Marc, 56 ans</figcaption></figure>
-              <figure><div className="ph" style={{ '--s': 140, backgroundImage: 'url(/hero/photos/jeanne-85.webp)' }} /><figcaption>Jeanne, 85 ans</figcaption></figure>
+              <figure><div className="ph" style={{ '--s': 74, backgroundImage: 'url(/hero/photos/lya-14.webp)' }} /><figcaption>{t.who.captions[0]}</figcaption></figure>
+              <figure><div className="ph" style={{ '--s': 96, backgroundImage: 'url(/hero/photos/women-44.webp)' }} /><figcaption>{t.who.captions[1]}</figcaption></figure>
+              <figure><div className="ph" style={{ '--s': 118, backgroundImage: 'url(/hero/photos/marc-56.webp)' }} /><figcaption>{t.who.captions[2]}</figcaption></figure>
+              <figure><div className="ph" style={{ '--s': 140, backgroundImage: 'url(/hero/photos/jeanne-85.webp)' }} /><figcaption>{t.who.captions[3]}</figcaption></figure>
             </div>
           </div>
 
           <div className="promise" data-reveal>
-            <div className="card"><span className="eyebrow">Gratuit</span><h3 className="t-h2">Et ça le restera</h3><p className="t-small">Pas d'abonnement, pas de version payante qui bloque vos souvenirs.</p></div>
-            <div className="card"><span className="eyebrow">Code ouvert</span><h3 className="t-h2">Vérifiable par tous</h3><p className="t-small">Le code est public. Une famille peut même héberger son propre Parenthèse.</p></div>
-            <div className="card"><span className="eyebrow">Vos données</span><h3 className="t-h2">Supprimables à tout moment</h3><p className="t-small">L'arbre et le compte se suppriment depuis l'app. Rien n'est revendu.</p></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── GUIDES ─────────────────────────────────────────────────── */}
-      <section id="guides" className="sec" style={{ paddingTop: 0 }}>
-        <div className="wrap sec-in">
-          <div className="head c" data-reveal>
-            <span className="eyebrow">Guides</span>
-            <h2 className="t-d2">Guides pour faire <em className="s">son arbre généalogique</em></h2>
-          </div>
-          <div className="guides" data-reveal>
-            {GUIDES.map(({ href, title, text }) => (
-              <a key={href} href={href} className="card guide">
-                <h3 className="t-h2">{title}</h3>
-                <p className="t-small">{text}</p>
-                <span className="more">Lire le guide</span>
-              </a>
+            {t.promise.map(({ eyebrow, title, text }) => (
+              <div key={eyebrow} className="card"><span className="eyebrow">{eyebrow}</span><h3 className="t-h2">{title}</h3><p className="t-small">{text}</p></div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ─── GUIDES ─────────────────────────────────────────────────── */}
+      {t.guides && <section id="guides" className="sec" style={{ paddingTop: 0 }}>
+        <div className="wrap sec-in">
+          <div className="head c" data-reveal>
+            <span className="eyebrow">{t.guides.eyebrow}</span>
+            <h2 className="t-d2">{t.guides.title[0]}<em className="s">{t.guides.title[1]}</em></h2>
+          </div>
+          <div className="guides" data-reveal>
+            {t.guides.items.map(({ href, title, text }) => (
+              <a key={href} href={href} className="card guide">
+                <h3 className="t-h2">{title}</h3>
+                <p className="t-small">{text}</p>
+                <span className="more">{t.guides.more}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>}
+
       {/* ─── CRÉER SON ARBRE ─────────────────────────────────────────── */}
       <section id="signup" className="final">
         <div className="wrap" data-reveal>
-          <h2 className="t-d2">Commencez par <em className="s">un seul visage</em></h2>
-          <p className="lede">Le vôtre, ou celui de quelqu'un que vous aimeriez garder.</p>
-          <button type="button" onClick={() => goToSignup('footer')} className="btn p">Créer mon arbre</button>
+          <h2 className="t-d2">{t.final.title[0]}<em className="s">{t.final.title[1]}</em></h2>
+          <p className="lede">{t.final.lede}</p>
+          <button type="button" onClick={() => goToSignup('footer')} className="btn p">{t.cta}</button>
           {source === 'app-shared' && sharedReturnUrl && (
-            <a href={sharedReturnUrl} className="back">Ou retourner explorer l'arbre partagé</a>
+            <a href={sharedReturnUrl} className="back">{t.final.back}</a>
           )}
         </div>
       </section>
@@ -1157,11 +1123,12 @@ export default function App() {
       {/* ─── FOOTER ─────────────────────────────────────────────────── */}
       <footer className="wrap foot">
         <Logo height={18} />
-        <nav aria-label="Pied de page">
-          <a href="#guides">Guides</a>
-          <a href="/donnees-et-vie-privee/">Vie privée</a>
-          <a href="https://github.com/IliesAllali/parenthese" rel="noopener noreferrer">Code source</a>
-          <a href="https://iliesallali.design/">Fait par Ilies Allali</a>
+        <nav aria-label={t.footer.label}>
+          {t.footer.guides && <a href="#guides">{t.footer.guides}</a>}
+          <a href={t.privacyHref}>{t.footer.privacy}</a>
+          <a href="https://github.com/IliesAllali/parenthese" rel="noopener noreferrer">{t.footer.source}</a>
+          <a href="https://iliesallali.design/">{t.footer.madeBy}</a>
+          <a href={t.otherLang.href} hrefLang={t.otherLang.hrefLang} lang={t.otherLang.hrefLang} title={t.otherLang.title}>{t.otherLang.label}</a>
         </nav>
       </footer>
     </div>

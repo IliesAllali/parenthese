@@ -22,6 +22,55 @@ const LOGO_RATIO = 7.541
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
 const n = (v) => Math.round(v * 100) / 100
 
+// Libellés imprimés sur les modèles, par langue (fr = page /arbre-genealogique-a-remplir/,
+// en = page /en/printable-family-tree/)
+export const TEXTES = {
+  fr: {
+    titre: ['Arbre ', 'généalogique'],
+    famille: 'de la famille',
+    pied: 'Modèle gratuit à imprimer et à remplir',
+    photo: 'Photo',
+    roles: [
+      ['Moi'],
+      ['Père', 'Mère'],
+      ['Grand-père paternel', 'Grand-mère paternelle', 'Grand-père maternel', 'Grand-mère maternelle'],
+      ['Arrière-grand-père', 'Arrière-grand-mère'],
+    ],
+    champs: ['Prénom', 'Nom', 'Né(e) le', 'à', 'Décès'],
+    legendes: [['Moi'], ['Parents'], ['Grands-', 'parents'], ['Arrière-grands-', 'parents'], ['Trisaïeuls']],
+    sosa: "Numérotation Sosa. Le père d'une personne porte le double de son numéro, la mère le double plus un.",
+    tags: {
+      g3: '3 générations',
+      g4: '4 générations',
+      photos: '3 générations avec photos',
+      eventail: '5 générations en éventail',
+      dessine: '3 générations, arbre dessiné',
+    },
+  },
+  en: {
+    titre: ['Family ', 'tree'],
+    famille: 'of the family',
+    pied: 'Free template to print and fill in',
+    photo: 'Photo',
+    roles: [
+      ['Me'],
+      ['Father', 'Mother'],
+      ['Paternal grandfather', 'Paternal grandmother', 'Maternal grandfather', 'Maternal grandmother'],
+      ['Great-grandfather', 'Great-grandmother'],
+    ],
+    champs: ['First name', 'Last name', 'Born on', 'in', 'Died'],
+    legendes: [['Me'], ['Parents'], ['Grand-', 'parents'], ['Great-', 'grandparents'], ['Great-great-', 'grandparents']],
+    sosa: "Ahnentafel (Sosa) numbering. A person's father has double their number, their mother double plus one.",
+    tags: {
+      g3: '3 generations',
+      g4: '4 generations',
+      photos: '3 generations with photos',
+      eventail: '5-generation fan chart',
+      dessine: '3 generations, drawn tree',
+    },
+  },
+}
+
 const STYLE = `
   .titre { font-family: 'Newsreader', serif; font-size: 9px; fill: ${C.encre}; }
   .titre-i { font-family: 'Newsreader', serif; font-style: italic; font-size: 9px; fill: ${C.a700}; }
@@ -40,10 +89,10 @@ const STYLE = `
   .photo { fill: #fff; stroke: ${C.encre}; stroke-opacity: .28; stroke-width: .2; stroke-dasharray: .8 .8; }
 `
 
-function page({ W, H, body, titre = 'modèle' }) {
+function page({ W, H, body, titre = 'modèle', lang = 'fr' }) {
   const orient = W > H ? 'landscape' : 'portrait'
   return `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>${esc(titre)}</title>
+<html lang="${lang}"><head><meta charset="utf-8"><title>${esc(titre)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400&display=block" rel="stylesheet">
@@ -65,35 +114,31 @@ function champ(x, xEnd, y, label) {
   return `<g class="f"><text class="lab" x="${n(x)}" y="${n(y)}">${esc(label)}</text><line class="wl" x1="${n(x + 8)}" y1="${n(y + 0.45)}" x2="${n(xEnd)}" y2="${n(y + 0.45)}"/></g>`
 }
 
-function entete({ W, margin, tag, top = 14 }) {
+function entete({ W, margin, tag, t, top = 14 }) {
   const y = top + 9
   return `
-  <text class="titre" x="${margin}" y="${y}">Arbre <tspan class="titre-i">généalogique</tspan></text>
-  <g class="f"><text class="sous" x="${margin}" y="${y + 8}">de la famille</text><line class="wl" x1="${margin + 20}" y1="${y + 8.5}" x2="${margin + 100}" y2="${y + 8.5}"/></g>
+  <text class="titre" x="${margin}" y="${y}">${esc(t.titre[0])}<tspan class="titre-i">${esc(t.titre[1])}</tspan></text>
+  <g class="f"><text class="sous" x="${margin}" y="${y + 8}">${esc(t.famille)}</text><line class="wl" x1="${margin + 20}" y1="${y + 8.5}" x2="${margin + 100}" y2="${y + 8.5}"/></g>
   <text class="tag" x="${W - margin}" y="${y}" text-anchor="end">${esc(tag)}</text>
   <line class="regle" x1="${margin}" y1="${y + 13}" x2="${W - margin}" y2="${y + 13}"/>`
 }
 
-function pied({ W, H, margin, texte = 'Modèle gratuit à imprimer et à remplir' }) {
+function pied({ W, H, margin, t }) {
   const h = 3.4
   const w = h * LOGO_RATIO
   const y = H - 8
   return `
   <svg x="${margin}" y="${n(y - h + 0.5)}" width="${n(w)}" height="${h}" viewBox="${LOGO_VIEWBOX}">${LOGO_INNER}</svg>
-  <text class="pied" x="${W - margin}" y="${y}" text-anchor="end">${esc(texte)}, parenthese.io</text>`
+  <text class="pied" x="${W - margin}" y="${y}" text-anchor="end">${esc(t.pied)}, parenthese.io</text>`
 }
 
-const ROLES = [
-  ['Moi'],
-  ['Père', 'Mère'],
-  ['Grand-père paternel', 'Grand-mère paternelle', 'Grand-père maternel', 'Grand-mère maternelle'],
-  Array.from({ length: 8 }, (_, i) => (i % 2 ? 'Arrière-grand-mère' : 'Arrière-grand-père')),
-]
+// Rôle de chaque case, génération par génération (les arrière-grands-parents alternent père, mère)
+const rolesDe = (t) => [t.roles[0], t.roles[1], t.roles[2], Array.from({ length: 8 }, (_, i) => t.roles[3][i % 2])]
 
-const CHAMPS = ['Prénom', 'Nom', 'Né(e) le', 'à', 'Décès']
+const NB_CHAMPS = 5
 
 // Boîte de personne : rôle + numéro Sosa en tête, photo optionnelle, puis les champs
-function boite({ x, y, w, h, role, sosa, ls, photo }) {
+function boite({ x, y, w, h, role, sosa, ls, photo, t }) {
   const pad = 2.4
   let out = `<rect class="bx" x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}" rx="1.6"/>`
   out += `<text class="role" x="${n(x + pad)}" y="${n(y + 4.3)}">${esc(role)}</text>`
@@ -104,21 +149,23 @@ function boite({ x, y, w, h, role, sosa, ls, photo }) {
     const ph = photo.h
     const px = x + (w - pw) / 2
     out += `<rect class="photo" x="${n(px)}" y="${n(cy + 0.6)}" width="${pw}" height="${ph}" rx="1"/>`
-    out += `<text class="photo-lab" x="${n(x + w / 2)}" y="${n(cy + 0.6 + ph / 2 + 0.8)}" text-anchor="middle">Photo</text>`
+    out += `<text class="photo-lab" x="${n(x + w / 2)}" y="${n(cy + 0.6 + ph / 2 + 0.8)}" text-anchor="middle">${esc(t.photo)}</text>`
     cy += ph + 1.6
   }
-  CHAMPS.forEach((label, k) => {
+  t.champs.forEach((label, k) => {
     out += champ(x + pad, x + w - pad, cy + (k + 1) * ls - 0.9, label)
   })
   return out
 }
 
 function hauteurBoite(ls, photo) {
-  return 6 + (photo ? photo.h + 1.6 : 0) + CHAMPS.length * ls + 1.4
+  return 6 + (photo ? photo.h + 1.6 : 0) + NB_CHAMPS * ls + 1.4
 }
 
 // Arbre ascendant vertical : « Moi » en bas, les ancêtres au-dessus, côté paternel à gauche
-function arbre({ W, H, margin, top, bottom, gens, gap, maxW, ls, photo, tag, texte }) {
+function arbre({ W, H, margin, top, bottom, gens, gap, maxW, ls, photo, tag, lang }) {
+  const t = TEXTES[lang]
+  const ROLES = rolesDe(t)
   const boxH = hauteurBoite(ls, photo)
   const vgap = (bottom - top - gens * boxH) / (gens - 1)
   const rowY = (g) => bottom - boxH - g * (boxH + vgap)
@@ -131,7 +178,7 @@ function arbre({ W, H, margin, top, bottom, gens, gap, maxW, ls, photo, tag, tex
     const slot = availW / count
     const w = Math.min(slot - gap, maxW[g])
     for (let i = 0; i < count; i++) {
-      boites += boite({ x: cx(g, i) - w / 2, y: rowY(g), w, h: boxH, role: ROLES[g][i], sosa: count + i, ls, photo })
+      boites += boite({ x: cx(g, i) - w / 2, y: rowY(g), w, h: boxH, role: ROLES[g][i], sosa: count + i, ls, photo, t })
       if (g < gens - 1) {
         const yb = rowY(g + 1) + boxH
         const yt = rowY(g)
@@ -142,27 +189,27 @@ function arbre({ W, H, margin, top, bottom, gens, gap, maxW, ls, photo, tag, tex
       }
     }
   }
-  return page({ W, H, body: entete({ W, margin, tag }) + traits + boites + pied({ W, H, margin, texte }) })
+  return page({ W, H, lang, body: entete({ W, margin, tag: t.tags[tag], t }) + traits + boites + pied({ W, H, margin, t }) })
 }
 
-export function troisGenerations() {
+export function troisGenerations(lang = 'fr') {
   return arbre({
     W: 210, H: 297, margin: 14, top: 50, bottom: 276, gens: 3, gap: 4,
-    maxW: [84, 66, 42], ls: 8.2, tag: '3 générations',
+    maxW: [84, 66, 42], ls: 8.2, tag: 'g3', lang,
   })
 }
 
-export function quatreGenerations() {
+export function quatreGenerations(lang = 'fr') {
   return arbre({
     W: 297, H: 210, margin: 12, top: 47, bottom: 193, gens: 4, gap: 2.6,
-    maxW: [76, 64, 56, 32], ls: 5.3, tag: '4 générations',
+    maxW: [76, 64, 56, 32], ls: 5.3, tag: 'g4', lang,
   })
 }
 
-export function troisGenerationsPhotos() {
+export function troisGenerationsPhotos(lang = 'fr') {
   return arbre({
     W: 210, H: 297, margin: 14, top: 46, bottom: 280, gens: 3, gap: 4,
-    maxW: [84, 66, 42], ls: 6.2, photo: { w: 23, h: 28 }, tag: '3 générations avec photos',
+    maxW: [84, 66, 42], ls: 6.2, photo: { w: 23, h: 28 }, tag: 'photos', lang,
   })
 }
 
@@ -187,14 +234,15 @@ function arc(cx, cy, r, d0, d1) {
   return `M${n(x0)} ${n(y0)} A${r} ${r} 0 0 1 ${n(x1)} ${n(y1)}`
 }
 
-export function cinqGenerationsEventail() {
+export function cinqGenerationsEventail(lang = 'fr') {
+  const t = TEXTES[lang]
   const W = 297
   const H = 210
   const margin = 12
   const cx = W / 2
   const cy = 188
   const R = [0, 26, 55, 82, 108, 134]
-  const LEGENDES = [['Moi'], ['Parents'], ['Grands-', 'parents'], ['Arrière-grands-', 'parents'], ['Trisaïeuls']]
+  const LEGENDES = t.legendes
   let body = ''
   // anneaux de la génération 2 à 5 (Sosa 2 à 31), du père (gauche) à la mère (droite)
   for (let g = 1; g <= 4; g++) {
@@ -240,13 +288,13 @@ export function cinqGenerationsEventail() {
     const mid = g === 0 ? 0 : (R[g] + R[g + 1]) / 2
     const xs = g === 0 ? [cx] : [cx - mid, cx + mid]
     xs.forEach((x) => {
-      lines.forEach((t, k) => {
-        body += `<text class="role" x="${n(x)}" y="${n(cy + 4.4 + k * 2.7)}" text-anchor="middle">${esc(t)}</text>`
+      lines.forEach((ligne, k) => {
+        body += `<text class="role" x="${n(x)}" y="${n(cy + 4.4 + k * 2.7)}" text-anchor="middle">${esc(ligne)}</text>`
       })
     })
   })
-  body += `<text class="lab" x="${W - margin}" y="${31}" text-anchor="end">Numérotation Sosa. Le père d'une personne porte le double de son numéro, la mère le double plus un.</text>`
-  return page({ W, H, body: entete({ W, margin, tag: '5 générations en éventail' }) + body + pied({ W, H, margin }) })
+  body += `<text class="lab" x="${W - margin}" y="${31}" text-anchor="end">${esc(t.sosa)}</text>`
+  return page({ W, H, lang, body: entete({ W, margin, tag: t.tags.eventail, t }) + body + pied({ W, H, margin, t }) })
 }
 
 // ─── Arbre dessiné, 3 générations ───────────────────────────────────────────
@@ -276,7 +324,8 @@ function feuille(x, y, angle, s) {
   return `<path d="M0 0 C${n(s * 0.35)} ${n(-s * 0.32)} ${n(s * 0.75)} ${n(-s * 0.3)} ${s} 0 C${n(s * 0.75)} ${n(s * 0.3)} ${n(s * 0.35)} ${n(s * 0.32)} 0 0 Z" transform="translate(${n(x)} ${n(y)}) rotate(${n(angle)})"/>`
 }
 
-export function arbreDessine() {
+export function arbreDessine(lang = 'fr') {
+  const t = TEXTES[lang]
   const W = 210
   const H = 297
   const margin = 14
@@ -322,23 +371,24 @@ export function arbreDessine() {
   // sol
   dessin += `<path d="M62 283 C88 280 122 280 148 283" stroke="${C.a500}" stroke-width=".35" fill="none" stroke-linecap="round"/>`
   let boites = ''
-  const roles = [ROLES[0], ROLES[1], ROLES[2]]
+  const roles = rolesDe(t)
   ;[[moi], parents, gps].forEach((row, g) => {
     row.forEach((b, i) => {
-      boites += boite({ x: b.x - b.w / 2, y: b.y, w: b.w, h: bh, role: roles[g][i], sosa: 2 ** g + i, ls })
+      boites += boite({ x: b.x - b.w / 2, y: b.y, w: b.w, h: bh, role: roles[g][i], sosa: 2 ** g + i, ls, t })
     })
   })
   // teintes opaques (a300 à 55 % et a500 à 50 % sur blanc) pour éviter les surimpressions aux jonctions
-  const body = entete({ W, margin, tag: '3 générations, arbre dessiné' })
+  const body = entete({ W, margin, tag: t.tags.dessine, t })
     + `<g fill="#f5d7cd">${dessin}</g><g fill="#e9b4a5">${feuillage}</g>`
-    + boites + pied({ W, H, margin })
-  return page({ W, H, body })
+    + boites + pied({ W, H, margin, t })
+  return page({ W, H, lang, body })
 }
 
+// slug = nom des fichiers français, en = nom des fichiers anglais
 export const MODELES = [
-  { slug: 'arbre-genealogique-3-generations', build: troisGenerations, portrait: true },
-  { slug: 'arbre-genealogique-4-generations', build: quatreGenerations, portrait: false },
-  { slug: 'arbre-genealogique-5-generations-eventail', build: cinqGenerationsEventail, portrait: false },
-  { slug: 'arbre-genealogique-avec-photos', build: troisGenerationsPhotos, portrait: true },
-  { slug: 'arbre-genealogique-dessine', build: arbreDessine, portrait: true },
+  { slug: 'arbre-genealogique-3-generations', en: 'family-tree-3-generations', build: troisGenerations, portrait: true },
+  { slug: 'arbre-genealogique-4-generations', en: 'family-tree-4-generations', build: quatreGenerations, portrait: false },
+  { slug: 'arbre-genealogique-5-generations-eventail', en: 'family-tree-5-generation-fan-chart', build: cinqGenerationsEventail, portrait: false },
+  { slug: 'arbre-genealogique-avec-photos', en: 'family-tree-with-photos', build: troisGenerationsPhotos, portrait: true },
+  { slug: 'arbre-genealogique-dessine', en: 'family-tree-drawn', build: arbreDessine, portrait: true },
 ]
