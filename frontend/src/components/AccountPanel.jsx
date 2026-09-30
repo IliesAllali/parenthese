@@ -11,6 +11,7 @@ const AccountPanel = ({
   selectedPersonId = '',
   people = [],
   onSelectPerson,
+  onManageAccount,
   onClose,
 }) => {
   const [query, setQuery] = useState('')
@@ -96,11 +97,19 @@ const AccountPanel = ({
           </div>
         </div>
 
-        {selectedPersonId && (
+        {(selectedPersonId || onManageAccount) && (
           <div className="pz-modal-actions">
-            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onSelectPerson?.(null)}>
-              {t("Ce n'est plus moi")}
-            </button>
+            {selectedPersonId && (
+              <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onSelectPerson?.(null)}>
+                {t("Ce n'est plus moi")}
+              </button>
+            )}
+            {/* Vos arbres, déconnexion et suppression du compte : l'écran du compte, joignable d'ici */}
+            {onManageAccount && (
+              <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm ap-manage" onClick={onManageAccount}>
+                {t('Gérer mon compte')}
+              </button>
+            )}
           </div>
         )}
       </div>

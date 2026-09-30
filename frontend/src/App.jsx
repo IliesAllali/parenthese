@@ -1885,6 +1885,18 @@ function App() {
           const notFound = error?.status === 404 || error?.payload?.error === 'tree_not_found'
           setTreeNotFound(notFound)
           tree.setGateError(notFound ? t("Cet arbre n'existe pas.") : t('Impossible de résoudre ce lien de partage.'))
+          // Lien mort, mais la session du compte reste valable : « Créer mon arbre » ou « Mon compte »
+          // doivent ouvrir le compte connecté, pas un écran de connexion vide
+          const storedUserToken = auth.restoreUserToken()
+          if (storedUserToken) {
+            try {
+              await auth.loadAccountTrees(storedUserToken)
+              if (!active) return
+              auth.setUserAuth({ token: storedUserToken, user: auth.restoreUserProfile?.() || null })
+            } catch {
+              auth.clearStoredUserToken()
+            }
+          }
           return
         }
       }
@@ -2024,19 +2036,22 @@ function App() {
 
   // Fallback auto: si l'utilisateur est connecté mais n'a aucun arbre,
   // on bascule automatiquement sur la démo (utile en production quand la création d'account laisse l'UI vide).
+  // Sauf s'il a ouvert lui-même « Mon compte » : l'écran « Vos arbres » sait afficher un compte vide, et c'est
+  // là que se trouvent la déconnexion et « Supprimer mon compte » (sans ça, introuvables sans arbre).
   useEffect(() => {
     if (
       tree.bootState === 'account' &&
       auth.authenticated &&
       !auth.accountLoading &&
       auth.accountTrees.length === 0 &&
+      !accountFromTree &&
       !pendingSharedTreeRef.current // retour sur un arbre partagé en cours : pas d'assistant "votre arbre"
     ) {
       handleUseDemo()
       setAccountEntryMode('register')
       setTreeWizardVisible(true)
     }
-  }, [tree.bootState, auth.authenticated, auth.accountLoading, auth.accountTrees.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tree.bootState, auth.authenticated, auth.accountLoading, auth.accountTrees.length, accountFromTree]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUseAccount = (mode = 'login') => {
     const ctx = tree.treeContext
@@ -2700,6 +2715,7 @@ function App() {
         selectedPersonId={linkedSelfPersonId}
         people={persons}
         onSelectPerson={handleSelectSelfPerson}
+        onManageAccount={() => handleUseAccount('login')}
         onClose={() => setAccountPanelVisible(false)}
       />
       <AdminPanel

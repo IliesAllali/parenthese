@@ -73,6 +73,7 @@ export default {
   "Personne ne correspond à cette recherche.": "No one matches this search.",
   "C'est moi": "That's me",
   "Ce n'est plus moi": "That's not me",
+  'Gérer mon compte': 'Manage my account',
   // Paramètres de l'arbre (AdminPanel)
   "Impossible de charger les paramètres de cet arbre.": "Couldn't load this tree's settings.",
   "Les modifications de la famille sont désormais appliquées directement.": "Changes from the family now go live right away.",
