@@ -2,7 +2,7 @@
 # Front Parenthèse (React + Vite) servi par nginx. Contexte de build : la racine du dépôt.
 # nginx sert frontend/dist et relaie l'API vers le service `api` (voir deploy/nginx.docker.conf).
 
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app
 
