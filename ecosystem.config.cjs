@@ -10,6 +10,8 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 4000,
+        # nginx relaie vers 127.0.0.1:4000 (deploy/nginx.conf) : l'API n'écoute pas sur les interfaces publiques
+        HOST: '127.0.0.1',
       },
       max_memory_restart: '512M',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
