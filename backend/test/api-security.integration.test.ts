@@ -40,7 +40,7 @@ const { prismaMock } = vi.hoisted(() => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       upsert: vi.fn(),
-      updateMany: vi.fn(),
+      updateMany: vi.fn(),      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     person: {
       findMany: vi.fn(),
@@ -64,7 +64,7 @@ const { prismaMock } = vi.hoisted(() => ({
       updateMany: vi.fn(),
     },
     mediaItem: {
-      count: vi.fn(),
+      count: vi.fn(),      aggregate: vi.fn().mockResolvedValue({ _sum: { sizeBytes: 0 } }),
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -78,7 +78,7 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
-      update: vi.fn(),
+      update: vi.fn(),      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       count: vi.fn(),
     },
     contributionChange: {
@@ -99,6 +99,9 @@ vi.mock('../src/lib/prisma.js', () => ({
 }))
 
 let createApp: () => FastifyInstance
+
+// Vraie image d'un pixel : le serveur reconnaît les fichiers à leurs octets, plus au type déclaré
+const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64')
 
 function applyTestEnv(): void {
   process.env.NODE_ENV = 'test'
@@ -134,6 +137,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  prismaMock.userTreeAccess.deleteMany?.mockResolvedValue({ count: 0 })
+  prismaMock.contributionSession.updateMany?.mockResolvedValue({ count: 1 })
+  prismaMock.mediaItem.aggregate?.mockResolvedValue({ _sum: { sizeBytes: 0 } })
 
   prismaMock.user.findUnique.mockResolvedValue(null)
   prismaMock.user.create.mockResolvedValue({ id: 'user-1', email: 'user@example.com' })
@@ -1021,8 +1027,8 @@ describe('API security and authz', () => {
         type: 'photo',
         fileName: 'portrait.jpg',
         mimeType: 'image/jpeg',
-        sizeBytes: 5,
-        dataBase64: Buffer.from('hello').toString('base64'),
+        sizeBytes: PNG_1PX.length,
+        dataBase64: PNG_1PX.toString('base64'),
         caption: 'Portrait famille',
       },
     })
@@ -1059,8 +1065,8 @@ describe('API security and authz', () => {
     type: 'photo',
     fileName: 'portrait.jpg',
     mimeType: 'image/jpeg',
-    sizeBytes: 5,
-    dataBase64: Buffer.from('hello').toString('base64'),
+    sizeBytes: PNG_1PX.length,
+    dataBase64: PNG_1PX.toString('base64'),
   }
 
   it('turns a member media upload into a pending contribution', async () => {
@@ -1346,10 +1352,9 @@ describe('API security and authz', () => {
     await app.close()
   })
 
-  it('rejects mismatched mime type for gpx media', async () => {
+  it('rejects a gpx upload whose content is not a gpx track', async () => {
     const app = createApp()
     const token = await createUserToken(app)
-    const fakePayload = '<gpx version=\"1.1\"></gpx>'
 
     const response = await app.inject({
       method: 'POST',
@@ -1358,9 +1363,9 @@ describe('API security and authz', () => {
       payload: {
         type: 'gpx',
         fileName: 'trace.gpx',
-        mimeType: 'image/png',
-        sizeBytes: Buffer.byteLength(fakePayload),
-        dataBase64: Buffer.from(fakePayload).toString('base64'),
+        mimeType: 'application/gpx+xml',
+        sizeBytes: PNG_1PX.length,
+        dataBase64: PNG_1PX.toString('base64'),
       },
     })
 
@@ -1485,5 +1490,57 @@ describe('API security and authz', () => {
       nextOffset: null,
     })
     await app.close()
+  })
+
+  // Audit 1.0 (30/09/2026)
+  it('refuses the annotations of a tree the account has no access to', async () => {
+    const app = createApp()
+    const token = await createUserToken(app, 'stranger')
+    prismaMock.treeMembership.findUnique.mockResolvedValue(null)
+    prismaMock.userTreeAccess.findUnique.mockResolvedValue(null)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/trees/tree-1/annotations',
+      headers: { authorization: `Bearer ${token}` },
+    })
+
+    expect(response.statusCode).toBe(403)
+    expect(prismaMock.annotation.findMany).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('no longer accepts an account session in a media address', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/trees/tree-1/media/media-1?token=${encodeURIComponent(token)}`,
+    })
+
+    expect(response.statusCode).toBe(401)
+    await app.close()
+  })
+
+  it('cuts accounts linked by the share password when the owner changes it', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/trees/tree-1/access/passwords',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { password: 'nouveau-mot-de-passe' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    expect(prismaMock.userTreeAccess.deleteMany).toHaveBeenCalledWith({ where: { treeId: 'tree-1' } })
+    await app.close()
+  })
+
+  it('masks tokens in logged addresses', async () => {
+    const { redactUrl } = await import('../src/app.js')
+    expect(redactUrl('/trees/t/media/m?token=abc.def&v=2')).toBe('/trees/t/media/m?token=[masqué]&v=2')
   })
 })
