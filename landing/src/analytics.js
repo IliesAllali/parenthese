@@ -11,6 +11,30 @@ let enabled = Boolean(KEY)
 const queuedEvents = []
 const MAX_QUEUED_EVENTS = 100
 
+// Une adresse d'arbre (/arbre/<slug>) peut arriver en referrer : elle ne part jamais chez PostHog.
+// Même règle que frontend/src/utils/analytics.js.
+function scrubTreeSlug(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\/arbre\/[^/?#\s]+/g, '/arbre/:slug')
+      .replace(/%2Farbre%2F(?:(?!%2F|%3F|%23)[^&#\s])+/gi, '%2Farbre%2F%3Aslug')
+  }
+  if (Array.isArray(value)) return value.map(scrubTreeSlug)
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, scrubTreeSlug(v)]))
+  }
+  return value
+}
+
+export function scrubAnalyticsEvent(event) {
+  if (!event) return event
+  const next = { ...event }
+  for (const key of ['properties', '$set', '$set_once']) {
+    if (next[key]) next[key] = scrubTreeSlug(next[key])
+  }
+  return next
+}
+
 function flushQueue() {
   if (!ph || typeof ph.capture !== 'function') return
   while (queuedEvents.length > 0) {
@@ -35,6 +59,11 @@ export const analytics = {
           person_profiles: 'identified_only',
           autocapture: false,
           capture_pageview: false,
+          disable_session_recording: true,
+          // Aucun feature flag dans le code. Sans ça, /flags recevrait les propriétés de personne
+          // ($initial_current_url...), que before_send ne voit pas.
+          advanced_disable_flags: true,
+          before_send: scrubAnalyticsEvent,
         })
         ph = posthog
         flushQueue()
