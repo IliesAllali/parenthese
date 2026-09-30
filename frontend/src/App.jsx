@@ -429,22 +429,6 @@ function buildContribChangesList(draft = {}) {
   return items
 }
 
-// Anciennes copies locales du mot de passe (avant qu'il soit gardé par le serveur) : on les efface,
-// elles pouvaient montrer un mot de passe changé depuis un autre appareil.
-function clearLegacyInvitePasswords(treeId) {
-  if (!treeId) {
-    return
-  }
-
-  try {
-    for (const role of ['share', 'contributor', 'visitor']) {
-      localStorage.removeItem(`invite_password_${treeId}_${role}`)
-    }
-  } catch {
-    // Ignore localStorage failures
-  }
-}
-
 function App() {
   const auth = useAuth()
   const tree = useTreeAccess()
@@ -1284,7 +1268,6 @@ function App() {
 
   const handleOpenContributionPanel = useCallback(async () => {
     const treeId = tree.treeContext.treeId
-    clearLegacyInvitePasswords(treeId)
     await resolveContributionShareUrl()
     let share = ''
     const accessToken = auth.userAuth.token || tree.treeContext.accessToken
