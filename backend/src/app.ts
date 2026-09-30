@@ -18,14 +18,34 @@ import { treeRoutes } from './routes/trees.js'
 import { visitRoutes } from './routes/visits.js'
 import type { AnyJwtPayload } from './types/auth.js'
 
+// Les adresses des médias portent un jeton (<img src> n'envoie pas d'en-tête) : jamais dans les journaux
+export function redactUrl(url: string | undefined): string | undefined {
+  return url?.replace(/([?&]token=)[^&#]*/g, '$1[masqué]')
+}
+
 export function createApp() {
   const app = Fastify({
-    logger: env.NODE_ENV !== 'test',
+    logger: env.NODE_ENV === 'test'
+      ? false
+      : {
+          serializers: {
+            req(request) {
+              return {
+                method: request.method,
+                url: redactUrl(request.url),
+                host: request.host,
+                remoteAddress: request.ip,
+              }
+            },
+          },
+        },
     bodyLimit: 12 * 1024 * 1024,
     // Accept both `/path` et `/path/` to avoid 301 → 400 issues via nginx
     routerOptions: { ignoreTrailingSlash: true },
-    // Trust X-Forwarded-For from Nginx proxy so rate limiting uses real client IPs
-    trustProxy: true,
+    // Seuls les proxys connus (nginx) sont crus : l'adresse du client est la dernière qu'ils ont ajoutée à
+    // X-Forwarded-For. Faire confiance à tout l'en-tête laissait le client choisir son adresse et contourner
+    // les limites d'essais (voir TRUST_PROXY dans config/env.ts).
+    trustProxy: env.TRUST_PROXY,
   })
 
   app.decorate('prisma', prisma)
@@ -99,6 +119,7 @@ export function createApp() {
           kind: 'tree_access',
           treeId: payload.treeId,
           role: payload.role,
+          accessVersion: payload.accessVersion,
         }
       }
     } catch {

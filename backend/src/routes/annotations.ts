@@ -2,6 +2,12 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest 
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
+import {
+  InvalidAnnotationContentError,
+  sanitizeAnnotationContentForRead,
+  sanitizeAnnotationContentForWrite,
+} from '../lib/annotation-content.js'
+import { canReadTree } from '../lib/tree-access.js'
 import type { MembershipRole } from '../types/auth.js'
 
 const treeIdParamSchema = z.object({
@@ -59,6 +65,16 @@ function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: st
   }
 }
 
+// null = chemin de photo refusé (voir lib/annotation-content.ts)
+function cleanContent(content: string, treeId: string): string | null {
+  try {
+    return sanitizeAnnotationContentForWrite(content, treeId)
+  } catch (error) {
+    if (error instanceof InvalidAnnotationContentError) return null
+    throw error
+  }
+}
+
 function hasAdminRight(role: MembershipRole): boolean {
   return role === 'owner' || role === 'admin'
 }
@@ -97,13 +113,16 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
     const membership = await getAdminMembership(app, user.userId, params.data.id)
     if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
 
+    const content = cleanContent(payload.data.content, params.data.id)
+    if (content === null) return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
+
     const annotation = await app.prisma.annotation.create({
       data: {
         treeId: params.data.id,
         type: payload.data.type,
         x: payload.data.x,
         y: payload.data.y,
-        content: payload.data.content,
+        content,
         style: (payload.data.style ?? {}) as Prisma.InputJsonValue,
         zIndex: payload.data.zIndex ?? 0,
         createdBy: user.userId,
@@ -131,6 +150,7 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
     if (!params.success) return reply.code(400).send({ error: 'invalid_tree_id' })
 
     if (!request.actor) return reply.code(401).send({ error: 'authentication_required' })
+    if (!(await canReadTree(app, params.data.id, request.actor))) return reply.code(403).send({ error: 'forbidden' })
 
     const annotations = await app.prisma.annotation.findMany({
       where: {
@@ -140,7 +160,9 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
       orderBy: [{ zIndex: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     })
 
-    return reply.send({ annotations })
+    return reply.send({
+      annotations: annotations.map((annotation) => ({ ...annotation, content: sanitizeAnnotationContentForRead(annotation.content) })),
+    })
   })
 
   // UPDATE annotation
@@ -160,7 +182,11 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
     const data: Record<string, unknown> = {}
     if (payload.data.x !== undefined) data.x = payload.data.x
     if (payload.data.y !== undefined) data.y = payload.data.y
-    if (payload.data.content !== undefined) data.content = payload.data.content
+    if (payload.data.content !== undefined) {
+      const content = cleanContent(payload.data.content, params.data.id)
+      if (content === null) return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
+      data.content = content
+    }
     if (payload.data.style !== undefined) data.style = payload.data.style
     if (payload.data.zIndex !== undefined) data.zIndex = payload.data.zIndex
 
@@ -249,15 +275,22 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
     const treeId = params.data.id
     const results = { created: 0, updated: 0, deleted: 0 }
 
+    // Tout est vérifié avant la première écriture
+    const createContents = payload.data.create.map((item) => cleanContent(item.content, treeId))
+    const updateContents = payload.data.update.map((item) => (item.content === undefined ? undefined : cleanContent(item.content, treeId)))
+    if (createContents.includes(null) || updateContents.includes(null)) {
+      return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
+    }
+
     // Creates
-    for (const item of payload.data.create) {
+    for (const [index, item] of payload.data.create.entries()) {
       await app.prisma.annotation.create({
         data: {
           treeId,
           type: item.type,
           x: item.x,
           y: item.y,
-          content: item.content,
+          content: createContents[index] as string,
           style: (item.style ?? {}) as Prisma.InputJsonValue,
           zIndex: item.zIndex ?? 0,
           createdBy: user.userId,
@@ -267,11 +300,11 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Updates
-    for (const item of payload.data.update) {
+    for (const [index, item] of payload.data.update.entries()) {
       const data: Record<string, unknown> = {}
       if (item.x !== undefined) data.x = item.x
       if (item.y !== undefined) data.y = item.y
-      if (item.content !== undefined) data.content = item.content
+      if (item.content !== undefined) data.content = updateContents[index]
       if (item.style !== undefined) data.style = item.style
       if (item.zIndex !== undefined) data.zIndex = item.zIndex
 

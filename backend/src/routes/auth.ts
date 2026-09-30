@@ -8,6 +8,13 @@ import { revokeUserToken } from '../lib/token-revocation.js'
 import { deleteTreeRecords, removeTreeMediaDirectories } from '../lib/tree-purge.js'
 import type { AnyJwtPayload } from '../types/auth.js'
 
+// Hash de comparaison pour une adresse inconnue, calculé une fois au premier besoin
+let dummyHash: Promise<string> | null = null
+function getDummyHash(): Promise<string> {
+  dummyHash ??= hashPassword(randomUUID())
+  return dummyHash
+}
+
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
@@ -152,6 +159,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       })
 
       if (!user) {
+        // Même durée qu'un mauvais mot de passe : la réponse ne dit pas si l'adresse a un compte
+        await verifyPassword(parsed.data.password, await getDummyHash())
         return reply.code(401).send({ error: 'invalid_credentials' })
       }
 
