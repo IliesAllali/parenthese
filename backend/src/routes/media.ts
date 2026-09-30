@@ -6,9 +6,20 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { env } from '../config/env.js'
-import { isUserTokenRevoked } from '../lib/token-revocation.js'
+import {
+  applyMediaResponseHeaders,
+  extensionForMime,
+  InvalidMediaError,
+  isMimeAllowedForType,
+  removeStoredFile,
+  sanitizeImage,
+  scrubMp4Location,
+  sniffMimeType,
+  type BinaryMediaType,
+} from '../lib/media-files.js'
 import { syncPersonMediaOrder } from '../lib/media-order.js'
-import type { AnyJwtPayload, MembershipRole } from '../types/auth.js'
+import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
+import type { MembershipRole } from '../types/auth.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -102,75 +113,51 @@ function normalizeOptionalText(value: string | null | undefined): string | null 
   return normalized.length > 0 ? normalized : null
 }
 
-function inferFileExtension(fileName: string, mimeType: string): string {
-  const rawExt = path.extname(fileName).toLowerCase().replace(/[^.a-z0-9]/g, '')
-  if (rawExt.length >= 2 && rawExt.length <= 8) {
-    return rawExt
+// Fichier décodé, reconnu à ses octets et nettoyé (photos sans métadonnées, vidéos sans position).
+// Le type déclaré par le navigateur n'est plus qu'un indice pour les conteneurs ambigus.
+async function prepareUploadedFile(
+  buffer: Buffer,
+  type: BinaryMediaType,
+  fileName: string,
+): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
+  const mimeType = sniffMimeType(buffer, type, fileName)
+  if (!mimeType || !isMimeAllowedForType(type, mimeType)) {
+    throw new InvalidMediaError('invalid_media_mime_type')
   }
 
-  const map: Record<string, string> = {
-    'image/jpeg': '.jpg',
-    'image/png': '.png',
-    'image/webp': '.webp',
-    'image/gif': '.gif',
-    'image/svg+xml': '.svg',
-    'video/mp4': '.mp4',
-    'audio/mpeg': '.mp3',
-    'audio/wav': '.wav',
-    'application/pdf': '.pdf',
-    'application/geo+json': '.geojson',
-    'application/gpx+xml': '.gpx',
-    'application/xml': '.xml',
-    'text/xml': '.xml',
-    'application/json': '.json',
-    'text/plain': '.txt',
-  }
-
-  return map[mimeType] || '.bin'
-}
-
-function isMimeTypeAllowedForMediaType(type: 'photo' | 'video' | 'audio' | 'document' | 'geojson' | 'gpx', mimeType: string): boolean {
-  const normalizedMimeType = mimeType.toLowerCase()
-
+  let cleaned = buffer
   if (type === 'photo') {
-    return normalizedMimeType.startsWith('image/')
+    cleaned = await sanitizeImage(buffer, mimeType)
+  } else if (mimeType === 'video/mp4' || mimeType === 'video/quicktime' || mimeType === 'audio/mp4') {
+    cleaned = scrubMp4Location(Buffer.from(buffer))
   }
 
-  if (type === 'video') {
-    return normalizedMimeType.startsWith('video/')
-  }
-
-  if (type === 'audio') {
-    return normalizedMimeType.startsWith('audio/')
-  }
-
-  if (type === 'geojson') {
-    return (
-      normalizedMimeType === 'application/geo+json' ||
-      normalizedMimeType === 'application/json' ||
-      normalizedMimeType === 'text/geojson' ||
-      normalizedMimeType === 'text/plain'
-    )
-  }
-
-  if (type === 'gpx') {
-    return (
-      normalizedMimeType === 'application/gpx+xml' ||
-      normalizedMimeType === 'application/xml' ||
-      normalizedMimeType === 'text/xml' ||
-      normalizedMimeType === 'text/plain' ||
-      normalizedMimeType === 'application/octet-stream'
-    )
-  }
-
-  return (
-    normalizedMimeType === 'application/pdf' ||
-    normalizedMimeType === 'application/msword' ||
-    normalizedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    normalizedMimeType === 'text/plain' ||
-    normalizedMimeType === 'application/octet-stream'
-  )
+  return { buffer: cleaned, mimeType, extension: extensionForMime(mimeType) }
 }
+
+// Place disque d'un arbre : total, et part des envois en attente de relecture (limite l'envoi en boucle)
+async function exceedsStorageQuota(app: FastifyRequest['server'], treeId: string, incomingBytes: number, isPending: boolean): Promise<boolean> {
+  const MB = 1024 * 1024
+  const total = await app.prisma.mediaItem.aggregate({
+    where: { treeId, deletedAt: null },
+    _sum: { sizeBytes: true },
+  })
+  if ((total._sum.sizeBytes ?? 0) + incomingBytes > env.MEDIA_QUOTA_PER_TREE_MB * MB) {
+    return true
+  }
+
+  if (!isPending) {
+    return false
+  }
+
+  const pending = await app.prisma.mediaItem.aggregate({
+    where: { treeId, status: 'pending', deletedAt: null },
+    _sum: { sizeBytes: true },
+  })
+  return (pending._sum.sizeBytes ?? 0) + incomingBytes > env.MEDIA_PENDING_QUOTA_PER_TREE_MB * MB
+}
+
+const UPLOAD_RATE_LIMIT = { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
 
 async function requireAdminMembership(app: FastifyRequest['server'], userId: string, treeId: string) {
   const membership = await app.prisma.treeMembership.findUnique({
@@ -196,148 +183,17 @@ async function requireAdminMembership(app: FastifyRequest['server'], userId: str
   return membership
 }
 
-async function assertTreeReadableByActor(app: FastifyRequest['server'], treeId: string, actor: FastifyRequest['actor']): Promise<boolean> {
-  if (!actor) {
-    return false
+// Session (en-tête) ou jeton médias (adresse d'une image). La session du compte n'est plus acceptée
+// dans l'adresse : elle finissait dans les journaux, l'historique et les liens copiés.
+async function canReadMedia(app: FastifyRequest['server'], treeId: string, request: FastifyRequest, token: string | undefined): Promise<boolean> {
+  if (await canReadTree(app, treeId, request.actor)) {
+    return true
   }
-
-  if (actor.kind === 'user') {
-    const membership = await app.prisma.treeMembership.findUnique({
-      where: {
-        treeId_userId: {
-          treeId,
-          userId: actor.userId,
-        },
-      },
-      include: {
-        tree: {
-          select: {
-            deletedAt: true,
-          },
-        },
-      },
-    })
-
-    if (membership && !membership.tree.deletedAt) {
-      return true
-    }
-
-    const shared = await app.prisma.userTreeAccess.findUnique({
-      where: {
-        treeId_userId: {
-          treeId,
-          userId: actor.userId,
-        },
-      },
-      include: {
-        tree: {
-          select: {
-            deletedAt: true,
-          },
-        },
-      },
-    })
-
-    return Boolean(shared && !shared.tree.deletedAt)
-  }
-
-  if (actor.treeId !== treeId) {
-    return false
-  }
-
-  const tree = await app.prisma.tree.findFirst({
-    where: {
-      id: treeId,
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-    },
-  })
-
-  return Boolean(tree)
-}
-
-async function assertTreeReadableByQueryToken(app: FastifyRequest['server'], treeId: string, token: string): Promise<boolean> {
-  let payload: AnyJwtPayload
-
-  try {
-    payload = await app.jwt.verify<AnyJwtPayload>(token)
-  } catch {
-    return false
-  }
-
-  if (payload.kind === 'user') {
-    if (isUserTokenRevoked(payload.jti)) {
-      return false
-    }
-
-    const membership = await app.prisma.treeMembership.findUnique({
-      where: {
-        treeId_userId: {
-          treeId,
-          userId: payload.userId,
-        },
-      },
-      include: {
-        tree: {
-          select: {
-            deletedAt: true,
-          },
-        },
-      },
-    })
-
-    if (membership && !membership.tree.deletedAt) {
-      return true
-    }
-
-    const shared = await app.prisma.userTreeAccess.findUnique({
-      where: {
-        treeId_userId: {
-          treeId,
-          userId: payload.userId,
-        },
-      },
-      include: {
-        tree: {
-          select: {
-            deletedAt: true,
-          },
-        },
-      },
-    })
-
-    return Boolean(shared && !shared.tree.deletedAt)
-  }
-
-  if (payload.treeId !== treeId) {
-    return false
-  }
-
-  const accessState = await app.prisma.treeAccessPasswords.findUnique({
-    where: {
-      treeId,
-    },
-    select: {
-      updatedAt: true,
-      tree: {
-        select: {
-          deletedAt: true,
-        },
-      },
-    },
-  })
-
-  if (!accessState || accessState.tree.deletedAt) {
-    return false
-  }
-
-  return accessState.updatedAt.getTime() === payload.accessVersion
+  return token ? canReadTreeWithMediaToken(app, treeId, token) : false
 }
 
 export const mediaRoutes: FastifyPluginAsync = async (app) => {
-  app.post('/trees/:id/persons/:personId/media', async (request, reply) => {
+  app.post('/trees/:id/persons/:personId/media', UPLOAD_RATE_LIMIT, async (request, reply) => {
     const actor = request.actor
     if (!actor) {
       return reply.code(401).send({ error: 'authentication_required' })
@@ -384,6 +240,48 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     if (!person) {
       return reply.code(404).send({ error: 'person_not_found' })
+    }
+
+    // Fichier reconnu, nettoyé et compté AVANT toute écriture : un envoi refusé ne laisse ni contribution
+    // vide en attente ni fichier sur le disque
+    let prepared: { buffer: Buffer; mimeType: string; extension: string } | null = null
+    let uploadFileName = ''
+    let uploadCaption: string | null = null
+    if (!('youtubeUrl' in payload.data)) {
+      if (payload.data.type === 'citation') {
+        const citationText = payload.data.caption.trim()
+        if (!citationText) {
+          return reply.code(400).send({ error: 'citation_text_required' })
+        }
+        prepared = { buffer: Buffer.from(citationText, 'utf8'), mimeType: 'text/plain', extension: '.txt' }
+        uploadFileName = 'citation.txt'
+        uploadCaption = citationText
+      } else {
+        const decoded = Buffer.from(stripDataUrlPrefix(payload.data.dataBase64), 'base64')
+        if (!decoded.length) {
+          return reply.code(400).send({ error: 'empty_media_file' })
+        }
+        if (decoded.length !== payload.data.sizeBytes) {
+          return reply.code(400).send({ error: 'size_mismatch' })
+        }
+        if (payload.data.type === 'photo' && decoded.length > MAX_IMAGE_BYTES) {
+          return reply.code(400).send({ error: 'image_too_large' })
+        }
+        try {
+          prepared = await prepareUploadedFile(decoded, payload.data.type, payload.data.fileName)
+        } catch (error) {
+          if (error instanceof InvalidMediaError) {
+            return reply.code(400).send({ error: 'invalid_media_mime_type' })
+          }
+          throw error
+        }
+        uploadFileName = payload.data.fileName
+        uploadCaption = payload.data.caption ?? null
+      }
+
+      if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length, isPending)) {
+        return reply.code(413).send({ error: 'storage_quota_exceeded' })
+      }
     }
 
     // Une contribution d'une ligne, créée avant le média pour qu'il la référence
@@ -465,66 +363,22 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(201).send({ media, status: media.status })
     }
 
-    let fileBuffer: Buffer
-    let normalizedMimeType: string
-    let normalizedFileName: string
-    let normalizedSizeBytes: number
-    let normalizedCaption: string | null
-    const normalizedSource = normalizeOptionalText(payload.data.source)
-
-    if (payload.data.type === 'citation') {
-      const citationText = payload.data.caption.trim()
-      if (!citationText) {
-        return reply.code(400).send({ error: 'citation_text_required' })
-      }
-
-      fileBuffer = Buffer.from(citationText, 'utf8')
-      normalizedMimeType = 'text/plain'
-      normalizedFileName = 'citation.txt'
-      normalizedSizeBytes = fileBuffer.length
-      normalizedCaption = citationText
-    } else {
-      if (!isMimeTypeAllowedForMediaType(payload.data.type, payload.data.mimeType)) {
-        return reply.code(400).send({ error: 'invalid_media_mime_type' })
-      }
-
-      const encoded = stripDataUrlPrefix(payload.data.dataBase64)
-      try {
-        fileBuffer = Buffer.from(encoded, 'base64')
-      } catch {
-        return reply.code(400).send({ error: 'invalid_base64_data' })
-      }
-
-      if (!fileBuffer.length) {
-        return reply.code(400).send({ error: 'empty_media_file' })
-      }
-
-      if (fileBuffer.length !== payload.data.sizeBytes) {
-        return reply.code(400).send({ error: 'size_mismatch' })
-      }
-
-      if (payload.data.type === 'photo' && fileBuffer.length > MAX_IMAGE_BYTES) {
-        return reply.code(400).send({ error: 'image_too_large' })
-      }
-
-      normalizedMimeType = payload.data.mimeType
-      normalizedFileName = payload.data.fileName
-      normalizedSizeBytes = payload.data.sizeBytes
-      normalizedCaption = payload.data.caption ?? null
+    if (!prepared) {
+      return reply.code(400).send({ error: 'invalid_payload' })
     }
 
-    const extension = inferFileExtension(normalizedFileName, normalizedMimeType)
+    const normalizedSource = normalizeOptionalText(payload.data.source)
     const mediaId = randomUUID()
-    const relativePath = path.posix.join(params.data.id, params.data.personId, `${mediaId}${extension}`)
+    const relativePath = path.posix.join(params.data.id, params.data.personId, `${mediaId}${prepared.extension}`)
     const storageRoot = getStorageRoot()
     const absolutePath = path.resolve(storageRoot, relativePath)
 
-    if (!absolutePath.startsWith(storageRoot)) {
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
       return reply.code(400).send({ error: 'invalid_media_path' })
     }
 
     await mkdir(path.dirname(absolutePath), { recursive: true })
-    await writeFile(absolutePath, fileBuffer)
+    await writeFile(absolutePath, prepared.buffer)
 
     const mediaCount = await app.prisma.mediaItem.count({
       where: {
@@ -541,11 +395,11 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         treeId: params.data.id,
         personId: params.data.personId,
         type: payload.data.type,
-        mimeType: normalizedMimeType,
+        mimeType: prepared.mimeType,
         filePath: relativePath,
-        caption: normalizedCaption,
+        caption: uploadCaption,
         source: normalizedSource,
-        sizeBytes: normalizedSizeBytes,
+        sizeBytes: prepared.buffer.length,
         displayOrder: isPending ? 0 : mediaCount + 1,
         isFeatured: !isPending && mediaCount < 3,
         uploadedBy: uploaderUserId,
@@ -558,7 +412,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
     }
 
-    await recordContributionChange(mediaId, { type: payload.data.type, mimeType: normalizedMimeType, caption: normalizedCaption })
+    await recordContributionChange(mediaId, { type: payload.data.type, mimeType: prepared.mimeType, caption: uploadCaption })
 
     await app.prisma.auditLog.create({
       data: {
@@ -570,8 +424,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         payloadJson: {
           personId: params.data.personId,
           type: payload.data.type,
-          fileName: normalizedFileName,
-          sizeBytes: normalizedSizeBytes,
+          fileName: uploadFileName,
+          sizeBytes: prepared.buffer.length,
         },
       },
     })
@@ -607,6 +461,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       },
       select: {
         id: true,
+        avatarPath: true,
       },
     })
 
@@ -614,18 +469,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'person_not_found' })
     }
 
-    if (!payload.data.mimeType.startsWith('image/')) {
-      return reply.code(400).send({ error: 'invalid_avatar_mime_type' })
-    }
-
-    const encoded = stripDataUrlPrefix(payload.data.dataBase64)
-    let fileBuffer: Buffer
-
-    try {
-      fileBuffer = Buffer.from(encoded, 'base64')
-    } catch {
-      return reply.code(400).send({ error: 'invalid_base64_data' })
-    }
+    const fileBuffer = Buffer.from(stripDataUrlPrefix(payload.data.dataBase64), 'base64')
 
     if (!fileBuffer.length) {
       return reply.code(400).send({ error: 'empty_media_file' })
@@ -639,21 +483,30 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'image_too_large' })
     }
 
-    const extension = inferFileExtension(payload.data.fileName, payload.data.mimeType)
+    let prepared: Awaited<ReturnType<typeof prepareUploadedFile>>
+    try {
+      prepared = await prepareUploadedFile(fileBuffer, 'photo', payload.data.fileName)
+    } catch (error) {
+      if (error instanceof InvalidMediaError) {
+        return reply.code(400).send({ error: 'invalid_avatar_mime_type' })
+      }
+      throw error
+    }
+
     const relativePath = path.posix.join(
       params.data.id,
       params.data.personId,
-      `avatar-${randomUUID()}${extension}`,
+      `avatar-${randomUUID()}${prepared.extension}`,
     )
     const storageRoot = getStorageRoot()
     const absolutePath = path.resolve(storageRoot, relativePath)
 
-    if (!absolutePath.startsWith(storageRoot)) {
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
       return reply.code(400).send({ error: 'invalid_media_path' })
     }
 
     await mkdir(path.dirname(absolutePath), { recursive: true })
-    await writeFile(absolutePath, fileBuffer)
+    await writeFile(absolutePath, prepared.buffer)
 
     await app.prisma.person.updateMany({
       where: {
@@ -663,10 +516,13 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       },
       data: {
         avatarPath: relativePath,
-        avatarMimeType: payload.data.mimeType,
+        avatarMimeType: prepared.mimeType,
         updatedBy: request.actor.userId,
       },
     })
+
+    // L'ancien portrait ne reste pas sur le disque
+    await removeStoredFile(storageRoot, person.avatarPath)
 
     await app.prisma.auditLog.create({
       data: {
@@ -697,6 +553,11 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
+    const person = await app.prisma.person.findFirst({
+      where: { id: params.data.personId, treeId: params.data.id, deletedAt: null },
+      select: { avatarPath: true },
+    })
+
     const updated = await app.prisma.person.updateMany({
       where: {
         id: params.data.personId,
@@ -713,6 +574,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     if (updated.count === 0) {
       return reply.code(404).send({ error: 'person_not_found' })
     }
+
+    await removeStoredFile(getStorageRoot(), person?.avatarPath)
 
     await app.prisma.auditLog.create({
       data: {
@@ -829,6 +692,11 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
+    const existingMedia = await app.prisma.mediaItem.findFirst({
+      where: { id: params.data.mediaId, treeId: params.data.id, personId: params.data.personId, deletedAt: null },
+      select: { filePath: true },
+    })
+
     const updateResult = await app.prisma.mediaItem.updateMany({
       where: {
         id: params.data.mediaId,
@@ -844,6 +712,9 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     if (updateResult.count === 0) {
       return reply.code(404).send({ error: 'media_not_found' })
     }
+
+    // Supprimé = effacé du disque (la ligne reste pour le journal)
+    await removeStoredFile(getStorageRoot(), existingMedia?.filePath)
 
     await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
 
@@ -875,12 +746,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'invalid_query' })
     }
 
-    const readableByActor = await assertTreeReadableByActor(app, params.data.id, request.actor)
-    const readableByQueryToken = query.data.token
-      ? await assertTreeReadableByQueryToken(app, params.data.id, query.data.token)
-      : false
-
-    if (!readableByActor && !readableByQueryToken) {
+    if (!(await canReadMedia(app, params.data.id, request, query.data.token))) {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
@@ -902,7 +768,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     const storageRoot = getStorageRoot()
     const absolutePath = path.resolve(storageRoot, person.avatarPath)
-    if (!absolutePath.startsWith(storageRoot)) {
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
       return reply.code(400).send({ error: 'invalid_media_path' })
     }
 
@@ -913,8 +779,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'media_file_missing' })
     }
 
-    reply.header('Cache-Control', 'private, max-age=300')
-    reply.type(person.avatarMimeType || 'application/octet-stream')
+    applyMediaResponseHeaders(reply, person.avatarMimeType, 'portrait')
 
     return reply.send(fileBuffer)
   })
@@ -930,12 +795,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'invalid_query' })
     }
 
-    const readableByActor = await assertTreeReadableByActor(app, params.data.id, request.actor)
-    const readableByQueryToken = query.data.token
-      ? await assertTreeReadableByQueryToken(app, params.data.id, query.data.token)
-      : false
-
-    if (!readableByActor && !readableByQueryToken) {
+    if (!(await canReadMedia(app, params.data.id, request, query.data.token))) {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
@@ -962,7 +822,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     const storageRoot = getStorageRoot()
     const absolutePath = path.resolve(storageRoot, media.filePath)
-    if (!absolutePath.startsWith(storageRoot)) {
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
       return reply.code(400).send({ error: 'invalid_media_path' })
     }
 
@@ -973,8 +833,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'media_file_missing' })
     }
 
-    reply.header('Cache-Control', 'private, max-age=300')
-    reply.type(media.mimeType)
+    applyMediaResponseHeaders(reply, media.mimeType, path.basename(media.filePath))
 
     return reply.send(fileBuffer)
   })
@@ -994,7 +853,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     photoId: z.string().min(1),
   })
 
-  app.post('/trees/:id/annotation-photos', async (request, reply) => {
+  app.post('/trees/:id/annotation-photos', UPLOAD_RATE_LIMIT, async (request, reply) => {
     if (!request.actor || request.actor.kind !== 'user') {
       return reply.code(401).send({ error: 'authentication_required' })
     }
@@ -1014,17 +873,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
-    if (!payload.data.mimeType.startsWith('image/')) {
-      return reply.code(400).send({ error: 'invalid_annotation_photo_mime_type' })
-    }
-
-    const encoded = stripDataUrlPrefix(payload.data.dataBase64)
-    let fileBuffer: Buffer
-    try {
-      fileBuffer = Buffer.from(encoded, 'base64')
-    } catch {
-      return reply.code(400).send({ error: 'invalid_base64_data' })
-    }
+    const fileBuffer = Buffer.from(stripDataUrlPrefix(payload.data.dataBase64), 'base64')
 
     if (!fileBuffer.length) {
       return reply.code(400).send({ error: 'empty_photo_file' })
@@ -1038,18 +887,27 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'photo_too_large' })
     }
 
+    let prepared: Awaited<ReturnType<typeof prepareUploadedFile>>
+    try {
+      prepared = await prepareUploadedFile(fileBuffer, 'photo', payload.data.fileName)
+    } catch (error) {
+      if (error instanceof InvalidMediaError) {
+        return reply.code(400).send({ error: 'invalid_annotation_photo_mime_type' })
+      }
+      throw error
+    }
+
     const photoId = randomUUID()
-    const extension = inferFileExtension(payload.data.fileName, payload.data.mimeType)
-    const relativePath = path.posix.join(params.data.id, 'annotation-photos', `${photoId}${extension}`)
+    const relativePath = path.posix.join(params.data.id, 'annotation-photos', `${photoId}${prepared.extension}`)
     const storageRoot = getStorageRoot()
     const absolutePath = path.resolve(storageRoot, relativePath)
 
-    if (!absolutePath.startsWith(storageRoot)) {
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
       return reply.code(400).send({ error: 'invalid_photo_path' })
     }
 
     await mkdir(path.dirname(absolutePath), { recursive: true })
-    await writeFile(absolutePath, fileBuffer)
+    await writeFile(absolutePath, prepared.buffer)
 
     return reply.code(201).send({
       photoId,
@@ -1068,12 +926,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'invalid_query' })
     }
 
-    const readableByActor = await assertTreeReadableByActor(app, params.data.id, request.actor)
-    const readableByQueryToken = query.data.token
-      ? await assertTreeReadableByQueryToken(app, params.data.id, query.data.token)
-      : false
-
-    if (!readableByActor && !readableByQueryToken) {
+    if (!(await canReadMedia(app, params.data.id, request, query.data.token))) {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
@@ -1096,7 +949,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     for (const ext of extensions) {
       const candidate = path.resolve(photoDir, `${photoIdSafe}${ext}`)
-      if (!candidate.startsWith(storageRoot)) continue
+      if (!candidate.startsWith(storageRoot + path.sep)) continue
       try {
         await readFile(candidate) // existence check
         foundPath = candidate
@@ -1116,8 +969,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'photo_file_missing' })
     }
 
-    reply.header('Cache-Control', 'private, max-age=300')
-    reply.type(foundMime)
+    applyMediaResponseHeaders(reply, foundMime, path.basename(foundPath))
 
     return reply.send(fileBuffer)
   })
