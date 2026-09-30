@@ -92,6 +92,43 @@ fix_perms() {
   find "$REPO_DIR/$1" -type f -exec chmod 644 {} +
 }
 
+# Sauvegarde de la base avant migration, à côté de celles de deploy/backup.sh ($BACKUP_ROOT/pre-migration).
+# « prisma migrate status » sort en 0 quand la base est à jour : pas de dump. Tout autre code (migration en
+# attente, historique divergent, base injoignable) déclenche le dump, et un dump raté arrête le déploiement.
+# Les PREMIGRATION_KEEP derniers dumps sont gardés (10 par défaut).
+predeploy_dump() {
+  if (cd "$REPO_DIR/backend" && npx --no-install prisma migrate status >/dev/null 2>&1); then
+    log "Aucune migration en attente, pas de sauvegarde avant migration"
+    return 0
+  fi
+  log "Migrations en attente : sauvegarde de la base avant de les appliquer"
+  (
+    set -euo pipefail
+    umask 077
+    # Sous-shell : DATABASE_URL et les réglages de sauvegarde ne fuient pas dans les builds qui suivent
+    set -a
+    # shellcheck disable=SC1090,SC1091
+    . "$REPO_DIR/backend/.env"
+    if [ -f "${BACKUP_ENV_FILE:-/etc/genealogy/backup.env}" ]; then
+      # shellcheck disable=SC1090
+      . "${BACKUP_ENV_FILE:-/etc/genealogy/backup.env}"
+    fi
+    set +a
+    command -v pg_dump >/dev/null 2>&1 || { echo "ERROR: pg_dump absent, déploiement arrêté avant migration"; exit 1; }
+    [ -n "${DATABASE_URL:-}" ] || { echo "ERROR: DATABASE_URL absent de backend/.env"; exit 1; }
+    dir="${BACKUP_ROOT:-/var/backups/genealogy}/pre-migration"
+    mkdir -p "$dir"
+    file="$dir/genealogy-premigration-$(date -u +%Y%m%dT%H%M%SZ)-${NEW_SHA:0:12}.dump"
+    if ! pg_dump "$DATABASE_URL" --format=custom --file "$file"; then
+      rm -f "$file"
+      echo "ERROR: pg_dump a échoué, déploiement arrêté avant migration"
+      exit 1
+    fi
+    echo "[deploy] Base sauvegardée : $file"
+    ls -1t "$dir"/genealogy-premigration-*.dump 2>/dev/null | tail -n +"$((${PREMIGRATION_KEEP:-10} + 1))" | xargs -r rm -f
+  )
+}
+
 # 4. Backend
 BACKEND_CHANGED=0
 if changed backend ecosystem.config.cjs; then
@@ -101,6 +138,7 @@ if changed backend ecosystem.config.cjs; then
     || { echo "ERROR: dépendances backend manquantes après installation"; exit 1; }
   log "Build backend"
   (cd "$REPO_DIR/backend" && NODE_ENV='' npm run prisma:generate && NODE_ENV='' npm run build)
+  predeploy_dump
   log "Migrations"
   (cd "$REPO_DIR/backend" && npm run prisma:deploy)
 else
@@ -117,7 +155,8 @@ else
   log "Frontend inchangé"
 fi
 
-# 6. Landing (elle utilise les polices du frontend)
+# 6. Landing (autonome, plus aucune police lue dans le frontend ; frontend/src/assets reste dans le
+#    déclencheur par prudence, sans effet tant que rien n'y change)
 if changed landing frontend/src/assets; then
   install_deps landing
   log "Build landing"

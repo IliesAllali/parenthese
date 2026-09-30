@@ -71,7 +71,7 @@ jobs:
       - name: Tests
         run: npm test
 
-      # Le build lit les polices dans ../frontend/src/assets, présentes dans le dépôt.
+      # Le build ne lit que landing/ : aucune police n'est prise dans ../frontend.
       - name: Build
         run: npm run build
 
