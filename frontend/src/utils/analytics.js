@@ -22,6 +22,36 @@ function flushQueue() {
   }
 }
 
+// L'adresse d'un arbre (/arbre/<slug>) vaut clé d'accès en lecture : elle ne quitte jamais le
+// navigateur. Toute chaîne envoyée à PostHog ($current_url, $pathname, $referrer,
+// $initial_current_url, $session_entry_url, propriétés de personne...) est réécrite en /arbre/:slug.
+const TREE_PATH_RE = /\/arbre\/[^/?#\s]+/g
+const TREE_PATH_ENCODED_RE = /%2Farbre%2F(?:(?!%2F|%3F|%23)[^&#\s])+/gi
+
+export function scrubTreeSlug(value) {
+  if (typeof value === 'string') {
+    return value
+      .replace(TREE_PATH_RE, '/arbre/:slug')
+      .replace(TREE_PATH_ENCODED_RE, '%2Farbre%2F%3Aslug')
+  }
+  if (Array.isArray(value)) return value.map(scrubTreeSlug)
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    const out = {}
+    for (const [k, v] of Object.entries(value)) out[k] = scrubTreeSlug(v)
+    return out
+  }
+  return value
+}
+
+export function scrubAnalyticsEvent(event) {
+  if (!event) return event
+  const next = { ...event }
+  if (next.properties) next.properties = scrubTreeSlug(next.properties)
+  if (next.$set) next.$set = scrubTreeSlug(next.$set)
+  if (next.$set_once) next.$set_once = scrubTreeSlug(next.$set_once)
+  return next
+}
+
 function normalizeRole(value) {
   return String(value || '').trim().toLowerCase()
 }
@@ -43,6 +73,11 @@ export function initAppAnalytics() {
         person_profiles: 'identified_only',
         autocapture: false,
         capture_pageview: false,
+        disable_session_recording: true,
+        // Aucun feature flag dans le code. Sans ça, /flags recevrait les propriétés de personne
+        // ($initial_current_url...), que before_send ne voit pas.
+        advanced_disable_flags: true,
+        before_send: scrubAnalyticsEvent,
       })
       ph = posthog
       flushQueue()

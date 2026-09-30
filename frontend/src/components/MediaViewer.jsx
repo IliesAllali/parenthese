@@ -135,15 +135,17 @@ const MediaViewer = ({ media, person, onClose }) => {
       // Extract YouTube video ID and build embed URL
       const watchMatch = mediaUrl.match(/[?&]v=([^&]+)/)
       const shortMatch = mediaUrl.match(/youtu\.be\/([^/?]+)/)
-      const videoId = (watchMatch?.[1] || shortMatch?.[1] || '').split('?')[0]
-      if (!videoId) {
+      const videoId = (watchMatch?.[1] || shortMatch?.[1] || '').split(/[?#]/)[0]
+      // Un identifiant YouTube fait 11 caractères : tout le reste est refusé plutôt qu'intégré
+      if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
         return (
           <div className="media-video-container">
             <div className="media-video-text">{t('Lien YouTube invalide')}</div>
           </div>
         )
       }
-      const embedUrl = `https://www.youtube.com/embed/${videoId}`
+      // youtube-nocookie : pas de cookie YouTube tant que la vidéo n'est pas lancée
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`
       return (
         <div className="media-video-container media-video-container--youtube">
           <iframe
@@ -273,7 +275,8 @@ const MediaViewer = ({ media, person, onClose }) => {
               src={openStreetMapEmbedUrl}
               title={t('Carte OpenStreetMap')}
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              // Origine seulement : l'adresse complète contient celle de l'arbre
+              referrerPolicy="strict-origin-when-cross-origin"
             />
           ) : (
             <svg

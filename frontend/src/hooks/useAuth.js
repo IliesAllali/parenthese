@@ -10,6 +10,7 @@ import {
 import { listTrees } from '../api/treeApi'
 import * as errorMessages from '../utils/errorMessages'
 import { t } from '../i18n/index.js'
+import { clearAccountLocalData } from '../utils/localHygiene.js'
 
 const USER_TOKEN_STORAGE_KEY = 'user_auth_token'
 const USER_PROFILE_STORAGE_KEY = 'user_auth_profile'
@@ -127,7 +128,8 @@ export function useAuth() {
       // ignore logout errors and clear local session anyway
     } finally {
       localStorage.removeItem(USER_TOKEN_STORAGE_KEY)
-      localStorage.removeItem(USER_PROFILE_STORAGE_KEY)
+      // Brouillons, fiche « c'est moi » et profil : rien du compte ne reste pour la personne suivante
+      clearAccountLocalData()
       setUserAuth({ token: '', user: null })
       setAccountTrees([])
       setLastOpenedTree(null)
@@ -159,6 +161,7 @@ export function useAuth() {
     }
 
     clearStoredUserToken()
+    clearAccountLocalData()
     return null
   }
 

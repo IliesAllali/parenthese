@@ -1,11 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import faviconUrl from './assets/Parenthese logo.svg?url'
+import './assets/fonts/fonts.css'
 import './index.css'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import BootLoader from './components/BootLoader.jsx'
 import { initAppAnalytics } from './utils/analytics.js'
+import { sweepLegacyLocalData } from './utils/localHygiene.js'
 
 const setFavicon = (href) => {
   if (typeof document === 'undefined') return
@@ -22,6 +24,7 @@ const setFavicon = (href) => {
   upsertLink(`link[rel="apple-touch-icon"]`, 'apple-touch-icon')
 }
 
+sweepLegacyLocalData()
 setFavicon(faviconUrl)
 initAppAnalytics()
 
