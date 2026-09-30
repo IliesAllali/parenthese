@@ -1,6 +1,10 @@
+import path from 'node:path'
+
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
+import { env } from '../config/env.js'
+import { removeStoredFile } from '../lib/media-files.js'
 import { syncPersonMediaOrder } from '../lib/media-order.js'
 
 import type { Actor, MembershipRole } from '../types/auth.js'
@@ -30,7 +34,8 @@ const createSessionSchema = z.object({
   title: z.string().min(2).max(120),
   submittedByLabel: z.string().trim().min(1).max(120).optional(),
   comment: z.string().trim().max(500).optional().nullable(),
-  changes: z.array(contributionChangeSchema).min(1),
+  // Une famille propose quelques personnes à la fois ; au-delà, c'est un envoi en boucle
+  changes: z.array(contributionChangeSchema).min(1).max(200),
 })
 
 const listSessionsQuerySchema = z.object({
@@ -988,7 +993,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
 }
 
 export const contributionRoutes: FastifyPluginAsync = async (app) => {
-  app.post('/trees/:id/contributions/sessions', async (request, reply) => {
+  app.post('/trees/:id/contributions/sessions', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) {
       return reply.code(400).send({ error: 'invalid_tree_id' })
@@ -1167,7 +1172,18 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
         explicitDecisions.set(changeDecision.changeId, changeDecision.decision)
       }
 
+      const rejectedMediaIds: string[] = []
       const { updatedSession, approvedCount, rejectedCount, conflictCount, status } = await app.prisma.$transaction(async (tx) => {
+        // Deux relectures simultanées : la seconde attend le verrou de la ligne, puis ne trouve plus
+        // la session en attente. Sans ce verrou, les deux appliquaient les mêmes ajouts.
+        const claimed = await tx.contributionSession.updateMany({
+          where: { id: session.id, status: 'pending' },
+          data: { reviewedBy: membership.userId },
+        })
+        if (claimed.count === 0) {
+          throw new ContributionRouteError(409, 'contribution_session_already_reviewed')
+        }
+
         let approvedCount = 0
         let rejectedCount = 0
         let conflictCount = 0
@@ -1223,6 +1239,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
                 where: { id: change.entityId, treeId: params.data.id },
                 data: { status: 'rejected', deletedAt: new Date() },
               })
+              rejectedMediaIds.push(change.entityId)
             }
             rejectedCount += 1
           }
@@ -1269,6 +1286,16 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
 
         return { updatedSession, approvedCount, rejectedCount, conflictCount, status }
       }, { timeout: 30_000 })
+
+      // Photo refusée = effacée du disque, une fois la relecture enregistrée
+      if (rejectedMediaIds.length > 0) {
+        const rejected = await app.prisma.mediaItem.findMany({
+          where: { id: { in: rejectedMediaIds }, treeId: params.data.id },
+          select: { filePath: true },
+        })
+        const storageRoot = path.resolve(env.MEDIA_STORAGE_PATH)
+        await Promise.all(rejected.map((media) => removeStoredFile(storageRoot, media.filePath)))
+      }
 
       return reply.send({
         session: updatedSession,
