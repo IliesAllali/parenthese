@@ -55,6 +55,10 @@ export function getAccountErrorMessage(error) {
     return t('Le format de fichier ne correspond pas au type de média choisi.')
   }
 
+  if (errorCode === 'storage_quota_exceeded') {
+    return t("L'arbre n'a plus de place pour de nouveaux souvenirs. Son propriétaire peut en supprimer.")
+  }
+
   if (errorCode === 'citation_text_required') {
     return t('Ajoutez le texte de la citation.')
   }

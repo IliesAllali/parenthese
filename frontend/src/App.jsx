@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { buildMediaUrl } from './utils/mediaToken.js'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
 import { FamilyWelcome, SouvenirPicker } from './components/FamilyOnboarding.jsx'
@@ -783,10 +784,8 @@ function App() {
       // Get natural dimensions from the file
       const img = new Image()
       img.onload = () => {
-        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
-        const fullUrl = token
-          ? `${apiBase}${result.photoPath}?token=${encodeURIComponent(token)}`
-          : `${apiBase}${result.photoPath}`
+        // Adresse d'affichage avec le jeton médias ; le serveur n'enregistre que photoPath
+        const fullUrl = buildMediaUrl(result.photoPath, import.meta.env.VITE_API_BASE_URL || '/api')
         annot.placePhoto(worldX, worldY, result.photoPath, fullUrl, img.naturalWidth, img.naturalHeight)
         URL.revokeObjectURL(img.src)
       }
@@ -2695,7 +2694,6 @@ function App() {
       />
       <ContributionPanel
         visible={contrib.contribState.visible}
-        mediaToken={tree.treeContext.accessToken || auth.userAuth.token || ''}
         treeId={tree.treeContext.treeId}
         canModerate={tree.canEditCurrentTree}
         loading={contrib.contribState.loading}

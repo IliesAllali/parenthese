@@ -84,6 +84,7 @@ export default {
   'Le fichier média envoyé est invalide.': 'The media file you sent is invalid.',
   'Le format de fichier ne correspond pas au type de média choisi.': 'The file format does not match the media type you chose.',
   'Ajoutez le texte de la citation.': 'Add the text of the quote.',
+  "L'arbre n'a plus de place pour de nouveaux souvenirs. Son propriétaire peut en supprimer.": 'This tree has no room left for new memories. Its owner can delete some.',
   "Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API.": 'Database error. Run `npm run prisma:deploy`, then restart the API.',
   'Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.': 'Database unavailable. Run `npm run db:bootstrap` in the backend.',
   'Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.': 'Invalid slug: 3 to 64 characters, lowercase letters, numbers and hyphens only.',

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { buildMediaUrl } from '../utils/mediaToken.js'
 import { API_BASE_URL } from '../api/client'
 import { persons as treePersons } from '../data/mockData'
 import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
@@ -37,13 +38,13 @@ const MEDIA_TYPE_LABELS = {
 }
 
 // Souvenir envoyé par la famille : de quoi juger avant d'accepter
-function getMediaPreview(change, treeId, token) {
+function getMediaPreview(change, treeId) {
   const data = (change.afterJson && typeof change.afterJson === 'object') ? change.afterJson : {}
   const label = MEDIA_TYPE_LABELS[data.type] || t('Souvenir')
   const caption = typeof data.caption === 'string' ? data.caption : ''
   const isYoutube = data.mimeType === 'video/youtube'
   const url = change.entityId && treeId && !isYoutube
-    ? `${API_BASE_URL}/trees/${encodeURIComponent(treeId)}/media/${encodeURIComponent(change.entityId)}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    ? buildMediaUrl(`/trees/${encodeURIComponent(treeId)}/media/${encodeURIComponent(change.entityId)}`, API_BASE_URL)
     : null
   return { type: data.type, label, caption, url, isYoutube }
 }
@@ -143,7 +144,7 @@ function getFieldRows(change) {
     })
 }
 
-function getAnnotationPreview(change) {
+function getAnnotationPreview(change, treeId) {
   const data = change.afterJson || change.after || {}
   const type = data.type
   if (!type) return null
@@ -152,8 +153,13 @@ function getAnnotationPreview(change) {
   if (type === 'drawing') return { type, color: data.style?.color || '#2A2622' }
   if (type === 'photo') {
     try {
+      // Seulement une photo de cet arbre, reconstruite depuis son chemin : une adresse fournie par
+      // l'auteur de la contribution pourrait pister celui qui relit
       const parsed = typeof data.content === 'string' ? JSON.parse(data.content) : data.content
-      return { type, url: parsed?.url || null }
+      const prefix = `/trees/${treeId}/annotation-photos/`
+      const photoPath = typeof parsed?.photoPath === 'string' ? parsed.photoPath : ''
+      const isOwnPhoto = photoPath.startsWith(prefix) && /^[A-Za-z0-9-]+$/.test(photoPath.slice(prefix.length))
+      return { type, url: isOwnPhoto ? buildMediaUrl(photoPath, API_BASE_URL) : null }
     } catch { return { type } }
   }
   return { type }
@@ -188,7 +194,6 @@ function buildInviteText(url, password) {
 
 const ContributionPanel = ({
   visible,
-  mediaToken = '',
   treeId,
   canModerate,
   loading,
@@ -494,8 +499,8 @@ const ContributionPanel = ({
                           const isRejected = decision === 'rejected'
                           const personName = getPersonDisplayName(change, session.changes || [])
                           const fields = getFieldRows(change)
-                          const annPreview = change.entityType === 'annotation' ? getAnnotationPreview(change) : null
-                          const mediaPreview = change.entityType === 'media' ? getMediaPreview(change, treeId, mediaToken) : null
+                          const annPreview = change.entityType === 'annotation' ? getAnnotationPreview(change, treeId) : null
+                          const mediaPreview = change.entityType === 'media' ? getMediaPreview(change, treeId) : null
 
                           return (
                             <div
