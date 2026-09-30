@@ -4,7 +4,7 @@
 //   1. API : le propriétaire crée un compte et un arbre partagé (mot de passe contributeur)
 //   2. Navigateur A (famille, sans compte) : lien partagé → mot de passe → arbre ouvert en contributeur
 //   3. Rechargement : reste contributeur (jeton en poche), sans ressaisie
-//   4. Navbar "Créer un compte" → formulaire → compte créé → retour sur l'arbre, rattaché (navbar contributeur connecté)
+//   4. Menu « Plus » → "Créer un compte" → formulaire → compte créé → retour sur l'arbre, rattaché (barre de la famille connectée)
 //   5. Rechargement : l'arbre s'ouvre directement, sans grille d'accès
 //   6. API : l'arbre figure dans "mes arbres" du nouveau compte avec le rôle contributor
 //   7. Navigateur B (propriétaire) : connexion → paramètres → "modifications appliquées directement" → API confirme
@@ -87,7 +87,9 @@ async function launchBrowser(label) {
     async clickLabel(label) {
       return p.eval(`(() => { const el = document.querySelector('button[aria-label=' + JSON.stringify(${JSON.stringify(label)}) + ']'); if (!el) return false; el.click(); return true })()`, false)
     },
-    navLabels: () => p.eval(`[...document.querySelectorAll('.contextual-navbar button[aria-label]')].map(b => b.getAttribute('aria-label'))`, false),
+    // Bouton visible dont le texte ou l'aria-label vaut exactement `text`
+    hasButton: (text) => p.eval(`[...document.querySelectorAll('button, [role=button], [role=menuitem]')].some(b => b.offsetParent !== null && ((b.textContent || '').trim() === ${JSON.stringify(text)} || b.getAttribute('aria-label') === ${JSON.stringify(text)}))`, false),
+    clickButton: (text) => p.eval(`(() => { const el = [...document.querySelectorAll('button, [role=button], [role=menuitem]')].find(b => b.offsetParent !== null && ((b.textContent || '').trim() === ${JSON.stringify(text)} || b.getAttribute('aria-label') === ${JSON.stringify(text)})); if (!el) return false; el.click(); return true })()`, false),
     async shot(file) { const { data } = await p.send('Page.captureScreenshot', { format: 'png' }); const { writeFileSync } = await import('node:fs'); writeFileSync(new URL(`./out/${file}`, import.meta.url), Buffer.from(data, 'base64')) },
     close() { try { proc.kill() } catch {} ; try { rmSync(profileDir, { recursive: true, force: true }) } catch {} },
   }
@@ -115,18 +117,21 @@ try {
   }
   check('2. arbre ouvert avec le mot de passe', opened2)
   await sleep(1000)
-  let labels = await A.navLabels()
-  check('2. navbar contributeur (sans compte)', labels.includes("Contribuer à l'arbre") && labels.includes('Créer un compte'), labels.join(' | '))
+  // Barre de la famille depuis le 25/09 : « Ajouter un souvenir », « Ajouter une personne », « Plus »
+  check('2. carte d accueil de la première visite fermée', await A.clickButton("Regarder l'arbre"))
+  await sleep(500)
+  check('2. barre de la famille (sans compte)', await A.hasButton('Ajouter un souvenir') && await A.hasButton('Plus'))
 
   // ---------- 3. Rechargement : reste contributeur ----------
   await A.goto(`${FRONT}/arbre/${slug}`)
   await A.waitFor(`document.querySelector('canvas.galaxy-canvas')`)
   await sleep(1000)
-  labels = await A.navLabels()
-  check('3. après rechargement, toujours contributeur sans ressaisie', labels.includes("Contribuer à l'arbre"), labels.join(' | '))
+  check('3. après rechargement, toujours contributeur sans ressaisie', await A.hasButton('Ajouter un souvenir'))
 
-  // ---------- 4. Créer un compte depuis la navbar ----------
-  check('4. clic "Créer un compte"', await A.clickLabel('Créer un compte'))
+  // ---------- 4. Créer un compte depuis le menu « Plus » ----------
+  await A.clickButton('Plus')
+  await sleep(400)
+  check('4. clic "Créer un compte"', await A.clickButton('Créer un compte'))
   check('4. écran compte en mode inscription', await A.waitFor(`document.querySelector('#accountFirstName')`))
   const pendingText = await A.eval(`document.querySelector('.account-pending-tree')?.textContent || ''`, false)
   check('4. rappel du retour sur l arbre', pendingText.includes('Famille E2E'), pendingText.trim())
@@ -137,8 +142,7 @@ try {
   await A.clickText('button', 'Créer mon compte')
   check('4. retour sur l arbre après création', await A.waitFor(`document.querySelector('canvas.galaxy-canvas')`, 20000))
   await sleep(1500)
-  labels = await A.navLabels()
-  check('4. navbar contributeur connecté', labels.includes('Contribuer'), labels.join(' | '))
+  check('4. famille connectée : barre de la famille et menu du compte', await A.hasButton('Ajouter un souvenir') && await A.hasButton('Menu compte'))
   const wizardShown = await A.eval(`/appelle votre famille/i.test(document.body.innerText)`, false)
   check('4. pas d assistant "votre arbre" par-dessus', !wizardShown)
   await A.shot('e2e-after-register.png')
@@ -149,8 +153,7 @@ try {
   const gateShown = await A.eval(`!!document.querySelector('input[type=password]')`, false)
   check('5. rechargement connecté : arbre direct, pas de grille', direct && !gateShown)
   await sleep(1000)
-  labels = await A.navLabels()
-  check('5. toujours contributeur connecté', labels.includes('Contribuer'), labels.join(' | '))
+  check('5. toujours contributeur connecté', await A.hasButton('Ajouter un souvenir') && await A.hasButton('Menu compte'))
 } finally {
   A.close()
 }
