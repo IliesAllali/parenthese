@@ -45,7 +45,7 @@ const { prismaMock } = vi.hoisted(() => ({
       findMany: vi.fn(),
       findUnique: vi.fn(),
       upsert: vi.fn(),
-      updateMany: vi.fn(),
+      updateMany: vi.fn(),      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     person: {
       findMany: vi.fn(),
@@ -69,7 +69,7 @@ const { prismaMock } = vi.hoisted(() => ({
       updateMany: vi.fn(),
     },
     mediaItem: {
-      count: vi.fn(),
+      count: vi.fn(),      aggregate: vi.fn().mockResolvedValue({ _sum: { sizeBytes: 0 } }),
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -83,7 +83,7 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       findMany: vi.fn(),
       findFirst: vi.fn(),
-      update: vi.fn(),
+      update: vi.fn(),      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       count: vi.fn(),
     },
     contributionChange: {
@@ -123,6 +123,9 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  prismaMock.userTreeAccess.deleteMany?.mockResolvedValue({ count: 0 })
+  prismaMock.contributionSession.updateMany?.mockResolvedValue({ count: 1 })
+  prismaMock.mediaItem.aggregate?.mockResolvedValue({ _sum: { sizeBytes: 0 } })
 
   prismaMock.user.findUnique.mockResolvedValue(null)
   prismaMock.user.create.mockResolvedValue({ id: 'user-1', email: 'owner@example.com' })
