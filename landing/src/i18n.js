@@ -111,7 +111,6 @@ export const COPY = {
     final: {
       title: ['Commencez par ', 'un seul visage'],
       lede: "Le vôtre, ou celui de quelqu'un que vous aimeriez garder.",
-      back: "Ou retourner explorer l'arbre partagé",
     },
     footer: {
       label: 'Pied de page',
@@ -220,7 +219,6 @@ export const COPY = {
     final: {
       title: ['Start with ', 'a single face'],
       lede: "Yours, or the face of someone you'd like to keep close.",
-      back: 'Or go back to the shared tree',
     },
     footer: {
       label: 'Footer',
