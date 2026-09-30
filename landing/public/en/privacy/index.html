@@ -57,10 +57,10 @@
 
       <h2>What Parenthèse stores</h2>
       <p><strong>Your account.</strong> Your email address and your password, stored as a hash (bcrypt), so no one can read it back, including me. The date the account was created and the last tree you opened, to take you back to it when you log in. The first name asked for at sign-up is not sent to the server, it stays in your browser.</p>
-      <p><strong>Your trees.</strong> The name, the description, the sharing address, the settings, and the two access passwords (visitor and contributor), which are also hashed.</p>
+      <p><strong>Your trees.</strong> The name, the description, the sharing address, the settings, and the sharing password. It is hashed to check access, and kept encrypted so the owner can read it again and send it to their family.</p>
       <p><strong>The people.</strong> What you enter for each of them (first name, last name, birth name, dates and places of birth and death, occupation, region, nationality, sex, notes, portrait). And the unions and parent-child links that connect them.</p>
-      <p><strong>The media.</strong> Photos, videos, audio recordings, documents, GPS tracks, quotes and YouTube links attached to a person, with their caption and source. A photo can be up to 5 MB, any other file up to 20 MB. On top of that come the annotations placed on the tree itself, such as text, drawings, stickers and photos.</p>
-      <p><strong>Contributions.</strong> When someone suggests a change, Parenthèse keeps the suggestion, the state before and after, who submitted it (a member's email address, or “Contributor” for access by password) and the decision made.</p>
+      <p><strong>The media.</strong> Photos, videos, audio recordings, documents, GPS tracks, quotes and YouTube links attached to a person, with their caption and source. A photo can be up to 5 MB, any other file up to 20 MB. Photos are saved again without their metadata (GPS location, device, date taken), and the location is removed from phone videos. On top of that come the annotations placed on the tree itself, such as text, drawings, stickers and photos.</p>
+      <p><strong>Contributions.</strong> When someone suggests a change, Parenthèse keeps the suggestion, the state before and after, who submitted it (a member's email address, or for access by password the first name the person gave, otherwise “Contributor”) and the decision made.</p>
       <p><strong>The tree's log.</strong> Every creation, change and deletion is dated and attributed to an account or to an access by password. The owner can view it. It is there to know who changed what.</p>
       <p><strong>Visits.</strong> Each time a tree is opened, it is recorded with the date, the type of device (phone, tablet or computer), the account if there is one, and the first name if the person gave it when opening the tree. The IP address is not kept. Only a fingerprint that cannot be reversed is used to count distinct visitors. The owner of the tree can see these visits. They are erased after one year.</p>
       <p><strong>Technical logs.</strong> Like any web server, the Parenthèse server records the requests it receives (IP address, page requested, errors) to run and troubleshoot the service.</p>
@@ -71,15 +71,15 @@
       <h2>Who can see what</h2>
       <p>A tree is never public. The app blocks search engines from indexing it, and none of its content is visible without the link and a password.</p>
       <ul>
-        <li><strong>The owner</strong>, the account that created the tree, sees and edits everything. They set the passwords, approve contributions, view the log and the visits, and export and delete the tree.</li>
-        <li><strong>A contributor</strong> has received the link and the contributor password. They can view everything and suggest changes. By default, those changes wait for the owner's approval before they appear.</li>
-        <li><strong>A visitor</strong> has received the link and the visitor password. They can view, without changing anything.</li>
+        <li><strong>The owner</strong>, the account that created the tree, sees and edits everything. They choose the sharing password, approve contributions, view the log and the visits, and export and delete the tree.</li>
+        <li><strong>The family</strong> has received the link and the sharing password. They can view everything and suggest additions, memories, photos, people. By default, these wait for the owner's approval before they appear.</li>
+        
       </ul>
       <p>Anyone who has the link and a password sees the whole tree, including living people with their dates, places and notes, and can export it as a GEDCOM file.</p>
       <div class="note">
         <p><strong>One detail.</strong> Even before typing the password, the person who opens the link sees the tree's name and its description, nothing else, and nothing about the owner. So don't put anything in the description that you don't want to show to whoever has the link.</p>
       </div>
-      <p>An access password opens a 24-hour session. An account session lasts 7 days, or less if you log out.</p>
+      <p>The sharing password opens a 24-hour session. An account session lasts 7 days, or less if you log out. When the owner changes the sharing password, every session opened with the old one is closed, including those linked to an account.</p>
 
       <h2>Where it is hosted, and for how long</h2>
       <p>On a server rented from Hostinger, which I manage. The database (PostgreSQL) and the media files are stored there. The files sit in a folder outside the web, and are only served to someone with a valid access session for the tree. Traffic between you and the site and the app goes over HTTPS.</p>
@@ -92,7 +92,7 @@
 
       <h2>Audience measurement</h2>
       <p>Parenthèse uses PostHog to count visits and see what gets used. PostHog is hosted in the United States, and the usage data described here is sent there.</p>
-      <p>Here is what is measured, and nothing more. On the website, page views, scrolling, clicks on the “Start your tree” buttons, with where they came from (previous page, mobile or computer). In the app, opening the account screen, creating an account or a tree, and for shared trees, opening them, the time spent and the type of content viewed (text, photo, video), with the role, visitor or contributor. The tree is identified there by a scrambled code, never by its name.</p>
+      <p>Here is what is measured, and nothing more. On the website, page views, scrolling, clicks on the “Start your tree” buttons, with where they came from (previous page, mobile or computer). In the app, opening the account screen, creating an account or a tree, and for shared trees, opening them, the time spent and the type of content viewed (text, photo, video), with the type of access. The tree is identified there by a scrambled code, never by its name.</p>
       <p>There is no automatic capture of clicks or pages, and no session recording. No tree content (name, person, photo) is sent, and neither is the address of the tree, which is removed from links before anything is sent. When you are logged in to your account, a technical account identifier (never your email address) links your visits together. A cookie is set on parenthese.io and its subdomains to recognize the same visit across the site and the app.</p>
 
       <h2>Your rights</h2>
@@ -113,7 +113,7 @@
 
       <section class="cta">
         <h2>A tree your family views through a link</h2>
-        <p>One account, one family name, two passwords. You stay in control of who sees what.</p>
+        <p>One account, one family name, one password for the family. You stay in control of who sees what.</p>
         <a class="btn" href="https://app.parenthese.io/?account=register&amp;lang=en&amp;source=page-vie-privee">Start your tree</a>
       </section>
     </article>

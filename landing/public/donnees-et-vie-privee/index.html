@@ -57,10 +57,10 @@
 
       <h2>Ce que Parenthèse enregistre</h2>
       <p><strong>Votre compte.</strong> Votre adresse email et votre mot de passe, stocké sous forme de hachage (bcrypt), donc personne ne peut le relire, moi compris. La date de création du compte et le dernier arbre ouvert, pour vous y ramener à la connexion. Le prénom demandé à l'inscription n'est pas envoyé au serveur, il reste dans votre navigateur.</p>
-      <p><strong>Vos arbres.</strong> Le nom, la description, l'adresse de partage, les réglages, et les deux mots de passe d'accès (visiteur et contributeur), eux aussi hachés.</p>
+      <p><strong>Vos arbres.</strong> Le nom, la description, l'adresse de partage, les réglages, et le mot de passe de partage. Il est haché pour vérifier l'accès, et gardé chiffré pour que le propriétaire puisse le relire et le renvoyer à sa famille.</p>
       <p><strong>Les personnes.</strong> Ce que vous saisissez sur chacune, prénom, nom, nom de naissance, dates et lieu de naissance et de décès, profession, région, nationalité, sexe, notes, portrait. Et les unions et liens de filiation qui les relient.</p>
-      <p><strong>Les médias.</strong> Photos, vidéos, enregistrements audio, documents, tracés GPS, citations et liens YouTube posés sur une personne, avec leur légende et leur source. Une photo fait 5 Mo au plus, un autre fichier 20 Mo. S'y ajoutent les annotations posées sur l'arbre lui-même, textes, dessins, autocollants, photos.</p>
-      <p><strong>Les contributions.</strong> Quand quelqu'un propose une modification, Parenthèse garde la proposition, l'état avant et après, qui l'a soumise (l'adresse email d'un membre, ou « Contributeur » pour un accès par mot de passe) et la décision prise.</p>
+      <p><strong>Les médias.</strong> Photos, vidéos, enregistrements audio, documents, tracés GPS, citations et liens YouTube posés sur une personne, avec leur légende et leur source. Une photo fait 5 Mo au plus, un autre fichier 20 Mo. Les photos sont réenregistrées sans leurs métadonnées (position GPS, appareil, date de prise de vue), et la position est retirée des vidéos de téléphone. S'y ajoutent les annotations posées sur l'arbre lui-même, textes, dessins, autocollants, photos.</p>
+      <p><strong>Les contributions.</strong> Quand quelqu'un propose une modification, Parenthèse garde la proposition, l'état avant et après, qui l'a soumise (l'adresse email d'un membre, ou pour un accès par mot de passe le prénom que la personne a donné, sinon « Contributeur ») et la décision prise.</p>
       <p><strong>Le journal de l'arbre.</strong> Chaque création, modification et suppression est datée et attribuée à un compte ou à un accès par mot de passe. Le propriétaire peut le consulter. Il sert à savoir qui a changé quoi.</p>
       <p><strong>Les visites.</strong> Chaque ouverture d'un arbre est notée, avec la date, le type d'appareil (téléphone, tablette ou ordinateur), le compte s'il y en a un, et le prénom si la personne l'a donné en ouvrant l'arbre. L'adresse IP n'est pas gardée, seule une empreinte impossible à retourner sert à compter les visiteurs distincts. Le propriétaire de l'arbre voit ces visites. Elles sont effacées au bout d'un an.</p>
       <p><strong>Les journaux techniques.</strong> Comme tout serveur web, celui de Parenthèse enregistre les requêtes reçues (adresse IP, page demandée, erreurs) pour faire fonctionner et dépanner le service.</p>
@@ -71,15 +71,15 @@
       <h2>Qui peut voir quoi</h2>
       <p>Un arbre n'est jamais public. L'application interdit son indexation par les moteurs de recherche, et rien de son contenu n'est visible sans le lien et un mot de passe.</p>
       <ul>
-        <li><strong>Le propriétaire</strong>, le compte qui a créé l'arbre, voit et modifie tout. Il fixe les mots de passe, valide les contributions, consulte le journal et les visites, exporte et supprime l'arbre.</li>
-        <li><strong>Un contributeur</strong> a reçu le lien et le mot de passe contributeur. Il consulte tout et propose des modifications. Par défaut, elles attendent la validation du propriétaire avant d'apparaître.</li>
-        <li><strong>Un visiteur</strong> a reçu le lien et le mot de passe visiteur. Il consulte, sans rien modifier.</li>
+        <li><strong>Le propriétaire</strong>, le compte qui a créé l'arbre, voit et modifie tout. Il choisit le mot de passe de partage, valide les contributions, consulte le journal et les visites, exporte et supprime l'arbre.</li>
+        <li><strong>La famille</strong> a reçu le lien et le mot de passe de partage. Elle consulte tout et propose des ajouts, souvenirs, photos, personnes. Par défaut, ils attendent la validation du propriétaire avant d'apparaître.</li>
+        
       </ul>
       <p>Toute personne qui a le lien et un mot de passe voit l'arbre entier, y compris les personnes vivantes avec leurs dates, leurs lieux et leurs notes, et peut l'exporter en fichier GEDCOM.</p>
       <div class="note">
         <p><strong>Une précision.</strong> Avant même de saisir le mot de passe, la personne qui ouvre le lien voit le nom de l'arbre et sa description, rien d'autre, et rien sur le propriétaire. Ne mettez donc pas dans la description ce que vous ne voulez pas montrer à qui a le lien.</p>
       </div>
-      <p>Un mot de passe d'accès ouvre une session de 24 heures. La session d'un compte dure 7 jours, ou moins si vous vous déconnectez.</p>
+      <p>Le mot de passe de partage ouvre une session de 24 heures. La session d'un compte dure 7 jours, ou moins si vous vous déconnectez. Quand le propriétaire change le mot de passe de partage, toutes les sessions ouvertes avec l'ancien se ferment, y compris celles rattachées à un compte.</p>
 
       <h2>Où c'est hébergé, et combien de temps</h2>
       <p>Sur un serveur loué chez Hostinger, que j'administre. La base de données (PostgreSQL) et les fichiers médias y sont stockés, les fichiers dans un dossier hors du web, et ne sont servis qu'à une personne dont la session d'accès à l'arbre est valide. Les échanges avec le site et l'application passent en HTTPS.</p>
@@ -92,7 +92,7 @@
 
       <h2>Mesure d'audience</h2>
       <p>Parenthèse utilise PostHog pour compter les visites et voir ce qui est utilisé. PostHog est hébergé aux États-Unis, les données d'usage décrites ici y sont envoyées.</p>
-      <p>Ce qui est mesuré, et rien de plus. Sur le site, la visite d'une page, le défilement, les clics sur les boutons « Créer mon arbre », avec la provenance (page précédente, mobile ou ordinateur). Dans l'application, l'ouverture de l'écran de compte, la création d'un compte ou d'un arbre, et pour les arbres partagés, l'ouverture, le temps passé et le type de contenu consulté (texte, photo, vidéo), avec le rôle, visiteur ou contributeur. L'arbre y est désigné par un code brouillé, jamais par son nom.</p>
+      <p>Ce qui est mesuré, et rien de plus. Sur le site, la visite d'une page, le défilement, les clics sur les boutons « Créer mon arbre », avec la provenance (page précédente, mobile ou ordinateur). Dans l'application, l'ouverture de l'écran de compte, la création d'un compte ou d'un arbre, et pour les arbres partagés, l'ouverture, le temps passé et le type de contenu consulté (texte, photo, vidéo), avec le type d'accès. L'arbre y est désigné par un code brouillé, jamais par son nom.</p>
       <p>Il n'y a pas de capture automatique des clics ni des pages, et pas d'enregistrement des sessions. Aucun contenu d'arbre (nom, personne, photo) n'est envoyé, ni l'adresse de l'arbre, retirée des liens avant tout envoi. Quand vous êtes connecté à votre compte, un identifiant technique du compte (jamais votre adresse email) relie vos visites entre elles. Un cookie est posé sur parenthese.io et ses sous-domaines pour reconnaître la même visite entre le site et l'application.</p>
 
       <h2>Vos droits</h2>
@@ -113,7 +113,7 @@
 
       <section class="cta">
         <h2>Un arbre que la famille consulte par un lien</h2>
-        <p>Un compte, un nom de famille, deux mots de passe. Vous gardez la main sur qui voit quoi.</p>
+        <p>Un compte, un nom de famille, un mot de passe pour la famille. Vous gardez la main sur qui voit quoi.</p>
         <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=page-vie-privee">Créer mon arbre</a>
       </section>
     </article>
