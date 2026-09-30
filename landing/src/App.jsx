@@ -51,7 +51,7 @@ function HeroGraph({ className = '', label }) {
         firstName: 'Camille',
         years: '1987',
         frameType: 'polaroid',
-        photo: '/hero/photos/women-44.webp',
+        photo: '/hero/photos/camille-39.webp',
         x: 158,
         y: 168,
         medias: [
@@ -65,7 +65,7 @@ function HeroGraph({ className = '', label }) {
         firstName: 'Alex',
         years: '1985',
         frameType: 'rect',
-        photo: '/hero/photos/men-32.webp',
+        photo: '/hero/photos/alex-41.webp',
         x: 602,
         y: 168,
         medias: [
@@ -1050,7 +1050,7 @@ export default function App({ locale = 'fr' }) {
             </div>
             <div className="gens" aria-hidden="true">
               <figure><div className="ph" style={{ '--s': 74, backgroundImage: 'url(/hero/photos/lya-14.webp)' }} /><figcaption>{t.who.captions[0]}</figcaption></figure>
-              <figure><div className="ph" style={{ '--s': 96, backgroundImage: 'url(/hero/photos/women-44.webp)' }} /><figcaption>{t.who.captions[1]}</figcaption></figure>
+              <figure><div className="ph" style={{ '--s': 96, backgroundImage: 'url(/hero/photos/camille-39.webp)' }} /><figcaption>{t.who.captions[1]}</figcaption></figure>
               <figure><div className="ph" style={{ '--s': 118, backgroundImage: 'url(/hero/photos/marc-56.webp)' }} /><figcaption>{t.who.captions[2]}</figcaption></figure>
               <figure><div className="ph" style={{ '--s': 140, backgroundImage: 'url(/hero/photos/jeanne-85.webp)' }} /><figcaption>{t.who.captions[3]}</figcaption></figure>
             </div>

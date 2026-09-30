@@ -45,7 +45,7 @@ const shotIllu = await p.send('Page.captureScreenshot', { format: 'png', clip: {
 const hero = await p.eval(`(() => { const s = document.querySelector('section'); const r = s.getBoundingClientRect(); return { x: r.left, y: 0, w: r.width, h: Math.min(r.height, 900) } })()`)
 const shotHero = await p.send('Page.captureScreenshot', { format: 'png', clip: { x: hero.x, y: hero.y, width: hero.w, height: hero.h, scale: 2 } })
 
-// Composition 1200×630 : illustration centrée sur le fond crème (dégradé identique au hero)
+// Composition 1200×630 : illustration centrée sur le fond de la DA (#FBFAF7, identique au hero)
 function compose(pngBase64, srcW, srcH, { fit = 'contain', pad = 30, zoom = 1 } = {}) {
   const W = 1200, H = 630
   let w, h
@@ -53,8 +53,7 @@ function compose(pngBase64, srcW, srcH, { fit = 'contain', pad = 30, zoom = 1 } 
   else { const s = Math.min((W - pad * 2) / srcW, (H - pad * 2) / srcH) * zoom; w = srcW * s; h = srcH * s }
   const x = (W - w) / 2, y = (H - h) / 2
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}">
-    <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF5DF"/><stop offset="0.52" stop-color="#FEF9ED"/><stop offset="1" stop-color="#FFF5DF"/></linearGradient></defs>
-    <rect width="${W}" height="${H}" fill="url(#bg)"/>
+    <rect width="${W}" height="${H}" fill="#FBFAF7"/>
     <image x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid ${fit === 'cover' ? 'slice' : 'meet'}" xlink:href="data:image/png;base64,${pngBase64}"/>
   </svg>`
   return new Resvg(svg, { fitTo: { mode: 'width', value: W } }).render().asPng()
