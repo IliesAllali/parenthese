@@ -1,5 +1,7 @@
 import type { Annotation, MediaItem, ParentChildLink, Person, Union } from '@prisma/client'
 
+import { sanitizeAnnotationContentForRead } from '../lib/annotation-content.js'
+
 export type GraphPayload = {
   persons: Array<{
     id: string
@@ -122,7 +124,7 @@ export function buildGraphPayload(
         type: ann.type,
         x: ann.x,
         y: ann.y,
-        content: ann.content,
+        content: sanitizeAnnotationContentForRead(ann.content),
         style: ann.style,
         zIndex: ann.zIndex,
         createdBy: ann.createdBy,

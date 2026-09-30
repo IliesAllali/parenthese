@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from '../lib/auth.js'
 import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
+import { isTreeUnlockLocked, recordTreeUnlockFailure } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 
@@ -694,6 +695,10 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: 'tree_not_found' })
       }
 
+      if (isTreeUnlockLocked(params.data.id)) {
+        return reply.code(429).send({ error: 'too_many_attempts' })
+      }
+
       // Un seul mot de passe de partage (25/09/2026) : regarder et proposer. Les deux colonnes restent,
       // les arbres créés avant ont encore deux mots de passe différents, les deux ouvrent en contributeur.
       // Apostrophe typographique ou espace finale ajoutées par un clavier de téléphone : acceptées (password-variants.ts)
@@ -704,6 +709,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       )
 
       if (!matches) {
+        recordTreeUnlockFailure(params.data.id)
         return reply.code(401).send({ error: 'invalid_password' })
       }
 
@@ -971,6 +977,12 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       },
       data,
     })
+
+    // Changer le mot de passe met dehors ceux qui l'avaient : les jetons d'arbre tombent avec la version,
+    // les comptes rattachés par ce mot de passe perdent aussi leur accès (ils le retapent s'ils ont le nouveau)
+    if (Object.keys(data).length > 0) {
+      await app.prisma.userTreeAccess.deleteMany({ where: { treeId: params.data.id } })
+    }
 
     // Le mot de passe lisible suit toujours celui en vigueur ; deux mots de passe distincts = plus de valeur unique
     if (payload.data.password) {

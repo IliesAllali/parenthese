@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 
+import { signMediaToken } from '../lib/tree-access.js'
 import { recordTreeVisit, type VisitAccessKind } from '../lib/tree-visits.js'
 import { buildGraphPayload } from '../utils/graph-payload.js'
 
@@ -143,6 +144,8 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       treeId,
       rootPersonId,
       graph,
+      // Pour l'adresse des images (<img src> n'envoie pas la session) : lecture des médias de cet arbre seulement
+      mediaToken: signMediaToken(app, treeId, actor),
     })
   })
 }

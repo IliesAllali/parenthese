@@ -16,8 +16,10 @@ export async function matchSharePassword(
   hashes: string[],
   verify: (password: string, hash: string) => Promise<boolean>,
 ): Promise<string | null> {
+  // Un mot de passe unique est rangé dans les deux colonnes avec le même hash : une seule comparaison bcrypt
+  const distinctHashes = [...new Set(hashes)]
   for (const candidate of sharePasswordVariants(input)) {
-    for (const hash of hashes) {
+    for (const hash of distinctHashes) {
       if (await verify(candidate, hash)) return candidate
     }
   }

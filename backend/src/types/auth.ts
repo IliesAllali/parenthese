@@ -17,7 +17,16 @@ export type TreeAccessJwtPayload = {
   accessVersion: number
 }
 
-export type AnyJwtPayload = UserJwtPayload | TreeAccessJwtPayload
+// Lecture seule des médias d'un arbre, dans l'adresse des images (voir lib/tree-access.ts)
+export type MediaJwtPayload = {
+  kind: 'media'
+  sub: string
+  treeId: string
+  userId?: string
+  accessVersion?: number
+}
+
+export type AnyJwtPayload = UserJwtPayload | TreeAccessJwtPayload | MediaJwtPayload
 
 export type UserActor = {
   kind: 'user'
@@ -29,6 +38,7 @@ export type TreeAccessActor = {
   kind: 'tree_access'
   treeId: string
   role: TreeAccessRole
+  accessVersion: number
 }
 
 export type Actor = UserActor | TreeAccessActor | null

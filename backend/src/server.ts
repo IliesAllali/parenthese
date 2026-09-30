@@ -7,7 +7,7 @@ async function bootstrap() {
   try {
     await app.listen({
       port: env.PORT,
-      host: '0.0.0.0',
+      host: env.HOST,
     })
   } catch (error) {
     app.log.error(error)
