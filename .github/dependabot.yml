@@ -1,0 +1,65 @@
+# Mises à jour de dépendances proposées chaque semaine. Les versions mineures et correctives sont
+# regroupées en une PR par écosystème et par dossier ; une version majeure arrive seule, pour être lue.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /landing
+    schedule:
+      interval: weekly
+    groups:
+      landing-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # Dockerfile.web (racine) et backend/Dockerfile
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /backend
+    schedule:
+      interval: weekly
+    groups:
+      docker-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # Images de docker-compose.yml
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      compose-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # Changer de version majeure de PostgreSQL demande un pg_dump / restauration du volume db-data
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]

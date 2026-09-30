@@ -34,3 +34,8 @@ backend/storage/media/
 # Clés SSH / certificats
 *.pem
 id_*
+
+# Outils et notes de travail locaux (méthode BMAD, mémoire d'agent)
+_bmad/
+_bmad-output/
+memory/

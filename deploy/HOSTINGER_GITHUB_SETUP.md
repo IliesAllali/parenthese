@@ -12,6 +12,7 @@ Chaque push sur `main` lance d'abord la CI (`.github/workflows/ci.yml`). Si elle
 - `HOSTINGER_PORT` : port SSH (facultatif, 22 par défaut)
 - `HOSTINGER_USER` : utilisateur SSH
 - `HOSTINGER_SSH_PRIVATE_KEY` : clé privée dont la clé publique est dans `authorized_keys` sur le serveur
+- `SSH_KNOWN_HOSTS` : clé d'hôte du serveur, épinglée. La produire depuis une machine de confiance avec `ssh-keyscan -p PORT HÔTE`, comparer l'empreinte (`ssh-keygen -lf`) à celle affichée sur le serveur par `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`, puis coller les lignes telles quelles. Sans ce secret, le workflow reprend la clé présentée au moment du run et affiche un avertissement.
 
 ## Ce qui vit sur le serveur, hors du dépôt
 

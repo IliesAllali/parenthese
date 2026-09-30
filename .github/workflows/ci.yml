@@ -25,11 +25,11 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
@@ -37,6 +37,10 @@ jobs:
 
       - name: Dépendances
         run: npm ci --no-audit --no-fund
+
+      # Bloque seulement sur une faille critique d'une dépendance de production
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=critical
 
       - name: Lint
         run: npm run lint
@@ -55,11 +59,11 @@ jobs:
       run:
         working-directory: landing
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
@@ -68,10 +72,14 @@ jobs:
       - name: Dépendances
         run: npm ci --no-audit --no-fund
 
+      # Bloque seulement sur une faille critique d'une dépendance de production
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=critical
+
       - name: Tests
         run: npm test
 
-      # Le build lit les polices dans ../frontend/src/assets, présentes dans le dépôt.
+      # Le build ne lit que landing/ : aucune police n'est prise dans ../frontend.
       - name: Build
         run: npm run build
 
@@ -106,11 +114,11 @@ jobs:
       CHECKPOINT_DISABLE: '1'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
@@ -118,6 +126,10 @@ jobs:
 
       - name: Dépendances
         run: npm ci --no-audit --no-fund
+
+      # Bloque seulement sur une faille critique d'une dépendance de production
+      - name: Audit des dépendances de production
+        run: npm audit --omit=dev --audit-level=critical
 
       - name: Client Prisma
         run: npm run prisma:generate
@@ -139,7 +151,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
 
