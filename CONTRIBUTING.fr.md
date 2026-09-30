@@ -35,6 +35,13 @@ Si vous touchez à Docker ou à nginx, lancez `docker compose up -d --build` pui
 - Pas de nouvelle dépendance lourde (framework, bibliothèque d'interface, service externe) sans en avoir discuté dans une issue.
 - La promesse du README tient : pas de publicité, et aucune mesure d'audience activée par défaut sur une instance auto-hébergée.
 
-## Licence
+## Licence des contributions
 
-Parenthèse est publié sous [PolyForm Noncommercial 1.0.0](LICENSE). En proposant une contribution, vous acceptez qu'elle soit publiée sous cette même licence.
+Parenthèse est publié sous [PolyForm Noncommercial 1.0.0](LICENSE) et le reste.
+
+En ouvrant une pull request, vous
+
+- certifiez avoir écrit la contribution ou avoir le droit de la proposer, dans l'esprit du [Developer Certificate of Origin](https://developercertificate.org/). Signez vos commits avec `git commit -s`, qui ajoute une ligne `Signed-off-by` ;
+- accordez au mainteneur, Ilies Allali, une licence perpétuelle, irrévocable, mondiale et gratuite pour utiliser, modifier et proposer votre contribution sous d'autres licences, y compris commerciales.
+
+Si vous ne pouvez pas l'accepter, dites-le dans la pull request avant sa fusion.

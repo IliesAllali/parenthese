@@ -35,6 +35,13 @@ If you touch Docker or nginx, run `docker compose up -d --build` then `bash tool
 - No new heavy dependency (framework, UI library, external service) without discussing it in an issue.
 - The README promise holds: no ads, and no analytics turned on by default on a self-hosted instance.
 
-## License
+## License of contributions
 
-Parenthèse is published under [PolyForm Noncommercial 1.0.0](LICENSE). By submitting a contribution, you agree that it is published under the same license.
+Parenthèse is published under [PolyForm Noncommercial 1.0.0](LICENSE), and stays under it.
+
+By opening a pull request, you:
+
+- certify that you wrote the contribution or otherwise have the right to submit it, in the spirit of the [Developer Certificate of Origin](https://developercertificate.org/). Sign your commits with `git commit -s`, which adds a `Signed-off-by:` line;
+- grant the maintainer, Ilies Allali, a perpetual, irrevocable, worldwide, royalty-free license to use, modify and relicense your contribution under any terms, including commercial ones.
+
+If you can't agree to this, say so in the pull request before it is merged.
