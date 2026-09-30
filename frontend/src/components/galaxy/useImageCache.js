@@ -11,7 +11,9 @@ export function useImageCache(revisionKey = 0, onImageLoaded = null) {
   useEffect(() => {
     const allUrls = new Set()
     persons.forEach((p) => { if (p.photo) allUrls.add(p.photo) })
-    medias.forEach((m) => { if (m.url) allUrls.add(m.url) })
+    // Seules les photos sont dessinées : une vidéo YouTube chargée ici partait chez youtube.com
+    // dès l'ouverture de l'arbre, sans que personne ait lancé la vidéo.
+    medias.forEach((m) => { if (m.url && m.type === 'photo') allUrls.add(m.url) })
 
     allUrls.forEach((url) => {
       if (imageCache.current.has(url) || pendingLoads.current.has(url)) {
