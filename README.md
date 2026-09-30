@@ -57,6 +57,8 @@ To open the instance to your family over the Internet, put an HTTPS reverse prox
 
 A self-hosted instance sends no analytics. Usage tracking on parenthese.io only turns on when a PostHog key is provided at build time, which this setup does not do.
 
+The help and privacy links in the app point to parenthese.io. To use your own pages, set `VITE_HELP_URL` and `VITE_PRIVACY_URL` when you build the front end yourself (see `frontend/.env.example`).
+
 Useful commands:
 
 ```bash
