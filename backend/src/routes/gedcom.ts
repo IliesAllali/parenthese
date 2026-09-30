@@ -11,6 +11,23 @@ const importBodySchema = z.object({
   content: z.string().min(1).max(10 * 1024 * 1024),
 })
 
+// Un fichier GEDCOM vient de l'extérieur : longueur des lignes, nombre de fiches et taille des champs
+// plafonnés comme partout ailleurs (sinon un seul fichier bloque l'API ou remplit la base)
+const MAX_LINE_LENGTH = 4096
+const MAX_IMPORTED_PERSONS = 20000
+const MAX_IMPORTED_FAMILIES = 20000
+
+function clip(value: string | null, max: number): string | null {
+  if (value === null) return null
+  const trimmed = value.trim()
+  return trimmed ? trimmed.slice(0, max) : null
+}
+
+// Export : un champ sur une ligne ne doit jamais en créer une autre (enregistrement injecté)
+function oneLine(value: string | null | undefined): string {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ')
+}
+
 function hasAdminRight(role: MembershipRole): boolean {
   return role === 'owner' || role === 'admin'
 }
@@ -26,13 +43,13 @@ type GedcomNode = {
 }
 
 function parseGedcom(text: string): GedcomNode[] {
-  const lines = text.split(/\r?\n/)
+  const lines = text.split(/\r\n|\r|\n/)
   const roots: GedcomNode[] = []
   const stack: GedcomNode[] = []
 
   for (const raw of lines) {
     const line = raw.trim()
-    if (!line) continue
+    if (!line || line.length > MAX_LINE_LENGTH) continue
 
     const match = line.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\w+)(?:\s+(.*))?$/)
     if (!match) continue
@@ -131,12 +148,16 @@ function isoToGedcomDate(value: string | Date | null): string | null {
 
 // ─── Name Parsing ────────────────────────────────────────────────────────────
 
+// « Jean /Dupont/ » : lu par indexOf, l'ancienne expression régulière était quadratique sur les espaces
 function parseGedcomName(value: string): { firstName: string; lastName: string } {
-  const slashMatch = value.match(/^(.*?)\s*\/([^/]*)\/(.*)?$/)
-  if (slashMatch) {
+  const open = value.indexOf('/')
+  const close = open >= 0 ? value.indexOf('/', open + 1) : -1
+  if (open >= 0 && close > open) {
+    const before = value.slice(0, open).trim()
+    const after = value.slice(close + 1).trim()
     return {
-      firstName: (slashMatch[1].trim() || slashMatch[3]?.trim() || '').trim(),
-      lastName: slashMatch[2].trim(),
+      firstName: before || after,
+      lastName: value.slice(open + 1, close).trim(),
     }
   }
   return { firstName: value.trim(), lastName: '' }
@@ -297,7 +318,7 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
     for (const person of persons) {
       const xref = sanitizeXref(person.id)
       lines.push(`0 @I${xref}@ INDI`)
-      lines.push(`1 NAME ${person.firstName} /${person.lastName}/`)
+      lines.push(`1 NAME ${oneLine(person.firstName)} /${oneLine(person.lastName).replace(/\//g, '')}/`)
 
       if (person.sex === 'male' || person.sex === 'M') lines.push('1 SEX M')
       else if (person.sex === 'female' || person.sex === 'F') lines.push('1 SEX F')
@@ -306,7 +327,7 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
       if (birthDate || person.birthPlace) {
         lines.push('1 BIRT')
         if (birthDate) lines.push(`2 DATE ${birthDate}`)
-        if (person.birthPlace) lines.push(`2 PLAC ${person.birthPlace}`)
+        if (person.birthPlace) lines.push(`2 PLAC ${oneLine(person.birthPlace)}`)
       }
 
       const deathDate = isoToGedcomDate(person.deathDate)
@@ -315,10 +336,10 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
         lines.push(`2 DATE ${deathDate}`)
       }
 
-      if (person.profession) lines.push(`1 OCCU ${person.profession}`)
+      if (person.profession) lines.push(`1 OCCU ${oneLine(person.profession)}`)
 
       if (person.notes) {
-        const noteLines = person.notes.split('\n')
+        const noteLines = person.notes.split(/\r\n|\r|\n/)
         lines.push(`1 NOTE ${noteLines[0]}`)
         for (let i = 1; i < noteLines.length; i++) {
           lines.push(`2 CONT ${noteLines[i]}`)
@@ -378,7 +399,7 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // Import
-  app.post('/trees/:id/import/gedcom', async (request, reply) => {
+  app.post('/trees/:id/import/gedcom', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) {
       return reply.code(400).send({ error: 'invalid_tree_id' })
@@ -414,6 +435,10 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
     const indiNodes = roots.filter((node) => node.tag === 'INDI' && node.xref)
     const famNodes = roots.filter((node) => node.tag === 'FAM' && node.xref)
 
+    if (indiNodes.length > MAX_IMPORTED_PERSONS || famNodes.length > MAX_IMPORTED_FAMILIES) {
+      return reply.code(413).send({ error: 'gedcom_too_large' })
+    }
+
     const xrefToPersonId = new Map<string, string>()
     let personsCreated = 0
     let unionsCreated = 0
@@ -431,25 +456,25 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
 
         const birtNode = findChild(indi, 'BIRT')
         const birthDateIso = gedcomDateToIso(findChild(birtNode, 'DATE')?.value ?? '')
-        const birthPlace = findChild(birtNode, 'PLAC')?.value?.trim() || null
+        const birthPlace = clip(findChild(birtNode, 'PLAC')?.value ?? null, 200)
 
         const deatNode = findChild(indi, 'DEAT')
         const deathDateIso = gedcomDateToIso(findChild(deatNode, 'DATE')?.value ?? '')
 
-        const profession = findChild(indi, 'OCCU')?.value?.trim() || null
+        const profession = clip(findChild(indi, 'OCCU')?.value ?? null, 200)
 
         const noteNode = findChild(indi, 'NOTE')
         let notes: string | null = null
         if (noteNode?.value) {
           const contLines = findAllChildren(noteNode, 'CONT').map((n) => n.value)
-          notes = [noteNode.value, ...contLines].join('\n').trim() || null
+          notes = clip([noteNode.value, ...contLines].join('\n'), 2000)
         }
 
         const person = await tx.person.create({
           data: {
             treeId,
-            firstName: firstName || '?',
-            lastName: lastName || '',
+            firstName: (firstName || '?').slice(0, 120),
+            lastName: (lastName || '').slice(0, 120),
             sex,
             birthDate: isoDateToDbDate(birthDateIso),
             deathDate: isoDateToDbDate(deathDateIso),
