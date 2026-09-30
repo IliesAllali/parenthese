@@ -6,10 +6,7 @@
 
 Never describe a vulnerability in an issue, a discussion or a pull request: everything there is public.
 
-Two private channels:
-
-- the **Security** tab of this GitHub repository, "Report a vulnerability" button;
-- an email to pro.allali.ilies@gmail.com.
+Report it preferably through GitHub's private vulnerability reporting: the **Security** tab of this repository, "Report a vulnerability" button. If you can't use it, send an email to pro.allali.ilies@gmail.com.
 
 If you can, say what is affected (address, API route, file), the steps to reproduce and the impact you observe. A short, precise report is enough. English or French, as you prefer.
 

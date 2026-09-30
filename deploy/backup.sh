@@ -5,7 +5,15 @@
 # La base est sauvegardée à chaque passage. L'archive des médias n'est refaite que si les médias ont
 # changé (sinon une archive identique par jour), et seules les
 # BACKUP_MEDIA_KEEP dernières archives sont gardées.
+#
+# Envoi hors du serveur (facultatif, BACKUP_S3_BUCKET) : si BACKUP_AGE_RECIPIENT est renseigné (une ou
+# plusieurs clés publiques séparées par des espaces, « age1... » ou « ssh-ed25519 AAAA... » sans commentaire),
+# le dump et l'archive sont chiffrés avec age avant l'envoi et seules les copies chiffrées (.age) partent.
+# Les fichiers gardés sur le serveur restent en clair, lisibles par root seulement.
+# Restauration d'une copie chiffrée : age -d -i cle-privee.txt fichier.dump.age > fichier.dump
 set -euo pipefail
+# Dumps, archives et empreintes lisibles par le seul propriétaire
+umask 077
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_ENV_FILE="$REPO_DIR/backend/.env"
@@ -115,9 +123,43 @@ if [ -n "${BACKUP_S3_BUCKET:-}" ]; then
     S3_ARGS+=(--region "$BACKUP_S3_REGION")
   fi
 
-  aws s3 cp "$DB_BACKUP_FILE" "$S3_BASE_URI/db/$(basename "$DB_BACKUP_FILE")" "${S3_ARGS[@]}"
+  # Copies à envoyer : chiffrées si une clé age est configurée, sinon les fichiers tels quels (comportement historique)
+  UPLOAD_DB_FILE="$DB_BACKUP_FILE"
+  UPLOAD_MEDIA_FILE="$MEDIA_BACKUP_FILE"
+  if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then
+    if ! command -v age >/dev/null 2>&1; then
+      echo "ERROR: BACKUP_AGE_RECIPIENT is set but age is not installed (apt install age)."
+      exit 1
+    fi
+    AGE_ARGS=()
+    read -r -a AGE_KEYS <<< "$BACKUP_AGE_RECIPIENT"
+    # Une clé ssh s'écrit en deux mots (« ssh-ed25519 AAAA... ») : on recolle type et clé
+    i=0
+    while [ "$i" -lt "${#AGE_KEYS[@]}" ]; do
+      key="${AGE_KEYS[$i]}"
+      if [[ "$key" == ssh-* ]]; then
+        i=$((i + 1))
+        key="$key ${AGE_KEYS[$i]:-}"
+      fi
+      AGE_ARGS+=(-r "$key")
+      i=$((i + 1))
+    done
+    ENCRYPT_DIR="$(mktemp -d "$BACKUP_ROOT/.offsite-XXXXXX")"
+    trap 'rm -rf "$ENCRYPT_DIR"' EXIT
+    UPLOAD_DB_FILE="$ENCRYPT_DIR/$(basename "$DB_BACKUP_FILE").age"
+    age "${AGE_ARGS[@]}" -o "$UPLOAD_DB_FILE" "$DB_BACKUP_FILE"
+    if [ "$MEDIA_IS_NEW" = "1" ]; then
+      UPLOAD_MEDIA_FILE="$ENCRYPT_DIR/$(basename "$MEDIA_BACKUP_FILE").age"
+      age "${AGE_ARGS[@]}" -o "$UPLOAD_MEDIA_FILE" "$MEDIA_BACKUP_FILE"
+    fi
+    echo "Copies chiffrées avec age avant envoi."
+  else
+    echo "WARNING: BACKUP_AGE_RECIPIENT absent, les sauvegardes partent en clair."
+  fi
+
+  aws s3 cp "$UPLOAD_DB_FILE" "$S3_BASE_URI/db/$(basename "$UPLOAD_DB_FILE")" "${S3_ARGS[@]}"
   if [ "$MEDIA_IS_NEW" = "1" ]; then
-    aws s3 cp "$MEDIA_BACKUP_FILE" "$S3_BASE_URI/media/$(basename "$MEDIA_BACKUP_FILE")" "${S3_ARGS[@]}"
+    aws s3 cp "$UPLOAD_MEDIA_FILE" "$S3_BASE_URI/media/$(basename "$UPLOAD_MEDIA_FILE")" "${S3_ARGS[@]}"
   fi
   aws s3 cp "$CHECKSUM_FILE" "$S3_BASE_URI/meta/$(basename "$CHECKSUM_FILE")" "${S3_ARGS[@]}"
 else

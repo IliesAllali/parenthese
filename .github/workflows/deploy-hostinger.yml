@@ -48,20 +48,30 @@ jobs:
 
     steps:
       - name: Start SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
 
-      - name: Add Hostinger host key (best-effort)
+      # Clé d'hôte épinglée par le secret SSH_KNOWN_HOSTS (sortie de ssh-keyscan relue à la main, voir
+      # deploy/HOSTINGER_GITHUB_SETUP.md). Sans ce secret, repli sur ssh-keyscan au moment du run, qui
+      # fait confiance à la clé présentée ce jour-là : un avertissement le signale dans le run.
+      - name: Hostinger host key
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           PORT="${HOSTINGER_PORT:-22}"
           mkdir -p ~/.ssh
-          # keyscan can fail if the host firewall blocks GitHub runners; make it non-fatal
-          ssh-keyscan -T 5 -p "$PORT" -H "$HOSTINGER_HOST" >> ~/.ssh/known_hosts || true
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::Secret SSH_KNOWN_HOSTS absent : clé d'hôte récupérée par ssh-keyscan, sans vérification. Ajoutez le secret."
+            ssh-keyscan -T 5 -p "$PORT" -H "$HOSTINGER_HOST" >> ~/.ssh/known_hosts || true
+          fi
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy on Hostinger
         env:
@@ -74,7 +84,7 @@ jobs:
           PORT="${HOSTINGER_PORT:-22}"
 
           # backend/.env vit sur le serveur, jamais dans GitHub (dépôt public)
-          ssh -p "$PORT" -o ServerAliveInterval=30 "$HOSTINGER_USER@$HOSTINGER_HOST" "FORCE_FULL=$FORCE_FULL bash -s" <<'EOF'
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "$HOSTINGER_USER@$HOSTINGER_HOST" "FORCE_FULL=$FORCE_FULL bash -s" <<'EOF'
           set -euo pipefail
           cd /var/www/parenthese
           # Sous le même verrou que deploy.sh : récupération du code, puis déploiement

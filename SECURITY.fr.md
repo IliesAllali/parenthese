@@ -6,10 +6,7 @@
 
 Ne décrivez jamais une faille dans une issue, une discussion ou une pull request : tout y est public.
 
-Deux canaux privés :
-
-- l'onglet **Security** de ce dépôt GitHub, bouton « Report a vulnerability » ;
-- un email à pro.allali.ilies@gmail.com.
+Passez de préférence par le signalement privé de GitHub, dans l'onglet **Security** de ce dépôt, bouton « Report a vulnerability ». Si vous ne pouvez pas l'utiliser, écrivez à pro.allali.ilies@gmail.com.
 
 Indiquez si possible ce qui est touché (adresse, route de l'API, fichier), les étapes pour reproduire et l'impact que vous constatez. Un rapport court et précis suffit.
 
