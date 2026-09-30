@@ -4,6 +4,7 @@
 // ============================================================
 
 import { t } from '../i18n/index.js'
+import { buildMediaUrl } from '../utils/mediaToken.js'
 
 // Démo : noms et lieux restent français, les textes descriptifs sont traduits.
 export let persons = [
@@ -80,16 +81,13 @@ function pickFrameType(id) {
   return frameTypes[hash % frameTypes.length]
 }
 
-function buildProtectedAssetUrl(pathOrUrl, apiBaseUrl, authToken, cacheBust = null) {
-  if (!pathOrUrl) {
+// Adresse d'un fichier de l'arbre avec le jeton médias (voir utils/mediaToken.js)
+function buildProtectedAssetUrl(pathOrUrl, apiBaseUrl, mediaToken, cacheBust = null) {
+  let protectedUrl = buildMediaUrl(pathOrUrl, apiBaseUrl, mediaToken)
+  if (!protectedUrl) {
     return null
   }
 
-  const absolutePath = pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')
-    ? pathOrUrl
-    : `${apiBaseUrl}${pathOrUrl}`
-
-  let protectedUrl = authToken ? `${absolutePath}?token=${encodeURIComponent(authToken)}` : absolutePath
   if (cacheBust !== null && cacheBust !== undefined) {
     const separator = protectedUrl.includes('?') ? '&' : '?'
     protectedUrl = `${protectedUrl}${separator}v=${encodeURIComponent(String(cacheBust))}`
@@ -130,7 +128,7 @@ export function resetToDemoData() {
 }
 
 export function loadGraphData(graph, options = {}) {
-  const authToken = options.authToken || ''
+  const mediaToken = options.mediaToken || ''
   const apiBaseUrl = (options.apiBaseUrl || '').replace(/\/$/, '')
   const avatarCacheBust = options.avatarCacheBust ?? null
 
@@ -142,7 +140,7 @@ export function loadGraphData(graph, options = {}) {
 
   persons = remotePersons.map((person) => {
     const localPerson = mapRemotePersonToLocal(person)
-    localPerson.photo = buildProtectedAssetUrl(person.avatarUrlPath || null, apiBaseUrl, authToken, avatarCacheBust)
+    localPerson.photo = buildProtectedAssetUrl(person.avatarUrlPath || null, apiBaseUrl, mediaToken, avatarCacheBust)
     return localPerson
   })
 
@@ -200,7 +198,7 @@ export function loadGraphData(graph, options = {}) {
   medias = remoteMedias
     .filter((media) => personIdSet.has(media.personId))
     .map((media, index) => {
-      const mediaUrl = buildProtectedAssetUrl(media.urlPath || '', apiBaseUrl, authToken)
+      const mediaUrl = buildProtectedAssetUrl(media.urlPath || '', apiBaseUrl, mediaToken)
 
       return {
         id: media.id,
@@ -218,12 +216,12 @@ export function loadGraphData(graph, options = {}) {
 
   annotations = remoteAnnotations.map((ann) => {
     let content = ann.content || ''
-    // For photo annotations: rebuild URL with current auth token from stored photoPath
+    // Annotation photo : l'adresse est reconstruite ici depuis photoPath, le serveur n'en garde aucune
     if (ann.type === 'photo' && content) {
       try {
         const parsed = typeof content === 'string' ? JSON.parse(content) : content
         if (parsed.photoPath) {
-          parsed.url = buildProtectedAssetUrl(parsed.photoPath, apiBaseUrl, authToken)
+          parsed.url = buildProtectedAssetUrl(parsed.photoPath, apiBaseUrl, mediaToken)
           content = JSON.stringify(parsed)
         }
       } catch { /* ignore */ }

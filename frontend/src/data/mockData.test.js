@@ -42,7 +42,7 @@ describe('loadGraphData avatar mapping', () => {
         ],
         annotations: [],
       },
-      { apiBaseUrl: '/api', authToken: 'abc' },
+      { apiBaseUrl: '/api', mediaToken: 'abc' },
     )
 
     expect(getPersonById('p-1')?.photo).toBe('/api/trees/t-1/persons/p-1/avatar?token=abc')

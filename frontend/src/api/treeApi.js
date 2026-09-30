@@ -57,6 +57,7 @@ export async function fetchTreeGraph(treeId, token) {
     treeId: data?.treeId || treeId,
     rootPersonId: data?.rootPersonId || null,
     graph: data?.graph || { persons: [], unions: [], filiations: [], medias: [] },
+    mediaToken: data?.mediaToken || '',
   }
 }
 
