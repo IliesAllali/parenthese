@@ -1857,8 +1857,8 @@ function App() {
       let resolvedTreeId = TREE_ID_FROM_ENV
       let resolvedTreeName = ''
       let resolvedTreeDescription = ''
-      let resolvedTreeOwnerName = ''
-      let resolvedTreeOwnerEmail = ''
+      const resolvedTreeOwnerName = ''
+      const resolvedTreeOwnerEmail = ''
 
       // Root app:
       // - not connected => demo by default
@@ -1879,8 +1879,6 @@ function App() {
           resolvedTreeId = treeInfo.id
           resolvedTreeName = treeInfo.name || ''
           resolvedTreeDescription = treeInfo.description || ''
-          resolvedTreeOwnerName = treeInfo.ownerName || ''
-          resolvedTreeOwnerEmail = treeInfo.ownerEmail || ''
         } catch (error) {
           if (!active) return
           tree.setBootState('need-access')
