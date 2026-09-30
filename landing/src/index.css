@@ -191,7 +191,6 @@ html.logo-intro .lk-nom { animation: lk-nom 700ms var(--ease-out) 380ms both; }
 /* fin */
 .final { background: var(--peche-50); text-align: center; padding: clamp(64px, 9vw, 112px) var(--gut); }
 .final .wrap { display: grid; justify-items: center; gap: 22px; }
-.final .back { font: 500 14px var(--sans); color: var(--encre2); }
 
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 28px; font: 400 13px var(--sans); color: var(--doux); }
 .foot nav { display: flex; gap: 18px; flex-wrap: wrap; }

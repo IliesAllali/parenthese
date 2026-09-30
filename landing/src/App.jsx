@@ -894,7 +894,6 @@ const readSource = () => new URLSearchParams(window.location.search).get('source
 export default function App({ locale = 'fr' }) {
   const t = COPY[locale]
   const [headerElevated, setHeaderElevated] = useState(false)
-  const [sharedReturnUrl, setSharedReturnUrl] = useState('')
   const scrollMilestonesRef = useRef({ half: false, full: false })
 
   // La page est prérendue à la compilation, sans URL : le premier rendu est toujours la variante
@@ -913,28 +912,6 @@ export default function App({ locale = 'fr' }) {
   useEffect(() => {
     analytics.capture('page_viewed', buildEventProps())
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (source !== 'app-shared') {
-      setSharedReturnUrl('')
-      return
-    }
-
-    const returnUrlFromQuery = new URLSearchParams(window.location.search).get('return_url') || ''
-
-    try {
-      if (returnUrlFromQuery) {
-        sessionStorage.setItem('parenthese_return_url', returnUrlFromQuery)
-        setSharedReturnUrl(returnUrlFromQuery)
-        return
-      }
-
-      const fromSession = sessionStorage.getItem('parenthese_return_url') || ''
-      setSharedReturnUrl(fromSession)
-    } catch {
-      setSharedReturnUrl(returnUrlFromQuery)
-    }
-  }, [source])
 
   // Bordure du header au défilement + paliers de scroll pour PostHog
   useEffect(() => {
@@ -1112,9 +1089,6 @@ export default function App({ locale = 'fr' }) {
           <h2 className="t-d2">{t.final.title[0]}<em className="s">{t.final.title[1]}</em></h2>
           <p className="lede">{t.final.lede}</p>
           <button type="button" onClick={() => goToSignup('footer')} className="btn p">{t.cta}</button>
-          {source === 'app-shared' && sharedReturnUrl && (
-            <a href={sharedReturnUrl} className="back">{t.final.back}</a>
-          )}
         </div>
       </section>
 

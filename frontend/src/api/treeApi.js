@@ -8,8 +8,6 @@ export async function resolveTreeBySlug(slug) {
     slug: data?.tree?.slug || '',
     name: data?.tree?.name || '',
     description: data?.tree?.description || null,
-    ownerName: data?.tree?.ownerName || null,
-    ownerEmail: data?.tree?.ownerEmail || null,
   }
 }
 

@@ -51,6 +51,8 @@ Pour ouvrir l'instance à la famille depuis Internet, placez un reverse proxy HT
 
 Une instance auto-hébergée n'envoie aucune mesure d'audience : le suivi d'usage de parenthese.io ne s'active que si une clé PostHog est fournie au build, ce que cette configuration ne fait pas.
 
+Les liens d'aide et de vie privée de l'application mènent à parenthese.io. Pour pointer vers vos propres pages, renseignez `VITE_HELP_URL` et `VITE_PRIVACY_URL` quand vous construisez vous-même le front (voir `frontend/.env.example`).
+
 Commandes utiles :
 
 ```bash
