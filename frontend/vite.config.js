@@ -22,6 +22,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: { proxy },
+    // Mêmes navigateurs qu'avec Vite 7 : Vite 8 relève sa cible par défaut (Safari 16.4, Chrome 111),
+    // et la famille ouvre souvent l'arbre sur un vieil iPad ou un ancien téléphone
+    build: { target: ['chrome107', 'edge107', 'firefox104', 'safari16'] },
     test: {
       environment: 'node',
       include: ['src/**/*.test.{js,jsx}'],
