@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, useCallback } from 'react'
+import { memo, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
 import { getPersonMedias, getParents, getChildren, getPersonUnions } from '../data/mockData'
 import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_GEN_DELAY, ENTRANCE_NODE_DURATION, ENTRANCE_NODE_STAGGER, ENTRANCE_MAX_GEN_SPAN, ENTRANCE_MAX_NODE_SPAN, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
 import { easeOutCubic } from './galaxy/utils'
@@ -33,7 +33,8 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   const canvasRef = useRef(null)
   // Lu au calcul du cadrage seulement : changer de personne de départ ne recadre pas une vue en cours
   const focusPersonIdRef = useRef(focusPersonId)
-  focusPersonIdRef.current = focusPersonId
+  // Mis à jour hors du rendu, avant l'effet de cadrage déclaré plus bas (même phase, ordre de déclaration)
+  useEffect(() => { focusPersonIdRef.current = focusPersonId }, [focusPersonId])
   const layoutDataRef = useRef(null)
   const [layoutReady, setLayoutReady] = useState(false)
   const transformRef = useRef({ x: 0, y: 0, scale: 1 })
@@ -118,48 +119,46 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     maxScale: MAX_SCALE,
   })
 
-  // Expose zoom API to parent (ZoomControl component)
-  if (zoomApiRef) {
-    zoomApiRef.current = {
-      zoomTo: (newScale) => {
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const rect = canvas.getBoundingClientRect()
-        const cx = rect.width / 2
-        const cy = rect.height / 2
-        const base = targetTransformRef.current
-        const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale))
-        const ratio = clamped / base.scale
-        targetTransformRef.current = {
-          scale: clamped,
-          x: cx - ratio * (cx - base.x),
-          y: cy - ratio * (cy - base.y),
-        }
-      },
-      resetZoom: () => {
-        if (initialTransformRef.current) {
-          targetTransformRef.current = { ...initialTransformRef.current }
-        }
-      },
-      // Recherche : glisse jusqu'à la personne, dans la partie de l'écran que la fiche ne couvre pas
-      // (fiche à gauche sur ordinateur, 408 px ; par le bas sur téléphone)
-      focusPerson: (personId) => {
-        const canvas = canvasRef.current
-        const node = layoutDataRef.current?.children.find(n => n.id === `p-${personId}`)
-        if (!canvas || !node) return
-        const rect = canvas.getBoundingClientRect()
-        const pos = getAnimatedPos(node, performance.now())
-        const scale = Math.min(MAX_SCALE, Math.max(targetTransformRef.current.scale, 1))
-        const phone = rect.width <= 768
-        const screenX = phone ? rect.width / 2 : (408 + rect.width) / 2
-        const screenY = phone ? rect.height * 0.22 : rect.height / 2
-        targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
-      },
-      getScale: () => transformRef.current.scale,
-      MIN_SCALE,
-      MAX_SCALE,
-    }
-  }
+  // Expose zoom API to parent (ZoomControl component), posée au commit et non pendant le rendu
+  useImperativeHandle(zoomApiRef, () => ({
+    zoomTo: (newScale) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const cx = rect.width / 2
+      const cy = rect.height / 2
+      const base = targetTransformRef.current
+      const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale))
+      const ratio = clamped / base.scale
+      targetTransformRef.current = {
+        scale: clamped,
+        x: cx - ratio * (cx - base.x),
+        y: cy - ratio * (cy - base.y),
+      }
+    },
+    resetZoom: () => {
+      if (initialTransformRef.current) {
+        targetTransformRef.current = { ...initialTransformRef.current }
+      }
+    },
+    // Recherche : glisse jusqu'à la personne, dans la partie de l'écran que la fiche ne couvre pas
+    // (fiche à gauche sur ordinateur, 408 px ; par le bas sur téléphone)
+    focusPerson: (personId) => {
+      const canvas = canvasRef.current
+      const node = layoutDataRef.current?.children.find(n => n.id === `p-${personId}`)
+      if (!canvas || !node) return
+      const rect = canvas.getBoundingClientRect()
+      const pos = getAnimatedPos(node, performance.now())
+      const scale = Math.min(MAX_SCALE, Math.max(targetTransformRef.current.scale, 1))
+      const phone = rect.width <= 768
+      const screenX = phone ? rect.width / 2 : (408 + rect.width) / 2
+      const screenY = phone ? rect.height * 0.22 : rect.height / 2
+      targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
+    },
+    getScale: () => transformRef.current.scale,
+    MIN_SCALE,
+    MAX_SCALE,
+  }), [getAnimatedPos])
 
   // Zoom util (used by pinch)
   const zoomAt = useCallback((factor, center) => {

@@ -52,8 +52,9 @@ export function useTreeAccess() {
   // Change à chaque chargement des données, même sans nouveau placement : l'arbre y charge les images manquantes
   const [assetRevision, setAssetRevision] = useState(0)
   // Horodatage des portraits stable pendant la session : un rechargement ne force pas à tout retélécharger.
-  // Il ne change que lorsqu'un portrait change (envoi d'une nouvelle photo).
-  const avatarCacheBustRef = useRef(Date.now())
+  // Il ne change que lorsqu'un portrait change (envoi d'une nouvelle photo). Posé au premier chargement
+  // d'un arbre, pas au rendu (Date.now() rendrait le rendu impur).
+  const avatarCacheBustRef = useRef(null)
 
   const canEditCurrentTree = useMemo(() => {
     const role = normalizeRole(treeContext.role)
@@ -70,7 +71,7 @@ export function useTreeAccess() {
     loadGraphData(graphPayload.graph, {
       mediaToken: graphPayload.mediaToken,
       apiBaseUrl: API_BASE_URL,
-      avatarCacheBust: options.avatarCacheBust ?? avatarCacheBustRef.current,
+      avatarCacheBust: options.avatarCacheBust ?? (avatarCacheBustRef.current ??= Date.now()),
     })
     if (options.avatarCacheBust) avatarCacheBustRef.current = options.avatarCacheBust
     setAssetRevision((current) => current + 1)
