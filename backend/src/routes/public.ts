@@ -6,7 +6,8 @@ const slugParamSchema = z.object({
 })
 
 export const publicRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/arbre/:slug', async (request, reply) => {
+  // Limité : sans route authentifiée, c'est la porte pour énumérer les noms de famille et trouver l'id d'un arbre
+  app.get('/arbre/:slug', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = slugParamSchema.safeParse(request.params)
     if (!params.success) {
       return reply.code(400).send({ error: 'invalid_slug' })

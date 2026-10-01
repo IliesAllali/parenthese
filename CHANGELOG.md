@@ -2,6 +2,33 @@
 
 Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 
+## 1.0.1 (2026-10-01)
+
+Security release, from an independent review of 1.0.0.
+
+### Security
+
+- A crafted video file could block the whole API for hours (the location-scrubbing pattern ran in quadratic time). It now runs in linear time.
+- Account sessions issued before 2026-10-01 are no longer accepted, so every user signs in again once. Until 1.0.0, a session could end up in photo annotations and in server logs. `SESSIONS_NOT_BEFORE` moves this date without rotating `JWT_SECRET`.
+- In a contribution, the "before" state shown to the owner now comes from the database, not from the contributor. A relative could previously label a deletion with another person's name.
+- Deleting a person through an approved contribution now removes their unions, links, memories and portrait, exactly like the owner's own deletion. Their files are erased from disk on both paths.
+- Sharing-password attempts are counted before the check, so a burst of parallel requests can no longer go past the per-tree limit. Password checks run one at a time, so password guessing cannot saturate the API.
+- Changing the sharing password and linking an account now run in a single transaction, and an unlock started just before the change can no longer keep access.
+- The storage quota counts the actual disk usage of a tree, portraits and annotation photos included. An account can own at most 10 trees.
+- Size limits: request bodies are capped at 1 MB outside upload routes; contributions, annotations (number per tree, batch size, style size) and GEDCOM imports (lines, links, one import at a time) are bounded.
+- GIF files are re-encoded, which bounds their size and strips their metadata.
+- Old annotation contributions no longer return a stored image address.
+- The server refuses to start with a published example `JWT_SECRET` when `NODE_ENV` is not set.
+
+### Deployment and self-hosting
+
+- Production deploys the exact commit the CI validated, never an older one, and stops if the SSH host key is not pinned.
+- nginx: `X-Forwarded-For` is set to the connecting address instead of being appended to; the version is hidden; the production access log drops query strings, which carried media tokens.
+- The PostHog script no longer loads anything from PostHog's servers, and the dashboard can no longer turn on click, heatmap or error capture. The CSP now names the two PostHog hosts instead of `*.posthog.com`.
+- `deploy/backup.sh` no longer uploads unencrypted backups unless `BACKUP_ALLOW_PLAINTEXT=1` is set.
+
+Correction to 1.0.0: not every fix listed there came with an automated test.
+
 ## 1.0.0 (2026-09-30)
 
 First public release. The code has been public since 2026-09-14; this version marks the app as ready to self-host.

@@ -3,8 +3,9 @@ name: Deploy Hostinger
 # Déploie Parenthèse sur le VPS quand le workflow « CI » a réussi sur un push sur main, ou à la main.
 # Le travail est fait sur le serveur par deploy/deploy.sh, incrémental et verrouillé : seules les parties
 # modifiées sont reconstruites, et un run sans changement ne reconstruit rien.
-# Le serveur déploie origin/main au moment du run (fetch + reset) : si deux pushs se suivent de près,
-# c'est le plus récent qui part, sa propre CI déclenchera ensuite un run sans changement.
+# Le serveur déploie le commit exact que la CI a validé (head_sha du run), jamais la tête de main au
+# moment du run : un push arrivé entre-temps, CI rouge ou en cours, partait sinon en production sans contrôle.
+# Un run plus ancien qu'un déploiement déjà fait ne revient pas en arrière.
 on:
   workflow_run:
     workflows:
@@ -53,24 +54,20 @@ jobs:
           ssh-private-key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
 
       # Clé d'hôte épinglée par le secret SSH_KNOWN_HOSTS (sortie de ssh-keyscan relue à la main, voir
-      # deploy/HOSTINGER_GITHUB_SETUP.md). Sans ce secret, repli sur ssh-keyscan au moment du run, qui
-      # fait confiance à la clé présentée ce jour-là : un avertissement le signale dans le run.
+      # deploy/HOSTINGER_GITHUB_SETUP.md). Sans ce secret, le déploiement s'arrête : faire confiance à la clé
+      # présentée le jour du run enverrait la clé de déploiement à n'importe quel serveur intercalé.
       - name: Hostinger host key
         env:
-          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
-          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
           SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
-          PORT="${HOSTINGER_PORT:-22}"
+          if [ -z "$SSH_KNOWN_HOSTS" ]; then
+            echo "::error::Secret SSH_KNOWN_HOSTS absent : ajoutez la clé d'hôte du VPS (voir deploy/HOSTINGER_GITHUB_SETUP.md)."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          if [ -n "$SSH_KNOWN_HOSTS" ]; then
-            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            echo "::warning::Secret SSH_KNOWN_HOSTS absent : clé d'hôte récupérée par ssh-keyscan, sans vérification. Ajoutez le secret."
-            ssh-keyscan -T 5 -p "$PORT" -H "$HOSTINGER_HOST" >> ~/.ssh/known_hosts || true
-          fi
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy on Hostinger
@@ -79,19 +76,34 @@ jobs:
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT }}
           HOSTINGER_USER: ${{ secrets.HOSTINGER_USER }}
           FORCE_FULL: ${{ inputs.full && '1' || '0' }}
+          DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -euo pipefail
           PORT="${HOSTINGER_PORT:-22}"
+          if ! printf '%s' "$DEPLOY_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::Commit à déployer invalide : $DEPLOY_SHA"
+            exit 1
+          fi
 
           # backend/.env vit sur le serveur, jamais dans GitHub (dépôt public)
-          ssh -p "$PORT" -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "$HOSTINGER_USER@$HOSTINGER_HOST" "FORCE_FULL=$FORCE_FULL bash -s" <<'EOF'
+          ssh -p "$PORT" -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "$HOSTINGER_USER@$HOSTINGER_HOST" "FORCE_FULL=$FORCE_FULL DEPLOY_SHA=$DEPLOY_SHA bash -s" <<'EOF'
           set -euo pipefail
           cd /var/www/parenthese
           # Sous le même verrou que deploy.sh : récupération du code, puis déploiement
-          flock -w 900 /tmp/parenthese-deploy.lock env PARENTHESE_DEPLOY_LOCKED=1 FORCE_FULL="$FORCE_FULL" bash -c '
+          flock -w 900 /tmp/parenthese-deploy.lock env PARENTHESE_DEPLOY_LOCKED=1 FORCE_FULL="$FORCE_FULL" DEPLOY_SHA="$DEPLOY_SHA" bash -c '
             set -euo pipefail
             git fetch -q origin main
-            git reset -q --hard origin/main
+            # Le commit validé doit appartenir à main
+            if ! git merge-base --is-ancestor "$DEPLOY_SHA" origin/main; then
+              echo "Commit $DEPLOY_SHA absent de main : rien n est déployé" >&2
+              exit 1
+            fi
+            # Un déploiement plus récent est déjà en ligne : pas de retour en arrière
+            if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ] && git merge-base --is-ancestor "$DEPLOY_SHA" HEAD; then
+              echo "Version plus récente déjà déployée, $DEPLOY_SHA ignoré"
+              exit 0
+            fi
+            git reset -q --hard "$DEPLOY_SHA"
             bash deploy/deploy.sh
           '
           EOF

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 
+import { UPLOAD_BODY_LIMIT } from '../config/env.js'
 import type { MembershipRole } from '../types/auth.js'
 
 const treeIdParamSchema = z.object({
@@ -16,6 +17,15 @@ const importBodySchema = z.object({
 const MAX_LINE_LENGTH = 4096
 const MAX_IMPORTED_PERSONS = 20000
 const MAX_IMPORTED_FAMILIES = 20000
+// Le parseur construit un objet par ligne : 10 Mo de lignes courtes montaient à 370 Mo de mémoire, et le
+// redémarrage pm2 qui suivait effaçait les limites d'essais gardées en mémoire. Au-delà, le fichier est refusé.
+const MAX_GEDCOM_NODES = 300_000
+const MAX_IMPORTED_LINKS = 60_000
+
+class GedcomTooLargeError extends Error {}
+
+// Un import à la fois sur toute l'instance : chacun tient une connexion de la base pendant sa transaction
+let importInProgress = false
 
 function clip(value: string | null, max: number): string | null {
   if (value === null) return null
@@ -46,10 +56,13 @@ function parseGedcom(text: string): GedcomNode[] {
   const lines = text.split(/\r\n|\r|\n/)
   const roots: GedcomNode[] = []
   const stack: GedcomNode[] = []
+  let nodeCount = 0
 
   for (const raw of lines) {
     const line = raw.trim()
     if (!line || line.length > MAX_LINE_LENGTH) continue
+    nodeCount += 1
+    if (nodeCount > MAX_GEDCOM_NODES) throw new GedcomTooLargeError()
 
     const match = line.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\w+)(?:\s+(.*))?$/)
     if (!match) continue
@@ -399,7 +412,7 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // Import
-  app.post('/trees/:id/import/gedcom', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
+  app.post('/trees/:id/import/gedcom', { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) {
       return reply.code(400).send({ error: 'invalid_tree_id' })
@@ -430,12 +443,25 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
-    const roots = parseGedcom(body.data.content)
+    if (importInProgress) {
+      return reply.code(429).send({ error: 'gedcom_import_busy' })
+    }
+
+    let roots: GedcomNode[]
+    try {
+      roots = parseGedcom(body.data.content)
+    } catch (error) {
+      if (error instanceof GedcomTooLargeError) {
+        return reply.code(413).send({ error: 'gedcom_too_large' })
+      }
+      throw error
+    }
 
     const indiNodes = roots.filter((node) => node.tag === 'INDI' && node.xref)
     const famNodes = roots.filter((node) => node.tag === 'FAM' && node.xref)
+    const childLinkCount = famNodes.reduce((total, fam) => total + findAllChildren(fam, 'CHIL').length, 0)
 
-    if (indiNodes.length > MAX_IMPORTED_PERSONS || famNodes.length > MAX_IMPORTED_FAMILIES) {
+    if (indiNodes.length > MAX_IMPORTED_PERSONS || famNodes.length > MAX_IMPORTED_FAMILIES || childLinkCount > MAX_IMPORTED_LINKS) {
       return reply.code(413).send({ error: 'gedcom_too_large' })
     }
 
@@ -444,6 +470,8 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
     let unionsCreated = 0
     let linksCreated = 0
 
+    importInProgress = true
+    try {
     await app.prisma.$transaction(async (tx) => {
       for (const indi of indiNodes) {
         const nameNode = findChild(indi, 'NAME')
@@ -552,6 +580,9 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
         },
       })
     }, { timeout: 60000 })
+    } finally {
+      importInProgress = false
+    }
 
     return reply.send({ personsCreated, unionsCreated, linksCreated })
   })

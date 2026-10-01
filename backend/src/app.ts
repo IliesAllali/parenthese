@@ -39,7 +39,9 @@ export function createApp() {
             },
           },
         },
-    bodyLimit: 12 * 1024 * 1024,
+    // 1 Mo par défaut : le JSON est lu avant toute vérification d'identité. Les envois de fichiers, l'import
+    // GEDCOM, les contributions et les annotations groupées montent à UPLOAD_BODY_LIMIT sur leur route.
+    bodyLimit: 1024 * 1024,
     // Accept both `/path` et `/path/` to avoid 301 → 400 issues via nginx
     routerOptions: { ignoreTrailingSlash: true },
     // Seuls les proxys connus (nginx) sont crus : l'adresse du client est la dernière qu'ils ont ajoutée à
@@ -78,6 +80,11 @@ export function createApp() {
 
       if (payload.kind === 'user') {
         if (isUserTokenRevoked(payload.jti)) {
+          return
+        }
+
+        // Sessions émises avant SESSIONS_NOT_BEFORE refusées (voir config/env.ts)
+        if (typeof payload.iat !== 'number' || payload.iat * 1000 < env.SESSIONS_NOT_BEFORE.getTime()) {
           return
         }
 

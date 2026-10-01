@@ -27,6 +27,7 @@ const { prismaMock } = vi.hoisted(() => ({
       updateMany: vi.fn(),
     },
     treeMembership: {
+      count: vi.fn(async () => 0),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),

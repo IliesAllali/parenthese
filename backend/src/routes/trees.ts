@@ -1,15 +1,21 @@
+import path from 'node:path'
+
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 
 import { env } from '../config/env.js'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
+import { softDeletePersonCascade, softDeleteUnionCascade } from '../lib/entity-deletion.js'
+import { removeStoredFile } from '../lib/media-files.js'
 import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
-import { isTreeUnlockLocked, recordTreeUnlockFailure } from '../lib/unlock-guard.js'
+import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
+
+const MAX_TREES_PER_ACCOUNT = 10
 
 const treeIdParamSchema = z.object({
   id: z.string().min(1),
@@ -177,6 +183,38 @@ function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: st
 
 function hasAdminRight(role: MembershipRole): boolean {
   return role === 'owner' || role === 'admin'
+}
+
+// Rattache un compte à l'arbre ouvert par le mot de passe de partage, si ce mot de passe est toujours celui en
+// vigueur (accessVersion). Le verrou partagé sur la ligne fait attendre un changement de mot de passe concurrent
+// jusqu'à la fin du rattachement, qu'il supprime ensuite ; passé avant, il change la version et on ne rattache pas.
+// Sans lui, un unlock lancé juste avant un changement recréait le rattachement après la purge.
+async function attachShareAccess(app: FastifyInstance, treeId: string, userId: string, accessVersion: number): Promise<boolean> {
+  return app.prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<Array<{ updatedAt: Date }>>`
+      SELECT "updatedAt" FROM tree_access_passwords WHERE "treeId" = ${treeId} FOR SHARE`
+    if (rows.length === 0 || rows[0].updatedAt.getTime() !== accessVersion) {
+      return false
+    }
+
+    const now = new Date()
+    const role = 'contributor' as const
+    await tx.userTreeAccess.upsert({
+      where: { treeId_userId: { treeId, userId } },
+      create: { treeId, userId, role },
+      update: { role, updatedAt: now },
+    })
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        lastOpenedTreeId: treeId,
+        lastOpenedAccessMode: 'share',
+        lastOpenedRole: role,
+        lastOpenedAt: now,
+      },
+    })
+    return true
+  })
 }
 
 async function getMembership(app: FastifyInstance, userId: string, treeId: string) {
@@ -386,7 +424,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/trees', async (request, reply) => {
+  app.post('/trees', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
       return
@@ -395,6 +433,14 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const parsed = createTreeSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
+    }
+
+    // Le quota disque est par arbre : sans plafond d'arbres, un compte multipliait sa place sans limite
+    const ownedTrees = await app.prisma.treeMembership.count({
+      where: { userId: user.userId, role: 'owner', tree: { deletedAt: null } },
+    })
+    if (ownedTrees >= MAX_TREES_PER_ACCOUNT) {
+      return reply.code(403).send({ error: 'tree_limit_reached' })
     }
 
     const normalizedSlug = normalizeSlug(parsed.data.slug)
@@ -695,23 +741,29 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: 'tree_not_found' })
       }
 
-      if (isTreeUnlockLocked(params.data.id)) {
+      const releaseAttempt = reserveTreeUnlockAttempt(params.data.id)
+      if (!releaseAttempt) {
         return reply.code(429).send({ error: 'too_many_attempts' })
       }
 
       // Un seul mot de passe de partage (25/09/2026) : regarder et proposer. Les deux colonnes restent,
       // les arbres créés avant ont encore deux mots de passe différents, les deux ouvrent en contributeur.
       // Apostrophe typographique ou espace finale ajoutées par un clavier de téléphone : acceptées (password-variants.ts)
-      const matches = await matchSharePassword(
+      const check = serializePasswordCheck(() => matchSharePassword(
         payload.data.password,
         [accessConfig.contributorHash, accessConfig.visitorHash],
         verifyPassword,
-      )
+      ))
+      if (!check) {
+        releaseAttempt()
+        return reply.code(429).send({ error: 'too_many_attempts' })
+      }
+      const matches = await check
 
       if (!matches) {
-        recordTreeUnlockFailure(params.data.id)
         return reply.code(401).send({ error: 'invalid_password' })
       }
+      releaseAttempt()
 
       const role = 'contributor' as const
 
@@ -729,37 +781,10 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       )
 
       if (request.actor && request.actor.kind === 'user') {
-        const now = new Date()
-
-        await app.prisma.userTreeAccess.upsert({
-          where: {
-            treeId_userId: {
-              treeId: params.data.id,
-              userId: request.actor.userId,
-            },
-          },
-          create: {
-            treeId: params.data.id,
-            userId: request.actor.userId,
-            role,
-          },
-          update: {
-            role,
-            updatedAt: now,
-          },
-        })
-
-        await app.prisma.user.update({
-          where: {
-            id: request.actor.userId,
-          },
-          data: {
-            lastOpenedTreeId: params.data.id,
-            lastOpenedAccessMode: 'share',
-            lastOpenedRole: role,
-            lastOpenedAt: now,
-          },
-        })
+        const attached = await attachShareAccess(app, params.data.id, request.actor.userId, accessConfig.updatedAt.getTime())
+        if (!attached) {
+          return reply.code(409).send({ error: 'access_changed' })
+        }
       }
 
       return reply.send({
@@ -822,36 +847,10 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: 'invalid_access_token' })
     }
 
-    const now = new Date()
-    await app.prisma.userTreeAccess.upsert({
-      where: {
-        treeId_userId: {
-          treeId: params.data.id,
-          userId: user.userId,
-        },
-      },
-      create: {
-        treeId: params.data.id,
-        userId: user.userId,
-        role,
-      },
-      update: {
-        role,
-        updatedAt: now,
-      },
-    })
-
-    await app.prisma.user.update({
-      where: {
-        id: user.userId,
-      },
-      data: {
-        lastOpenedTreeId: params.data.id,
-        lastOpenedAccessMode: 'share',
-        lastOpenedRole: role,
-        lastOpenedAt: now,
-      },
-    })
+    const attached = await attachShareAccess(app, params.data.id, user.userId, accessPayload.accessVersion)
+    if (!attached) {
+      return reply.code(401).send({ error: 'invalid_access_token' })
+    }
 
     return reply.send({ treeId: params.data.id, role })
   })
@@ -879,7 +878,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
 
   // Arbres d'avant : le propriétaire tape le mot de passe déjà donné, le serveur le vérifie et le retient
   // sans rien changer aux accès (les hash et leur updatedAt ne bougent pas).
-  app.post('/trees/:id/access/passwords/remember', async (request, reply) => {
+  app.post('/trees/:id/access/passwords/remember', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
       return
@@ -906,11 +905,15 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // On garde la variante exacte qui correspond au hash, c'est elle que la famille doit recevoir
-    const password = await matchSharePassword(
+    const check = serializePasswordCheck(() => matchSharePassword(
       payload.data.password,
       [accessConfig.contributorHash, accessConfig.visitorHash],
       verifyPassword,
-    )
+    ))
+    if (!check) {
+      return reply.code(429).send({ error: 'too_many_attempts' })
+    }
+    const password = await check
     if (!password) {
       return reply.code(422).send({ error: 'password_mismatch' })
     }
@@ -971,30 +974,34 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       data.contributorHash = await hashPassword(payload.data.contributorPassword)
     }
 
-    await app.prisma.treeAccessPasswords.update({
-      where: {
-        treeId: params.data.id,
-      },
-      data,
-    })
-
-    // Changer le mot de passe met dehors ceux qui l'avaient : les jetons d'arbre tombent avec la version,
-    // les comptes rattachés par ce mot de passe perdent aussi leur accès (ils le retapent s'ils ont le nouveau)
-    if (Object.keys(data).length > 0) {
-      await app.prisma.userTreeAccess.deleteMany({ where: { treeId: params.data.id } })
-    }
-
-    // Le mot de passe lisible suit toujours celui en vigueur ; deux mots de passe distincts = plus de valeur unique
-    if (payload.data.password) {
-      const passwordEnc = encryptSharePassword(payload.data.password)
-      await app.prisma.treeSharePassword.upsert({
-        where: { treeId: params.data.id },
-        create: { treeId: params.data.id, passwordEnc },
-        update: { passwordEnc, setAt: new Date() },
+    // Une seule transaction : nouveau mot de passe, rattachements purgés et mot de passe lisible changent
+    // ensemble (voir attachShareAccess pour l'unlock concurrent)
+    await app.prisma.$transaction(async (tx) => {
+      await tx.treeAccessPasswords.update({
+        where: {
+          treeId: params.data.id,
+        },
+        data,
       })
-    } else {
-      await app.prisma.treeSharePassword.deleteMany({ where: { treeId: params.data.id } })
-    }
+
+      // Changer le mot de passe met dehors ceux qui l'avaient : les jetons d'arbre tombent avec la version,
+      // les comptes rattachés par ce mot de passe perdent aussi leur accès (ils le retapent s'ils ont le nouveau)
+      if (Object.keys(data).length > 0) {
+        await tx.userTreeAccess.deleteMany({ where: { treeId: params.data.id } })
+      }
+
+      // Le mot de passe lisible suit toujours celui en vigueur ; deux mots de passe distincts = plus de valeur unique
+      if (payload.data.password) {
+        const passwordEnc = encryptSharePassword(payload.data.password)
+        await tx.treeSharePassword.upsert({
+          where: { treeId: params.data.id },
+          create: { treeId: params.data.id, passwordEnc },
+          update: { passwordEnc, setAt: new Date() },
+        })
+      } else {
+        await tx.treeSharePassword.deleteMany({ where: { treeId: params.data.id } })
+      }
+    })
 
     await app.prisma.auditLog.create({
       data: {
@@ -1404,55 +1411,16 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
-    const now = new Date()
-    const deletedPerson = await app.prisma.person.updateMany({
-      where: {
-        id: params.data.personId,
-        treeId: params.data.id,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: now,
-        updatedBy: user.userId,
-      },
-    })
+    const deleted = await app.prisma.$transaction((tx) =>
+      softDeletePersonCascade(tx, params.data.id, params.data.personId, user.userId),
+    )
 
-    if (deletedPerson.count === 0) {
+    if (!deleted) {
       return reply.code(404).send({ error: 'person_not_found' })
     }
 
-    const [deletedUnions, deletedLinks, deletedMedia] = await Promise.all([
-      app.prisma.union.updateMany({
-        where: {
-          treeId: params.data.id,
-          deletedAt: null,
-          OR: [{ partner1PersonId: params.data.personId }, { partner2PersonId: params.data.personId }],
-        },
-        data: {
-          deletedAt: now,
-        },
-      }),
-      app.prisma.parentChildLink.updateMany({
-        where: {
-          treeId: params.data.id,
-          deletedAt: null,
-          OR: [{ parentPersonId: params.data.personId }, { childPersonId: params.data.personId }],
-        },
-        data: {
-          deletedAt: now,
-        },
-      }),
-      app.prisma.mediaItem.updateMany({
-        where: {
-          treeId: params.data.id,
-          personId: params.data.personId,
-          deletedAt: null,
-        },
-        data: {
-          deletedAt: now,
-        },
-      }),
-    ])
+    const storageRoot = path.resolve(env.MEDIA_STORAGE_PATH)
+    await Promise.all(deleted.filePaths.map((filePath) => removeStoredFile(storageRoot, filePath)))
 
     await app.prisma.auditLog.create({
       data: {
@@ -1463,9 +1431,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         entityType: 'person',
         entityId: params.data.personId,
         payloadJson: {
-          deletedUnions: deletedUnions.count,
-          deletedLinks: deletedLinks.count,
-          deletedMedia: deletedMedia.count,
+          deletedUnions: deleted.unions,
+          deletedLinks: deleted.links,
+          deletedMedia: deleted.medias,
         },
       },
     })
@@ -1473,9 +1441,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({
       ok: true,
       cascaded: {
-        unions: deletedUnions.count,
-        links: deletedLinks.count,
-        medias: deletedMedia.count,
+        unions: deleted.unions,
+        links: deleted.links,
+        medias: deleted.medias,
       },
     })
   })
@@ -1715,32 +1683,13 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: 'forbidden' })
     }
 
-    const now = new Date()
-    const deletedUnion = await app.prisma.union.updateMany({
-      where: {
-        id: params.data.unionId,
-        treeId: params.data.id,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: now,
-      },
-    })
+    const deletedUnion = await softDeleteUnionCascade(app.prisma, params.data.id, params.data.unionId)
 
-    if (deletedUnion.count === 0) {
+    if (!deletedUnion) {
       return reply.code(404).send({ error: 'union_not_found' })
     }
 
-    const deletedLinks = await app.prisma.parentChildLink.updateMany({
-      where: {
-        treeId: params.data.id,
-        viaUnionId: params.data.unionId,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: now,
-      },
-    })
+    const deletedLinks = { count: deletedUnion.links }
 
     await app.prisma.auditLog.create({
       data: {

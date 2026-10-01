@@ -4,7 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { sanitizeAnnotationContentForRead, sanitizeAnnotationContentForWrite } from '../src/lib/annotation-content.js'
 import { isMimeAllowedForType, sanitizeImage, scrubMp4Location, sniffMimeType } from '../src/lib/media-files.js'
 import { matchSharePassword } from '../src/lib/password-variants.js'
-import { isTreeUnlockLocked, recordTreeUnlockFailure, resetTreeUnlockGuard } from '../src/lib/unlock-guard.js'
+import {
+  isTreeUnlockLocked,
+  recordTreeUnlockFailure,
+  reserveTreeUnlockAttempt,
+  resetTreeUnlockGuard,
+  serializePasswordCheck,
+} from '../src/lib/unlock-guard.js'
 
 const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64')
 
@@ -120,5 +126,65 @@ describe('mot de passe de partage', () => {
     expect(isTreeUnlockLocked('tree-x', now)).toBe(true)
     expect(isTreeUnlockLocked('tree-autre', now)).toBe(false)
     expect(isTreeUnlockLocked('tree-x', now + 16 * 60 * 1000)).toBe(false)
+  })
+
+  it('compte l essai avant la vérification : une rafale simultanée ne dépasse pas le plafond', () => {
+    resetTreeUnlockGuard()
+    const now = Date.now()
+    const reservations = Array.from({ length: 60 }, () => reserveTreeUnlockAttempt('tree-rafale', now))
+    expect(reservations.filter(Boolean)).toHaveLength(30)
+    expect(isTreeUnlockLocked('tree-rafale', now)).toBe(true)
+  })
+
+  it('rend la place d un essai réussi', () => {
+    resetTreeUnlockGuard()
+    const now = Date.now()
+    for (let i = 0; i < 29; i += 1) reserveTreeUnlockAttempt('tree-ok', now)
+    const release = reserveTreeUnlockAttempt('tree-ok', now)
+    expect(isTreeUnlockLocked('tree-ok', now)).toBe(true)
+    release?.()
+    expect(isTreeUnlockLocked('tree-ok', now)).toBe(false)
+  })
+
+  it('refuse au-delà de 20 comparaisons en attente au lieu d allonger la file', async () => {
+    let unblock: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => { unblock = resolve })
+    const runs = Array.from({ length: 25 }, () => serializePasswordCheck(() => gate.then(() => true)))
+    expect(runs.filter((run) => run === null)).toHaveLength(5)
+    unblock()
+    await Promise.all(runs.filter(Boolean))
+    expect(serializePasswordCheck(async () => true)).not.toBeNull()
+  })
+})
+
+describe('vidéos : position effacée en temps linéaire', () => {
+  it('traite un faux MP4 de 2 Mo piégé pour l expression régulière en moins d une seconde', () => {
+    const body = Buffer.from('+1+1CRS'.repeat(300_000), 'latin1')
+    const head = Buffer.alloc(8)
+    head.writeUInt32BE(body.length + 8, 0)
+    head.write('moov', 4, 'latin1')
+    const started = Date.now()
+    scrubMp4Location(Buffer.concat([head, body]))
+    expect(Date.now() - started).toBeLessThan(1000)
+  })
+
+  it('efface toujours une position avec altitude et système de coordonnées', () => {
+    const position = '+48.8584+002.2945+035.000CRSWGS_84/'
+    const head = Buffer.alloc(8)
+    head.writeUInt32BE(position.length + 8, 0)
+    head.write('moov', 4, 'latin1')
+    const out = scrubMp4Location(Buffer.concat([head, Buffer.from(position, 'latin1')]))
+    expect(out.subarray(8).toString('latin1')).toBe('+00.0000+000.0000+000.000CRSWGS_00/')
+  })
+})
+
+describe('GIF', () => {
+  it('réencode un GIF et retire ses blocs de commentaire', async () => {
+    const gif = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#808080' } }).gif().toBuffer()
+    const comment = Buffer.concat([Buffer.from([0x21, 0xfe, 0x0b]), Buffer.from('secret-XMP!'), Buffer.from([0x00])])
+    const withComment = Buffer.concat([gif.subarray(0, gif.length - 1), comment, Buffer.from([0x3b])])
+    const out = await sanitizeImage(withComment, 'image/gif')
+    expect(out.subarray(0, 6).toString('latin1')).toMatch(/^GIF8[79]a$/)
+    expect(out.includes(Buffer.from('secret-XMP!'))).toBe(false)
   })
 })

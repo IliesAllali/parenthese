@@ -7,6 +7,8 @@ export type UserJwtPayload = {
   jti: string
   userId: string
   email: string
+  // Posé par la signature (secondes) : sert au refus des sessions antérieures à SESSIONS_NOT_BEFORE
+  iat?: number
 }
 
 export type TreeAccessJwtPayload = {

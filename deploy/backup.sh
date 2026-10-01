@@ -153,8 +153,13 @@ if [ -n "${BACKUP_S3_BUCKET:-}" ]; then
       age "${AGE_ARGS[@]}" -o "$UPLOAD_MEDIA_FILE" "$MEDIA_BACKUP_FILE"
     fi
     echo "Copies chiffrées avec age avant envoi."
+  elif [ "${BACKUP_ALLOW_PLAINTEXT:-0}" = "1" ]; then
+    echo "WARNING: BACKUP_AGE_RECIPIENT absent et BACKUP_ALLOW_PLAINTEXT=1 : les sauvegardes partent en clair."
   else
-    echo "WARNING: BACKUP_AGE_RECIPIENT absent, les sauvegardes partent en clair."
+    # Des arbres de familles (noms, dates, photos) chez un hébergeur tiers, en clair : refusé par défaut.
+    # La copie locale ci-dessus est faite ; seul l'envoi hors du serveur est sauté.
+    echo "ERROR: BACKUP_S3_BUCKET est défini sans BACKUP_AGE_RECIPIENT : envoi refusé (chiffrez avec age, ou BACKUP_ALLOW_PLAINTEXT=1)."
+    exit 1
   fi
 
   aws s3 cp "$UPLOAD_DB_FILE" "$S3_BASE_URI/db/$(basename "$UPLOAD_DB_FILE")" "${S3_ARGS[@]}"

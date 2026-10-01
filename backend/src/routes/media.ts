@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
-import { env } from '../config/env.js'
+import { env, UPLOAD_BODY_LIMIT } from '../config/env.js'
 import {
   applyMediaResponseHeaders,
   extensionForMime,
@@ -18,6 +18,7 @@ import {
   type BinaryMediaType,
 } from '../lib/media-files.js'
 import { syncPersonMediaOrder } from '../lib/media-order.js'
+import { resolveTreeMediaDirectory } from '../lib/tree-purge.js'
 import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
 import type { MembershipRole } from '../types/auth.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
@@ -69,7 +70,7 @@ const uploadYoutubeVideoSchema = z.object({
   submittedByLabel: z.string().trim().min(1).max(120).optional(),
   type: z.literal('video'),
   mimeType: z.literal('video/youtube'),
-  youtubeUrl: z.string().regex(YOUTUBE_URL_RE),
+  youtubeUrl: z.string().max(500).regex(YOUTUBE_URL_RE),
   caption: z.string().max(280).optional().nullable(),
   source: mediaSourceSchema,
 })
@@ -135,14 +136,40 @@ async function prepareUploadedFile(
   return { buffer: cleaned, mimeType, extension: extensionForMime(mimeType) }
 }
 
+// Octets réellement occupés par le dossier d'un arbre. Le total des médias en base ne voyait ni les portraits,
+// ni les photos d'annotation, ni les fichiers restés après une suppression : le quota se contournait.
+async function treeDiskUsage(treeId: string): Promise<number> {
+  const directory = resolveTreeMediaDirectory(treeId, getStorageRoot())
+  if (!directory) return 0
+  let total = 0
+  const walk = async (dir: string): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await walk(entryPath)
+      } else if (entry.isFile()) {
+        try {
+          total += (await stat(entryPath)).size
+        } catch {
+          // effacé entre-temps
+        }
+      }
+    }
+  }
+  await walk(directory)
+  return total
+}
+
 // Place disque d'un arbre : total, et part des envois en attente de relecture (limite l'envoi en boucle)
 async function exceedsStorageQuota(app: FastifyRequest['server'], treeId: string, incomingBytes: number, isPending: boolean): Promise<boolean> {
   const MB = 1024 * 1024
-  const total = await app.prisma.mediaItem.aggregate({
-    where: { treeId, deletedAt: null },
-    _sum: { sizeBytes: true },
-  })
-  if ((total._sum.sizeBytes ?? 0) + incomingBytes > env.MEDIA_QUOTA_PER_TREE_MB * MB) {
+  if ((await treeDiskUsage(treeId)) + incomingBytes > env.MEDIA_QUOTA_PER_TREE_MB * MB) {
     return true
   }
 
@@ -157,7 +184,8 @@ async function exceedsStorageQuota(app: FastifyRequest['server'], treeId: string
   return (pending._sum.sizeBytes ?? 0) + incomingBytes > env.MEDIA_PENDING_QUOTA_PER_TREE_MB * MB
 }
 
-const UPLOAD_RATE_LIMIT = { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
+// Seules les routes d'envoi acceptent un corps de 12 Mo (fichier en base64), le reste de l'API est à 1 Mo (app.ts)
+const UPLOAD_RATE_LIMIT = { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
 
 async function requireAdminMembership(app: FastifyRequest['server'], userId: string, treeId: string) {
   const membership = await app.prisma.treeMembership.findUnique({
@@ -433,7 +461,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(201).send({ media, status: media.status })
   })
 
-  app.post('/trees/:id/persons/:personId/avatar', async (request, reply) => {
+  app.post('/trees/:id/persons/:personId/avatar', UPLOAD_RATE_LIMIT, async (request, reply) => {
     if (!request.actor || request.actor.kind !== 'user') {
       return reply.code(401).send({ error: 'authentication_required' })
     }
@@ -491,6 +519,10 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: 'invalid_avatar_mime_type' })
       }
       throw error
+    }
+
+    if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length, false)) {
+      return reply.code(413).send({ error: 'storage_quota_exceeded' })
     }
 
     const relativePath = path.posix.join(
@@ -895,6 +927,10 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: 'invalid_annotation_photo_mime_type' })
       }
       throw error
+    }
+
+    if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length, false)) {
+      return reply.code(413).send({ error: 'storage_quota_exceeded' })
     }
 
     const photoId = randomUUID()

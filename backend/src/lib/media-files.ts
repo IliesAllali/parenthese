@@ -136,11 +136,13 @@ export function extensionForMime(mimeType: string): string {
 export class InvalidMediaError extends Error {}
 
 // Photos : rotation du téléphone appliquée aux pixels, puis réencodage sans aucune métadonnée
-// (GPS, appareil, date). Un GIF n'a pas d'EXIF et peut être animé : il passe tel quel.
+// (GPS, appareil, date). Un GIF peut être animé : réencodé image par image, ce qui borne ses dimensions et
+// retire ses blocs XMP et commentaires (il passait tel quel, sans aucune limite).
 export async function sanitizeImage(buf: Buffer, mimeType: string): Promise<Buffer> {
-  if (mimeType === 'image/gif') return buf
-
   try {
+    if (mimeType === 'image/gif') {
+      return await sharp(buf, { animated: true, limitInputPixels: 50_000_000, failOn: 'error' }).gif().toBuffer()
+    }
     const image = sharp(buf, { limitInputPixels: 50_000_000, failOn: 'error' }).rotate()
     if (mimeType === 'image/jpeg') return await image.jpeg({ quality: 90, mozjpeg: true }).toBuffer()
     if (mimeType === 'image/png') return await image.png().toBuffer()
@@ -173,7 +175,9 @@ export function scrubMp4Location(buf: Buffer): Buffer {
       const end = Math.min(offset + size, buf.length)
       const region = buf.subarray(offset + header, end)
       const text = region.toString('latin1')
-      const pattern = /[+-]\d{1,3}(?:\.\d+)?[+-]\d{1,3}(?:\.\d+)?(?:[+-]\d+(?:\.\d+)?)?(?:CRS[^/]*)?\//g
+      // Chaque partie est bornée : la forme d'avant, `(?:CRS[^/]*)?`, rebalayait le reste de la boîte depuis
+      // chaque position, et un faux MP4 de 8 Mo rempli de « +1+1CRS » bloquait l'API pendant des heures.
+      const pattern = /[+-]\d{1,3}(?:\.\d{1,12})?[+-]\d{1,3}(?:\.\d{1,12})?(?:[+-]\d{1,6}(?:\.\d{1,12})?)?(?:CRS[^/]{0,40})?\//g
       for (const match of text.matchAll(pattern)) {
         const zeroed = match[0].replace(/\d/g, '0')
         region.write(zeroed, match.index ?? 0, 'latin1')

@@ -7,6 +7,7 @@ import {
   sanitizeAnnotationContentForRead,
   sanitizeAnnotationContentForWrite,
 } from '../lib/annotation-content.js'
+import { UPLOAD_BODY_LIMIT } from '../config/env.js'
 import { canReadTree } from '../lib/tree-access.js'
 import type { MembershipRole } from '../types/auth.js'
 
@@ -19,12 +20,23 @@ const annotationParamsSchema = z.object({
   annotationId: z.string().min(1),
 })
 
+// Bornes : sans elles, un envoi groupé de 12 Mo par requête et sans limite de fréquence remplissait la base
+const MAX_BATCH_ITEMS = 500
+const MAX_STYLE_CHARS = 4000
+const MAX_ANNOTATIONS_PER_TREE = 5000
+const ANNOTATION_RATE_LIMIT = { max: 60, timeWindow: '1 minute' }
+
+const styleSchema = z.record(z.string(), z.unknown()).refine(
+  (value) => JSON.stringify(value).length <= MAX_STYLE_CHARS,
+  { message: 'style_too_large' },
+)
+
 const createAnnotationSchema = z.object({
   type: z.enum(['drawing', 'sticker', 'text', 'photo']),
   x: z.number(),
   y: z.number(),
   content: z.string().min(1).max(50000),
-  style: z.record(z.string(), z.unknown()).optional(),
+  style: styleSchema.optional(),
   zIndex: z.number().int().optional(),
 })
 
@@ -33,7 +45,7 @@ const patchAnnotationSchema = z
     x: z.number().optional(),
     y: z.number().optional(),
     content: z.string().min(1).max(50000).optional(),
-    style: z.record(z.string(), z.unknown()).optional(),
+    style: styleSchema.optional(),
     zIndex: z.number().int().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
@@ -41,16 +53,16 @@ const patchAnnotationSchema = z
   })
 
 const batchAnnotationSchema = z.object({
-  create: z.array(createAnnotationSchema).optional().default([]),
+  create: z.array(createAnnotationSchema).max(MAX_BATCH_ITEMS).optional().default([]),
   update: z.array(z.object({
     id: z.string().min(1),
     x: z.number().optional(),
     y: z.number().optional(),
     content: z.string().min(1).max(50000).optional(),
-    style: z.record(z.string(), z.unknown()).optional(),
+    style: styleSchema.optional(),
     zIndex: z.number().int().optional(),
-  })).optional().default([]),
-  delete: z.array(z.string().min(1)).optional().default([]),
+  })).max(MAX_BATCH_ITEMS).optional().default([]),
+  delete: z.array(z.string().min(1)).max(MAX_BATCH_ITEMS).optional().default([]),
 })
 
 function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string } | null {
@@ -98,9 +110,15 @@ function hasActiveAdminMembership(membership: Awaited<ReturnType<typeof getAdmin
   return Boolean(membership && !membership.tree.deletedAt && hasAdminRight(membership.role))
 }
 
+async function exceedsAnnotationCap(app: FastifyInstance, treeId: string, incoming: number): Promise<boolean> {
+  if (incoming === 0) return false
+  const count = await app.prisma.annotation.count({ where: { treeId, deletedAt: null } })
+  return count + incoming > MAX_ANNOTATIONS_PER_TREE
+}
+
 export const annotationRoutes: FastifyPluginAsync = async (app) => {
   // CREATE annotation
-  app.post('/trees/:id/annotations', async (request, reply) => {
+  app.post('/trees/:id/annotations', { config: { rateLimit: ANNOTATION_RATE_LIMIT } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
 
@@ -112,6 +130,8 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
 
     const membership = await getAdminMembership(app, user.userId, params.data.id)
     if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
+
+    if (await exceedsAnnotationCap(app, params.data.id, 1)) return reply.code(413).send({ error: 'annotation_limit_reached' })
 
     const content = cleanContent(payload.data.content, params.data.id)
     if (content === null) return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
@@ -259,7 +279,7 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
   })
 
   // BATCH annotations (create + update + delete in one request)
-  app.post('/trees/:id/annotations/batch', async (request, reply) => {
+  app.post('/trees/:id/annotations/batch', { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: ANNOTATION_RATE_LIMIT } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
 
@@ -271,6 +291,10 @@ export const annotationRoutes: FastifyPluginAsync = async (app) => {
 
     const membership = await getAdminMembership(app, user.userId, params.data.id)
     if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
+
+    if (await exceedsAnnotationCap(app, params.data.id, payload.data.create.length)) {
+      return reply.code(413).send({ error: 'annotation_limit_reached' })
+    }
 
     const treeId = params.data.id
     const results = { created: 0, updated: 0, deleted: 0 }

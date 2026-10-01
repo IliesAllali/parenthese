@@ -3,7 +3,9 @@ import path from 'node:path'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
-import { env } from '../config/env.js'
+import { env, UPLOAD_BODY_LIMIT } from '../config/env.js'
+import { sanitizeAnnotationContentForRead } from '../lib/annotation-content.js'
+import { softDeletePersonCascade, softDeleteUnionCascade } from '../lib/entity-deletion.js'
 import { removeStoredFile } from '../lib/media-files.js'
 import { syncPersonMediaOrder } from '../lib/media-order.js'
 
@@ -21,12 +23,21 @@ const sessionParamsSchema = z.object({
   sessionId: z.string().min(1),
 })
 
+// Une fiche de personne ou une annotation tient en quelques Ko : sans plafond, un détenteur du mot de passe
+// remplissait la base à 12 Mo par envoi
+const MAX_CHANGE_JSON_CHARS = 64_000
+const MAX_PENDING_SESSIONS_PER_TREE = 200
+const boundedJson = z.unknown().optional().refine(
+  (value) => value === undefined || JSON.stringify(value).length <= MAX_CHANGE_JSON_CHARS,
+  { message: 'change_too_large' },
+)
+
 const contributionChangeSchema = z.object({
   entityType: z.enum(['person', 'union', 'parent_child_link', 'annotation', 'media']),
   action: z.enum(['create', 'update', 'delete', 'reorder']),
   entityId: z.string().min(1).optional().nullable(),
-  before: z.unknown().optional(),
-  after: z.unknown().optional(),
+  before: boundedJson,
+  after: boundedJson,
   conflictState: z.enum(['none', 'needs_review']).optional(),
 })
 
@@ -210,6 +221,12 @@ function toTrimmedStringOrNull(value?: string | null): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
+// Contenu d'annotation dans une proposition : même nettoyage qu'à la lecture des annotations
+function stripAnnotationUrl<T>(value: T): T {
+  if (!isRecord(value) || typeof value.content !== 'string') return value
+  return { ...value, content: sanitizeAnnotationContentForRead(value.content) } as T
+}
+
 function toPrismaJson(
   value: unknown,
 ): Prisma.InputJsonValue | Prisma.NullTypes.DbNull | Prisma.NullTypes.JsonNull | undefined {
@@ -288,6 +305,8 @@ async function applyContributionChange(
   change: ParsedChange,
   actorUserId: string | null,
   refs: RefMap = new Map(),
+  // Fichiers à effacer une fois la transaction validée (suppression d'une personne)
+  filesToRemove: string[] = [],
 ): Promise<{ entityId: string | null }> {
   // Les annotations sont appliquées par le client après la relecture (batchAnnotations) :
   // rien à faire ici. Avant, elles tombaient dans la branche des liens et faisaient échouer la relecture.
@@ -401,22 +420,14 @@ async function applyContributionChange(
     }
 
     if (change.action === 'delete') {
-      const result = await tx.person.updateMany({
-        where: {
-          id: change.entityId,
-          treeId,
-          deletedAt: null,
-        },
-        data: {
-          deletedAt: new Date(),
-          updatedBy: actorUserId,
-        },
-      })
+      // Même cascade que la route du propriétaire : unions, liens, souvenirs et portrait partent avec la personne
+      const deleted = await softDeletePersonCascade(tx, treeId, change.entityId, actorUserId)
 
-      if (result.count === 0) {
+      if (!deleted) {
         throw new ContributionRouteError(400, 'invalid_entity_reference')
       }
 
+      filesToRemove.push(...deleted.filePaths)
       return { entityId: change.entityId }
     }
 
@@ -542,18 +553,10 @@ async function applyContributionChange(
     }
 
     if (change.action === 'delete') {
-      const result = await tx.union.updateMany({
-        where: {
-          id: change.entityId,
-          treeId,
-          deletedAt: null,
-        },
-        data: {
-          deletedAt: new Date(),
-        },
-      })
+      // Les liens parent-enfant qui passaient par cette union partent avec elle (comme côté propriétaire)
+      const deleted = await softDeleteUnionCascade(tx, treeId, change.entityId)
 
-      if (result.count === 0) {
+      if (!deleted) {
         throw new ContributionRouteError(400, 'invalid_entity_reference')
       }
 
@@ -773,20 +776,18 @@ async function applyContributionChange(
   throw new ContributionRouteError(400, 'unsupported_change_action_for_link')
 }
 
-async function detectConflict(
+const SNAPSHOT_ENTITY_TYPES = new Set(['person', 'union', 'parent_child_link'])
+
+// État actuel d'une personne, union ou lien, tel qu'on le montre à la relecture. null : introuvable dans l'arbre.
+async function snapshotEntity(
   tx: TxClient,
   treeId: string,
-  change: { entityType: string; action: string; entityId: string | null; beforeJson: unknown },
-): Promise<boolean> {
-  if (change.action !== 'update' || !change.entityId || !isRecord(change.beforeJson)) {
-    return false
-  }
-
-  const before = change.beforeJson
-
-  if (change.entityType === 'person') {
+  entityType: string,
+  entityId: string,
+): Promise<Record<string, unknown> | null> {
+  if (entityType === 'person') {
     const current = await tx.person.findFirst({
-      where: { id: change.entityId, treeId, deletedAt: null },
+      where: { id: entityId, treeId, deletedAt: null },
       select: {
         firstName: true,
         lastName: true,
@@ -801,48 +802,53 @@ async function detectConflict(
         notes: true,
       },
     })
-    if (!current) return true
-    const snap: Record<string, unknown> = {
+    if (!current) return null
+    return {
       ...current,
       birthDate: current.birthDate?.toISOString().slice(0, 10) ?? null,
       deathDate: current.deathDate?.toISOString().slice(0, 10) ?? null,
     }
-    for (const key of Object.keys(before)) {
-      if (key in snap && String(snap[key] ?? '') !== String(before[key] ?? '')) return true
-    }
-    return false
   }
 
-  if (change.entityType === 'union') {
+  if (entityType === 'union') {
     const current = await tx.union.findFirst({
-      where: { id: change.entityId, treeId, deletedAt: null },
+      where: { id: entityId, treeId, deletedAt: null },
       select: { partner1PersonId: true, partner2PersonId: true, unionType: true, startDate: true, endDate: true, displayOrder: true },
     })
-    if (!current) return true
-    const snap: Record<string, unknown> = {
+    if (!current) return null
+    return {
       ...current,
       startDate: current.startDate?.toISOString().slice(0, 10) ?? null,
       endDate: current.endDate?.toISOString().slice(0, 10) ?? null,
     }
-    for (const key of Object.keys(before)) {
-      if (key in snap && String(snap[key] ?? '') !== String(before[key] ?? '')) return true
-    }
-    return false
   }
 
-  if (change.entityType === 'parent_child_link') {
+  if (entityType === 'parent_child_link') {
     const current = await tx.parentChildLink.findFirst({
-      where: { id: change.entityId, treeId, deletedAt: null },
+      where: { id: entityId, treeId, deletedAt: null },
       select: { parentPersonId: true, childPersonId: true, viaUnionId: true, parentageType: true, displayOrder: true },
     })
-    if (!current) return true
-    const snap = current as Record<string, unknown>
-    for (const key of Object.keys(before)) {
-      if (key in snap && String(snap[key] ?? '') !== String(before[key] ?? '')) return true
-    }
+    return current ? { ...current } : null
+  }
+
+  return null
+}
+
+async function detectConflict(
+  tx: TxClient,
+  treeId: string,
+  change: { entityType: string; action: string; entityId: string | null; beforeJson: unknown },
+): Promise<boolean> {
+  if (change.action !== 'update' || !change.entityId || !isRecord(change.beforeJson) || !SNAPSHOT_ENTITY_TYPES.has(change.entityType)) {
     return false
   }
 
+  const before = change.beforeJson
+  const snap = await snapshotEntity(tx, treeId, change.entityType, change.entityId)
+  if (!snap) return true
+  for (const key of Object.keys(before)) {
+    if (key in snap && String(snap[key] ?? '') !== String(before[key] ?? '')) return true
+  }
   return false
 }
 
@@ -993,7 +999,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
 }
 
 export const contributionRoutes: FastifyPluginAsync = async (app) => {
-  app.post('/trees/:id/contributions/sessions', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
+  app.post('/trees/:id/contributions/sessions', { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) {
       return reply.code(400).send({ error: 'invalid_tree_id' })
@@ -1011,6 +1017,18 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
     try {
       const context = await resolveSubmissionContext(app, request.actor, params.data.id)
       const now = new Date()
+
+      // Une famille n'a jamais des centaines de propositions en attente : au-delà, c'est un envoi en boucle
+      if (context.autoStatus === 'pending') {
+        const pendingCount = await app.prisma.contributionSession.count({
+          where: { treeId: params.data.id, status: 'pending' },
+        })
+        if (pendingCount >= MAX_PENDING_SESSIONS_PER_TREE) {
+          return reply.code(429).send({ error: 'too_many_pending_contributions' })
+        }
+      }
+
+      const filesToRemove: string[] = []
 
       // Tout ou rien : une erreur au milieu n'applique rien
       const { session, createdChanges } = await app.prisma.$transaction(async (tx) => {
@@ -1034,8 +1052,19 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
         for (const change of byApplicationOrder(payload.data.changes)) {
           let effectiveEntityId = change.entityId ?? null
 
+          // L'« avant » montré au propriétaire vient de la base, jamais du contributeur : un « avant » inventé
+          // faisait approuver « Suppression : Doublon Test » pour effacer en réalité la grand-mère.
+          let before = change.before
+          if ((change.action === 'update' || change.action === 'delete') && change.entityId && SNAPSHOT_ENTITY_TYPES.has(change.entityType)) {
+            const snapshot = await snapshotEntity(tx, params.data.id, change.entityType, change.entityId)
+            if (!snapshot) {
+              throw new ContributionRouteError(400, 'invalid_entity_reference')
+            }
+            before = snapshot
+          }
+
           if (context.autoStatus === 'approved') {
-            const applied = await applyContributionChange(tx, params.data.id, change, context.submittedByUserId, refs)
+            const applied = await applyContributionChange(tx, params.data.id, change, context.submittedByUserId, refs, filesToRemove)
             effectiveEntityId = applied.entityId
           }
 
@@ -1045,8 +1074,8 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
               entityType: change.entityType,
               entityId: effectiveEntityId,
               action: change.action,
-              beforeJson: toPrismaJson(change.before),
-              afterJson: toPrismaJson(change.after),
+              beforeJson: toPrismaJson(change.entityType === 'annotation' ? stripAnnotationUrl(before) : before),
+              afterJson: toPrismaJson(change.entityType === 'annotation' ? stripAnnotationUrl(change.after) : change.after),
               conflictState: change.conflictState ?? 'none',
               decision: context.autoStatus === 'approved' ? 'approved' : undefined,
             },
@@ -1072,6 +1101,9 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
 
         return { session, createdChanges }
       }, { timeout: 30_000 })
+
+      const storageRoot = path.resolve(env.MEDIA_STORAGE_PATH)
+      await Promise.all(filesToRemove.map((filePath) => removeStoredFile(storageRoot, filePath)))
 
       return reply.code(201).send({
         session,
@@ -1124,7 +1156,15 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
         },
       })
 
-      return reply.send({ sessions })
+      // Anciennes propositions d'annotation photo : leur `url` portait la session du contributeur
+      const cleaned = sessions.map((session) => ({
+        ...session,
+        changes: session.changes.map((change) => change.entityType === 'annotation'
+          ? { ...change, beforeJson: stripAnnotationUrl(change.beforeJson), afterJson: stripAnnotationUrl(change.afterJson) }
+          : change),
+      }))
+
+      return reply.send({ sessions: cleaned })
     } catch (error) {
       if (error instanceof ContributionRouteError) {
         return reply.code(error.statusCode).send({ error: error.code })
@@ -1173,6 +1213,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const rejectedMediaIds: string[] = []
+      const filesToRemove: string[] = []
       const { updatedSession, approvedCount, rejectedCount, conflictCount, status } = await app.prisma.$transaction(async (tx) => {
         // Deux relectures simultanées : la seconde attend le verrou de la ligne, puis ne trouve plus
         // la session en attente. Sans ce verrou, les deux appliquaient les mêmes ajouts.
@@ -1222,6 +1263,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
                 },
                 membership.userId,
                 refs,
+                filesToRemove,
               )
               approvedCount += 1
             } catch (error) {
@@ -1287,15 +1329,16 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
         return { updatedSession, approvedCount, rejectedCount, conflictCount, status }
       }, { timeout: 30_000 })
 
-      // Photo refusée = effacée du disque, une fois la relecture enregistrée
+      // Photo refusée, ou souvenirs d'une personne supprimée = effacés du disque, une fois la relecture enregistrée
+      const storageRoot = path.resolve(env.MEDIA_STORAGE_PATH)
       if (rejectedMediaIds.length > 0) {
         const rejected = await app.prisma.mediaItem.findMany({
           where: { id: { in: rejectedMediaIds }, treeId: params.data.id },
           select: { filePath: true },
         })
-        const storageRoot = path.resolve(env.MEDIA_STORAGE_PATH)
         await Promise.all(rejected.map((media) => removeStoredFile(storageRoot, media.filePath)))
       }
+      await Promise.all(filesToRemove.map((filePath) => removeStoredFile(storageRoot, filePath)))
 
       return reply.send({
         session: updatedSession,

@@ -36,6 +36,11 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default(DEV_DATABASE_URL),
   JWT_SECRET: z.string().min(16).default(DEV_JWT_SECRET),
   JWT_EXPIRES_IN: z.string().default('7d'),
+  // Les sessions de compte émises avant cette date sont refusées. Jusqu'au 30/09/2026, des sessions complètes
+  // ont pu être écrites dans les annotations photo et les journaux : elles tombent toutes, chacun se reconnecte
+  // une fois. Avancer cette date (ISO 8601) déconnecte tout le monde, sans changer JWT_SECRET (qui chiffre aussi
+  // les mots de passe de partage lisibles).
+  SESSIONS_NOT_BEFORE: z.coerce.date().default(new Date('2026-10-01T00:00:00Z')),
   JWT_TREE_ACCESS_EXPIRES_IN: z.string().default('24h'),
   CORS_ORIGIN: z
     .string()
@@ -48,6 +53,16 @@ const envSchema = z.object({
 })
 
 export const env = envSchema.parse(process.env)
+
+// Corps maximal des routes qui reçoivent un fichier en base64 ou un gros envoi (le reste de l'API : 1 Mo)
+export const UPLOAD_BODY_LIMIT = 12 * 1024 * 1024
+
+// Sans NODE_ENV, le schéma suppose « development » et la clé de signature retomberait sur une valeur publiée :
+// un `node dist/server.js` lancé à la main avec un .env incomplet signerait alors les sessions avec une clé
+// connue de tous. Hors développement ou test déclaré, une valeur publiée est refusée.
+if (!process.env.NODE_ENV && PUBLISHED_PLACEHOLDER_SECRETS.includes(env.JWT_SECRET)) {
+  throw new Error('JWT_SECRET is a published example value and NODE_ENV is not set: set NODE_ENV=development for local work, or generate a secret with `openssl rand -base64 48`')
+}
 
 if (env.NODE_ENV === 'production') {
   if (PUBLISHED_PLACEHOLDER_SECRETS.includes(env.JWT_SECRET)) {

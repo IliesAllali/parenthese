@@ -63,6 +63,17 @@ export const analytics = {
           // Aucun feature flag dans le code. Sans ça, /flags recevrait les propriétés de personne
           // ($initial_current_url...), que before_send ne voit pas.
           advanced_disable_flags: true,
+          // Même verrouillage que l'app (frontend/src/utils/analytics.js) : rien d'activable depuis le tableau
+          // de bord PostHog, aucun script externe
+          capture_dead_clicks: false,
+          capture_heatmaps: false,
+          capture_exceptions: false,
+          capture_performance: false,
+          rageclick: false,
+          disable_surveys: true,
+          disable_product_tours: true,
+          disable_web_experiments: true,
+          disable_external_dependency_loading: true,
           before_send: scrubAnalyticsEvent,
         })
         ph = posthog
