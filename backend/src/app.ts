@@ -53,6 +53,8 @@ export function createApp() {
 
   app.register(cors, {
     origin: env.CORS_ORIGIN.length === 1 ? env.CORS_ORIGIN[0] : env.CORS_ORIGIN,
+    // @fastify/cors 11 n'annonce plus par défaut que GET, HEAD et POST : l'API sert aussi PUT, PATCH, DELETE
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   })
 
   app.register(rateLimit, {

@@ -1,7 +1,9 @@
 import { config as loadDotenv } from 'dotenv'
 import { z } from 'zod'
 
-loadDotenv()
+// dotenv 17+ écrit « injected env (N) from .env » à chaque démarrage, même sans fichier : les journaux
+// de l'API restent au format JSON de Fastify
+loadDotenv({ quiet: true })
 
 const DEV_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/genealogy'
 const DEV_JWT_SECRET = 'dev-secret-change-me-please'

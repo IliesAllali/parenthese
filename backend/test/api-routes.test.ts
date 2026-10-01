@@ -582,6 +582,23 @@ describe('Health check', () => {
   })
 })
 
+describe('CORS', () => {
+  it('annonce PUT, PATCH et DELETE dans la réponse de pré-vérification', async () => {
+    const app = createApp()
+
+    const response = await app.inject({
+      method: 'OPTIONS',
+      url: '/trees/tree-1',
+      headers: { origin: 'http://localhost:5173', 'access-control-request-method': 'DELETE' },
+    })
+
+    expect(response.statusCode).toBe(204)
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173')
+    expect(response.headers['access-control-allow-methods']).toBe('GET,HEAD,PUT,PATCH,POST,DELETE')
+    await app.close()
+  })
+})
+
 describe('Tree CRUD', () => {
   it('creates a tree and returns it', async () => {
     const app = createApp()
