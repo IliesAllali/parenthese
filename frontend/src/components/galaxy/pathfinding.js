@@ -102,7 +102,7 @@ export function computeRelationshipLabel(edgePath) {
   }
 
   // Ascendants directs
-  let label = ''
+  let label
   if (downs === 0 && ups > 0) {
     if (ups === 1) label = t('Parent')
     else if (ups === 2) label = t('Grand-parent')

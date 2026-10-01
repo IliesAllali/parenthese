@@ -261,7 +261,7 @@ export function useAnnotations({ editModeActive, updateDraft }) {
             x: pt.x - anchorX,
             y: pt.y - anchorY,
           }))
-          let parsed = {}
+          let parsed
           try {
             parsed = typeof existing.content === 'string' ? JSON.parse(existing.content) : (existing.content || {})
           } catch { parsed = {} }

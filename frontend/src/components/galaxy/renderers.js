@@ -1141,7 +1141,7 @@ const photoPendingLoads = new Set()
 
 function drawPhotoAnnotation(ctx, ann, imageCache) {
   if (!imageCache) return
-  let parsed = {}
+  let parsed
   try {
     parsed = typeof ann.content === 'string' ? JSON.parse(ann.content) : (ann.content || {})
   } catch { return }
