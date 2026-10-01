@@ -1,8 +1,8 @@
 import { t } from '../../i18n/index.js'
 import { getPersonById, getPersonMedias } from '../../data/mockData'
-import { __iconNode as mapIconNode } from 'lucide-react/dist/esm/icons/map.js'
-import { __iconNode as mapPinIconNode } from 'lucide-react/dist/esm/icons/map-pin.js'
-import { __iconNode as routeIconNode } from 'lucide-react/dist/esm/icons/route.js'
+// Tracés Lucide dessinés sur le canvas : données publiques de @lucide/icons (Map renommé, il masquerait
+// le Map global utilisé plus bas)
+import { Map as mapIcon, MapPin as mapPinIcon, Route as routeIcon } from '@lucide/icons'
 import {
   PERSON_R, UNKNOWN_R, UNION_W, UNION_H, COMPACT_R, COMPACT_SCALE,
   MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE,
@@ -737,9 +737,9 @@ function drawGeoJsonThumbnail(ctx, ms) {
     vignette: 'rgba(46, 80, 60, 0.08)',
   })
 
-  drawLucideIcon(ctx, mapIconNode, 0, 0, ms * 1.45, 'rgba(61, 110, 84, 0.52)', 1.85, 1)
-  drawLucideIcon(ctx, mapPinIconNode, ms * 0.28, ms * 0.02, ms * 0.72, 'rgba(255, 255, 255, 0.92)', 2.2, 1)
-  drawLucideIcon(ctx, mapPinIconNode, ms * 0.28, ms * 0.02, ms * 0.72, '#2F6B4E', 1.65, 1)
+  drawLucideIcon(ctx, mapIcon.node, 0, 0, ms * 1.45, 'rgba(61, 110, 84, 0.52)', 1.85, 1)
+  drawLucideIcon(ctx, mapPinIcon.node, ms * 0.28, ms * 0.02, ms * 0.72, 'rgba(255, 255, 255, 0.92)', 2.2, 1)
+  drawLucideIcon(ctx, mapPinIcon.node, ms * 0.28, ms * 0.02, ms * 0.72, '#2F6B4E', 1.65, 1)
 }
 
 function drawGpxThumbnail(ctx, ms) {
@@ -752,9 +752,9 @@ function drawGpxThumbnail(ctx, ms) {
     vignette: 'rgba(32, 70, 104, 0.08)',
   })
 
-  drawLucideIcon(ctx, mapIconNode, 0, 0, ms * 1.45, 'rgba(58, 103, 143, 0.45)', 1.75, 0.95)
-  drawLucideIcon(ctx, routeIconNode, 0, 0, ms * 1.02, 'rgba(255, 255, 255, 0.96)', 2.2, 1)
-  drawLucideIcon(ctx, routeIconNode, 0, 0, ms * 1.02, '#3A678F', 1.35, 1)
+  drawLucideIcon(ctx, mapIcon.node, 0, 0, ms * 1.45, 'rgba(58, 103, 143, 0.45)', 1.75, 0.95)
+  drawLucideIcon(ctx, routeIcon.node, 0, 0, ms * 1.02, 'rgba(255, 255, 255, 0.96)', 2.2, 1)
+  drawLucideIcon(ctx, routeIcon.node, 0, 0, ms * 1.02, '#3A678F', 1.35, 1)
 }
 
 function drawMediaContent(ctx, media, ms, imageCache) {
@@ -1141,7 +1141,7 @@ const photoPendingLoads = new Set()
 
 function drawPhotoAnnotation(ctx, ann, imageCache) {
   if (!imageCache) return
-  let parsed = {}
+  let parsed
   try {
     parsed = typeof ann.content === 'string' ? JSON.parse(ann.content) : (ann.content || {})
   } catch { return }

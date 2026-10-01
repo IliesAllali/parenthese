@@ -436,6 +436,8 @@ function App() {
   useEffect(() => { setBooting(tree.bootState === 'loading') }, [tree.bootState])
   // Arbre partagé d'où l'on vient quand on ouvre l'écran compte : on y revient après connexion/création
   const pendingSharedTreeRef = useRef(null)
+  // Son nom, affiché par l'écran compte : un ref lu au rendu ne redessine rien quand il change
+  const [pendingSharedTreeName, setPendingSharedTreeName] = useState('')
   // Écran de compte ouvert depuis un arbre affiché : la croix y ramène
   const [accountFromTree, setAccountFromTree] = useState(false)
   const refreshTreeAndKeepSelection = useCallback(async (personId, options = {}) => {
@@ -2064,6 +2066,7 @@ function App() {
         treeOwnerEmail: ctx.treeOwnerEmail,
       }
       : null
+    setPendingSharedTreeName(pendingSharedTreeRef.current?.treeName || '')
     setTreeNotFound(false)
     tree.setGateError('')
     auth.setAccountError('')
@@ -2130,6 +2133,7 @@ function App() {
       return true
     } finally {
       pendingSharedTreeRef.current = null
+      setPendingSharedTreeName('')
     }
   }
 
@@ -2456,7 +2460,7 @@ function App() {
           trees={auth.accountTrees}
           activeTreeId={tree.treeContext.treeId}
           defaultMode={accountEntryMode}
-          pendingTreeName={pendingSharedTreeRef.current?.treeName || ''}
+          pendingTreeName={pendingSharedTreeName}
           onLogin={handleLogin}
           onRegister={handleRegister}
           onOpenTree={handleOpenTreeFromAccount}
