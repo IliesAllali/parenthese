@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "lucide-react": "^0.564.0",
+    "lucide-react": "^1.48.0",
     "posthog-js": "^1.353.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
