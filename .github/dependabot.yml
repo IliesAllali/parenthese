@@ -49,6 +49,11 @@ updates:
       docker-minor-patch:
         patterns: ["*"]
         update-types: [minor, patch]
+    ignore:
+      # nginx : mineure paire = stable, impaire = mainline (développement). On reste sur la stable
+      # (1.30 au 01/10/2026, nginx.org/en/download.html) ; passer à la stable suivante (1.32) à la main.
+      - dependency-name: nginx
+        update-types: [version-update:semver-minor]
 
   # Images de docker-compose.yml
   - package-ecosystem: docker-compose
