@@ -149,9 +149,12 @@ html.logo-intro .lk-nom { animation: lk-nom 700ms var(--ease-out) 380ms both; }
 .toast { display: flex; gap: 10px; align-items: center; background: var(--encre); color: var(--grege); border-radius: 999px; padding: 10px 16px 10px 10px; font: 500 14px var(--sans); box-shadow: var(--ombre); }
 .toast b { width: 26px; height: 26px; border-radius: 50%; background: center/cover; }
 
-/* démo */
-.sec-demo { background: var(--a50); }
-.demo-frame { position: relative; max-width: 1120px; width: 100%; margin-inline: auto; border-radius: var(--r-l); overflow: hidden; border: 1px solid var(--trait-l); background: var(--papier); box-shadow: var(--ombre); }
+/* démo : aplat terracotta vive et textes en blanc (choix A de Patch le 02/10/2026), cadre sans ombre */
+.sec-demo { background: var(--a500); }
+.sec-demo .head .eyebrow { color: rgba(255, 255, 255, .82); }
+.sec-demo .head .t-d2 { color: #fff; }
+.sec-demo .head .lede { color: rgba(255, 255, 255, .92); }
+.demo-frame { position: relative; max-width: 1120px; width: 100%; margin-inline: auto; border-radius: var(--r-l); overflow: hidden; border: 1px solid var(--trait-l); background: var(--papier); }
 .demo-wait { position: absolute; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 14px; background: var(--papier); font: 500 14px var(--sans); color: var(--doux); }
 .demo-wait .pz-mark { width: 56px; height: auto; }
 
@@ -189,8 +192,11 @@ html.logo-intro .lk-nom { animation: lk-nom 700ms var(--ease-out) 380ms both; }
 @media (hover: hover) and (pointer: fine) { .guide:hover { border-color: var(--a300); box-shadow: var(--ombre); } }
 
 /* fin */
-.final { background: var(--peche-50); text-align: center; padding: clamp(64px, 9vw, 112px) var(--gut); }
+.final { background: var(--a500); text-align: center; padding: clamp(64px, 9vw, 112px) var(--gut); }
 .final .wrap { display: grid; justify-items: center; gap: 22px; }
+.final .t-d2 { color: #fff; }
+.final .lede { color: rgba(255, 255, 255, .92); }
+.final .btn.p { background: #fff; color: var(--encre); }
 
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 28px; font: 400 13px var(--sans); color: var(--doux); }
 .foot nav { display: flex; gap: 18px; flex-wrap: wrap; }
