@@ -24,17 +24,15 @@ export let persons = [
 export let medias = [
   { id: 'm1', personId: 1, type: 'photo', url: '/demo/souvenir-mariage-1918-thumb.webp', urlHd: '/demo/souvenir-mariage-1918.webp', label: t('Mariage 1918') },
   { id: 'm2', personId: 1, type: 'photo', url: '/demo/souvenir-atelier-thumb.webp', urlHd: '/demo/souvenir-atelier.webp', label: t('Atelier de menuiserie') },
-  { id: 'm3', personId: 1, type: 'video', url: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', mimeType: 'video/youtube', label: t('Témoignage filmé 1960') },
   { id: 'm4', personId: 2, type: 'photo', url: '/demo/souvenir-jeunesse-thumb.webp', urlHd: '/demo/souvenir-jeunesse.webp', label: t('Jeunesse') },
   { id: 'm5', personId: 2, type: 'photo', url: '/demo/souvenir-portrait-famille-thumb.webp', urlHd: '/demo/souvenir-portrait-famille.webp', label: t('Portrait de famille') },
   { id: 'm6', personId: 3, type: 'photo', url: '/demo/souvenir-service-militaire-thumb.webp', urlHd: '/demo/souvenir-service-militaire.webp', label: t('Service militaire') },
-  { id: 'm7', personId: 3, type: 'video', url: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', mimeType: 'video/youtube', label: t('Mariage Simone 1943') },
+  // Actualités Polygoon 1947, CC BY-SA 3.0 NL, voir public/demo/CREDITS.md
+  { id: 'm7', personId: 3, type: 'video', url: '/demo/souvenir-mariage-1947.mp4', mimeType: 'video/mp4', label: t('Mariage Simone 1943') },
   { id: 'm8', personId: 3, type: 'photo', url: '/demo/souvenir-annees-70-thumb.webp', urlHd: '/demo/souvenir-annees-70.webp', label: t('Années 70') },
   { id: 'm9', personId: 8, type: 'photo', url: '/demo/souvenir-diplome-thumb.webp', urlHd: '/demo/souvenir-diplome.webp', label: t('Diplôme') },
   { id: 'm10', personId: 8, type: 'photo', url: '/demo/souvenir-plan-cabinet-thumb.webp', urlHd: '/demo/souvenir-plan-cabinet.webp', label: t('Plan du cabinet 1985') },
-  { id: 'm11', personId: 10, type: 'video', url: 'https://www.youtube.com/watch?v=M7lc1UVf-VE', mimeType: 'video/youtube', label: t('Anniversaire 2020') },
   { id: 'm12', personId: 6, type: 'photo', url: '/demo/souvenir-redaction-thumb.webp', urlHd: '/demo/souvenir-redaction.webp', label: t('En rédaction') },
-  { id: 'm13', personId: 6, type: 'video', url: 'https://www.youtube.com/watch?v=ScMzIvxBSi4', mimeType: 'video/youtube', label: t('Interview archive radio') },
 ]
 
 export let unions = [

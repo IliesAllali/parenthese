@@ -259,5 +259,16 @@
     "author": "Rob Croes / Anefo",
     "title": "Redactie bij krant ( Het Parool ), Bestanddeelnr 926-3740.jpg",
     "date": "1973-04-27"
+  },
+  "souvenir-mariage-1947.mp4": {
+    "candidate": "giethoorn-1947",
+    "source_page": "https://commons.wikimedia.org/wiki/File:Bruiloft_te_Giethoorn_Weeknummer_47-34_-_Open_Beelden_-_27686.ogv",
+    "file_url": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Bruiloft_te_Giethoorn_Weeknummer_47-34_-_Open_Beelden_-_27686.ogv",
+    "license": "CC BY-SA 3.0 nl",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/nl/deed.en",
+    "author": "Nederlands Instituut voor Beeld en Geluid (Polygoon, Open Beelden)",
+    "title": "Bruiloft te Giethoorn, Weeknummer 47-34",
+    "date": "1947-08-07",
+    "modifications": "extrait de 0:07 à 0:32, sans le son, mis à l’échelle en 640x480, fondu au début et à la fin, encodé en H.264"
   }
 }
