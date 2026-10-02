@@ -839,10 +839,24 @@ function InlineDemo({ t, locale }) {
               ? { minHeight: '66vh', height: '88vw', maxHeight: '780px' }
               : { minHeight: '52vh', height: '56vw', maxHeight: '720px' }}
           >
+            {/* Capture fixe de l'arbre de démo sous l'iframe : le bloc montre le vrai arbre avant le chargement,
+                aux captures d'écran comme aux visiteurs. Refaite depuis app.parenthese.io/?embed si l'arbre change. */}
+            <picture className="demo-poster">
+              <source media="(max-width: 768px)" srcSet={`/demo/arbre-demo-${locale}-mobile.webp`} width="712" height="1110" />
+              <img
+                src={`/demo/arbre-demo-${locale}-large.webp`}
+                alt={loaded ? '' : t.demo.poster}
+                width="2204"
+                height="1436"
+                loading="lazy"
+                decoding="async"
+              />
+            </picture>
+
             {!loaded && (
-              <div className="demo-wait" role="status">
-                <PzMark state={shouldLoad ? 'loading' : 'rest'} />
-                <span className={shouldLoad ? 'sr-only' : undefined}>{shouldLoad ? t.demo.loading : t.demo.idle}</span>
+              <div className={active ? 'demo-wait is-on' : 'demo-wait'} role="status">
+                {active && <PzMark state="loading" />}
+                <span className="sr-only">{shouldLoad ? t.demo.loading : t.demo.idle}</span>
               </div>
             )}
 
@@ -864,7 +878,7 @@ function InlineDemo({ t, locale }) {
               }}
             />
 
-            {!active && loaded && (
+            {!active && (
               <div
                 role="button"
                 tabIndex={0}

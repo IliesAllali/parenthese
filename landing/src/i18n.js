@@ -59,6 +59,7 @@ export const COPY = {
       idle: 'Démo interactive',
       frameTitle: 'Démo Parenthèse',
       enter: 'Entrer dans la démo',
+      poster: "Aperçu de l'arbre de démonstration, trois générations d'une famille avec leurs photos",
     },
     who: {
       eyebrow: 'Pour qui',
@@ -167,6 +168,7 @@ export const COPY = {
       idle: 'Interactive demo',
       frameTitle: 'Parenthèse demo',
       enter: 'Enter the demo',
+      poster: 'Preview of the demo tree, three generations of a family with their photos',
     },
     who: {
       eyebrow: "Who it's for",
