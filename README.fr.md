@@ -79,6 +79,8 @@ docker compose exec -T db pg_dump -U parenthese -Fc parenthese > parenthese-db-$
 docker run --rm -v parenthese_media:/data -v "$PWD":/backup alpine tar -czf /backup/parenthese-media-$(date +%F).tar.gz -C /data .
 ```
 
+La première commande sauvegarde la base. Elle contient les personnes, leurs liens, les comptes et les contributions, et elle sait à qui appartient chaque photo, vidéo ou enregistrement. La seconde sauvegarde les fichiers eux-mêmes. Il faut les deux. Restaurez la base seule et les souvenirs pointent vers des fichiers disparus. Restaurez l'archive seule et vous avez un dossier de fichiers rattachés à personne. L'export GEDCOM n'est pas une sauvegarde non plus. Il sert à emmener l'arbre vers un autre logiciel de généalogie et laisse de côté les médias et les annotations.
+
 Adaptez `-U parenthese` et le nom de base si vous avez changé `POSTGRES_USER` ou `POSTGRES_DB`. Pour restaurer la base : `docker compose exec -T db pg_restore -U parenthese -d parenthese --clean < parenthese-db-AAAA-MM-JJ.dump`, puis décompressez l'archive des médias dans le volume avec la même commande `docker run`, `tar -xzf` à la place de `-czf`.
 
 Le script `deploy/backup.sh` fait la même chose (dump PostgreSQL, archive des médias, sommes de contrôle, rotation, envoi S3 optionnel) pour une installation sans Docker : il lit `backend/.env` et a besoin de `pg_dump` sur la machine. Ses réglages passent par les variables `BACKUP_ROOT`, `BACKUP_RETENTION_DAYS` et `BACKUP_S3_BUCKET`.
