@@ -56,7 +56,7 @@ describe('getAccountErrorMessage', () => {
 
   it('returns media size message for image_too_large', () => {
     expect(getAccountErrorMessage({ status: 400, message: 'image_too_large' }))
-      .toBe('Image trop volumineuse (maximum 5 Mo).')
+      .toBe('Image trop volumineuse (maximum 5\u00A0Mo).')
   })
 
   it('returns invalid avatar format message', () => {
@@ -89,7 +89,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: { slug: ['too short'] }, formErrors: [] } },
-    })).toBe('Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
+    })).toBe('Slug invalide\u00A0: 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
   })
 
   it('returns name validation message for invalid_payload with name error', () => {
@@ -97,7 +97,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: { name: ['too short'] }, formErrors: [] } },
-    })).toBe("Nom d'arbre invalide : entre 2 et 120 caractères.")
+    })).toBe("Nom d'arbre invalide\u00A0: entre 2 et 120 caractères.")
   })
 
   it('returns password validation message for invalid_payload with password error', () => {
@@ -105,7 +105,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: { visitorPassword: ['too short'] }, formErrors: [] } },
-    })).toBe('Mots de passe invalides : entre 8 et 128 caractères.')
+    })).toBe('Mots de passe invalides\u00A0: entre 8 et 128 caractères.')
   })
 
   it('returns generic field error for unknown field', () => {
@@ -121,7 +121,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: {}, formErrors: ['Something went wrong'] } },
-    })).toBe('Erreur formulaire : Something went wrong')
+    })).toBe('Erreur formulaire\u00A0: Something went wrong')
   })
 
   it('returns generic 400 message for non-validation errors', () => {

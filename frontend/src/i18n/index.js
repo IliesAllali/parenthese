@@ -39,8 +39,29 @@ if (typeof document !== 'undefined') document.documentElement.lang = locale
 
 const missing = new Set()
 
+// Typographie française : espace fine insécable avant ? ! ;, insécable avant : et à l'intérieur
+// des « », insécable entre un nombre (ou une variable) et son unité. Appliquée au texte avant le
+// remplacement des variables, qui gardent leurs espaces (noms, adresses). Le dictionnaire anglais
+// reste indexé sur le français tel qu'écrit dans le code.
+const NNBSP = '\u202F'
+const NBSP = '\u00A0'
+const typoCache = new Map()
+export function frenchTypography(text) {
+  if (typeof text !== 'string') return text
+  let out = typoCache.get(text)
+  if (out !== undefined) return out
+  out = text
+    .replace(/(?<=[^\s\u00A0\u202F])[ \u00A0](?=[?!;])/g, NNBSP)
+    .replace(/(?<=[^\s\u00A0\u202F])[ \u202F](?=:)/g, NBSP)
+    .replace(/«[ \u202F]?(?!\u00A0)/g, `«${NBSP}`)
+    .replace(/(?<!\u00A0)[ \u202F]?»/g, `${NBSP}»`)
+    .replace(/(?<=[\d}]) (?=(?:%|€|km|kg|cm|mm|Mo|Go|Ko|ko|min|px|h)(?![\p{L}\d]))/gu, NBSP)
+  typoCache.set(text, out)
+  return out
+}
+
 export function t(fr, vars) {
-  let text = fr
+  let text = locale === 'fr' ? frenchTypography(fr) : fr
   if (locale === 'en') {
     if (Object.prototype.hasOwnProperty.call(en, fr)) text = en[fr]
     else if (import.meta.env?.DEV && !missing.has(fr)) {

@@ -36,6 +36,11 @@
 }
 
 /* ── Typo ─────────────────────────────────────────────────────── */
+/* Pas de mot ni de signe seul en fin de paragraphe (fenêtres, fiche, accueil, écrans d'accès).
+   Les noms de l'arbre sont dessinés sur le canvas, ces règles ne les touchent pas.
+   Longhand : ne réactive pas le retour à la ligne là où white-space: nowrap est posé. */
+h1, h2, h3, h4 { text-wrap-style: balance; }
+p, li, blockquote, figcaption, dd, .pz-sub, .pz-small, .pz-hint, .pz-error, .pz-success { text-wrap-style: pretty; }
 .pz-eyebrow { font: 500 12px/1.3 var(--pz-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--pz-muted); margin: 0; }
 .pz-title { font: 400 30px/1.1 var(--pz-serif); letter-spacing: -.01em; color: var(--pz-ink); margin: 0; text-wrap: balance; }
 .pz-title em { font-style: italic; font-weight: 300; }

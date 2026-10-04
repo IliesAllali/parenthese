@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import en from './en/index.js'
-import { t } from './index.js'
+import { frenchTypography, t } from './index.js'
 
 const SRC = fileURLToPath(new URL('..', import.meta.url))
 
@@ -44,5 +44,14 @@ describe('i18n', () => {
     const vars = (s) => (s.match(/\{\w+\}/g) ?? []).sort().join(',')
     const mismatched = Object.entries(en).filter(([fr, english]) => vars(fr) !== vars(english)).map(([fr]) => fr)
     expect(mismatched).toEqual([])
+  })
+
+  it('pose les espaces insécables du français sans toucher aux variables', () => {
+    expect(frenchTypography('Quitter {em} ?')).toBe('Quitter {em}\u202F?')
+    expect(frenchTypography('Prénom : {name}')).toBe('Prénom\u00A0: {name}')
+    expect(frenchTypography('Touchez « Ajouter »')).toBe('Touchez «\u00A0Ajouter\u00A0»')
+    expect(frenchTypography('Jusqu’à 20 Mo, {n} Mo')).toBe('Jusqu’à 20\u00A0Mo, {n}\u00A0Mo')
+    expect(frenchTypography('https://app.parenthese.io/?lang=fr')).toBe('https://app.parenthese.io/?lang=fr')
+    expect(frenchTypography('?')).toBe('?')
   })
 })

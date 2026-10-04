@@ -84,7 +84,7 @@ export const COPY = {
         },
         {
           href: '/application-arbre-genealogique/',
-          title: "Quelle application d'arbre généalogique choisir ?",
+          title: "Quelle application d'arbre généalogique choisir ?",
           text: 'Geneanet, MyHeritage, Filae, FamilySearch, Parenthèse. Rechercher des ancêtres et garder une mémoire vivante ne sont pas le même besoin.',
         },
         {

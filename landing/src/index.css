@@ -25,7 +25,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-h1, h2, h3, h4 { font-weight: 400; text-wrap: balance; }
+h1, h2, h3, h4 { font-weight: 400; }
+/* Pas de mot ni de signe seul en fin de paragraphe, titres équilibrés sur leurs lignes */
+/* (longhand : ne réactive pas le retour à la ligne là où white-space: nowrap est posé) */
+h1, h2, h3, h4, .t-d1, .t-d2, .t-h2, .t-h3 { text-wrap-style: balance; }
+p, li, blockquote, figcaption, dd, .lede, .t-small { text-wrap-style: pretty; }
 :focus-visible { outline: 2px solid var(--a500); outline-offset: 3px; border-radius: 6px; }
 
 .wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: var(--gut); }
