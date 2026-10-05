@@ -58,6 +58,7 @@ import { fileToBase64, getAccountErrorMessage } from './utils/errorMessages'
 import { getSiblingParentLinks } from './utils/familyLinks'
 import { getUploadMimeType, validateMediaFile } from './utils/mediaUpload'
 import {
+  getSource,
   identifyUser,
   resetUser,
   toInteractionMediaType,
@@ -669,15 +670,39 @@ function App() {
     })
   }, [isTrackableShareSession, journeyRole, opaqueTreeId])
 
-  // Identifiant technique du compte, jamais l'adresse email (engagement de la page Données et vie privée)
+  // Identifiant technique du compte, jamais l'adresse email (engagement de la page Données et vie privée).
+  // Remise à zéro seulement à la déconnexion : la faire à chaque ouverture anonyme effaçait le visiteur
+  // de la landing (cookie partagé sur .parenthese.io, démo en iframe) et coupait le funnel.
+  const wasAuthenticatedRef = useRef(false)
   useEffect(() => {
     if (auth.authenticated && auth.userAuth.user?.id) {
+      wasAuthenticatedRef.current = true
       identifyUser(auth.userAuth.user.id)
       return
     }
 
-    resetUser()
+    if (wasAuthenticatedRef.current) {
+      wasAuthenticatedRef.current = false
+      resetUser()
+    }
   }, [auth.authenticated, auth.userAuth.user?.id])
+
+  // Démo : une ouverture par chargement, puis une interaction de chaque type (sans aucun contenu de l'arbre).
+  // Ne compte que les visiteurs sans compte, la démo sert aussi de fond après une inscription.
+  const demoOpenedRef = useRef(false)
+  const demoInteractionsRef = useRef(new Set())
+  useEffect(() => {
+    if (!isDemoMode || tree.bootState !== 'ready' || auth.authenticated || demoOpenedRef.current) return
+    demoOpenedRef.current = true
+    const query = new URLSearchParams(window.location.search)
+    trackAppEvent('demo_opened', { embed: query.has('embed'), source: getSource() })
+  }, [isDemoMode, tree.bootState, auth.authenticated])
+
+  const trackDemoInteraction = useCallback((type) => {
+    if (!isDemoMode || auth.authenticated || demoInteractionsRef.current.has(type)) return
+    demoInteractionsRef.current.add(type)
+    trackAppEvent('demo_interaction', { type, embed: new URLSearchParams(window.location.search).has('embed') })
+  }, [isDemoMode, auth.authenticated])
 
   useEffect(() => {
     const treeId = tree.treeContext.treeId
@@ -726,7 +751,8 @@ function App() {
     const freshPerson = persons.find((candidate) => String(candidate.id) === String(personId)) || personLike || null
     tree.setSelectedPerson(freshPerson)
     trackTreeInteraction('text')
-  }, [tree.setSelectedPerson, trackTreeInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
+    trackDemoInteraction('person')
+  }, [tree.setSelectedPerson, trackTreeInteraction, trackDemoInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMediaSelectFresh = useCallback((media, personLike) => {
     const personId = personLike && typeof personLike === 'object' ? personLike.id : personLike
@@ -736,7 +762,8 @@ function App() {
 
     tree.handleMediaSelect(media, freshPerson)
     trackTreeInteraction(toInteractionMediaType(media?.type))
-  }, [tree.handleMediaSelect, trackTreeInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
+    trackDemoInteraction('media')
+  }, [tree.handleMediaSelect, trackTreeInteraction, trackDemoInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ref that Galaxy fills with a pointer to its transformRef (for computing view center)
   const galaxyTransformReadRef = useRef(null)
@@ -795,9 +822,10 @@ function App() {
     if (editMode.isActive && editMode.hasDraft) {
       setShowConfirmModal(true)
     } else {
+      if (!editMode.isActive) trackDemoInteraction('edit')
       editMode.toggle()
     }
-  }, [editMode.isActive, editMode.hasDraft, editMode.toggle]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editMode.isActive, editMode.hasDraft, editMode.toggle, trackDemoInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actions de la modal de confirmation
   const handleConfirmContinue = useCallback(() => {
@@ -2012,7 +2040,7 @@ function App() {
       // ?account=register (CTA de la landing) : écran compte directement en création
       if (query.get('account') === 'register') {
         setAccountEntryMode('register')
-        trackAppEvent('account_screen_viewed', { mode: 'register', from_shared_tree: false, source: query.get('source') || 'direct' })
+        trackAppEvent('account_screen_viewed', { mode: 'register', from_shared_tree: false, source: getSource() })
       }
       tree.setBootState('account')
     }
@@ -2179,7 +2207,7 @@ function App() {
     if (!success) {
       return
     }
-    trackAppEvent('account_registered', { from_shared_tree: Boolean(pendingSharedTreeRef.current?.treeId) })
+    trackAppEvent('account_registered', { from_shared_tree: Boolean(pendingSharedTreeRef.current?.treeId), source: getSource() })
 
     const token = auth.restoreUserToken()
     if (token && await resumePendingSharedTree(token)) {
@@ -2213,6 +2241,7 @@ function App() {
   }
 
   const handleOpenTreeWizard = () => {
+    trackDemoInteraction('create_tree')
     auth.setAccountError('')
     setTreeWelcomeVisible(false)
     setTreeWizardVisible(true)
@@ -2523,6 +2552,7 @@ function App() {
         onResultClick={(person) => {
           const fullPerson = persons.find(p => p.id === person.id)
           if (!fullPerson) return
+          trackDemoInteraction('search')
           tree.setSelectedPerson(fullPerson)
           galaxyZoomApiRef.current?.focusPerson?.(fullPerson.id)
         }}

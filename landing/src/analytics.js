@@ -85,6 +85,30 @@ export const analytics = {
       })
   },
 
+  /**
+   * Pour un clic qui quitte la page : l'événement part tout de suite (pas de file d'attente), puis on
+   * laisse 350 ms à la requête avant de naviguer. Pas de sendBeacon : Brave bloque ces requêtes « ping »
+   * (vu le 05/10, ERR_BLOCKED_BY_CLIENT). Si PostHog n'est pas encore chargé (init différée jusqu'à 3 s),
+   * on le charge et on attend au plus 800 ms avant de partir quand même.
+   */
+  captureThenNavigate(event, props, url) {
+    const go = () => window.location.assign(url)
+    if (!enabled) return go()
+    const send = () => {
+      try { ph.capture(event, props, { send_instantly: true }) } catch { /* on part quand même */ }
+      setTimeout(go, 350)
+    }
+    if (ph) return send()
+    this.init()
+    const startedAt = Date.now()
+    const wait = () => {
+      if (ph) return send()
+      if (!enabled || Date.now() - startedAt > 800) return go()
+      setTimeout(wait, 50)
+    }
+    wait()
+  },
+
   capture(event, props = {}) {
     if (!event) return
     if (ph && typeof ph.capture === 'function') {

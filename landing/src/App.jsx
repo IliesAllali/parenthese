@@ -861,7 +861,7 @@ function InlineDemo({ t, locale }) {
             )}
 
             <iframe
-              src={shouldLoad ? withAppQuery('https://app.parenthese.io/?embed', locale) : undefined}
+              src={shouldLoad ? withAppQuery(`https://app.parenthese.io/?embed&source=${appSource()}`, locale) : undefined}
               title={t.demo.frameTitle}
               loading="lazy"
               className="w-full h-full border-0"
@@ -899,11 +899,17 @@ function InlineDemo({ t, locale }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
-// Les CTA mènent à la création de compte dans l'app
-const APP_SIGNUP_URL = 'https://app.parenthese.io/?account=register&source=landing'
-
-
 const readSource = () => new URLSearchParams(window.location.search).get('source') || 'direct'
+
+// Source transmise à l'app : celle de l'arrivée sur la landing (?source=hn...), sinon « landing ».
+// L'app la garde jusqu'à l'inscription (frontend/src/utils/analytics.js, rememberSource).
+const appSource = () => {
+  const source = readSource()
+  return source === 'direct' ? 'landing' : encodeURIComponent(source)
+}
+
+// Les CTA mènent à la création de compte dans l'app
+const appSignupUrl = () => `https://app.parenthese.io/?account=register&source=${appSource()}`
 
 export default function App({ locale = 'fr' }) {
   const t = COPY[locale]
@@ -966,11 +972,14 @@ export default function App({ locale = 'fr' }) {
     return () => observer.disconnect()
   }, [])
 
-  // Vers la création de compte dans l'app. L'événement hero_cta_clicked est conservé pour le funnel PostHog.
+  // Vers la création de compte dans l'app. Un seul événement, signup_cta_clicked (celui du funnel PostHog
+  // « landing → écran compte → compte créé → arbre créé »), envoyé avant de quitter la page.
   const goToSignup = (placement = 'hero') => {
-    analytics.capture('hero_cta_clicked', buildEventProps({ placement }))
-    analytics.capture('signup_cta_clicked', buildEventProps({ placement }))
-    window.location.assign(withAppQuery(APP_SIGNUP_URL, locale))
+    analytics.captureThenNavigate(
+      'signup_cta_clicked',
+      buildEventProps({ placement }),
+      withAppQuery(appSignupUrl(), locale)
+    )
   }
 
   return (

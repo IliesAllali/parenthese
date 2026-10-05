@@ -52,6 +52,31 @@ export function scrubAnalyticsEvent(event) {
   return next
 }
 
+// Source d'arrivée (?source=hn, landing, app-shared...) : lue une fois à l'ouverture et gardée sur
+// l'appareil, pour que l'inscription dise d'où vient le visiteur même après quelques clics.
+// La première source connue gagne, « direct » ne remplace jamais une vraie source.
+const SOURCE_KEY = 'parenthese_source'
+
+export function rememberSource() {
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get('source')
+    const clean = String(fromUrl || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
+    if (clean && clean !== 'direct' && !localStorage.getItem(SOURCE_KEY)) {
+      localStorage.setItem(SOURCE_KEY, clean)
+    }
+  } catch {
+    // Stockage indisponible : l'inscription partira sans source
+  }
+}
+
+export function getSource() {
+  try {
+    return localStorage.getItem(SOURCE_KEY) || 'direct'
+  } catch {
+    return 'direct'
+  }
+}
+
 function normalizeRole(value) {
   return String(value || '').trim().toLowerCase()
 }
@@ -59,6 +84,7 @@ function normalizeRole(value) {
 export function initAppAnalytics() {
   if (initStarted) return
   initStarted = true
+  rememberSource()
 
   const key = import.meta.env.VITE_POSTHOG_KEY
   if (!key) return
