@@ -4,7 +4,7 @@
 # Étape 2 : image finale avec les seules dépendances de production, plus la CLI Prisma
 #           installée à part (nécessaire à `prisma migrate deploy` au démarrage).
 
-FROM node:24-bookworm-slim AS build
+FROM node:25-bookworm-slim AS build
 
 # openssl : requis par les moteurs Prisma (cible debian-openssl-3.0.x).
 RUN apt-get update \
@@ -23,7 +23,7 @@ COPY src ./src
 RUN npm run build
 
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:25-bookworm-slim AS runtime
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
