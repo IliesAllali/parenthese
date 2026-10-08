@@ -107,7 +107,15 @@ function normalizeSlug(value) {
 }
 
 function generateSecurePassword() {
-  return crypto.randomUUID().replace(/-/g, '')
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().replace(/-/g, '')
+  }
+  // crypto.randomUUID n'est exposé qu'en contexte sécurisé (HTTPS ou localhost) :
+  // sur du HTTP simple, getRandomValues reste disponible et donne le même UUID v4.
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 function getAccountSelfPersonStorageKey(userEmail, treeId) {
