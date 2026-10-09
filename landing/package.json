@@ -10,7 +10,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "posthog-js": "^1.435.8",
+    "posthog-js": "^1.438.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
