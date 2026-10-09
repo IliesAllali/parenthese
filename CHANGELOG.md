@@ -2,6 +2,12 @@
 
 Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 
+## Unreleased
+
+### Self-hosting
+
+- Single-container image `ghcr.io/iliesallali/parenthese-aio` (PostgreSQL, API and front end), for Unraid and NAS systems that install one container per app. It needs no configuration: the database, its password and the session key are created in `/data` on first start. Tested in CI by a fresh start, a restart and the smoke test.
+
 ## 1.0.2 (2026-10-09)
 
 ### Self-hosting

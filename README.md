@@ -77,6 +77,16 @@ docker compose down            # stop, data is kept
 
 To check that an installation works end to end, run `bash tools/docker-smoke.sh http://localhost` (add the port if `WEB_PORT` is not 80). The script needs `curl` and `jq`. It goes through the web port like a browser: home page, API health, account creation, sign-in, creating then deleting a test tree. The test account (`smoke-...@example.com`) stays in the database.
 
+### Single container (Unraid, NAS)
+
+For systems that install one container per app, `ghcr.io/iliesallali/parenthese-aio` runs the database, the API and the front end together:
+
+```bash
+docker run -d --name parenthese --restart unless-stopped -p 8080:80 -v /path/to/appdata/parenthese:/data ghcr.io/iliesallali/parenthese-aio
+```
+
+There is nothing to fill in. On first start the container creates the database, its password and the session key in `/data`, and reuses them afterwards. Photos and videos go to `/data/media`. Back up the whole `/data` folder with the container stopped, or dump the database while it runs with `docker exec parenthese runuser -u postgres -- pg_dump parenthese > parenthese.sql`. The database is PostgreSQL 15 here, the compose setup uses 16.
+
 ### Where the data lives
 
 Two Docker volumes, kept across restarts and updates:

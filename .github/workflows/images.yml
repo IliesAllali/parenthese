@@ -53,6 +53,10 @@ jobs:
           - image: parenthese-web
             context: .
             file: Dockerfile.web
+          # Tout-en-un (base, API, front) pour Unraid et les NAS
+          - image: parenthese-aio
+            context: .
+            file: Dockerfile.aio
     steps:
       # Sur workflow_run, le commit exact que la CI a validé, pas la tête de main au moment du run.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0

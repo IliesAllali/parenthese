@@ -71,6 +71,16 @@ docker compose down            # arrêt, les données sont conservées
 
 Pour vérifier qu'une installation fonctionne de bout en bout, lancez `bash tools/docker-smoke.sh http://localhost` (avec le port si `WEB_PORT` n'est pas 80). Le script a besoin de `curl` et `jq`. Il passe par le port web comme un navigateur : page d'accueil, santé de l'API, création d'un compte, connexion, création puis suppression d'un arbre de test. Le compte de test (`smoke-...@example.com`) reste en base.
 
+### Un seul conteneur (Unraid, NAS)
+
+Pour les systèmes qui installent un conteneur par application, `ghcr.io/iliesallali/parenthese-aio` fait tourner la base, l'API et le front ensemble :
+
+```bash
+docker run -d --name parenthese --restart unless-stopped -p 8080:80 -v /chemin/vers/appdata/parenthese:/data ghcr.io/iliesallali/parenthese-aio
+```
+
+Rien à remplir. Au premier démarrage, le conteneur crée dans `/data` la base, son mot de passe et la clé des sessions, puis les réutilise. Les photos et vidéos vont dans `/data/media`. Sauvegardez tout le dossier `/data` conteneur arrêté, ou exportez la base pendant qu'il tourne avec `docker exec parenthese runuser -u postgres -- pg_dump parenthese > parenthese.sql`. La base est ici PostgreSQL 15, l'installation compose utilise la 16.
+
 ### Où sont les données
 
 Deux volumes Docker, conservés entre les redémarrages et les mises à jour :
