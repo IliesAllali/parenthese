@@ -225,7 +225,7 @@ jobs:
         run: |
           docker ps -a
           docker logs --timestamps aio || true
-          docker exec aio cat /data/postgres.log || true
+          docker run --rm -v aio-data:/data busybox cat /data/postgres/postgres.log || true
 
       - name: Arrêt et suppression du volume
         if: always()

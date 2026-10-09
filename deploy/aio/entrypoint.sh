@@ -52,7 +52,7 @@ chmod 700 "$PGDATA"
 
 runuser -u postgres -- pg_ctl -D "$PGDATA" -w -t 60 \
   -o "-c listen_addresses=127.0.0.1 -c unix_socket_directories=/run/postgresql" \
-  -l "$DATA_DIR/postgres.log" start >/dev/null
+  -l "$PGDATA/postgres.log" start >/dev/null
 
 if [ "$FIRST_START" = 1 ]; then
   runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 -c "CREATE ROLE $DB_USER LOGIN"
