@@ -2,6 +2,23 @@
 
 Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 
+## 1.0.2 (2026-10-09)
+
+### Self-hosting
+
+- Docker images for the API and the front end are published on GitHub's registry, for amd64 and arm64: `ghcr.io/iliesallali/parenthese-api` and `ghcr.io/iliesallali/parenthese-web`. `docker-compose.yml` and `.env` are enough, no clone needed. `PARENTHESE_VERSION` in `.env` pins a version (`latest` follows main). Each publication is tested by an install in an empty folder with those two files only.
+- Creating a tree works on an instance served over plain HTTP on a local network. The browser only offers `crypto.randomUUID` over HTTPS or on localhost, and the sharing password now falls back to `crypto.getRandomValues` (#44, fixed in #45 by @coutadeurf).
+
+### Security
+
+- fast-jwt 6.3.4: its verifier cache could accept an expired token that has no `iat` claim.
+- Build tools only, nothing that runs in the browser or on the server: source-map-js 1.2.2 and postcss-selector-parser 7.1.6 (CPU exhaustion on crafted input).
+
+### Dependencies
+
+- Landing on Vite 8 and @vitejs/plugin-react 6, with the same target browsers as before, like the app.
+- Minor and patch updates (lucide, posthog-js, ESLint, PostCSS).
+
 ## 1.0.1 (2026-10-01)
 
 Security release, from an independent review of 1.0.0.
