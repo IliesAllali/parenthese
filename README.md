@@ -38,6 +38,14 @@ cd parenthese
 cp .env.example .env
 ```
 
+You can also skip the clone. The API and front-end images are published on GitHub's registry (`ghcr.io/iliesallali/parenthese-api` and `ghcr.io/iliesallali/parenthese-web`, for amd64 and arm64), so two files are enough:
+
+```bash
+mkdir parenthese && cd parenthese
+curl -fsSLO https://raw.githubusercontent.com/IliesAllali/parenthese/main/docker-compose.yml
+curl -fsSL https://raw.githubusercontent.com/IliesAllali/parenthese/main/.env.example -o .env
+```
+
 Open `.env` and fill in the two empty values:
 
 - `POSTGRES_PASSWORD`: a password for the database (letters and digits only).
@@ -49,7 +57,7 @@ Then:
 docker compose up -d
 ```
 
-The first start builds the images, applies the database migrations, then serves the app on [http://localhost](http://localhost). Create your account from the home screen. The first account is an account like any other, there is no global administrator.
+The first start downloads the images (or builds them from the source when they can't be pulled), applies the database migrations, then serves the app on [http://localhost](http://localhost). Create your account from the home screen. The first account is an account like any other, there is no global administrator.
 
 Three containers run: `db` (PostgreSQL 16), `api` (the Node API) and `web` (nginx, which serves the front end and proxies the API). Only `web` is exposed, on the port set by `WEB_PORT` (80 by default). If that port is taken, change `WEB_PORT` in `.env` and update `CORS_ORIGIN` to match.
 
@@ -94,8 +102,10 @@ The `deploy/backup.sh` script does the same (PostgreSQL dump, media archive, che
 ### Updating
 
 ```bash
-git pull && docker compose up -d --build
+docker compose pull && docker compose up -d
 ```
+
+`latest` follows the main branch. To stay on a version, set `PARENTHESE_VERSION` in `.env` (for example `1.0`). From a clone, `git pull && docker compose up -d --build` builds from the source instead.
 
 Database migrations apply on their own when the API starts. Make a backup first, as a habit.
 

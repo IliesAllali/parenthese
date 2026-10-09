@@ -4,6 +4,9 @@
 #   docker compose logs -f api    suivre l'API
 #   docker compose down           arrêter (les volumes db-data et media sont conservés)
 #   bash tools/docker-smoke.sh    vérifier l'installation
+# Les images de l'API et du front sont publiées sur ghcr.io (version choisie par PARENTHESE_VERSION,
+# `latest` par défaut) : ce fichier et le .env suffisent, sans le code. Si l'image est introuvable,
+# compose la construit depuis les sources (dépôt cloné) ; `--build` force cette construction.
 
 name: parenthese
 
@@ -24,6 +27,7 @@ services:
       retries: 12
 
   api:
+    image: ghcr.io/iliesallali/parenthese-api:${PARENTHESE_VERSION:-latest}
     build: ./backend
     restart: unless-stopped
     depends_on:
@@ -49,6 +53,7 @@ services:
       start_period: 30s
 
   web:
+    image: ghcr.io/iliesallali/parenthese-web:${PARENTHESE_VERSION:-latest}
     build:
       context: .
       dockerfile: Dockerfile.web
