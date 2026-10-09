@@ -14,7 +14,7 @@ SECRETS_DIR="$DATA_DIR/secrets"
 DB_NAME=parenthese
 DB_USER=parenthese
 
-log() { echo "[parenthese] $*"; }
+log() { echo "[parenthese] $*" >&2; }
 
 mkdir -p "$MEDIA_DIR" "$SECRETS_DIR" /run/postgresql
 chmod 700 "$SECRETS_DIR"
