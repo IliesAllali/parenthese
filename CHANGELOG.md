@@ -2,7 +2,7 @@
 
 Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 
-## Unreleased
+## 1.0.3 (2026-10-10)
 
 ### Self-hosting
 
