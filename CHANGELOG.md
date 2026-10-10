@@ -7,6 +7,7 @@ Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 ### Self-hosting
 
 - Single-container image `ghcr.io/iliesallali/parenthese-aio` (PostgreSQL, API and front end), for Unraid and NAS systems that install one container per app. It needs no configuration: the database, its password and the session key are created in `/data` on first start. Tested in CI by a fresh start, a restart and the smoke test.
+- The `parenthese-web` image reads the API address from `API_UPSTREAM` (`api:4000` by default, unchanged for existing installs). Set it when the name `api` is already taken on the Docker network, for example on Umbrel where apps share one network.
 
 ## 1.0.2 (2026-10-09)
 

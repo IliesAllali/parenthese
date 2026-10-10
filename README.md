@@ -59,7 +59,7 @@ docker compose up -d
 
 The first start downloads the images (or builds them from the source when they can't be pulled), applies the database migrations, then serves the app on [http://localhost](http://localhost). Create your account from the home screen. The first account is an account like any other, there is no global administrator.
 
-Three containers run: `db` (PostgreSQL 16), `api` (the Node API) and `web` (nginx, which serves the front end and proxies the API). Only `web` is exposed, on the port set by `WEB_PORT` (80 by default). If that port is taken, change `WEB_PORT` in `.env` and update `CORS_ORIGIN` to match.
+Three containers run: `db` (PostgreSQL 16), `api` (the Node API) and `web` (nginx, which serves the front end and proxies the API). Only `web` is exposed, on the port set by `WEB_PORT` (80 by default). If that port is taken, change `WEB_PORT` in `.env` and update `CORS_ORIGIN` to match. The `web` container finds the API at `api:4000`; if you run the images under other service names, set `API_UPSTREAM` on `web` (for example `API_UPSTREAM=myapi:4000`).
 
 To open the instance to your family over the Internet, put an HTTPS reverse proxy in front of the `web` port (Caddy, Traefik, nginx) and set the public address in `CORS_ORIGIN`, for example `https://tree.your-domain.com`.
 
