@@ -267,3 +267,47 @@ describe('separated parents', () => {
     expect(separatedPairUnions([filiations[0]], [])).toEqual([])
   })
 })
+
+describe('generation rows', () => {
+  // Lignée maternelle sur trois générations, lignée paternelle sur une seule (un parent connu
+  // pour chacun des grands-parents) : les deux couples de grands-parents partagent la même rangée.
+  const persons = ['ggga', 'gggb', 'gga', 'ggb', 'gm1', 'gf1', 'm', 'ggx', 'ggy', 'gm2', 'gf2', 'f', 'kid'].map((id) => ({ id }))
+  const unions = [
+    { id: 'u0', partner1Id: 'ggga', partner2Id: 'gggb', displayOrder: 1 },
+    { id: 'u1', partner1Id: 'gga', partner2Id: 'ggb', displayOrder: 2 },
+    { id: 'u2', partner1Id: 'gm1', partner2Id: 'gf1', displayOrder: 3 },
+    { id: 'u3', partner1Id: 'gm2', partner2Id: 'gf2', displayOrder: 4 },
+    { id: 'u4', partner1Id: 'm', partner2Id: 'f', displayOrder: 5 },
+  ]
+  const link = (id, childId, unionId, parentId = null) => ({ id, childId, unionId, parentId, parentageType: 'biologique', displayOrder: 1 })
+  const filiations = [
+    link('f1', 'gga', 'u0'),
+    link('f2', 'gm1', 'u1'),
+    link('f3', 'm', 'u2'),
+    link('f4', 'f', 'u3'),
+    link('f5', 'kid', 'u4'),
+    link('f6', 'gm2', null, 'ggy'),
+    link('f7', 'gf2', null, 'ggx'),
+  ]
+
+  function generations() {
+    const result = computeLayout({ persons, unions, filiations })
+    return new Map(result.children.filter((node) => node._type === 'person').map((node) => [node.id.slice(2), node._generation]))
+  }
+
+  it('puts both sets of grandparents on the same row when one line goes back further', () => {
+    const gen = generations()
+    expect(gen.get('kid')).toBe(4)
+    expect(gen.get('m')).toBe(3)
+    expect(gen.get('f')).toBe(3)
+    expect([gen.get('gm1'), gen.get('gf1'), gen.get('gm2'), gen.get('gf2')]).toEqual([2, 2, 2, 2])
+  })
+
+  it('places a lone ancestor on the row just above their child', () => {
+    const gen = generations()
+    expect(gen.get('ggx')).toBe(1)
+    expect(gen.get('ggy')).toBe(1)
+    expect(gen.get('gga')).toBe(1)
+    expect(gen.get('ggga')).toBe(0)
+  })
+})
