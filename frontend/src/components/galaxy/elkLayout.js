@@ -300,6 +300,59 @@ export function computeLayout(graphData = null) {
     }
   }
 
+  // Descendre les ancêtres d'une lignée moins profonde : chaque parent (et son couple) se place
+  // juste au-dessus de son enfant le plus haut, pour que les grands-parents des deux côtés
+  // partagent la même rangée même quand une seule lignée remonte loin.
+  {
+    const childGensByParent = new Map()
+    normalizedFiliations.forEach(f => {
+      const childGen = genMap.get(f.childId)
+      if (childGen === undefined) return
+      const parentIds = []
+      if (f.unionId) {
+        const u = unionsById.get(f.unionId)
+        if (u?.partner1Id) parentIds.push(u.partner1Id)
+        if (u?.partner2Id) parentIds.push(u.partner2Id)
+      } else if (f.parentId) {
+        parentIds.push(f.parentId)
+      }
+      for (const pid of parentIds) {
+        if (!childGensByParent.has(pid)) childGensByParent.set(pid, [])
+        childGensByParent.get(pid).push(f.childId)
+      }
+    })
+    const inUnion = new Set()
+    unions.forEach(u => { if (u.partner1Id) inUnion.add(u.partner1Id); if (u.partner2Id) inUnion.add(u.partner2Id) })
+    const target = (pid) => {
+      const kids = childGensByParent.get(pid)
+      if (!kids?.length) return Infinity
+      return Math.min(...kids.map(k => genMap.get(k) ?? Infinity)) - 1
+    }
+
+    for (let iter = 0, changed = true; changed && iter < 100; iter++) {
+      changed = false
+      unions.forEach(u => {
+        if (!u.partner1Id || !u.partner2Id) return
+        const g1 = genMap.get(u.partner1Id) ?? 0
+        const g2 = genMap.get(u.partner2Id) ?? 0
+        const cur = Math.max(g1, g2)
+        const cap = Math.min(target(u.partner1Id), target(u.partner2Id))
+        const next = Number.isFinite(cap) && cap > cur ? cap : cur
+        if (next !== g1 || next !== g2) {
+          if (next > target(u.partner1Id) || next > target(u.partner2Id)) return
+          genMap.set(u.partner1Id, next)
+          genMap.set(u.partner2Id, next)
+          changed = true
+        }
+      })
+      persons.forEach(p => {
+        if (inUnion.has(p.id)) return
+        const t = target(p.id)
+        if (Number.isFinite(t) && t > (genMap.get(p.id) ?? 0)) { genMap.set(p.id, t); changed = true }
+      })
+    }
+  }
+
   // ----------------------------------------------------------
   // Conjoints isolés : mariés une seule fois, sans parent ni enfant dans l'arbre.
   // Dessinés en petit à côté du partenaire (voir COMPACT_* dans constants.js).
