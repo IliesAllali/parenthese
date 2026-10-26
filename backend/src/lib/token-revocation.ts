@@ -33,7 +33,9 @@ export function isUserTokenRevoked(jti: string): boolean {
   return true
 }
 
-// Au démarrage : les déconnexions encore valables reviennent en mémoire, les expirées sont effacées
+// Au démarrage : les déconnexions encore valables reviennent en mémoire, les expirées sont effacées. L'effacement
+// n'a lieu qu'ici : la table grossit entre deux redémarrages, d'une ligne par déconnexion, ce qui reste minuscule
+// avec un déploiement par jour ou presque.
 export async function loadRevokedTokens(store: RevocationStore): Promise<number> {
   const now = new Date()
   await store.revokedSession.deleteMany({ where: { expiresAt: { lte: now } } })

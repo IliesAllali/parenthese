@@ -58,13 +58,11 @@ export function createApp() {
   })
 
   app.decorate('prisma', prisma)
-  // Les déconnexions d'avant le redémarrage reviennent en mémoire avant la première requête
+  // Les déconnexions d'avant le redémarrage reviennent en mémoire avant la première requête (onReady passe avant
+  // listen). Sans elles, l'API ne démarre pas : chaque session fermée redeviendrait valable sans que personne le
+  // voie, et pm2 comme Docker relancent l'API.
   app.addHook('onReady', async () => {
-    try {
-      await loadRevokedTokens(app.prisma)
-    } catch (error) {
-      app.log.error({ err: error }, 'déconnexions non rechargées')
-    }
+    await loadRevokedTokens(app.prisma)
   })
   app.decorateRequest('actor', null)
 
