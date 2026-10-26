@@ -245,7 +245,7 @@ export function parseByteRange(header: string | undefined, size: number): { star
   if (match[1] === '') {
     // Les n derniers octets
     const suffix = Number(match[2])
-    if (suffix === 0) return 'unsatisfiable'
+    if (suffix === 0 || size === 0) return 'unsatisfiable'
     return { start: Math.max(0, size - suffix), end: size - 1 }
   }
   const start = Number(match[1])

@@ -19,6 +19,7 @@ describe('parseByteRange', () => {
     expect(parseByteRange('bytes=1000-', 1000)).toBe('unsatisfiable')
     expect(parseByteRange('bytes=5-2', 1000)).toBe('unsatisfiable')
     expect(parseByteRange('bytes=-0', 1000)).toBe('unsatisfiable')
+    expect(parseByteRange('bytes=-5', 0)).toBe('unsatisfiable')
   })
 
   it('envoie tout sans plage lisible', () => {

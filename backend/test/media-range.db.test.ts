@@ -30,6 +30,8 @@ async function call(method: string, url: string, token?: string, payload?: unkno
 describe.skipIf(!TEST_DB)('souvenir lu par morceaux, vraie base', () => {
   let token: string
   let url: string
+  let treeId: string
+  let personId: string
   let whole: Buffer
 
   beforeAll(async () => {
@@ -46,9 +48,9 @@ describe.skipIf(!TEST_DB)('souvenir lu par morceaux, vraie base', () => {
     const owner = await call('POST', '/auth/register', undefined, { email: `range-${run}@exemple.fr`, password: 'mot-de-passe-solide', firstName: 'Hélène' })
     token = owner.json().token
     const tree = await call('POST', '/trees', token, { name: 'Arbre de démo', slug: `range-${run}`, visitorPassword: 'partage-demo-1', contributorPassword: 'partage-demo-1' })
-    const treeId = tree.json().tree?.id ?? tree.json().id
+    treeId = tree.json().tree?.id ?? tree.json().id
     const person = await call('POST', `/trees/${treeId}/persons`, token, { firstName: 'Odette', lastName: 'Duval' })
-    const personId = person.json().person?.id ?? person.json().id
+    personId = person.json().person?.id ?? person.json().id
     const sent = await call('POST', `/trees/${treeId}/persons/${personId}/media`, token, {
       type: 'photo', fileName: 'photo.png', mimeType: 'image/png', sizeBytes: Buffer.from(PIXEL, 'base64').length, dataBase64: PIXEL,
     })
@@ -88,7 +90,20 @@ describe.skipIf(!TEST_DB)('souvenir lu par morceaux, vraie base', () => {
     expect(out.headers['content-range']).toBe(`bytes */${whole.length}`)
   })
 
-  it('les droits passent avant la plage', async () => {
+  it('les droits passent avant la plage, souvenir en attente compris', async () => {
     expect((await call('GET', url, undefined, undefined, { range: 'bytes=0-1' })).statusCode).toBe(401)
+    // Un membre envoie un souvenir, qui attend la relecture ; un autre membre le demande par morceaux
+    const register = async (name: string) => (await call('POST', '/auth/register', undefined, { email: `${name}-${run}@exemple.fr`, password: 'mot-de-passe-solide', firstName: name })).json().token as string
+    const author = await register('auteur')
+    const reader = await register('lecteur')
+    for (const t of [author, reader]) expect((await call('POST', `/trees/${treeId}/access/unlock`, t, { password: 'partage-demo-1' })).statusCode).toBe(200)
+    const sent = await call('POST', `/trees/${treeId}/persons/${personId}/media`, author, {
+      type: 'photo', fileName: 'photo.png', mimeType: 'image/png', sizeBytes: Buffer.from(PIXEL, 'base64').length, dataBase64: PIXEL,
+    })
+    const pending = sent.json().media ?? sent.json()
+    expect(pending.status).toBe('pending')
+    const pendingUrl = `/trees/${treeId}/media/${pending.id}`
+    expect((await call('GET', pendingUrl, reader, undefined, { range: 'bytes=0-1' })).statusCode).toBe(404)
+    expect((await call('GET', pendingUrl, author, undefined, { range: 'bytes=0-1' })).statusCode).toBe(206)
   })
 })
