@@ -8,7 +8,7 @@ import { Prisma } from '@prisma/client'
 
 import { env } from './config/env.js'
 import { prisma } from './lib/prisma.js'
-import { isUserTokenRevoked } from './lib/token-revocation.js'
+import { isUserTokenRevoked, loadRevokedTokens } from './lib/token-revocation.js'
 import { authRoutes } from './routes/auth.js'
 import { contributionRoutes } from './routes/contributions.js'
 import { graphRoutes } from './routes/graph.js'
@@ -58,6 +58,14 @@ export function createApp() {
   })
 
   app.decorate('prisma', prisma)
+  // Les déconnexions d'avant le redémarrage reviennent en mémoire avant la première requête
+  app.addHook('onReady', async () => {
+    try {
+      await loadRevokedTokens(app.prisma)
+    } catch (error) {
+      app.log.error({ err: error }, 'déconnexions non rechargées')
+    }
+  })
   app.decorateRequest('actor', null)
 
   app.register(cors, {
