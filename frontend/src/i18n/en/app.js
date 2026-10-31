@@ -34,6 +34,9 @@ export default {
   // App.jsx : liens familiaux
   'Lien déjà présent': 'This link already exists',
   'Lien familial ajouté (démo locale)': 'Family link added (local demo)',
+  // Plusieurs prénoms dans le champ Prénom
+  'et': 'and',
+  "{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.": '{names} are on the tree, as a draft. Send when you are done.',
   'Lien ajouté à la contribution': 'Link added to your contribution',
   'Lien familial ajouté': 'Family link added',
   'Lien modifié (démo locale)': 'Link changed (local demo)',

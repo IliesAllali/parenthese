@@ -96,6 +96,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   }, [])
   useEffect(() => cancelTabsRequest, [cancelTabsRequest])
   const pendingFocusRef = useRef(null) // personne cherchée dans un autre onglet, visée après le changement
+  const pendingFrameRef = useRef(null) // personnes à cadrer une fois l'arbre reposé (ajout de plusieurs prénoms)
   // Lien d'un onglet (?famille=<charnière>) : ouvert dès que l'arbre et ses onglets sont connus, et de nouveau si
   // la personne de départ arrive après (visiteur), tant qu'on n'a pas soi-même changé d'onglet
   const linkFamilyRef = useRef(initialFamilyKey != null ? String(initialFamilyKey) : null)
@@ -516,6 +517,26 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       const screenY = phone ? rect.height * 0.22 : rect.height / 2
       targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
     },
+    // Plusieurs personnes venant d'être ajoutées : toutes dans le champ, au-dessus de la barre du bas. Si l'arbre
+    // n'est pas encore reposé avec elles, le cadrage attend la prochaine mise en place.
+    focusPersons: (personIds) => {
+      const canvas = canvasRef.current
+      const wanted = new Set(personIds.map((id) => `p-${id}`))
+      const nodes = (layoutDataRef.current?.children || []).filter((n) => wanted.has(n.id))
+      if (!canvas || nodes.length < personIds.length) { pendingFrameRef.current = personIds; return }
+      pendingFrameRef.current = null
+      const rect = canvas.getBoundingClientRect()
+      const now = performance.now()
+      const centers = nodes.map((n) => getAnimatedPos(n, now))
+      const xs = centers.map((p) => p.cx)
+      const ys = centers.map((p) => p.cy)
+      const margin = 140 // un portrait et son prénom
+      const fit = Math.min((rect.width - 32) / (Math.max(...xs) - Math.min(...xs) + margin), (rect.height * 0.6) / (Math.max(...ys) - Math.min(...ys) + margin))
+      const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(Math.max(targetTransformRef.current.scale, 1), fit)))
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2
+      const cy = (Math.min(...ys) + Math.max(...ys)) / 2
+      targetTransformRef.current = { scale, x: rect.width / 2 - cx * scale, y: rect.height * 0.42 - cy * scale }
+    },
     getScale: () => transformRef.current.scale,
     moveSibling,
     getSiblingPlace,
@@ -848,6 +869,11 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       const id = pendingFocusRef.current
       pendingFocusRef.current = null
       requestAnimationFrame(() => zoomApiRef?.current?.focusPerson?.(id))
+    }
+    if (pendingFrameRef.current) {
+      const ids = pendingFrameRef.current
+      pendingFrameRef.current = null
+      requestAnimationFrame(() => zoomApiRef?.current?.focusPersons?.(ids))
     }
   }, [graphRevision, activeKey, familyTabs, selfPersonId, ghosts, requestTabs, cancelTabsRequest])
 
