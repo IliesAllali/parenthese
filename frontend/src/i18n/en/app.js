@@ -34,6 +34,16 @@ export default {
   // App.jsx : liens familiaux
   'Lien déjà présent': 'This link already exists',
   'Lien familial ajouté (démo locale)': 'Family link added (local demo)',
+  // Invitations à créer son arbre (SIGNUP_PROMPTS)
+  'Lien ajouté à la démo.': 'Link added to the demo.',
+  'Lien modifié dans la démo.': 'Link changed in the demo.',
+  'Lien retiré de la démo.': 'Link removed from the demo.',
+  'Votre essai reste dans la démo.': 'Your changes stay in the demo.',
+  'Pour votre famille,': 'For your own family,',
+  'créez votre arbre': 'create your tree',
+  'Votre famille': 'Your family',
+  'Faire le mien': 'Make my own',
+  'un arbre pour votre famille, gratuit': 'a tree for your family, free',
   // Plusieurs prénoms dans le champ Prénom
   'et': 'and',
   "{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.": '{names} are on the tree, as a draft. Send when you are done.',
