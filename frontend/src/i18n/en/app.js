@@ -44,6 +44,9 @@ export default {
   'Votre famille': 'Your family',
   'Faire le mien': 'Make my own',
   'un arbre pour votre famille, gratuit': 'a tree for your family, free',
+  // Plusieurs prénoms dans le champ Prénom
+  'et': 'and',
+  "{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.": '{names} are on the tree, as a draft. Send when you are done.',
   'Lien ajouté à la contribution': 'Link added to your contribution',
   'Lien familial ajouté': 'Family link added',
   'Lien modifié (démo locale)': 'Link changed (local demo)',

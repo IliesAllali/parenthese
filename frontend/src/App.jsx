@@ -67,6 +67,7 @@ import { useEditMode } from './hooks/useEditMode'
 import { useAnnotations } from './hooks/useAnnotations'
 import AnnotationToolbar from './components/annotations/AnnotationToolbar'
 import TextInputOverlay from './components/annotations/TextInputOverlay'
+import { joinFirstNames, splitFirstNames } from './utils/firstNames.js'
 import { filiations, getChildren, getParents, getPersonUnions, medias, persons, replaceGraph, unions } from './data/mockData'
 import { readGedcomFile } from './utils/gedcomText'
 import { readGedcomBundle, zipErrorMessage } from './utils/gedcomBundle.js'
@@ -1242,6 +1243,9 @@ function App() {
           siblingParentLinks.push(...links)
         }
       }
+      // « Paul, Marie, Jean » pour un enfant ou un frère : une personne par prénom, mêmes liens pour chacune
+      const firstNames = splitFirstNames(formData.firstName, formData.relations || [])
+      const batch = firstNames.length > 1 ? { batch: firstNames.length } : {}
       // Un enfant ajouté à une personne qui n'a qu'un conjoint est l'enfant du couple : il passe par les liens
       // du couple, comme un frère ou une sœur. Une adoption reste au seul parent choisi.
       const relationCount = (formData.relations || []).length
@@ -1256,191 +1260,217 @@ function App() {
         }),
       }
 
-      if (!tree.canEditCurrentTree) {
-        if (isDemoMode) {
-          const personId = makeLocalId('local-person')
-          const birthYear = extractYearFromIsoDate(formData.birthDate)
-          const deathYear = extractYearFromIsoDate(formData.deathDate)
-          const newPerson = {
-            id: personId,
-            firstName: formData.firstName,
-            lastName: formData.lastName || '',
-            birthName: formData.birthName || null,
-            nickname: formData.nickname || null,
-            sex: formData.sex || null,
-            birthDate: formData.birthDate || null,
-            deathDate: formData.deathDate || null,
-            birthYear,
-            deathYear,
-            isAlive: !deathYear,
-            photo: null,
-            frameType: 'round',
-          }
+      const addOne = async (formData) => {
+        if (!tree.canEditCurrentTree) {
+          if (isDemoMode) {
+            const personId = makeLocalId('local-person')
+            const birthYear = extractYearFromIsoDate(formData.birthDate)
+            const deathYear = extractYearFromIsoDate(formData.deathDate)
+            const newPerson = {
+              id: personId,
+              firstName: formData.firstName,
+              lastName: formData.lastName || '',
+              birthName: formData.birthName || null,
+              nickname: formData.nickname || null,
+              sex: formData.sex || null,
+              birthDate: formData.birthDate || null,
+              deathDate: formData.deathDate || null,
+              birthYear,
+              deathYear,
+              isAlive: !deathYear,
+              photo: null,
+              frameType: 'round',
+            }
 
-          replaceGraph({ persons: [...persons, newPerson] })
+            replaceGraph({ persons: [...persons, newPerson] })
 
-          for (const rel of formData.relations) {
-            if (rel.type === 'spouse') {
-              const existsUnion = unions.some((union) => (
-                (String(union.partner1Id) === String(rel.personId) && String(union.partner2Id) === String(personId))
-                || (String(union.partner1Id) === String(personId) && String(union.partner2Id) === String(rel.personId))
-              ))
-              if (!existsUnion) {
-                unions.push({
-                  id: makeLocalId('local-union'),
-                  partner1Id: rel.personId,
-                  partner2Id: personId,
-                  unionType: 'mariage',
-                  startYear: null,
-                  endYear: null,
-                  displayOrder: unions.length + 1,
+            for (const rel of formData.relations) {
+              if (rel.type === 'spouse') {
+                const existsUnion = unions.some((union) => (
+                  (String(union.partner1Id) === String(rel.personId) && String(union.partner2Id) === String(personId))
+                  || (String(union.partner1Id) === String(personId) && String(union.partner2Id) === String(rel.personId))
+                ))
+                if (!existsUnion) {
+                  unions.push({
+                    id: makeLocalId('local-union'),
+                    partner1Id: rel.personId,
+                    partner2Id: personId,
+                    unionType: 'mariage',
+                    startYear: null,
+                    endYear: null,
+                    displayOrder: unions.length + 1,
+                  })
+                }
+              } else if (rel.type === 'parent') {
+                filiations.push({
+                  id: makeLocalId('local-filiation'),
+                  childId: rel.personId,
+                  parentId: personId,
+                  unionId: null,
+                  parentageType: rel.adopted ? 'adoption' : 'biologique',
+                  displayOrder: filiations.length + 1,
+                })
+              } else if (rel.type === 'child') {
+                filiations.push({
+                  id: makeLocalId('local-filiation'),
+                  childId: personId,
+                  parentId: rel.personId,
+                  unionId: null,
+                  parentageType: rel.adopted ? 'adoption' : 'biologique',
+                  displayOrder: filiations.length + 1,
                 })
               }
-            } else if (rel.type === 'parent') {
-              filiations.push({
-                id: makeLocalId('local-filiation'),
-                childId: rel.personId,
-                parentId: personId,
-                unionId: null,
-                parentageType: rel.adopted ? 'adoption' : 'biologique',
-                displayOrder: filiations.length + 1,
-              })
-            } else if (rel.type === 'child') {
+            }
+
+            for (const link of siblingParentLinks) {
+              const alreadyLinked = filiations.some((filiation) => (
+                String(filiation.childId) === String(personId)
+                && (link.unionId
+                  ? String(filiation.unionId) === link.unionId
+                  : String(filiation.parentId) === link.parentId)
+              ))
+              if (alreadyLinked) continue
               filiations.push({
                 id: makeLocalId('local-filiation'),
                 childId: personId,
-                parentId: rel.personId,
-                unionId: null,
-                parentageType: rel.adopted ? 'adoption' : 'biologique',
+                parentId: link.unionId ? null : link.parentId,
+                unionId: link.unionId,
+                parentageType: 'biologique',
                 displayOrder: filiations.length + 1,
               })
             }
+
+            tree.bumpGraphRevision()
+            tree.setSelectedPerson({ ...newPerson })
           }
 
-          for (const link of siblingParentLinks) {
-            const alreadyLinked = filiations.some((filiation) => (
-              String(filiation.childId) === String(personId)
-              && (link.unionId
-                ? String(filiation.unionId) === link.unionId
-                : String(filiation.parentId) === link.parentId)
-            ))
-            if (alreadyLinked) continue
-            filiations.push({
-              id: makeLocalId('local-filiation'),
-              childId: personId,
-              parentId: link.unionId ? null : link.parentId,
-              unionId: link.unionId,
-              parentageType: 'biologique',
-              displayOrder: filiations.length + 1,
-            })
-          }
-
-          tree.bumpGraphRevision()
-          tree.setSelectedPerson({ ...newPerson })
+          const draft = editMode.restoreDraft()
+          const ref = `tmp:${makeLocalId('personne')}`
+          const addedPersons = [
+            ...(draft.addedPersons || []),
+            {
+              ref,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              birthName: formData.birthName || null,
+              nickname: formData.nickname || null,
+              sex: formData.sex || null,
+              birthDate: formData.birthDate || null,
+              deathDate: formData.deathDate || null,
+              isDeceased: Boolean(formData.isDeceased),
+              birthPlace: formData.birthPlace || null,
+              deathPlace: formData.deathPlace || null,
+              toVerify: Boolean(formData.toVerify),
+              notes: formData.notes || null,
+              relations: (formData.relations || []).map((rel) => ({ type: rel.type, personId: rel.personId, adopted: Boolean(rel.adopted) })),
+              siblingParentLinks,
+            },
+          ]
+          editMode.updateDraft({ addedPersons })
+          trackAppEvent('person_added', { via: addPersonViaRef.current, role: 'family', relations: relationCount, tree_id: opaqueTreeId, ...batch })
+          // La personne apparaît en fantôme « Brouillon » : la famille peut en ajouter d'autres, puis envoyer une
+          // fois avec le bouton « Envoyer » de la barre (Patch, 25/10). Avant, la fenêtre d'envoi s'ouvrait d'office,
+          // seule façon de montrer qu'un ajout invisible comptait.
+          setAddPersonPanelVisible(false)
+          setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: [formData.firstName, formData.lastName].filter(Boolean).join(' ') || t('Nouvelle personne') }))
+          return { proposed: true, id: isDemoMode ? null : `ghost:brouillon:${ref}`, demoPerson: isDemoMode ? persons[persons.length - 1] : null }
         }
 
-        const draft = editMode.restoreDraft()
-        const addedPersons = [
-          ...(draft.addedPersons || []),
-          {
-            ref: `tmp:${makeLocalId('personne')}`,
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            birthName: formData.birthName || null,
-            nickname: formData.nickname || null,
-            sex: formData.sex || null,
-            birthDate: formData.birthDate || null,
-            deathDate: formData.deathDate || null,
-            isDeceased: Boolean(formData.isDeceased),
-            birthPlace: formData.birthPlace || null,
-            deathPlace: formData.deathPlace || null,
-            toVerify: Boolean(formData.toVerify),
-            notes: formData.notes || null,
-            relations: (formData.relations || []).map((rel) => ({ type: rel.type, personId: rel.personId, adopted: Boolean(rel.adopted) })),
-            siblingParentLinks,
-          },
-        ]
-        editMode.updateDraft({ addedPersons })
-        trackAppEvent('person_added', { via: addPersonViaRef.current, role: 'family', relations: relationCount, tree_id: opaqueTreeId })
-        // La personne apparaît en fantôme « Brouillon » : la famille peut en ajouter d'autres, puis envoyer une
-        // fois avec le bouton « Envoyer » de la barre (Patch, 25/10). Avant, la fenêtre d'envoi s'ouvrait d'office,
-        // seule façon de montrer qu'un ajout invisible comptait.
-        setAddPersonPanelVisible(false)
-        setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: [formData.firstName, formData.lastName].filter(Boolean).join(' ') || t('Nouvelle personne') }))
-        return { proposed: true }
-      }
+        if (!auth.userAuth.token) return
 
-      if (!auth.userAuth.token) return
-
-      const newPerson = await createPerson(
-        tree.treeContext.treeId,
-        {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          birthName: formData.birthName,
-          nickname: formData.nickname,
-          sex: formData.sex || null,
-          birthDate: formData.birthDate,
-          deathDate: formData.deathDate,
-          isDeceased: Boolean(formData.isDeceased),
-          // Personne venue d'une source publique (panneau « Chercher quelqu'un ») : lieux, « à vérifier » et source
-          ...(formData.birthPlace ? { birthPlace: formData.birthPlace } : {}),
-          ...(formData.deathPlace ? { deathPlace: formData.deathPlace } : {}),
-          ...(formData.toVerify ? { toVerify: true } : {}),
-          ...(formData.notes ? { notes: formData.notes } : {}),
-        },
-        auth.userAuth.token
-      )
-
-      // Créer les liens de relation
-      const linkedParentIds = new Set()
-      for (const rel of formData.relations) {
-        if (rel.type === 'child') {
-          linkedParentIds.add(String(rel.personId))
-          await createParentChildLink(
-            tree.treeContext.treeId,
-            { parentPersonId: rel.personId, childPersonId: newPerson.id, parentageType: rel.adopted ? 'adoption' : 'biologique', displayOrder: 1 },
-            auth.userAuth.token
-          )
-        } else if (rel.type === 'parent') {
-          await createParentChildLink(
-            tree.treeContext.treeId,
-            { parentPersonId: newPerson.id, childPersonId: rel.personId, parentageType: rel.adopted ? 'adoption' : 'biologique', displayOrder: 1 },
-            auth.userAuth.token
-          )
-        } else if (rel.type === 'spouse') {
-          await createUnion(
-            tree.treeContext.treeId,
-            { partner1PersonId: rel.personId, partner2PersonId: newPerson.id, unionType: 'mariage', displayOrder: 1 },
-            auth.userAuth.token
-          )
-        }
-      }
-
-      for (const link of siblingParentLinks) {
-        if (linkedParentIds.has(link.parentId)) continue
-        linkedParentIds.add(link.parentId)
-        await createParentChildLink(
+        const newPerson = await createPerson(
           tree.treeContext.treeId,
           {
-            parentPersonId: link.parentId,
-            childPersonId: newPerson.id,
-            viaUnionId: link.unionId,
-            parentageType: 'biologique',
-            displayOrder: 1,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            birthName: formData.birthName,
+            nickname: formData.nickname,
+            sex: formData.sex || null,
+            birthDate: formData.birthDate,
+            deathDate: formData.deathDate,
+            isDeceased: Boolean(formData.isDeceased),
+            // Personne venue d'une source publique (panneau « Chercher quelqu'un ») : lieux, « à vérifier » et source
+            ...(formData.birthPlace ? { birthPlace: formData.birthPlace } : {}),
+            ...(formData.deathPlace ? { deathPlace: formData.deathPlace } : {}),
+            ...(formData.toVerify ? { toVerify: true } : {}),
+            ...(formData.notes ? { notes: formData.notes } : {}),
           },
           auth.userAuth.token
         )
+
+        // Créer les liens de relation
+        const linkedParentIds = new Set()
+        for (const rel of formData.relations) {
+          if (rel.type === 'child') {
+            linkedParentIds.add(String(rel.personId))
+            await createParentChildLink(
+              tree.treeContext.treeId,
+              { parentPersonId: rel.personId, childPersonId: newPerson.id, parentageType: rel.adopted ? 'adoption' : 'biologique', displayOrder: 1 },
+              auth.userAuth.token
+            )
+          } else if (rel.type === 'parent') {
+            await createParentChildLink(
+              tree.treeContext.treeId,
+              { parentPersonId: newPerson.id, childPersonId: rel.personId, parentageType: rel.adopted ? 'adoption' : 'biologique', displayOrder: 1 },
+              auth.userAuth.token
+            )
+          } else if (rel.type === 'spouse') {
+            await createUnion(
+              tree.treeContext.treeId,
+              { partner1PersonId: rel.personId, partner2PersonId: newPerson.id, unionType: 'mariage', displayOrder: 1 },
+              auth.userAuth.token
+            )
+          }
+        }
+
+        for (const link of siblingParentLinks) {
+          if (linkedParentIds.has(link.parentId)) continue
+          linkedParentIds.add(link.parentId)
+          await createParentChildLink(
+            tree.treeContext.treeId,
+            {
+              parentPersonId: link.parentId,
+              childPersonId: newPerson.id,
+              viaUnionId: link.unionId,
+              parentageType: 'biologique',
+              displayOrder: 1,
+            },
+            auth.userAuth.token
+          )
+        }
+
+        // Mettre à jour le draft avec la nouvelle personne
+        editMode.updateDraft({
+          addedPersons: [...(editMode.restoreDraft().addedPersons || []), newPerson.id],
+        })
+
+        await tree.refreshCurrentTreeGraph()
+        trackAppEvent('person_added', { via: addPersonViaRef.current, role: 'manager', relations: relationCount, tree_id: opaqueTreeId, ...batch })
+        return newPerson
       }
 
-      // Mettre à jour le draft avec la nouvelle personne
-      editMode.updateDraft({
-        addedPersons: [...(editMode.restoreDraft().addedPersons || []), newPerson.id],
-      })
+      if (firstNames.length < 2) return await addOne(formData)
 
-      await tree.refreshCurrentTreeGraph()
-      trackAppEvent('person_added', { via: addPersonViaRef.current, role: 'manager', relations: relationCount, tree_id: opaqueTreeId })
-      return newPerson
+      const added = []
+      for (const firstName of firstNames) {
+        const result = await addOne({ ...formData, firstName })
+        if (!result) break
+        added.push(result)
+      }
+      if (!added.length) return null
+      const addedIds = added.map((result) => result.demoPerson?.id ?? result.id).filter((id) => id != null)
+      if (added[0].proposed) {
+        const names = joinFirstNames(firstNames.slice(0, added.length), t('et'))
+        setDraftNotice(t("{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { names: [names, formData.lastName].filter(Boolean).join(' ') }))
+      }
+      // Sur téléphone, une fiche ouverte couvrirait la fratrie : pas de fiche, la caméra les cadre tous
+      if (window.matchMedia?.('(max-width: 768px)').matches) {
+        tree.setSelectedPerson(null)
+        if (addedIds.length > 1) requestAnimationFrame(() => galaxyZoomApiRef.current?.focusPersons?.(addedIds))
+      } else if (added[0].demoPerson) {
+        tree.setSelectedPerson({ ...added[0].demoPerson })
+      }
+      return added[0]
     } catch (err) {
       setAddPersonError(err.message || t("Erreur lors de l'ajout de la personne"))
     } finally {
