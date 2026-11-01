@@ -1,0 +1,5 @@
+/* Cadre de la miniature : remplit son conteneur, sauf si une classe passée (mp-avatar, nav-avatar-photo…) en décide
+   autrement. :where ne pèse rien, la classe passée l'emporte toujours. */
+:where(.portrait-thumb) { position: relative; display: block; width: 100%; height: 100%; border-radius: inherit; }
+.portrait-thumb { overflow: hidden; }
+.portrait-thumb > img { display: block; width: 100%; height: 100%; object-fit: cover; }

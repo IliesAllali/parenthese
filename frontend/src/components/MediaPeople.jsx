@@ -3,6 +3,7 @@ import { Check, Search, UserPlus, X } from 'lucide-react'
 import { t } from '../i18n/index.js'
 import { firstNameLabel, fullNameLabel } from '../utils/personName.js'
 import './MediaPeople.css'
+import PortraitThumb from './PortraitThumb.jsx'
 
 const MAX_RESULTS = 6
 
@@ -10,7 +11,7 @@ const normalize = (value) => String(value || '').normalize('NFD').replace(/[Ì€-Í
 
 function PersonAvatar({ person }) {
   return person?.photo
-    ? <img className="mp-avatar" src={person.photo} alt="" />
+    ? <PortraitThumb className="mp-avatar" src={person.photo} crop={person.avatarCrop} />
     : <span className="mp-avatar mp-avatar--initial" aria-hidden="true">{person?.firstName?.[0] || '?'}</span>
 }
 

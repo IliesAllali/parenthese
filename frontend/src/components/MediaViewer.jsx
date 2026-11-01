@@ -15,6 +15,7 @@ import { eventTitle } from '../utils/lifeTimeline.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
 import { growFromTransform, takeOrigin } from '../utils/openOrigin.js'
 import { useSheetDrag, useSheetMode } from '../hooks/useSheetDrag.js'
+import PortraitThumb from './PortraitThumb.jsx'
 
 const HTTP_URL_RE = /^https?:\/\/\S+$/i
 const MAX_TITLE_LENGTH = 280
@@ -648,7 +649,7 @@ const MediaViewer = ({
           <div className="mv-meta">
             <span className="mv-person">
               {person?.photo ? (
-                <img className="mv-person-avatar" src={person.photo} alt="" />
+                <PortraitThumb className="mv-person-avatar" src={person.photo} crop={person.avatarCrop} />
               ) : (
                 <span className="mv-person-avatar mv-person-initial">{person?.firstName?.[0] || '?'}</span>
               )}

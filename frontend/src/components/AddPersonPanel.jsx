@@ -8,6 +8,7 @@ import { firstNameLabel } from '../utils/personName.js'
 import { SEX_CHOICES } from '../utils/personSex.js'
 import { initialOf } from '../utils/initial.js'
 import { findLikelyDuplicates } from '../utils/duplicates.js'
+import PortraitThumb from './PortraitThumb.jsx'
 
 // Titre traduit d'un bloc : le passage entre <em> et </em> garde son italique
 function withEmphasis(text) {
@@ -392,7 +393,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                     <li key={p.id}>
                       <button type="button" className="apn-dropdown-item" onClick={() => handleAddRelation(p)}>
                         <span className="apn-avatar" aria-hidden="true">
-                          {p.photo ? <img src={p.photo} alt="" /> : initialOf(p.firstName)}
+                          {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : initialOf(p.firstName)}
                         </span>
                         <span className="apn-dropdown-name">{firstNameLabel(p)} <em>{p.lastName || ''}</em></span>
                         {(p.birthYear || p.birthDate) && (

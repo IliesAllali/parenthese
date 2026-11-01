@@ -1,6 +1,7 @@
 import './SearchResultsDropdown.css'
 import { t } from '../../i18n/index.js'
 import { firstNameLabel } from '../../utils/personName.js'
+import PortraitThumb from '../PortraitThumb.jsx'
 
 // Raison du match renvoyée par usePersonSearch (valeur française), traduite à l'affichage
 const REASON_LABELS = {
@@ -58,7 +59,7 @@ function SearchResultsDropdown({
             {/* Photo miniature */}
             <div className="search-result-thumb">
               {person.photo ? (
-                <img src={person.photo} alt="" />
+                <PortraitThumb src={person.photo} crop={person.avatarCrop} />
               ) : (
                 <div className="search-result-initials">
                   {person.firstName?.[0] || '?'}
