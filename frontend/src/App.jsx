@@ -3535,6 +3535,7 @@ function App() {
         userDisplayName={accountDisplayName}
         userEmail={accountEmail}
         userAvatarPhoto={accountAvatarPhoto}
+        userAvatarCrop={linkedSelfPerson?.avatarCrop ?? null}
         linkedPersonName={linkedSelfPerson ? `${linkedSelfPerson.firstName || ''} ${linkedSelfPerson.lastName || ''}`.trim() : ''}
         activeTreeName={activeAccountTreeName}
         annotationTools={editMode.isActive ? {

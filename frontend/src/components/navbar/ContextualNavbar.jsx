@@ -13,6 +13,7 @@ import { PHONE_QUERY } from '../../utils/sheetDrag'
 import './ContextualNavbar.css'
 import { initialOf } from '../../utils/initial.js'
 import Kbd from '../Kbd.jsx'
+import PortraitThumb from '../PortraitThumb.jsx'
 
 const ANNOT_TOOLS = [
   { id: 'pointer', label: t('Sélection'), Icon: MousePointer2 },
@@ -42,6 +43,7 @@ function ContextualNavbar({
   userDisplayName = '',
   userEmail = '',
   userAvatarPhoto = '',
+  userAvatarCrop = null,
   linkedPersonName = '',
   activeTreeName = '',
   onEditClick,
@@ -399,7 +401,7 @@ function ContextualNavbar({
                 {!authenticated ? (
                   <User size={20} strokeWidth={2} aria-hidden="true" />
                 ) : userAvatarPhoto ? (
-                  <img className="nav-avatar-photo" src={userAvatarPhoto} alt="" />
+                  <PortraitThumb className="nav-avatar-photo" src={userAvatarPhoto} crop={userAvatarCrop} />
                 ) : (
                   <span className="nav-avatar-initial" aria-hidden="true">{avatarInitial}</span>
                 )}

@@ -25,6 +25,7 @@ import { normalizeSex, SEX_CHOICES } from '../utils/personSex.js'
 import { ProposalBanner } from './ProposalCard.jsx'
 import { initialsOf } from '../utils/initial.js'
 import { blurPlaceholder } from '../utils/blurhash.js'
+import PortraitThumb from './PortraitThumb.jsx'
 
 // Aucune modification en cours (référence stable)
 const NO_EDITS = Object.freeze({})
@@ -647,7 +648,7 @@ const PersonCard = ({
   const renderRelationRow = (target, relationType, meta, removable = true) => (
     <div key={`${relationType}-${target?.id}`} className="pc-rel-row">
       <span className="pc-rel-avatar" aria-hidden="true">
-        {target?.photo ? <img src={target.photo} alt="" /> : <span>{target?.firstName?.[0] || '?'}</span>}
+        {target?.photo ? <PortraitThumb src={target.photo} crop={target.avatarCrop} /> : <span>{target?.firstName?.[0] || '?'}</span>}
       </span>
       <span className="pc-rel-name">{target ? fullNameLabel(target) : ''}</span>
       {meta && <span className="pc-rel-meta">{meta}</span>}
@@ -1353,7 +1354,7 @@ const RelationSearchInline = forwardRef(function RelationSearchInline(
             <li key={p.id}>
               <button type="button" className="pc-search-item" onClick={() => onSelect(p)}>
                 <span className="pc-rel-avatar" aria-hidden="true">
-                  {p.photo ? <img src={p.photo} alt="" /> : <span>{p.firstName[0]}</span>}
+                  {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : <span>{p.firstName[0]}</span>}
                 </span>
                 <span className="pc-rel-name">{firstNameLabel(p)} <em>{p.lastName || ''}</em></span>
                 {p.birthYear && <span className="pc-rel-meta">{p.birthYear}</span>}

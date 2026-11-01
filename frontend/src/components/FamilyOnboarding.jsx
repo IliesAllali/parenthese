@@ -3,6 +3,7 @@ import { ImagePlus, Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
 import { t } from '../i18n/index.js'
 import { HELP_URL } from '../utils/siteLinks.js'
+import PortraitThumb from './PortraitThumb.jsx'
 
 // Carte d'accueil de la famille qui arrive par le lien : ce qu'on peut faire, en deux phrases
 export function FamilyWelcome({ visible, treeName, onAddSouvenir, onLook }) {
@@ -117,7 +118,7 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
             <li key={person.id}>
               <button type="button" className="fo-person" onClick={() => onPick?.(person)}>
                 <span className="fo-thumb" aria-hidden="true">
-                  {person.photo ? <img src={person.photo} alt="" /> : <span>{person.firstName?.[0] || '?'}</span>}
+                  {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <span>{person.firstName?.[0] || '?'}</span>}
                 </span>
                 <span className="fo-name">
                   <strong>{person.firstName} {person.lastName}</strong>

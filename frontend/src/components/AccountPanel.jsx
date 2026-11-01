@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import './AccountScreens.css'
 import { t } from '../i18n/index.js'
 import { initialOf } from '../utils/initial.js'
+import PortraitThumb from './PortraitThumb.jsx'
 
 const AccountPanel = ({
   visible,
@@ -51,7 +52,7 @@ const AccountPanel = ({
 
         <div className="ap-linked">
           <span className="ap-avatar" aria-hidden="true">
-            {linkedPerson?.photo ? <img src={linkedPerson.photo} alt="" /> : initialOf(linkedPerson?.firstName || userDisplayName, 'C')}
+            {linkedPerson?.photo ? <PortraitThumb src={linkedPerson.photo} crop={linkedPerson.avatarCrop} /> : initialOf(linkedPerson?.firstName || userDisplayName, 'C')}
           </span>
           <p className="pz-small">
             {linkedPerson
@@ -87,7 +88,7 @@ const AccountPanel = ({
                     onClick={() => onSelectPerson?.(person.id)}
                   >
                     <span className="ap-item-avatar" aria-hidden="true">
-                      {person.photo ? <img src={person.photo} alt="" /> : initialOf(person.firstName)}
+                      {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : initialOf(person.firstName)}
                     </span>
                     <span className="ap-item-name">{person.firstName} <em>{person.lastName || ''}</em></span>
                     {isSelected && <span className="pz-tag pz-tag--accent">{t("C'est moi")}</span>}
