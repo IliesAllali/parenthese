@@ -2502,10 +2502,16 @@ function App() {
       const resolvedTreeOwnerEmail = ''
 
       // Root app:
+      // - not connected, arrivé par un lien de diffusion (?source=…) => la démo, comme avant le 18/10 : ces liens
+      //   promettent l'arbre d'exemple et ont été envoyés sans ?demo (presse, créateurs, groupes)
       // - not connected => accueil à deux choix (variante B, 18/10)
       // - connected => continue bootstrap to open the user's tree
       if (!slug && !TREE_ID_FROM_ENV && !query.has('account')) {
         const userToken = auth.restoreUserToken()
+        if (!userToken && query.has('source')) {
+          tree.handleUseDemo()
+          return
+        }
         if (!userToken) {
           await authOptionsReady
           if (!active) return
