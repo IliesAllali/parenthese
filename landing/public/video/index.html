@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FBFAF7" />
+  <title>Parenthèse en 30 secondes</title>
+  <meta name="description" content="Un arbre de famille en ligne où chaque personne a ses photos, sa voix et ses souvenirs, et que toute la famille ouvre avec un lien. La vidéo en 30 secondes." />
+  <link rel="canonical" href="https://parenthese.io/video/" />
+  <meta property="og:type" content="video.other" />
+  <meta property="og:site_name" content="Parenthèse" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://parenthese.io/video/" />
+  <meta property="og:title" content="Parenthèse en 30 secondes" />
+  <meta property="og:description" content="L'arbre de famille que toute la famille peut ouvrir, avec les photos et la voix de chacun." />
+  <meta property="og:image" content="https://parenthese.io/video/apercu-16x9.jpg" />
+  <meta property="og:video" content="https://parenthese.io/video/parenthese-16x9.mp4" />
+  <meta property="og:video:type" content="video/mp4" />
+  <meta property="og:video:width" content="1920" />
+  <meta property="og:video:height" content="1080" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/guides.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "Parenthèse en 30 secondes",
+    "description": "Un arbre de famille en ligne où chaque personne a ses photos, sa voix et ses souvenirs, et que toute la famille ouvre avec un lien.",
+    "thumbnailUrl": "https://parenthese.io/video/apercu-16x9.jpg",
+    "contentUrl": "https://parenthese.io/video/parenthese-16x9.mp4",
+    "uploadDate": "2026-11-03",
+    "duration": "PT31S",
+    "inLanguage": "fr-FR"
+  }
+  </script>
+  <!-- Pages du site préparées en avance quand on survole un lien (appui sur téléphone) : elles s'ouvrent presque
+       tout de suite. Seulement les pages, pas les fichiers ; l'application (app.parenthese.io) n'est pas concernée.
+       Un navigateur qui ne connaît pas ces règles les ignore. -->
+  <script type="speculationrules">{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/*.*"}}]},"eagerness":"moderate"}]}</script>
+  <style>
+    .film { margin: 8px 0 32px; }
+    .film video { display: block; width: 100%; height: auto; border-radius: 16px; background: #2a2622; }
+    .film .portrait { display: none; max-width: 420px; margin: 0 auto; }
+    @media (max-width: 640px) {
+      .film .paysage { display: none; }
+      .film .portrait { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Parenthèse, accueil">
+        <img src="/logo.svg" alt="" width="166" height="22" />
+      </a>
+      <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=video">Créer mon arbre</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap">
+      <span class="eyebrow">Vidéo</span>
+      <h1>Parenthèse en 30 secondes</h1>
+      <p class="lead">Un arbre de famille en ligne où chaque personne a ses photos, sa voix et ses souvenirs, et que toute la famille ouvre avec un lien.</p>
+
+      <div class="film">
+        <video class="paysage" controls playsinline preload="metadata" poster="/video/apercu-16x9.jpg" width="1920" height="1080">
+          <source src="/video/parenthese-16x9.mp4" type="video/mp4" />
+        </video>
+        <video class="portrait" controls playsinline preload="none" poster="/video/apercu-9x16.jpg" width="1080" height="1920">
+          <source src="/video/parenthese-9x16.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      <section class="cta">
+        <h2>L'arbre d'exemple s'ouvre sans compte</h2>
+        <p>Parcourez une famille fictive, ouvrez les fiches et les souvenirs, puis créez le vôtre.</p>
+        <a class="btn" href="https://app.parenthese.io/?demo&amp;lang=fr&amp;source=video">Voir l'arbre d'exemple</a>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Parenthèse · <a href="/">parenthese.io</a></span>
+      <nav aria-label="Guides">
+        <a href="/comment-faire-un-arbre-genealogique/">Comment faire un arbre généalogique</a>
+        <a href="/arbre-genealogique-a-remplir/">Arbre généalogique à remplir</a>
+        <a href="/application-arbre-genealogique/">Quelle application choisir</a>
+        <a href="/arbre-genealogique-avec-photos/">Arbre généalogique avec photos</a>
+        <a href="/cousinade/">Organiser une cousinade</a>
+        <a href="/raconter-histoire-de-famille/">Raconter l'histoire de sa famille</a>
+        <a href="/arbre-genealogique-cadeau-noel/">Arbre généalogique en cadeau de Noël</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
