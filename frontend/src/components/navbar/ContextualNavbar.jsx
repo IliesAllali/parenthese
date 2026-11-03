@@ -230,6 +230,11 @@ function ContextualNavbar({
   // La famille sans compte trouve « Faire le mien » en bas du menu qu'elle ouvre, le menu Ajouter, et la ligne quitte
   // le menu du compte. Seulement si l'instance invite à créer son arbre (SIGNUP_PROMPTS).
   const ownTreeInAddMenu = signupPrompts && canRegister && isFamily && !authenticated && !showMobileAnnot
+  // Démo sans compte : « Créer mon arbre » devient le bouton noir de la barre, « Modifier » passe en clair à côté
+  // (planche du 03/11, variante C). Il quitte alors le menu du rond, pour ne pas être proposé deux fois.
+  // Pas dans la démo intégrée à la landing (?embed) : l'inscription s'ouvrirait dans le cadre, la landing a ses boutons.
+  const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('embed')
+  const demoSignupInBar = signupPrompts && canRegister && isDemo && !isEmbed && !authenticated && !showMobileAnnot
   if (ownTreeInAddMenu) {
     addGroups.push({ label: t('Votre famille'), items: [{ key: 'own-tree', icon: <TreeDeciduous {...ICON} />, label: t('Faire le mien'), sub: t('un arbre pour votre famille, gratuit'), onSelect: () => handleCreateAccountClick('ajouter') }] })
   }
@@ -371,7 +376,7 @@ function ContextualNavbar({
               <button
                 type="button"
                 ref={addBtnRef}
-                className={`nav-add${isPhone ? '' : ' nav-add--label'}${openMenu === 'add' ? ' is-open' : ''}${editModeActive ? ' is-editing' : ''}`}
+                className={`nav-add${isPhone ? '' : ' nav-add--label'}${demoSignupInBar ? ' nav-add--soft' : ''}${openMenu === 'add' ? ' is-open' : ''}${editModeActive ? ' is-editing' : ''}`}
                 onClick={() => setOpenMenu((v) => (v === 'add' ? null : 'add'))}
                 aria-expanded={openMenu === 'add'}
                 aria-haspopup="menu"
@@ -385,6 +390,17 @@ function ContextualNavbar({
               </button>
             )}
             {hasAddMenu && openMenu === 'add' && renderAddMenu()}
+
+            {demoSignupInBar && (
+              <button
+                type="button"
+                className="nav-add nav-add--label"
+                onClick={() => { closeMenus(); handleCreateAccountClick('demo-barre') }}
+              >
+                <TreeDeciduous size={18} strokeWidth={2.2} aria-hidden="true" />
+                <span className="nav-add-label">{t('Créer mon arbre')}</span>
+              </button>
+            )}
 
             {/* Rond du compte : icône de profil hors connexion, initiale ou photo connecté */}
             <div className="nav-dropdown-wrapper">
@@ -431,7 +447,7 @@ function ContextualNavbar({
                   onCreateTree={onCreateTree}
                   onSettings={onSettingsClick}
                   onLogin={() => onProfileClick?.('login', 'compte')}
-                  onRegister={canRegister && !ownTreeInAddMenu ? () => handleCreateAccountClick('compte') : undefined}
+                  onRegister={canRegister && !ownTreeInAddMenu && !demoSignupInBar ? () => handleCreateAccountClick('compte') : undefined}
                   onLogout={onLogout}
                 />
               )}

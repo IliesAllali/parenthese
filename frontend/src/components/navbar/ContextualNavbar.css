@@ -55,6 +55,9 @@
 @media (hover: hover) and (pointer: fine) { .nav-add:hover { background: #3a3530; } }
 .nav-add.is-open,
 .nav-add.is-editing { box-shadow: 0 0 0 4px var(--pz-a100); }
+/* « Modifier » en clair dans la démo, quand « Créer mon arbre » prend le noir à côté */
+.nav-add--soft { background: var(--pz-line-soft); color: var(--pz-ink); }
+@media (hover: hover) and (pointer: fine) { .nav-add--soft:hover { background: #e9e3da; } }
 
 /* Rond du compte */
 .nav-dropdown-wrapper { position: static; }
