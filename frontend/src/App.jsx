@@ -1684,7 +1684,6 @@ function App() {
       setShowContribModal(false)
       setContribSubmitError('')
       setContribSuccess(true)
-      trackAppEvent('proposal_sent', { changes: changes.length, tree_id: opaqueTreeId })
       setDraftNotice('')
       setTimeout(() => setContribSuccess(false), 6000)
     } catch (err) {

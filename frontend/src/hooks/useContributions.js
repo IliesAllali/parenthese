@@ -148,6 +148,13 @@ export function useContributions({ canEditCurrentTree, canSubmitContribution, tr
 
     try {
       const result = await submitContributionSession(treeContext.treeId, payload, treeContext.accessToken)
+      // Ici et pas dans l'appelant : toutes les propositions passent par cette fonction (fenêtre d'envoi
+      // comme raccourcis de la fiche). « approved » : un co-gestionnaire, appliqué sans relecture.
+      trackAppEvent('proposal_sent', {
+        changes: Array.isArray(payload.changes) ? payload.changes.length : 0,
+        status: result?.session?.status || 'pending',
+        tree_id: toOpaqueTreeId(treeContext.treeId),
+      })
 
       if (result?.session?.status === 'approved') {
         await refreshCurrentTreeGraph()
