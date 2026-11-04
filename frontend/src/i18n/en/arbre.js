@@ -18,7 +18,7 @@ export default {
   // Le lien de parenté affiché au survol se nomme langue par langue dans utils/kinship/
 
   // Glisser pour ajouter une personne (components/ProximityFeedback.jsx)
-  'Conjoint': 'Spouse',
+  'Conjoint': 'Partner',
   'Frère·Sœur': 'Sibling',
   'Lien': 'Link',
 
