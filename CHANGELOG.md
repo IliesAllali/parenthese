@@ -2,6 +2,38 @@
 
 Notable changes to Parenthèse. Dates are in YYYY-MM-DD format.
 
+## 1.6.0 (2026-11-04)
+
+### Adding people
+
+- Several first names in the First name field, separated by commas, add several children or siblings at once. "Paul, Marie, Jean" creates three people with the same links, last name and dates. Empty names and duplicates are skipped, up to 20 names. For a parent or a partner the field still takes one name. On a phone no profile opens after a group add, and the view frames the whole family (#203).
+
+### Life tab
+
+- Photos of a marriage show for both partners. The marriage was already in both Life tabs, but its photos only showed on the profile they were added from. A partner's photo opens in their name (#209).
+
+### Words
+
+- English relationship names go as far as the tree does. Great-great-grandfather, great-great-uncle, grandnephew, second cousin, first cousin twice removed, 4th cousin. "Partner" replaces "Spouse" everywhere, on the profile and the tree too, and "Nibling" is the neutral form of nephew and niece. Thanks to Arc676 (#204).
+
+### Photos
+
+- Portrait thumbnails follow the saved crop everywhere, not only on the tree and the profile. That covers the viewer, "In this photo", search, the profile links, adding a relative, the account and memory picking (#205).
+
+### Shared links
+
+- A link to the app pasted in WhatsApp, Messenger or iMessage shows a title, a sentence and an image. They are the same for every address, so no name or photo from a tree reaches the preview bots (#201).
+- A link with `?source=` and no session opens the demo again, not the welcome screen (#211).
+
+### Hosted instance
+
+- New `SIGNUP_PROMPTS` setting for the API, off by default. When it's on and registration is open, the app invites people to make their own tree in places that already exist: the Add menu of a shared tree, the demo messages, a "Create my tree" button in the demo bar, and a Christmas wording in the family invitation from December 1 to January 6. A self-hosted instance sees none of this unless it turns it on (#202, #212).
+- In the demo, the dialog that closes editing no longer says changes stay on this device. The demo saves nothing and the sentence now says so (#202).
+
+### Docker
+
+- `org.opencontainers.image.version` carries the real version: `1.6.0` on a release tag, and for example `1.5.9-11-gd5f9da6` on `latest` between releases. Container watchers like What's Up Docker can show it instead of a digest (#207).
+
 ## 1.5.9 (2026-10-29)
 
 ### Tree
