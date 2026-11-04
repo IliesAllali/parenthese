@@ -41,8 +41,8 @@ export default {
 
   // ─── Message d'invitation ───
   'Bonjour à tous,': 'Hi everyone,',
-  "Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon, et apportez vos vieilles photos, on le complétera ensemble à table.":
-    "For Christmas, I put our family tree online. Have a look before Christmas Eve, and bring your old photos, we'll fill it in together at the table.",
+  "Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon et apportez vos vieilles photos, on le complétera ensemble à table. Et si quelqu'un raconte une histoire de famille, enregistrez-la sur votre téléphone, sa voix aura sa place dans l'arbre.":
+    "For Christmas, I put our family tree online. Have a look before Christmas Eve and bring your old photos, we'll fill it in together at the table. And if someone tells a family story, record it on your phone, their voice belongs in the tree.",
   "Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter.":
     "I'm putting our family's history together in an online tree, and I'd love your help filling it in.",
   "L'arbre est ici {url}": 'The tree is here {url}',

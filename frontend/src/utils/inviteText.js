@@ -12,7 +12,7 @@ export function buildInviteText(url, password, { seasonal = false, now = new Dat
     t('Bonjour à tous,'),
     '',
     seasonal && isChristmasSeason(now)
-      ? t("Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon, et apportez vos vieilles photos, on le complétera ensemble à table.")
+      ? t("Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon et apportez vos vieilles photos, on le complétera ensemble à table. Et si quelqu'un raconte une histoire de famille, enregistrez-la sur votre téléphone, sa voix aura sa place dans l'arbre.")
       : t("Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter."),
     '',
     t("L'arbre est ici {url}", { url }),
