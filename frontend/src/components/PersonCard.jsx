@@ -516,6 +516,9 @@ const PersonCard = ({
       childIds: filiations.filter((f) => f.unionId && String(f.unionId) === String(union.id)).map((f) => f.childId),
     })),
   }
+  // Un moment du couple (mariage, divorce…) se montre chez les deux conjoints, avec ses souvenirs,
+  // même quand la photo a été ajoutée depuis la fiche de l'autre (#209)
+  const lifeMedias = [...personMedias, ...lifeFamily.unions.flatMap((union) => (union.partner ? getPersonMedias(union.partner.id) : []))]
 
   // Filter persons for relation search (exclude current person + already linked)
   const getFilteredPersonsForRelation = (relationType) => {
@@ -950,13 +953,13 @@ const PersonCard = ({
             life={lifeState.personId === person.id ? lifeState.data : null}
             loading={lifeState.personId !== person.id || lifeState.loading}
             failed={lifeState.personId === person.id && lifeState.failed}
-            medias={personMedias}
+            medias={lifeMedias}
             canAdd={canAddMoment}
             canEdit={canEditMoments}
             notice={lifeNotice}
             onAdd={() => { setLifeNotice(''); setMomentSheet({ entry: null }) }}
             onEdit={(entry) => { setLifeNotice(''); setMomentSheet({ entry }) }}
-            onOpenMedia={(media) => onMediaSelect?.(media, person)}
+            onOpenMedia={(media) => onMediaSelect?.(media, media.personId === person.id ? person : (getPersonById(media.personId) || person))}
             onOpenPerson={onOpenPerson}
           />
         )}
@@ -1276,7 +1279,7 @@ const PersonCard = ({
           entry={momentSheet.entry}
           treeId={treeId}
           token={immichToken}
-          medias={personMedias}
+          medias={momentSheet.entry?.milestone?.unionId ? lifeMedias : personMedias}
           isAdmin={canEditMoments}
           onUploadFile={onUploadMomentFile}
           onClose={() => setMomentSheet(null)}
