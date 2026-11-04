@@ -9,5 +9,11 @@ export default defineConfig({
     target: ['chrome107', 'edge107', 'firefox104', 'safari16'],
     outDir: 'dist',
     emptyOutDir: true,
+    // Le manifeste donne le nom à empreinte de src/pages.js, que scripts/inject-pages.mjs pose
+    // dans les pages statiques de public/ (guides, aide, vidéo), copiées sans passer par Vite
+    manifest: true,
+    rollupOptions: {
+      input: { main: 'index.html', pages: 'src/pages.js' },
+    },
   },
 })
