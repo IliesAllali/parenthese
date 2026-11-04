@@ -7,7 +7,8 @@ import './SettingsPanels.css'
 import PzBusy from './PzBusy.jsx'
 import { HELP_URL } from '../utils/siteLinks.js'
 import { t, dateLocale } from '../i18n/index.js'
-import { buildInviteText } from '../utils/inviteText.js'
+import { buildInviteText, isChristmasSeason } from '../utils/inviteText.js'
+import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
 import { sexLabel } from '../utils/personSex.js'
 import Skeleton from './Skeleton.jsx'
 
@@ -346,10 +347,19 @@ const ContributionPanel = ({
   const [inviteText, setInviteText] = useState('')
   useEffect(() => { setInviteText(defaultInviteText) }, [defaultInviteText])
 
-  const handleCopy = async (value, label) => {
+  // what : link, password ou message. Ce qui a été copié, jamais le texte lui-même
+  const handleCopy = async (value, label, what) => {
     const text = String(value || '').trim()
     if (!text) return
-    try { await navigator.clipboard.writeText(text); setCopyFeedback(label) }
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopyFeedback(label)
+      trackAppEvent('share_copied', {
+        what,
+        ...(what === 'message' ? { seasonal: Boolean(seasonalInvite && isChristmasSeason()) } : {}),
+        tree_id: toOpaqueTreeId(treeId),
+      })
+    }
     catch { setCopyFeedback(t('Copie indisponible')) }
   }
 
@@ -398,7 +408,7 @@ const ContributionPanel = ({
               </div>
               <div className="contrib-invite-link">
                 <code className="contrib-link-url">{inviteShareUrl || t('Lien indisponible')}</code>
-                <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, t('Lien copié'))}><Copy size={14} strokeWidth={2} />{t('Copier')}</button>
+                <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, t('Lien copié'), 'link')}><Copy size={14} strokeWidth={2} />{t('Copier')}</button>
               </div>
               <div className="contrib-invite-passwords">
                 <div className="contrib-role-row">
@@ -412,7 +422,7 @@ const ContributionPanel = ({
                   ) : (
                     <>
                       <button type="button" className={`contrib-pass-reveal${knownShare && !showPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowPassword((v) => !v)} disabled={!knownShare} title={showPassword ? t('Cliquer pour masquer') : t('Cliquer pour révéler')}>{knownShare || t('Pas encore enregistré')}</button>
-                      {knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(knownShare, t('Mot de passe copié'))}>{t('Copier')}</button>}
+                      {knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(knownShare, t('Mot de passe copié'), 'password')}>{t('Copier')}</button>}
                       {!knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('remember')}>{t("Saisir l'actuel")}</button>}
                       <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('change')}>{t('Changer')}</button>
                     </>
@@ -427,7 +437,7 @@ const ContributionPanel = ({
               {defaultInviteText && (
                 <div className="contrib-invite-message">
                   <div className="contrib-invite-message-row">
-                    <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(inviteText, t('Message copié'))}><Copy size={14} strokeWidth={2} />{t("Copier le message d'invitation")}</button>
+                    <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(inviteText, t('Message copié'), 'message')}><Copy size={14} strokeWidth={2} />{t("Copier le message d'invitation")}</button>
                     <button type="button" className="contrib-link-btn" aria-expanded={showInviteMessage} aria-controls="contrib-invite-text" onClick={() => setShowInviteMessage((v) => !v)}>
                       {showInviteMessage ? t('Masquer le message') : t('Voir ou modifier le message')}
                     </button>
