@@ -41,8 +41,8 @@ const TREE_ICONS = ['🌳', '🌿', '🌻', '🏡', '❤️', '🧡', '⭐', '�
 const AdminPanel = ({
   familyTabs = true,
   onFamilyTabsChange = null,
-  tabKinDepth = 1,
-  onTabKinDepthChange = null,
+  tabMinCount = 8,
+  onTabMinCountChange = null,
   fullNames = false,
   onFullNamesChange = null,
   visible,
@@ -540,27 +540,43 @@ const AdminPanel = ({
                     <p className="pz-small">{t('Réglages de ce navigateur.')}</p>
                     <label className={`ts-choice ${familyTabs ? 'is-active' : ''}`}>
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="familyTabs"
                         checked={familyTabs}
-                        onChange={(event) => onFamilyTabsChange?.(event.target.checked)}
+                        onChange={() => onFamilyTabsChange?.(true)}
                       />
                       <span className="ts-choice-text">
-                        <strong>{t('Séparer les belles-familles en onglets')}</strong>
-                        <small>{t("Quand la famille d'un conjoint est trop large pour l'écran, elle s'ouvre dans un onglet en haut de l'arbre.")}</small>
+                        <strong>{t('Un onglet par nom de famille')}</strong>
+                        <small>{t("Chaque nom porté par assez de personnes reliées entre elles a son onglet, avec les conjoints. Le premier onglet montre tout l'arbre.")}</small>
                       </span>
                     </label>
-                    <div className="pz-field">
-                      <span className="pz-label" id="settingsTabKinLabel">{t("Dans un onglet, montrer aussi les proches de l'autre côté")}</span>
-                      <div className="ts-icons" role="radiogroup" aria-labelledby="settingsTabKinLabel">
-                        {[[0, t('Ma ligne seulement')], [1, t('1 lien')], [2, t('2 liens')], [3, t('3 liens')]].map(([d, text]) => (
-                          <button key={d} type="button" role="radio" aria-checked={tabKinDepth === d} disabled={!familyTabs} className="ts-icon ts-icon--letter" onClick={() => onTabKinDepthChange?.(d)}>
-                            {text}
-                          </button>
-                        ))}
+                    {familyTabs && (
+                      <div className="pz-field ts-min-count">
+                        <label htmlFor="settingsTabMinCount">{t('Un onglet à partir de')}</label>
+                        <input
+                          id="settingsTabMinCount"
+                          type="number"
+                          inputMode="numeric"
+                          min={2}
+                          max={99}
+                          value={tabMinCount}
+                          onChange={(event) => { const n = Math.round(Number(event.target.value)); if (n >= 2 && n <= 99) onTabMinCountChange?.(n) }}
+                        />
+                        <span>{t('personnes au même nom')}</span>
                       </div>
-                      <p className="pz-hint">{t('Un lien : un parent, un enfant ou un conjoint. Ils apparaissent en plus clair ; votre propre ligne reste toujours visible.')}</p>
-                    </div>
+                    )}
+                    <label className={`ts-choice ${familyTabs ? '' : 'is-active'}`}>
+                      <input
+                        type="radio"
+                        name="familyTabs"
+                        checked={!familyTabs}
+                        onChange={() => onFamilyTabsChange?.(false)}
+                      />
+                      <span className="ts-choice-text">
+                        <strong>{t("Pas d'onglets")}</strong>
+                        <small>{t("Tout l'arbre sur une seule page.")}</small>
+                      </span>
+                    </label>
                     <label className={`ts-choice ${fullNames ? 'is-active' : ''}`}>
                       <input
                         type="checkbox"
