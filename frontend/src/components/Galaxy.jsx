@@ -117,25 +117,32 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   // Repère du changement d'onglet (Patch, 28/10 : « on perd un peu rapidement le fil ») : la personne qui relie
   // les deux familles garde sa place et son zoom à l'écran, seules les familles autour changent
   const anchorRef = useRef(null)
-  const linkPeople = (key) => {
-    const list = tabsCacheRef.current.tabs
-    const target = list.find((tb) => tb.key === String(key)), cur = activeTabRef.current || list[0]
-    return [target?.referenceId, ...(target?.hinges || []), cur?.referenceId, ...(cur?.hinges || [])].filter((x) => x != null).map(String)
-  }
+  // La personne gardée : celle de l'onglet visé, visible à l'écran, la plus proche du centre (sinon rien à garder)
   const rememberAnchor = (key) => {
-    const layout = layoutDataRef.current, t = transformRef.current
-    if (!layout || !t) return
-    const ids = linkPeople(key)
-    const node = layout.children.find((n) => n._type === 'person' && ids.includes(String(n._data?.id)))
-    anchorRef.current = node ? { id: String(node._data.id), sx: (node.x + node.width / 2) * t.scale + t.x, sy: (node.y + node.height / 2) * t.scale + t.y, scale: t.scale } : null
+    const layout = layoutDataRef.current, t = transformRef.current, canvas = canvasRef.current
+    if (!layout || !t || !canvas) return
+    const target = tabsCacheRef.current.tabs.find((tb) => tb.key === String(key))
+    const w = canvas.clientWidth, h = canvas.clientHeight
+    let best = null
+    for (const n of layout.children) {
+      if (n._type !== 'person' || n._line) continue
+      const id = String(n._data?.id)
+      if (target?.personIds && !target.personIds.has(id)) continue
+      const sx = (n.x + n.width / 2) * t.scale + t.x, sy = (n.y + n.height / 2) * t.scale + t.y
+      if (sx < 0 || sy < 0 || sx > w || sy > h) continue
+      const d = (sx - w / 2) ** 2 + (sy - h / 2) ** 2
+      if (!best || d < best.d) best = { id, sx, sy, d }
+    }
+    anchorRef.current = best ? { id: best.id, sx: best.sx, sy: best.sy, scale: t.scale } : null
   }
   const chooseTab = useCallback((key) => { rememberAnchor(key); linkFamilyRef.current = null; pendingFamilyRef.current = null; frameOnRef.current = null; setActiveKey(key) }, [])
-  // Survol d'un onglet : la personne par qui l'on y passe s'allume dans l'arbre affiché, sans texte (Patch : « que ça les suggère »)
+  // Survol d'un onglet : l'ancêtre de la branche s'allume dans l'arbre affiché, sans texte (Patch : « que ça les suggère »)
   const hoverTab = (key) => {
     const layout = layoutDataRef.current
     if (!layout) return
     const present = new Set(layout.children.filter((n) => n._type === 'person').map((n) => String(n._data?.id)))
-    const ids = linkPeople(key).filter((id) => present.has(id))
+    const ancestor = tabsCacheRef.current.tabs.find((tb) => tb.key === String(key))?.referenceId
+    const ids = ancestor != null && present.has(String(ancestor)) ? [String(ancestor)] : []
     searchHighlightSetRef.current = new Set([...searchHighlightIdsRef.current.map((id) => `p-${id}`), ...ids.map((id) => `p-${id}`)])
     needsRedrawRef.current = true
   }

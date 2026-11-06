@@ -61,6 +61,8 @@ export function nameTabsOf(graphData = null, minCount = 8) {
     const spell = new Map()
     for (const b of bearers) { const p = byId.get(b); const s = (p.birthName || p.lastName).trim(); spell.set(s, (spell.get(s) || 0) + 1) }
     const label = [...spell].sort((x, y) => y[1] - x[1])[0][0]
+    // Un nom porté par tout l'arbre ferait doublon avec le premier onglet
+    if (members.size >= persons.length) continue
     tabs.push({ key: root, referenceId: root, personIds: members, faded, label, count: members.size, nameKey: key.get(root) })
   }
   tabs.sort((a, b) => b.count - a.count)
