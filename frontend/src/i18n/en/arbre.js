@@ -8,7 +8,7 @@ export default {
   'Réglages de ce navigateur.': 'Saved in this browser.',
   'Un onglet par nom de famille': 'One tab per last name',
   "Chaque nom porté par assez de personnes reliées entre elles a son onglet, avec les conjoints. Le premier onglet montre tout l'arbre.": 'Each last name carried by enough related people gets its own tab, with their spouses. The first tab shows the whole tree.',
-  'Un onglet à partir de': 'A tab from',
+  'À partir de': 'From',
   'personnes au même nom': 'people with the same name',
   "Pas d'onglets": 'No tabs',
   "Tout l'arbre sur une seule page.": 'The whole tree on one page.',

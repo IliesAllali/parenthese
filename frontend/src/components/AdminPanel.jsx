@@ -552,7 +552,7 @@ const AdminPanel = ({
                     </label>
                     {familyTabs && (
                       <div className="ts-min-count">
-                        <label htmlFor="settingsTabMinCount">{t('Un onglet à partir de')}</label>
+                        <label htmlFor="settingsTabMinCount">{t('À partir de')}</label>
                         <input
                           id="settingsTabMinCount"
                           className="pz-input"
