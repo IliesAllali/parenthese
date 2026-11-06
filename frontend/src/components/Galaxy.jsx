@@ -3,7 +3,7 @@ import { getPersonMedias, getParents, getChildren, getPersonUnions, persons as g
 import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
 import { easeOutCubic } from './galaxy/utils'
 import { computeLayout, generateNodeRandomData, coupleBarMeta, restoreCoupleBarMeta } from './galaxy/elkLayout'
-import { computeBlockLayout, familyTabsOf, lineToFamily, subgraphOf, takeRootLayout } from './galaxy/blockLayout'
+import { computeBlockLayout, familyTabsOf, kinAround, lineToFamily, subgraphOf, takeRootLayout } from './galaxy/blockLayout'
 import { hasGhosts, withGhosts } from '../utils/ghosts'
 
 // Placement par blocs familiaux par défaut (mesures : tools/layout-bench). ?layout=sugiyama = placement Sugiyama.
@@ -77,7 +77,7 @@ function barTabs(tabs, activeKey) {
   })
 }
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, tabKinDepth = 1, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`) : la liste des familles de l'arbre, calculée une fois par
@@ -675,6 +675,12 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     // Dans l'onglet d'une autre famille, la personne commune (« C'est moi », sinon la personne de départ) reste
     // là, reliée par sa ligne directe (Patch, 21/10 : « je veux me voir tout le temps »)
     const line = tab?.personIds ? lineToFamily(selfPersonId ?? startRefRef.current ?? tabsCacheRef.current.tabs[0]?.resolvedRef, tab.personIds) : new Set()
+    // Autour, estompés aussi : l'autre parent des porteurs du nom venus d'ailleurs, et les proches de l'autre côté
+    // jusqu'à la profondeur choisie dans les réglages (Patch, 06/11)
+    if (tab?.personIds) {
+      for (const id of tab.faded || []) line.add(id)
+      for (const id of kinAround(tab.personIds, tabKinDepth)) line.add(id)
+    }
     const tabGraph = tab?.personIds ? subgraphOf(new Set([...tab.personIds, ...line])) : null
     const graph = hasGhosts(ghosts)
       ? withGhosts(tabGraph || { persons: graphPersons, unions: graphUnions, filiations: graphFiliations }, ghosts, !tabGraph)
@@ -875,7 +881,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       pendingFrameRef.current = null
       requestAnimationFrame(() => zoomApiRef?.current?.focusPersons?.(ids))
     }
-  }, [graphRevision, activeKey, familyTabs, selfPersonId, ghosts, requestTabs, cancelTabsRequest])
+  }, [graphRevision, activeKey, familyTabs, tabKinDepth, selfPersonId, ghosts, requestTabs, cancelTabsRequest])
 
   // Onglet ouvert, remonté pour l'adresse de la page et le lien de partage ; null pour la famille de départ
   useEffect(() => {
