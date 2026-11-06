@@ -305,5 +305,5 @@
 }
 .tm-share-btn { justify-self: start; }
 
-.ts-min-count { display: flex; align-items: center; gap: 8px; margin: -2px 0 10px 32px; font-size: 14px; color: var(--pz-ink-2); }
-.ts-min-count input { width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.ts-min-count { display: flex; align-items: center; gap: 10px; margin: 0 0 10px 16px; font: 400 14px var(--pz-sans); color: var(--pz-ink-2); }
+.ts-min-count .pz-input { width: 72px; padding-block: 8px; text-align: center; font-variant-numeric: tabular-nums; }
