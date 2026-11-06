@@ -305,5 +305,7 @@
 }
 .tm-share-btn { justify-self: start; }
 
-.ts-min-count { display: flex; flex-wrap: wrap; align-items: center; white-space: nowrap; gap: 10px; margin: 0 0 10px 16px; font: 400 14px var(--pz-sans); color: var(--pz-ink-2); }
-.ts-min-count .pz-input { width: 72px; padding-block: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.ts-min-count { display: grid; gap: 8px; margin: 0 0 12px 16px; font: 400 14px var(--pz-sans); color: var(--pz-ink-2); }
+.ts-min-count input[type=range] { width: 100%; max-width: 320px; accent-color: var(--pz-a500); }
+.ts-tab-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; color: var(--pz-faint); }
+.ts-tab-preview small { font-variant-numeric: tabular-nums; opacity: 0.7; }

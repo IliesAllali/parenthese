@@ -586,7 +586,7 @@ function App() {
   const setFamilyTabs = useCallback((on) => { setFamilyTabsState(on); try { localStorage.setItem('parenthese.familyTabs', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])
   // Nom de famille sous le prénom dans l'arbre, celui de naissance s'il est connu (#168). Réglage de ce navigateur.
   // Onglets par nom : nombre de porteurs d'un nom à partir duquel il a son onglet (8 par défaut, Patch, 07/11)
-  const [tabMinCount, setTabMinCountState] = useState(() => { try { const v = Number(localStorage.getItem('parenthese.tabMinCount')); return v >= 2 && v <= 99 ? v : 8 } catch { return 8 } })
+  const [tabMinCount, setTabMinCountState] = useState(() => { try { const v = Number(localStorage.getItem('parenthese.tabMinCount')); return v >= 2 && v <= 30 ? v : 8 } catch { return 8 } })
   const setTabMinCount = useCallback((n) => { setTabMinCountState(n); try { localStorage.setItem('parenthese.tabMinCount', String(n)) } catch { /* navigateur sans stockage */ } }, [])
   const [fullNames, setFullNamesState] = useState(() => { try { return localStorage.getItem('parenthese.fullNames') === 'on' } catch { return false } })
   const setFullNames = useCallback((on) => { setFullNamesState(on); try { localStorage.setItem('parenthese.fullNames', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])

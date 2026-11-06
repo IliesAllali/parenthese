@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, ImagePlus, Trash2, Unplug, X } from 'lucide-react'
 import './SettingsPanels.css'
 import {
@@ -25,6 +25,7 @@ import { t } from '../i18n/index.js'
 import { readGedcomFile } from '../utils/gedcomText.js'
 import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
+import { nameTabsOf } from './galaxy/nameTabs.js'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -62,6 +63,16 @@ const AdminPanel = ({
   onOpenPhotoStart,
 }) => {
   const [section, setSection] = useState('tree')
+  // Seuil des onglets : le curseur montre tout de suite les onglets qu'il crée ; l'arbre ne se recalcule qu'une
+  // fois le curseur posé
+  const [tabDraft, setTabDraft] = useState(tabMinCount)
+  useEffect(() => { setTabDraft(tabMinCount) }, [tabMinCount])
+  useEffect(() => {
+    if (tabDraft === tabMinCount) return undefined
+    const timer = setTimeout(() => onTabMinCountChange?.(tabDraft), 350)
+    return () => clearTimeout(timer)
+  }, [tabDraft, tabMinCount, onTabMinCountChange])
+  const tabPreview = useMemo(() => (visible && familyTabs ? nameTabsOf(null, tabDraft).slice(1) : []), [visible, familyTabs, tabDraft])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -552,18 +563,21 @@ const AdminPanel = ({
                     </label>
                     {familyTabs && (
                       <div className="ts-min-count">
-                        <label htmlFor="settingsTabMinCount">{t('À partir de')}</label>
+                        <label htmlFor="settingsTabMinCount">{t('À partir de {n} personnes au même nom', { n: tabDraft })}</label>
                         <input
                           id="settingsTabMinCount"
-                          className="pz-input"
-                          type="number"
-                          inputMode="numeric"
+                          type="range"
                           min={2}
-                          max={99}
-                          value={tabMinCount}
-                          onChange={(event) => { const n = Math.round(Number(event.target.value)); if (n >= 2 && n <= 99) onTabMinCountChange?.(n) }}
+                          max={30}
+                          step={1}
+                          value={tabDraft}
+                          onChange={(event) => setTabDraft(Number(event.target.value))}
                         />
-                        <span>{t('personnes au même nom')}</span>
+                        <p className="ts-tab-preview" aria-live="polite">
+                          {tabPreview.length
+                            ? tabPreview.map((tb) => <span key={tb.key} className="pz-tag">{tb.label} <small>{tb.count}</small></span>)
+                            : t("Aucun onglet à ce seuil : tout l'arbre sur une seule page.")}
+                        </p>
                       </div>
                     )}
                     <label className={`ts-choice ${familyTabs ? '' : 'is-active'}`}>
