@@ -585,9 +585,9 @@ function App() {
   const [familyTabs, setFamilyTabsState] = useState(() => { try { return localStorage.getItem('parenthese.familyTabs') !== 'off' } catch { return true } })
   const setFamilyTabs = useCallback((on) => { setFamilyTabsState(on); try { localStorage.setItem('parenthese.familyTabs', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])
   // Nom de famille sous le prénom dans l'arbre, celui de naissance s'il est connu (#168). Réglage de ce navigateur.
-  // Proches des autres familles dessinés, estompés, autour d'un onglet : 0 (ma ligne seulement) à 3 liens
-  const [tabKinDepth, setTabKinDepthState] = useState(() => { try { const v = localStorage.getItem('parenthese.tabKinDepth'); return ['0', '1', '2', '3'].includes(v) ? Number(v) : 1 } catch { return 1 } })
-  const setTabKinDepth = useCallback((d) => { setTabKinDepthState(d); try { localStorage.setItem('parenthese.tabKinDepth', String(d)) } catch { /* navigateur sans stockage */ } }, [])
+  // Onglets par nom : nombre de porteurs d'un nom à partir duquel il a son onglet (8 par défaut, Patch, 07/11)
+  const [tabMinCount, setTabMinCountState] = useState(() => { try { const v = Number(localStorage.getItem('parenthese.tabMinCount')); return v >= 2 && v <= 30 ? v : 8 } catch { return 8 } })
+  const setTabMinCount = useCallback((n) => { setTabMinCountState(n); try { localStorage.setItem('parenthese.tabMinCount', String(n)) } catch { /* navigateur sans stockage */ } }, [])
   const [fullNames, setFullNamesState] = useState(() => { try { return localStorage.getItem('parenthese.fullNames') === 'on' } catch { return false } })
   const setFullNames = useCallback((on) => { setFullNamesState(on); try { localStorage.setItem('parenthese.fullNames', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])
   // Premiers visages : fenêtre ouverte après un import GEDCOM, ou depuis les paramètres de l'arbre
@@ -3574,7 +3574,7 @@ function App() {
         reorderEnabled={canReorderSiblings}
         onReorderSiblings={handleReorderSiblings}
         familyTabs={familyTabs}
-        tabKinDepth={tabKinDepth}
+        tabMinCount={tabMinCount}
         fullNames={fullNames}
         annotationViewRef={annotationViewRef}
         onAnnotationsAnchored={persistAnnotationAnchors}
@@ -3756,8 +3756,8 @@ function App() {
         onClose={() => setAdminPanelVisible(false)}
         familyTabs={familyTabs}
         onFamilyTabsChange={setFamilyTabs}
-        tabKinDepth={tabKinDepth}
-        onTabKinDepthChange={setTabKinDepth}
+        tabMinCount={tabMinCount}
+        onTabMinCountChange={setTabMinCount}
         fullNames={fullNames}
         onFullNamesChange={setFullNames}
       />

@@ -2,8 +2,9 @@ import { memo, useEffect, useImperativeHandle, useRef, useState, useCallback } f
 import { getPersonMedias, getParents, getChildren, getPersonUnions, persons as graphPersons, unions as graphUnions, filiations as graphFiliations } from '../data/mockData'
 import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
 import { easeOutCubic } from './galaxy/utils'
-import { computeLayout, generateNodeRandomData, coupleBarMeta, restoreCoupleBarMeta } from './galaxy/elkLayout'
-import { computeBlockLayout, familyTabsOf, kinAround, lineToFamily, subgraphOf, takeRootLayout } from './galaxy/blockLayout'
+import { computeLayout, generateNodeRandomData, coupleBarMeta } from './galaxy/elkLayout'
+import { computeBlockLayout, lineToFamily, subgraphOf } from './galaxy/blockLayout'
+import { nameTabsOf } from './galaxy/nameTabs'
 import { hasGhosts, withGhosts } from '../utils/ghosts'
 
 // Placement par blocs familiaux par défaut (mesures : tools/layout-bench). ?layout=sugiyama = placement Sugiyama.
@@ -77,24 +78,15 @@ function barTabs(tabs, activeKey) {
   })
 }
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, tabKinDepth = 1, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, tabMinCount = 8, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`) : la liste des familles de l'arbre, calculée une fois par
   // version du graphe et par personne de départ, et l'onglet ouvert. Un onglet est le sous-arbre d'une
   // grande belle-famille, posé avec le conjoint charnière comme référence.
   const [tabs, setTabs] = useState([])
-  const [activeKey, setActiveKey] = useState(focusPersonId != null ? String(focusPersonId) : null)
-  const tabsCacheRef = useRef({ rev: -1, start: undefined, tabs: [] })
-  // Liste des onglets calculée dans un worker (galaxy/familyTabsWorker.js) quand l'arbre affiché est celui de la
-  // famille de départ : il ne dépend pas de cette liste, il s'affiche tout de suite et la barre suit. Une demande
-  // en cours est abandonnée (worker arrêté) dès qu'une autre part ou qu'on calcule la liste sur place.
-  const tabsRequestRef = useRef(null) // { rev, start, worker }
-  const cancelTabsRequest = useCallback(() => {
-    tabsRequestRef.current?.worker.terminate()
-    tabsRequestRef.current = null
-  }, [])
-  useEffect(() => cancelTabsRequest, [cancelTabsRequest])
+  const [activeKey, setActiveKey] = useState(null)
+  const tabsCacheRef = useRef({ rev: -1, min: null, tabs: [] })
   const pendingFocusRef = useRef(null) // personne cherchée dans un autre onglet, visée après le changement
   const pendingFrameRef = useRef(null) // personnes à cadrer une fois l'arbre reposé (ajout de plusieurs prénoms)
   // Lien d'un onglet (?famille=<charnière>) : ouvert dès que l'arbre et ses onglets sont connus, et de nouveau si
@@ -119,31 +111,38 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   useEffect(() => {
     startRefRef.current = focusPersonId
     if (linkFamilyRef.current != null) pendingFamilyRef.current = linkFamilyRef.current
-    setActiveKey(focusPersonId != null ? String(focusPersonId) : null)
+    setActiveKey(null)
   }, [focusPersonId])
   // Onglet choisi par la personne (barre, badge, recherche) : le lien d'arrivée ne s'impose plus
   // Repère du changement d'onglet (Patch, 28/10 : « on perd un peu rapidement le fil ») : la personne qui relie
   // les deux familles garde sa place et son zoom à l'écran, seules les familles autour changent
   const anchorRef = useRef(null)
-  const linkPeople = (key) => {
-    const list = tabsCacheRef.current.tabs
-    const target = list.find((tb) => tb.key === String(key)), cur = activeTabRef.current || list[0]
-    return [target?.referenceId, ...(target?.hinges || []), cur?.referenceId, ...(cur?.hinges || [])].filter((x) => x != null).map(String)
-  }
+  // La personne gardée : celle de l'onglet visé, visible à l'écran, la plus proche du centre (sinon rien à garder)
   const rememberAnchor = (key) => {
-    const layout = layoutDataRef.current, t = transformRef.current
-    if (!layout || !t) return
-    const ids = linkPeople(key)
-    const node = layout.children.find((n) => n._type === 'person' && ids.includes(String(n._data?.id)))
-    anchorRef.current = node ? { id: String(node._data.id), sx: (node.x + node.width / 2) * t.scale + t.x, sy: (node.y + node.height / 2) * t.scale + t.y, scale: t.scale } : null
+    const layout = layoutDataRef.current, t = transformRef.current, canvas = canvasRef.current
+    if (!layout || !t || !canvas) return
+    const target = tabsCacheRef.current.tabs.find((tb) => tb.key === String(key))
+    const w = canvas.clientWidth, h = canvas.clientHeight
+    let best = null
+    for (const n of layout.children) {
+      if (n._type !== 'person' || n._line) continue
+      const id = String(n._data?.id)
+      if (target?.personIds && !target.personIds.has(id)) continue
+      const sx = (n.x + n.width / 2) * t.scale + t.x, sy = (n.y + n.height / 2) * t.scale + t.y
+      if (sx < 0 || sy < 0 || sx > w || sy > h) continue
+      const d = (sx - w / 2) ** 2 + (sy - h / 2) ** 2
+      if (!best || d < best.d) best = { id, sx, sy, d }
+    }
+    anchorRef.current = best ? { id: best.id, sx: best.sx, sy: best.sy, scale: t.scale } : null
   }
   const chooseTab = useCallback((key) => { rememberAnchor(key); linkFamilyRef.current = null; pendingFamilyRef.current = null; frameOnRef.current = null; setActiveKey(key) }, [])
-  // Survol d'un onglet : la personne par qui l'on y passe s'allume dans l'arbre affiché, sans texte (Patch : « que ça les suggère »)
+  // Survol d'un onglet : l'ancêtre de la branche s'allume dans l'arbre affiché, sans texte (Patch : « que ça les suggère »)
   const hoverTab = (key) => {
     const layout = layoutDataRef.current
     if (!layout) return
     const present = new Set(layout.children.filter((n) => n._type === 'person').map((n) => String(n._data?.id)))
-    const ids = linkPeople(key).filter((id) => present.has(id))
+    const ancestor = tabsCacheRef.current.tabs.find((tb) => tb.key === String(key))?.referenceId
+    const ids = ancestor != null && present.has(String(ancestor)) ? [String(ancestor)] : []
     searchHighlightSetRef.current = new Set([...searchHighlightIdsRef.current.map((id) => `p-${id}`), ...ids.map((id) => `p-${id}`)])
     needsRedrawRef.current = true
   }
@@ -314,7 +313,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       unions: src.unions,
       filiations: filiationsWithOrder(src.filiations, src.unions, group.source, order),
     }
-    const result = computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs: familyTabsRef.current })
+    const result = computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs: false })
     const baseSource = base.children.find((n) => n.id === group.source)
     const source = result.children.find((n) => n.id === group.source)
     const shift = baseSource && source ? baseSource.x - source.x : 0
@@ -586,79 +585,16 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     }
   }, [])
 
-  // Liste arrivée : l'arbre affiché (famille de départ) ne change pas, ses pastilles prennent le nom et le compte de
-  // l'onglet où elles mènent
-  const applyTabs = useCallback((req, list) => {
-    if (tabsRequestRef.current !== req) return
-    tabsRequestRef.current = null
-    tabsCacheRef.current = { rev: req.rev, start: req.start, tabs: list }
-    setTabs(list)
-    for (const n of layoutDataRef.current?.children || []) {
-      const target = n._familyTab && list.find((tb) => tb.key === n._familyTab.tabKey)
-      if (target) n._familyTab = { ...n._familyTab, label: target.label, count: target.count }
-    }
-    needsRedrawRef.current = true
-  }, [])
-
-  // Lance le calcul de la liste dans un worker ; faux si le navigateur ne le permet pas (on calcule alors sur place)
-  const requestTabs = useCallback((rev, start, referenceId) => {
-    cancelTabsRequest()
-    if (typeof Worker === 'undefined') return false
-    let worker
-    try {
-      worker = new Worker(new URL('./galaxy/familyTabsWorker.js', import.meta.url), { type: 'module' })
-      worker.postMessage({ graph: { persons: graphPersons, unions: graphUnions, filiations: graphFiliations }, referenceId })
-    } catch {
-      worker?.terminate()
-      return false
-    }
-    const req = { rev, start, worker }
-    tabsRequestRef.current = req
-    // Échec du worker : la liste est calculée sur place, sans toucher aux couples de l'arbre affiché
-    const fallback = () => {
-      if (tabsRequestRef.current !== req) return
-      const meta = coupleBarMeta
-      const list = familyTabsOf(null, referenceId)
-      restoreCoupleBarMeta(meta)
-      applyTabs(req, list)
-    }
-    worker.onmessage = ({ data }) => {
-      worker.terminate()
-      if (data.error) fallback()
-      else applyTabs(req, data.tabs)
-    }
-    worker.onerror = () => { worker.terminate(); fallback() }
-    return true
-  }, [cancelTabsRequest, applyTabs])
-
   // Layout
   useEffect(() => {
-    // Onglets : la liste des familles, une fois par version du graphe et par personne de départ. Calculée
-    // avant l'arbre affiché, parce que chaque calcul de placement remplit les couples du module (coupleBarMeta)
-    const start = startRefRef.current != null ? String(startRefRef.current) : null
+    // Onglets par nom (galaxy/nameTabs.js) : la liste se lit dans les noms, une fois par version du graphe et par seuil
     const cache = tabsCacheRef.current
-    let freshTabs = null
-    // Liste en attente du worker : l'arbre affiché est celui de la famille de départ
-    let tabsPending = false
-    if (USE_BLOCK_LAYOUT && familyTabs && (cache.rev !== graphRevision || cache.start !== start)) {
-      const pending = tabsRequestRef.current
-      // Dans un onglet d'une autre famille, ou à l'arrivée par le lien d'un onglet, l'arbre affiché dépend de la
-      // liste : elle est calculée sur place
-      const inOtherTab = Boolean(cache.tabs.find((tb) => tb.key === activeKey)?.personIds)
-      if (!inOtherTab && pendingFamilyRef.current == null) {
-        tabsPending = (pending && pending.rev === graphRevision && pending.start === start) || requestTabs(graphRevision, start, startRefRef.current)
-      }
-      if (!tabsPending) {
-        cancelTabsRequest()
-        freshTabs = familyTabsOf(null, startRefRef.current)
-        tabsCacheRef.current = { rev: graphRevision, start, tabs: freshTabs }
-        setTabs(freshTabs)
-      }
+    if (familyTabs && (cache.rev !== graphRevision || cache.min !== tabMinCount)) {
+      const list = nameTabsOf(null, tabMinCount)
+      tabsCacheRef.current = { rev: graphRevision, min: tabMinCount, tabs: list }
+      setTabs(list)
     }
-    if (!familyTabs) {
-      cancelTabsRequest()
-      if (tabsCacheRef.current.tabs.length) { tabsCacheRef.current = { rev: -1, start: undefined, tabs: [] }; setTabs([]) }
-    }
+    if (!familyTabs && cache.tabs.length) { tabsCacheRef.current = { rev: -1, min: null, tabs: [] }; setTabs([]) }
     // La famille du lien : son onglet s'il existe dans ce navigateur, sinon l'arbre entier ouvert sur sa charnière
     if (pendingFamilyRef.current != null && graphPersons.length) {
       const key = pendingFamilyRef.current
@@ -668,19 +604,15 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
         if (key !== activeKey) { setActiveKey(key); return }
       } else frameOnRef.current = key
     }
-    const tab = familyTabs && !tabsPending ? (tabsCacheRef.current.tabs.find((tb) => tb.key === activeKey) || tabsCacheRef.current.tabs[0] || null) : null
+    const tab = familyTabs ? (tabsCacheRef.current.tabs.find((tb) => tb.key === activeKey) || tabsCacheRef.current.tabs[0] || null) : null
     activeTabRef.current = tab
-    // La personne de départ (ou la charnière de l'onglet) sert de référence aux rangées
-    focusPersonIdRef.current = tab ? tab.referenceId : startRefRef.current
+    // La personne de départ (ou l'ancêtre de la branche ouverte) sert de référence aux rangées
+    focusPersonIdRef.current = tab?.referenceId ?? startRefRef.current
     // Dans l'onglet d'une autre famille, la personne commune (« C'est moi », sinon la personne de départ) reste
     // là, reliée par sa ligne directe (Patch, 21/10 : « je veux me voir tout le temps »)
-    const line = tab?.personIds ? lineToFamily(selfPersonId ?? startRefRef.current ?? tabsCacheRef.current.tabs[0]?.resolvedRef, tab.personIds) : new Set()
-    // Autour, estompés aussi : l'autre parent des porteurs du nom venus d'ailleurs, et les proches de l'autre côté
-    // jusqu'à la profondeur choisie dans les réglages (Patch, 06/11)
-    if (tab?.personIds) {
-      for (const id of tab.faded || []) line.add(id)
-      for (const id of kinAround(tab.personIds, tabKinDepth)) line.add(id)
-    }
+    const line = tab?.personIds ? lineToFamily(selfPersonId ?? startRefRef.current, tab.personIds) : new Set()
+    // Estompés aussi : parents et enfants des porteurs qui ne portent pas le nom
+    for (const id of tab?.faded || []) line.add(id)
     const tabGraph = tab?.personIds ? subgraphOf(new Set([...tab.personIds, ...line])) : null
     const graph = hasGhosts(ghosts)
       ? withGhosts(tabGraph || { persons: graphPersons, unions: graphUnions, filiations: graphFiliations }, ghosts, !tabGraph)
@@ -688,30 +620,14 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     // Annotations d'avant l'ancrage (x, y seuls) : rattachées une fois à la personne la plus proche dans le
     // placement de l'onglet de départ, puis enregistrées. Calculé avant l'arbre affiché (coupleBarMeta, voir plus haut)
     const legacy = annotationData.some((a) => !readAnchor(a))
-    const departure = legacy && USE_BLOCK_LAYOUT && graph ? computeBlockLayout(null, startRefRef.current, { familyTabs }) : null
-    // Famille de départ sans propositions : son placement vient d'être calculé avec la liste des onglets
-    const kept = USE_BLOCK_LAYOUT && !graph && tab === freshTabs?.[0] ? takeRootLayout(freshTabs, focusPersonIdRef.current) : null
-    const result = kept || (USE_BLOCK_LAYOUT ? computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs }) : computeLayout(null, focusPersonIdRef.current))
+    const departure = legacy && USE_BLOCK_LAYOUT && graph ? computeBlockLayout(null, startRefRef.current, { familyTabs: false }) : null
+    const result = USE_BLOCK_LAYOUT ? computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs: false }) : computeLayout(null, focusPersonIdRef.current)
     if (legacy) {
       const anchored = anchorLegacy(annotationData, layoutCenters(departure || result))
       for (const ann of anchored) updateAnnotationInStore(ann.id, { style: ann.style })
       if (anchored.length) onAnnotationsAnchoredRef.current?.(anchored)
     }
-    // Les pastilles portent le nom de l'onglet où elles mènent (prénoms ajoutés aux homonymes)
-    for (const n of result.children) {
-      const target = n._familyTab && tabsCacheRef.current.tabs.find((tb) => tb.key === n._familyTab.tabKey)
-      if (target) n._familyTab = { ...n._familyTab, label: target.label, count: target.count }
-    }
     for (const n of result.children) if (n._type === 'person' && line.has(n.id.replace(/^p-/, ''))) n._line = true
-    // Dans l'onglet d'une belle-famille, chaque charnière (conjoint marié dans la famille d'où l'on vient)
-    // porte le badge de retour
-    if (tab?.parentKey) {
-      const parent = tabsCacheRef.current.tabs.find((tb) => tb.key === tab.parentKey)
-      for (const h of (tab.hinges || [tab.referenceId])) {
-        const node = result.children.find((n) => n.id === `p-${h}`)
-        if (parent && node) node._familyTab = { anchorId: node.id, label: parent.label, count: parent.count, tabKey: parent.key, place: 'above', back: true }
-      }
-    }
 
     const canvas = canvasRef.current
     if (!canvas) return
@@ -881,7 +797,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       pendingFrameRef.current = null
       requestAnimationFrame(() => zoomApiRef?.current?.focusPersons?.(ids))
     }
-  }, [graphRevision, activeKey, familyTabs, tabKinDepth, selfPersonId, ghosts, requestTabs, cancelTabsRequest])
+  }, [graphRevision, activeKey, familyTabs, tabMinCount, selfPersonId, ghosts])
 
   // Onglet ouvert, remonté pour l'adresse de la page et le lien de partage ; null pour la famille de départ
   useEffect(() => {
@@ -1369,7 +1285,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
               onFocus={() => { if (!active) hoverTab(tb.key) }}
               onBlur={leaveTab}
             >
-              <span className="family-tab-name">{tb.label ? tr('Famille {name}', { name: tb.label }) : tr('Famille')}</span>
+              <span className="family-tab-name">{tb.all ? tr("Tout l'arbre") : tr('Famille {name}', { name: tb.label })}</span>
               <span className="family-tab-count" title={tr('{n} personnes', { n: tb.count })}>{tb.count}</span>
             </button>
           )

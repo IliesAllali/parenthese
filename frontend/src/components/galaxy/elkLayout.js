@@ -10,8 +10,6 @@ import {
 // État partagé — peuplé par computeLayout, lu par renderers
 // ============================================================
 export let coupleBarMeta = []
-// Remet les couples d'un placement déjà calculé (placement repris d'un cache, voir familyTabsOf)
-export function restoreCoupleBarMeta(meta) { coupleBarMeta = meta }
 export let componentOrderPerGen = new Map()
 
 // ============================================================
