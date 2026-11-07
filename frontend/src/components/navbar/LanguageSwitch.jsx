@@ -7,7 +7,8 @@ import { LANGUAGES, LOCALES, locale, setLocale, t } from '../../i18n/index.js'
  */
 function LanguageSwitch({ className = '' }) {
   return (
-    <div className={`pz-lang ${className}`.trim()} role="group" aria-label={t('Langue')}>
+    // translate="no" : la traduction automatique du navigateur prenait les codes de langue (« EN ») pour des mots
+    <div className={`pz-lang ${className}`.trim()} role="group" aria-label={t('Langue')} translate="no">
       {LOCALES.map((code, index) => {
         const isActive = code === locale
         return (
