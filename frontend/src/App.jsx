@@ -588,6 +588,9 @@ function App() {
   // Onglets par nom : nombre de porteurs d'un nom à partir duquel il a son onglet (8 par défaut, Patch, 07/11)
   const [tabMinCount, setTabMinCountState] = useState(() => { try { const v = Number(localStorage.getItem('parenthese.tabMinCount')); return v >= 2 && v <= 30 ? v : 8 } catch { return 8 } })
   const setTabMinCount = useCallback((n) => { setTabMinCountState(n); try { localStorage.setItem('parenthese.tabMinCount', String(n)) } catch { /* navigateur sans stockage */ } }, [])
+  // Onglet « Tout l'arbre » en tête de la barre : coupé par défaut (Patch, 07/11)
+  const [showAllTab, setShowAllTabState] = useState(() => { try { return localStorage.getItem('parenthese.showAllTab') === 'on' } catch { return false } })
+  const setShowAllTab = useCallback((on) => { setShowAllTabState(on); try { localStorage.setItem('parenthese.showAllTab', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])
   const [fullNames, setFullNamesState] = useState(() => { try { return localStorage.getItem('parenthese.fullNames') === 'on' } catch { return false } })
   const setFullNames = useCallback((on) => { setFullNamesState(on); try { localStorage.setItem('parenthese.fullNames', on ? 'on' : 'off') } catch { /* navigateur sans stockage */ } }, [])
   // Premiers visages : fenêtre ouverte après un import GEDCOM, ou depuis les paramètres de l'arbre
@@ -3575,6 +3578,7 @@ function App() {
         onReorderSiblings={handleReorderSiblings}
         familyTabs={familyTabs}
         tabMinCount={tabMinCount}
+        showAllTab={showAllTab}
         fullNames={fullNames}
         annotationViewRef={annotationViewRef}
         onAnnotationsAnchored={persistAnnotationAnchors}
@@ -3758,6 +3762,8 @@ function App() {
         onFamilyTabsChange={setFamilyTabs}
         tabMinCount={tabMinCount}
         onTabMinCountChange={setTabMinCount}
+        showAllTab={showAllTab}
+        onShowAllTabChange={setShowAllTab}
         fullNames={fullNames}
         onFullNamesChange={setFullNames}
       />

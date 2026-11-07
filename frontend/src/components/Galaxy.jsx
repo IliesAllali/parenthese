@@ -51,13 +51,27 @@ const centerX = (node) => node.x + node.width / 2
 const easeOutQuint = (t) => 1 - (1 - t) ** 5
 const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, tabMinCount = 8, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+// L'onglet ouvert (Patch, 07/11 : « le système d'onglets sans le Tout l'arbre, sauf s'il est coché ») : celui
+// choisi, sinon « Tout l'arbre » s'il est affiché, sinon la famille de la personne de départ, sinon la plus
+// grande. Moins de deux familles : l'arbre entier, sans barre.
+function resolveTab(list, key, showAll, homeId) {
+  if (!list.length) return null
+  const chosen = key != null ? list.find((tb) => tb.key === key) : null
+  if (chosen) return chosen
+  if (showAll || list.length < 3) return list[0]
+  const id = homeId != null ? String(homeId) : null
+  return (id && list.find((tb) => tb.personIds?.has(id))) || list[1]
+}
+const barTabsOf = (list, showAll) => (showAll ? (list.length > 1 ? list : []) : (list.length > 2 ? list.slice(1) : []))
+
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, tabMinCount = 8, showAllTab = false, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`, galaxy/nameTabs.js) : « Tout l'arbre » puis un onglet par nom de
   // famille assez porté, calculés une fois par version du graphe et par seuil, et l'onglet ouvert
   const [tabs, setTabs] = useState([])
   const [activeKey, setActiveKey] = useState(null)
+  const [openKey, setOpenKey] = useState(null) // onglet réellement ouvert (resolveTab), allumé dans la barre
   const tabsCacheRef = useRef({ rev: -1, min: null, tabs: [] })
   const pendingFocusRef = useRef(null) // personne cherchée dans un autre onglet, visée après le changement
   const pendingFrameRef = useRef(null) // personnes à cadrer une fois l'arbre reposé (ajout de plusieurs prénoms)
@@ -575,8 +589,9 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
         if (key !== activeKey) { setActiveKey(key); return }
       } else frameOnRef.current = key
     }
-    const tab = familyTabs ? (tabsCacheRef.current.tabs.find((tb) => tb.key === activeKey) || tabsCacheRef.current.tabs[0] || null) : null
+    const tab = familyTabs ? resolveTab(tabsCacheRef.current.tabs, activeKey, showAllTab, selfPersonId ?? startRefRef.current) : null
     activeTabRef.current = tab
+    setOpenKey(tab?.key ?? null)
     // La personne de départ (ou l'ancêtre de la branche ouverte) sert de référence aux rangées
     focusPersonIdRef.current = tab?.referenceId ?? startRefRef.current
     // Dans l'onglet d'une autre famille, la personne commune (« C'est moi », sinon la personne de départ) reste
@@ -768,14 +783,16 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       pendingFrameRef.current = null
       requestAnimationFrame(() => zoomApiRef?.current?.focusPersons?.(ids))
     }
-  }, [graphRevision, activeKey, familyTabs, tabMinCount, selfPersonId, ghosts])
+  }, [graphRevision, activeKey, familyTabs, tabMinCount, showAllTab, selfPersonId, ghosts])
 
   // Onglet ouvert, remonté pour l'adresse de la page et le lien de partage ; null pour la famille de départ
   useEffect(() => {
     if (pendingFamilyRef.current != null) return
-    const open = familyTabs && tabs.length > 1 ? tabs.find((tb) => tb.key === activeKey) : null
-    onFamilyChangeRef.current?.(open && open !== tabs[0] ? { key: open.key, label: open.label } : null)
-  }, [activeKey, tabs, familyTabs])
+    const home = selfPersonId ?? startRefRef.current
+    const open = familyTabs && barTabsOf(tabs, showAllTab).length ? resolveTab(tabs, activeKey, showAllTab, home) : null
+    const byDefault = resolveTab(tabs, null, showAllTab, home)
+    onFamilyChangeRef.current?.(open && open !== byDefault && !open.all ? { key: open.key, label: open.label } : null)
+  }, [activeKey, tabs, familyTabs, showAllTab, selfPersonId])
 
   // Sync selectedPersonId
   useEffect(() => {
@@ -1239,10 +1256,10 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     {displayLabel && (
       <div className="path-label-overlay">{displayLabel}</div>
     )}
-    {familyTabs && tabs.length > 1 && (
+    {familyTabs && barTabsOf(tabs, showAllTab).length > 0 && (
       <nav ref={tabsBarRef} onScroll={updateTabsEdges} className={`family-tabs${annotationHandlers ? ' family-tabs--lowered' : ''}${tabsEdges}`} aria-label={tr('Familles')}>
-        {tabs.map((tb) => {
-          const active = tb.key === (tabs.some((x) => x.key === activeKey) ? activeKey : tabs[0].key)
+        {barTabsOf(tabs, showAllTab).map((tb) => {
+          const active = tb.key === openKey
           return (
             <button
               key={tb.key}

@@ -44,6 +44,8 @@ const AdminPanel = ({
   onFamilyTabsChange = null,
   tabMinCount = 8,
   onTabMinCountChange = null,
+  showAllTab = false,
+  onShowAllTabChange = null,
   fullNames = false,
   onFullNamesChange = null,
   visible,
@@ -558,7 +560,7 @@ const AdminPanel = ({
                       />
                       <span className="ts-choice-text">
                         <strong>{t('Un onglet par nom de famille')}</strong>
-                        <small>{t("Chaque nom porté par assez de personnes reliées entre elles a son onglet, avec les conjoints. Le premier onglet montre tout l'arbre.")}</small>
+                        <small>{t('Chaque nom porté par assez de personnes reliées entre elles a son onglet, avec les conjoints.')}</small>
                       </span>
                     </label>
                     {familyTabs && (
@@ -578,6 +580,10 @@ const AdminPanel = ({
                             ? tabPreview.map((tb) => <span key={tb.key} className="pz-tag">{tb.label} <small>{tb.count}</small></span>)
                             : t("Aucun onglet à ce seuil : tout l'arbre sur une seule page.")}
                         </p>
+                        <label className="ts-check">
+                          <input type="checkbox" checked={showAllTab} onChange={(event) => onShowAllTabChange?.(event.target.checked)} />
+                          {t("Ajouter un onglet « Tout l'arbre » en premier")}
+                        </label>
                       </div>
                     )}
                     <label className={`ts-choice ${familyTabs ? '' : 'is-active'}`}>
