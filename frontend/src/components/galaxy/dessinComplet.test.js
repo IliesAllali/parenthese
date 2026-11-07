@@ -20,10 +20,9 @@ describe('dessin complet, sans onglets par largeur', () => {
     it(`${kind} graine ${seed}`, () => {
       const tree = generate(kind, seed)
       const { graph } = tree
-      const result = computeBlockLayout(graph, tree.rootPersonId, { familyTabs: false })
+      const result = computeBlockLayout(graph, tree.rootPersonId)
       const people = result.children.filter((n) => n._type === 'person')
       expect(people.length).toBe(graph.persons.length)
-      expect(people.filter((n) => n._familyTab).length).toBe(0)
       expect(overlaps(people)).toBe(0)
     })
   }
@@ -53,9 +52,8 @@ function belleFamille() {
 describe('dessin complet, grande belle-famille', () => {
   it('tout le monde est dessiné, sans pastille', () => {
     const graph = belleFamille()
-    const result = computeBlockLayout(graph, 'henri', { familyTabs: false })
+    const result = computeBlockLayout(graph, 'henri')
     const people = result.children.filter((n) => n._type === 'person')
-    expect(people.filter((n) => n._familyTab).length).toBe(0)
     expect(people.length).toBe(graph.persons.length)
     expect(overlaps(people)).toBe(0)
   })

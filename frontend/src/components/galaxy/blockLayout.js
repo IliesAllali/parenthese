@@ -42,18 +42,6 @@ const RENVOI_FAR_PX = 1440
 const PARENT_SHIFT_PX = 400
 // Côté d'une belle-famille : le côté extérieur de la branche, sauf si l'autre côté la rapproche d'au moins ça
 const SIDE_SWITCH_PX = 1440
-// Carte de famille et pont (maquette A, retenue le 19/10). Une belle-famille plus large que ça ne se colle pas à
-// son enfant : elle devient un cluster dessiné à part, et une carte prend sa place au-dessus du conjoint
-// Une belle-famille plus large que ça n'est pas dessinée dans cet arbre : elle devient un onglet (son propre
-// arbre, calculé avec le conjoint comme référence) et le conjoint porte un badge vers elle.
-const FAMILY_TAB_PX = 2880
-// Une belle-famille poussée plus loin que ça de son enfant ne se colle pas : seuls les parents du conjoint
-// restent au-dessus de lui, le reste devient un onglet
-const FAMILY_FIT_PX = 480
-// Une belle-famille qui grimpe au-dessus des parents du conjoint reste dessinée si elle est toute petite
-const FAMILY_INLINE_MAX = 6
-// En dessous, une famille sortie de l'arbre ne fait pas d'onglet : elle reste dessinée
-const FAMILY_TAB_MIN = 10
 
 // Le fil d'une filiation union → enfant : une personne d'une autre famille, sur la ligne de l'enfant,
 // entre l'aplomb de l'union et l'enfant, est croisée. Frères et sœurs et leurs conjoint(e)s ne comptent pas
@@ -97,50 +85,34 @@ const overlaps = (l, r, list, gap) => list.some(([a, b]) => l < b + gap && r > a
 // Règle globale (Patch, 19/10) : l'arbre s'ouvre à partir de la personne de référence. Toute belle-famille,
 // grosse ou petite, part du côté opposé à la référence (à droite pour un conjoint à sa droite), le couple se
 // tourne vers elle. Ce côté ne se connaît qu'une fois la lignée posée, d'où une seconde passe.
-// `familyTabs` : vrai, une belle-famille trop large devient un onglet ; faux, tout l'arbre est dessiné d'un
-// tenant (mode « tout l'arbre »), les grandes familles sont seulement signalées dans `families`.
-export function computeBlockLayout(graphData = null, referenceId = null, { familyTabs = true } = {}) {
+export function computeBlockLayout(graphData = null, referenceId = null) {
   const forced = new Map()
-  let result = layoutOnce(graphData, referenceId, forced, familyTabs)
+  let result = layoutOnce(graphData, referenceId, forced)
   // Chaque passe fixe le côté des belles-familles d'après la passe précédente ; on s'arrête dès que plus rien
   // ne change, ou après quatre passes (les positions bougent d'une passe à l'autre)
   for (let pass = 0; pass < 4 && result._inlaws?.length; pass++) {
     const byId = new Map(result.children.map(n => [n.id, n]))
     const persons = result.children.filter(n => n._type === 'person')
     // Pivot : le centre de la famille dessinée. La référence elle-même, souvent au bord (dernière génération,
-    // charnière d'un onglet), enverrait toutes les belles-familles du même côté (Patch, 19/10 : « moins clair »)
+    // ou un conjoint), enverrait toutes les belles-familles du même côté (Patch, 19/10 : « moins clair »)
     const pivot = persons.length ? (Math.min(...persons.map(n => n.x)) + Math.max(...persons.map(n => n.x + n.width))) / 2 : 0
     let changed = false
     for (const { anchorId, side } of result._inlaws) {
       const a = byId.get(anchorId)
-      if (!a) continue // conjoint d'une famille devenue onglet : pas dans cet arbre
+      if (!a) continue
       const want = a.x + a.width / 2 < pivot ? -1 : 1
       if (want !== side && forced.get(anchorId) !== want) { forced.set(anchorId, want); changed = true }
     }
     if (!changed) break
-    result = layoutOnce(graphData, referenceId, forced, familyTabs)
+    result = layoutOnce(graphData, referenceId, forced)
   }
   return result
 }
 
-function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
+function layoutOnce(graphData, referenceId, forcedSide) {
   const result = computeLayout(graphData, referenceId)
   const nodes = result.children
   const byId = new Map(nodes.map(n => [n.id, n]))
-  // Nom d'une famille : celui que portent le plus ses membres (nom de naissance, sinon nom), pas celui de la seule
-  // personne de référence. Ex. : 175 personnes dont 5 portent le nom de la référence. Égalité : le nom
-  // de secours (celui de la référence) s'il est parmi les premiers, sinon le premier rencontré.
-  const nomMajoritaire = (ids, secours = '') => {
-    const n = new Map()
-    for (const id of ids) {
-      const d = byId.get(id)?._type === 'person' ? byId.get(id)._data : null
-      const nom = (d?.birthName || d?.lastName || '').trim()
-      if (nom) n.set(nom, (n.get(nom) || 0) + 1)
-    }
-    let best = '', max = 0
-    for (const [nom, c] of n) if (c > max) { best = nom; max = c }
-    return secours && n.get(secours) === max ? secours : (best || secours)
-  }
 
   // Chaînes de couples (composantes d'une rangée) telles que computeLayout les a ordonnées
   const chainOf = new Map()
@@ -246,10 +218,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
   const placed = new Set()
   const externalEdges = new Set() // `${union}>${enfant}` : enfant dessiné sous une autre lignée
   const detached = [] // familles qu'on n'a pas pu coller à leur enfant (trop loin) : posées à part, renvoi
-  const tabs = [] // belles-familles trop larges pour cet arbre, devenues onglets : { anchorId, pu, label, count, members }
-  const hiddenChains = new Set() // chaînes des familles devenues onglets : pas dessinées dans cet arbre
-  const tabOfChain = new Map() // chaîne cachée → son onglet : un second conjoint de la même famille renvoie au même onglet
-  const bigFamilies = [] // mode « tout l'arbre » : les familles qui seraient des onglets, dessinées quand même
   const attachedEdges = new Set() // `${union}>${enfant}` : fil d'une famille collée à son enfant, toujours dessiné
 
   // Imbrique des blocs de gauche à droite, rangée par rangée
@@ -320,25 +288,8 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
 
   // `outer` : côté extérieur hérité de la lignée (−1 gauche, +1 droite). Les belles-familles d'une branche vont
   // toutes du même côté, celui où la branche est au bord de l'arbre, pour ne pas se poser entre deux familles.
-  // Défaire ce qu'une construction a posé : chaînes, onglets nés pendant elle, arêtes externes notées
-  const chainsOf = (members) => new Set([...members].map(m => chainOf.get(m)).filter(Boolean))
-  const unplace = (members) => { for (const ch of chainsOf(members)) { placed.delete(ch); hiddenChains.delete(ch); tabOfChain.delete(ch) } }
-  const forgetTabs = (from, to) => {
-    const nested = new Set()
-    for (const tb of tabs.splice(from, to - from)) {
-      unplace(tb.members)
-      for (const m of tb.members) nested.add(m)
-      for (const h of tb.hinges) { byId.get(h)._familyTab = null; nested.add(h) }
-      byId.get(tb.anchorId)._familyTab = null
-    }
-    return nested
-  }
-  const forgetExternal = (before, after) => { for (const e of after) if (!before.has(e)) externalEdges.delete(e) }
-  const registerTab = (tab) => { tabs.push(tab); for (const ch of chainsOf(tab.members)) { hiddenChains.add(ch); tabOfChain.set(ch, tab) } }
 
-  // `parentsOnly` : la chaîne est au milieu de sa fratrie, les belles-familles de ses conjoints se réduisent
-  // aux parents au-dessus du conjoint, le reste devient un onglet
-  function buildBlock(chain, ownerUnion = null, outer = 0, parentsOnly = false) {
+  function buildBlock(chain, ownerUnion = null, outer = 0) {
     placed.add(chain)
     const gen = genOf(chain)
     const childBlocks = []
@@ -361,8 +312,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       // Belle-famille en construction : une chaîne dont aucun membre du sang n'est enfant de cette union, mais
       // dont un membre du sang a ses parents ailleurs, ira sous ces parents-là (le sang de la référence gagne)
       const duSang = anchor && !kc.some(id => blood.has(id) && parentUnionOf.get(id) === unionId) && kc.some(id => blood.has(id) && byId.get(id)._type === 'person' && parentUnionOf.has(id))
-      // Un enfant parti dans un onglet ne laisse pas de place vide : ses parents se centrent sur les enfants dessinés
-      if (tabOfChain.has(kc)) return
       if (placed.has(kc) || duSang) {
         external.push({ kid, unionId })
         externalEdges.add(`${unionId}>${kid}`)
@@ -370,10 +319,8 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
         return
       }
       const side = sideOfUnion(unionId) || outer || (i < (kidsOfChain.length - 1) / 2 ? -1 : 1)
-      const snap = { tabsBefore: tabs.length, externalBefore: new Set(externalEdges) }
       const b = buildBlock(kc, unionId, side)
-      snap.tabsAfter = tabs.length; snap.externalAfter = new Set(externalEdges)
-      childBlocks.push({ ...b, unionId, kid, side, snap })
+      childBlocks.push({ ...b, unionId, kid, side })
     })
     // Un enfant dont le conjoint amène sa famille va au bout de la fratrie, de son côté : sa belle-famille,
     // qui fait partie de son bloc, se retrouve au bord, sans survoler ses frères et sœurs. L'ordre de
@@ -392,20 +339,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       const i = kids.findIndex(b => b.kid != null && anchor.path.has(chainOf.get(b.kid)))
       if (i >= 0) { const [b] = kids.splice(i, 1); if (anchor.end === 'right') kids.push(b); else kids.unshift(b) }
     }
-    // Règle du bout (Patch, 19/10 soir) : seule une belle-famille au bout de la fratrie est dessinée entière.
-    // Un enfant marié au milieu de sa fratrie est rebâti avec les seuls parents de son conjoint au-dessus de
-    // lui, le reste de la belle-famille devient un onglet. Ainsi aucun fil ne passe sous une autre famille.
-    const middle = kids.map((b, i) => ({ b, i })).filter(({ b, i }) => i > 0 && i < kids.length - 1 && !b.ghost && b.attachBig)
-    middle.sort((x, y) => y.b.snap.tabsBefore - x.b.snap.tabsBefore)
-    for (const { b, i } of middle) {
-      forgetTabs(b.snap.tabsBefore, b.snap.tabsAfter)
-      unplace(b.members)
-      forgetExternal(b.snap.externalBefore, b.snap.externalAfter)
-      const snap = { tabsBefore: tabs.length, externalBefore: new Set(externalEdges) }
-      const nb = buildBlock(chainOf.get(b.kid), b.unionId, b.side, true)
-      snap.tabsAfter = tabs.length; snap.externalAfter = new Set(externalEdges)
-      kids[i] = { ...nb, unionId: b.unionId, kid: b.kid, side: b.side, snap }
-    }
     childBlocks.length = 0
     childBlocks.push(...kids)
     const packed = packBlocks(childBlocks, FAMILY_GAP)
@@ -417,35 +350,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     // déjà dessinée (reliée deux fois) ne l'est pas une seconde fois : la filiation reste externe, renvoi si
     // son fil croise une autre famille.
     const built = []
-    // Réduire une belle-famille à ses seuls parents : frères, sœurs et ancêtres du conjoint deviennent un onglet
-    // dont les parents sont les charnières (badge sur eux), puis les parents seuls sont rebâtis au-dessus du conjoint
-    function reduceToParents(entry) {
-      const { block, anchorId: id, side, pu, pc, snap } = entry
-      // Arbre dessiné en entier (onglets par nom, ou pas d'onglets) : personne n'est caché derrière une pastille
-      if (!familyTabs) return block
-      const pcPersons = pc.filter(x => byId.get(x)._type === 'person')
-      const keep = new Set(pcPersons)
-      const extra = [...block.members].filter(m => byId.get(m)?._type === 'person' && !keep.has(m) && chainOf.get(m) !== pc)
-      // Une famille de FAMILY_TAB_MIN personnes ou moins reste dessinée : pas d'onglet pour si peu (Patch, 20/10)
-      if (extra.length <= FAMILY_TAB_MIN) return block
-      const nested = forgetTabs(snap.tabsBefore, snap.tabsAfter)
-      unplace(block.members)
-      forgetExternal(snap.externalBefore, snap.externalAfter)
-      const A = byId.get(id)
-      const members = new Set([...extra, ...nested].filter(m => !keep.has(m)))
-      const label = nomMajoritaire(members, A._data?.birthName || byId.get(pcPersons[0])?._data?.lastName || A._data?.lastName || '')
-      registerTab({ anchorId: pcPersons[0], pu: parentUnionOf.get(pcPersons[0]) || pu, label, count: members.size, members, hinges: pcPersons.slice(1), hingeEdges: [] })
-      for (const x of pcPersons) byId.get(x)._familyTab = { anchorId: pcPersons[0], label, count: members.size, tabKey: pcPersons[0].replace(/^p-/, ''), place: 'above' }
-      const saved = anchor
-      anchor = { kid: id, end: side < 0 ? 'right' : 'left', path: pathOf(id) }
-      snap.tabsBefore = tabs.length
-      snap.externalBefore = new Set(externalEdges)
-      const nb = buildBlock(pc, null, side)
-      snap.tabsAfter = tabs.length
-      snap.externalAfter = new Set(externalEdges)
-      anchor = saved
-      return nb
-    }
     // L'enfant de la lignée dans cette chaîne (celui dont les parents sont ownerUnion), s'il est seul
     const kidsHere = chain.filter(id => byId.get(id)._type === 'person' && ownerUnion && parentUnionOf.get(id) === ownerUnion)
     const kidOfChain = kidsHere.length === 1 ? kidsHere[0] : null
@@ -457,65 +361,14 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       if (placed.has(pc)) continue
       const top = topChainOf(pc)
       if (placed.has(top)) continue
-      const owner = tabOfChain.get(top) || tabOfChain.get(pc)
-      if (owner) {
-        // Sa famille est déjà un onglet (un autre conjoint l'a amenée) : même badge, même onglet
-        const A = byId.get(id)
-        A._familyTab = { anchorId: owner.anchorId, label: owner.label, count: owner.count, tabKey: owner.anchorId.replace(/^p-/, ''), place: 'above' }
-        owner.hinges.push(id)
-        owner.hingeEdges.push([pu, id])
-        continue
-      }
       // Le côté extérieur de la branche prime : une branche au bout de sa fratrie pose ses belles-familles au-delà,
       // jamais dans la fratrie des aînés (Patch, 20/10 : la branche de Paul à droite d'Eugénie)
       const side = (chain.length === 3 && outer) ? outer : (forcedSide.get(id) ?? (chain.length > 3 ? (chain.indexOf(id) < chain.length / 2 ? -1 : 1) : (chain.indexOf(id) < chain.length / 2 ? -1 : 1)))
       const saved = anchor
-      const tabsBefore = tabs.length
-      const externalBefore = new Set(externalEdges)
       anchor = { kid: id, end: side < 0 ? 'right' : 'left', path: pathOf(id) }
-      let block = buildBlock(top, null, side)
+      const block = buildBlock(top, null, side)
       anchor = saved
-      if (block.width > FAMILY_TAB_PX && !familyTabs) {
-        const A = byId.get(id)
-        bigFamilies.push({ anchorId: id, label: nomMajoritaire(block.members, A._data?.birthName || A._data?.lastName || ''), count: [...block.members].filter(m => byId.get(m)?._type === 'person').length })
-      }
-      if (block.width > FAMILY_TAB_PX && familyTabs) {
-        // Trop large pour cet arbre : la famille devient un onglet et n'est pas dessinée ici. Sa construction ne
-        // laisse aucune trace (onglets imbriqués, chaînes posées, arêtes externes), et le fil de ses parents
-        // vers le conjoint est caché : c'est le badge du conjoint qui dit où est sa famille.
-        // Les onglets nés pendant cette construction (familles emboîtées) rejoignent celle-ci : son onglet les
-        // retrouvera en se dessinant, avec ses propres onglets
-        const nested = forgetTabs(tabsBefore, tabs.length)
-        unplace(block.members)
-        forgetExternal(externalBefore, new Set(externalEdges))
-        const A = byId.get(id)
-        const partners = [byId.get(pu)?._data?.p1Key, byId.get(pu)?._data?.p2Key].map(k => byId.get(k)?._data).filter(Boolean)
-        const members = new Set([...[...block.members].filter(m => byId.get(m)?._type === 'person'), ...nested])
-        const label = nomMajoritaire(members, A._data?.birthName || partners.find(d => d.lastName)?.lastName || A._data?.lastName || '')
-        registerTab({ anchorId: id, pu, label, count: members.size, members, hinges: [], hingeEdges: [[pu, id]] })
-        A._familyTab = { anchorId: id, label, count: members.size, tabKey: id.replace(/^p-/, ''), place: 'above' }
-        continue
-      }
-      const entry = { block, anchorId: id, side, pu, pc, snap: { tabsBefore, tabsAfter: tabs.length, externalBefore, externalAfter: new Set(externalEdges) } }
-      // Une belle-famille collée ne déborde pas, au-dessus de la rangée des parents du conjoint, de la place de
-      // ces parents : des ancêtres plus larges grimperaient dans les rangées des aînés de la lignée et s'y
-      // glisseraient entre deux frères (Patch, 20/10, Marc et Sophie entre Anaïs et Germaine). Les parents
-      // restent, le reste devient un onglet. Des ancêtres en colonne au-dessus des parents restent dessinés.
-      // Une toute petite famille (jusqu'à FAMILY_INLINE_MAX personnes au-delà des parents) reste dessinée,
-      // à condition que ce qui est au-dessus des parents tienne dans leur largeur (une colonne d'ancêtres),
-      // sinon elle déborderait dans les rangées des aînés (Paul et ses frères dans la fratrie de Catherine)
-      const deep = [...block.rows.keys()].some(g => g < gen - 1)
-      const beyondParents = deep ? [...block.members].filter(m => byId.get(m)?._type === 'person' && chainOf.get(m) !== pc).length : 0
-      // Au-dessus des parents, seuls les ancêtres en ligne directe du conjoint sont admis : des oncles ou tantes
-      // élargiraient ces rangées et la famille se glisserait dans la fratrie des aînés de la lignée
-      const ancestors = new Set()
-      for (const stack = [id]; stack.length;) {
-        const u = parentUnionOf.get(stack.pop())
-        if (!u) continue
-        for (const k of [byId.get(u)?._data?.p1Key, byId.get(u)?._data?.p2Key]) if (k && !ancestors.has(k)) { ancestors.add(k); stack.push(k) }
-      }
-      const collaterals = deep && [...block.members].some(m => { const n = byId.get(m); return n?._type === 'person' && n._generation < gen - 1 && !ancestors.has(m) })
-      if (parentsOnly || (deep && (beyondParents > FAMILY_INLINE_MAX || collaterals))) entry.block = reduceToParents(entry)
+      const entry = { block, anchorId: id, side, pu, pc }
       built.push(entry)
       orient(chain, kidOfChain ?? (chain.length === 3 ? (chain[0] === id ? chain[2] : chain[0]) : null), side)
     }
@@ -641,14 +494,7 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       }
       return res
     }
-    let result = placeBest()
-    // 3) Une belle-famille qui ne se colle pas à son enfant (poussée de plus de FAMILY_FIT_PX) se réduit aux
-    //    parents du conjoint, le reste devient un onglet, et tout se pose à nouveau
-    const tooFar = result.list.map((a, i) => ({ a, p: built[i] })).filter(({ a, p }) => Math.abs(a.x - a.ideal) > FAMILY_FIT_PX && p.block.rows.size > 1)
-    if (tooFar.length) {
-      for (const { p } of [...tooFar].sort((u, v) => v.p.snap.tabsBefore - u.p.snap.tabsBefore)) p.block = reduceToParents(p)
-      result = placeBest()
-    }
+    const result = placeBest()
     rows.clear()
     for (const [g, l] of result.rows) rows.set(g, l)
     const attachments = result.list.map(a => ({ block: a.block, x: a.x }))
@@ -656,8 +502,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       attachedEdges.add(`${parentUnionOf.get(a.anchorId)}>${a.anchorId}`)
     }
     const attachSide = built.length ? (built.every(p => p.side < 0) ? -1 : built.every(p => p.side > 0) ? 1 : 0) : 0
-    // Une belle-famille attachée qui dépasse les seuls parents (frères et sœurs ou ancêtres du conjoint)
-    const attachBig = attachments.some(a => a.block.rows.size > 1)
     for (const p of built) inlaws.push({ anchorId: p.anchorId, side: p.side })
 
     const members = new Set(chain)
@@ -690,7 +534,7 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       return null
     }
     return {
-      rows, members, external, gen, rel, attachSide, attachBig,
+      rows, members, external, gen, rel, attachSide,
       chain: [rowX, rowX + rowW],
       width: extentOf(rows)[1],
       place(x0) {
@@ -729,27 +573,11 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     (isBloodChain(b) - isBloodChain(a)) || countDesc(b) - countDesc(a) || genOf(a) - genOf(b) || birthYearOf(a) - birthYearOf(b) || String(a[0]).localeCompare(String(b[0]))
   ))
   const free = []
-  for (const r of roots) if (!placed.has(r) && !hiddenChains.has(r)) free.push(buildBlock(r))
-  for (const c of chains) if (!placed.has(c) && !hiddenChains.has(c)) free.push(buildBlock(c))
+  for (const r of roots) if (!placed.has(r)) free.push(buildBlock(r))
+  for (const c of chains) if (!placed.has(c)) free.push(buildBlock(c))
   free.push(...detached)
   const forest = packBlocks(free, FAMILY_GAP * 2)
   free.forEach((b, i) => b.place(forest.xs[i]))
-  const referenceNode = result.referenceId != null ? byId.get(`p-${result.referenceId}`) : null
-  // Le fil des parents d'un conjoint dont la famille est un onglet n'est pas dessiné : son badge dit où elle est
-  for (const tb of tabs) for (const [pu, id] of tb.hingeEdges) for (const e of result.edges) if (e.sources[0] === pu && e.targets[0] === id) e._hidden = true
-
-  // Les familles devenues onglets sortent de cet arbre : leurs nœuds et leurs arêtes ne sont pas dessinés
-  if (hiddenChains.size) {
-    const hidden = new Set([...hiddenChains].flatMap(ch => ch))
-    for (const n of nodes) if (n._type === 'unknown' && hidden.has(n.id.replace(/^unknown-/, 'p-'))) hidden.add(n.id)
-    result.children = nodes.filter(n => !hidden.has(n.id))
-    // Un onglet se propose depuis le badge d'un conjoint dessiné : ceux dont le conjoint est caché avec sa famille tombent
-    for (let i = tabs.length - 1; i >= 0; i--) if (hidden.has(tabs[i].anchorId)) tabs.splice(i, 1)
-    for (const tb of tabs) tb.hinges = tb.hinges.filter(h => !hidden.has(h))
-    result.edges = result.edges.filter(e => !hidden.has(e.sources[0]) && !hidden.has(e.targets[0]))
-    nodes.length = 0
-    nodes.push(...result.children)
-  }
   // Réinjecter le X, normalisé à 0 ; Y inchangé (rangées)
   let minX = Infinity
   for (const n of nodes) if (pos.has(n.id)) minX = Math.min(minX, pos.get(n.id))
@@ -830,14 +658,6 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     for (const r of list) byId.get(r.id)._railLift = Math.min(4, liftOf(r.id))
   }
 
-  // Les familles de cet arbre : la lignée dessinée, puis chaque belle-famille devenue onglet. Galaxy en fait
-  // la barre d'onglets ; un onglet est le même arbre recalculé avec le conjoint comme référence.
-  const drawn = nodes.filter(n => n._type === 'person')
-  result.families = [
-    { id: 'main', label: nomMajoritaire(drawn.map(n => n.id), referenceNode?._data?.lastName || drawn[0]?._data?.lastName || ''), count: drawn.length, referenceId: result.referenceId ?? null },
-    ...tabs.map(tb => ({ id: tb.anchorId, anchorId: tb.anchorId, label: tb.label, count: tb.count, members: [...tb.members].map(m => m.replace(/^p-/, '')), hinges: [tb.anchorId, ...tb.hinges].map(m => m.replace(/^p-/, '')) })),
-    ...bigFamilies.map(f => ({ id: f.anchorId, anchorId: f.anchorId, label: f.label, count: f.count, members: [], drawn: true })),
-  ]
   result._inlaws = inlaws
 
   return result

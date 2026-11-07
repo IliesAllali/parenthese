@@ -570,7 +570,7 @@ function App() {
   })
 
   const [adminPanelVisible, setAdminPanelVisible] = useState(false)
-  // Onglet de famille ouvert : l'adresse de la page le porte (?famille=<charnière>), et le lien à envoyer à la
+  // Onglet de famille ouvert : l'adresse de la page le porte (?famille=<ancêtre de la branche>), et le lien à envoyer à la
   // famille aussi, pour qu'il ouvre l'arbre sur cette famille
   const [initialFamilyKey] = useState(() => new URLSearchParams(window.location.search).get('famille'))
   const [openFamily, setOpenFamily] = useState(null)
