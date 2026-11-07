@@ -1,11 +1,8 @@
 import { Fragment } from 'react'
-import { LOCALES, locale, setLocale, t } from '../../i18n/index.js'
-
-// Noms des langues écrits dans leur propre langue : ils ne se traduisent pas.
-const NATIVE_NAMES = { fr: 'Français', en: 'English' }
+import { LANGUAGES, LOCALES, locale, setLocale, t } from '../../i18n/index.js'
 
 /**
- * Choix de la langue « FR · EN », la langue courante en appui.
+ * Choix de la langue « FR · EN », une entrée par langue de LANGUAGES, la langue courante en appui.
  * Changer de langue recharge la page (voir i18n/index.js).
  */
 function LanguageSwitch({ className = '' }) {
@@ -21,7 +18,7 @@ function LanguageSwitch({ className = '' }) {
               className={`pz-lang-opt${isActive ? ' is-active' : ''}`}
               aria-pressed={isActive}
               lang={code}
-              title={NATIVE_NAMES[code]}
+              title={LANGUAGES[code].name}
               onClick={() => setLocale(code)}
             >
               {code.toUpperCase()}

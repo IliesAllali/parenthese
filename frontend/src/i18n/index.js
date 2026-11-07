@@ -1,8 +1,8 @@
-// Langue de l'interface : français ou anglais.
+// Langue de l'interface : français, anglais, ou toute langue déclarée dans LANGUAGES.
 //
 // Le texte français sert de clé : t('Mot de passe incorrect.') renvoie la phrase telle quelle en
-// français, et sa traduction du dictionnaire anglais (./en) en anglais. Une clé absente du
-// dictionnaire retombe sur le français, jamais sur une chaîne vide.
+// français, et sa traduction du dictionnaire de la langue (./en pour l'anglais) ailleurs. Une clé
+// absente du dictionnaire retombe sur l'anglais, puis sur le français, jamais sur une chaîne vide.
 //
 // Variables entre accolades : t('{n} personnes', { n: 3 }).
 //
@@ -12,8 +12,34 @@
 
 import en from './en/index.js'
 
-export const LOCALES = ['fr', 'en']
+// Langues de l'interface, dans l'ordre du bouton de choix.
+//   name : le nom de la langue écrit dans la langue même, il ne se traduit pas
+//   region : la région des dates quand le navigateur n'en donne pas dans cette langue
+//   dictionary : les traductions, indexées sur le français (aucune pour le français, qui sert de clé)
+// Ajouter une langue : un dossier ./<code>/ sur le modèle de ./en, une ligne ici, et ses noms de
+// liens de parenté dans utils/kinship (l'anglais sinon).
+export const LANGUAGES = {
+  fr: { name: 'Français', region: 'fr-FR' },
+  en: { name: 'English', region: 'en-GB', dictionary: en },
+}
+export const LOCALES = Object.keys(LANGUAGES)
+// Langue de repli : celle d'un navigateur dont aucune langue n'est connue, et celle d'un texte
+// pas encore traduit dans la langue choisie
+export const FALLBACK_LOCALE = 'en'
 const STORAGE_KEY = 'pz-locale'
+
+const browserLanguages = () => (typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? navigator.languages : [navigator.language]))
+
+// ?lang= dans l'adresse, sinon le choix mémorisé, sinon la première langue du navigateur que l'appli
+// connaît, l'anglais mis à part : il sert de repli, et « en-US, fr » donne le français.
+export function pickLocale({ fromUrl, stored, languages = [] } = {}) {
+  if (LOCALES.includes(fromUrl)) return fromUrl
+  if (LOCALES.includes(stored)) return stored
+  const known = languages
+    .map((lang) => String(lang).toLowerCase().split(/[-_]/)[0])
+    .find((code) => code !== FALLBACK_LOCALE && LOCALES.includes(code))
+  return known || FALLBACK_LOCALE
+}
 
 function detectLocale() {
   // ?lang=en dans l'adresse l'emporte (liens partagés vers la démo en anglais) et devient le choix mémorisé.
@@ -22,22 +48,18 @@ function detectLocale() {
     try { window.localStorage.setItem(STORAGE_KEY, fromUrl) } catch { /* rien */ }
     return fromUrl
   }
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (LOCALES.includes(stored)) return stored
-  } catch { /* stockage indisponible : on suit le navigateur */ }
-  const languages = typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? navigator.languages : [navigator.language])
-  return languages.some((lang) => String(lang).toLowerCase().startsWith('fr')) ? 'fr' : 'en'
+  let stored = null
+  try { stored = window.localStorage.getItem(STORAGE_KEY) } catch { /* stockage indisponible : on suit le navigateur */ }
+  return pickLocale({ stored, languages: browserLanguages() })
 }
 
 export const locale = typeof window === 'undefined' ? 'fr' : detectLocale()
 
 // Pour toLocaleDateString et consorts : la région du navigateur dans la langue de l'interface (en-US, fr-CA…),
-// sinon fr-FR ou en-GB. Elle décide de l'ordre jour, mois, année et du séparateur (issue #152).
+// sinon celle de LANGUAGES (fr-FR, en-GB…). Elle décide de l'ordre jour, mois, année et du séparateur (issue #152).
 function regionalDateLocale() {
-  const fallback = locale === 'fr' ? 'fr-FR' : 'en-GB'
-  const languages = typeof navigator === 'undefined' ? [] : (navigator.languages?.length ? navigator.languages : [navigator.language])
-  const regional = languages.find((lang) => new RegExp(`^${locale}-[a-z]{2}$`, 'i').test(String(lang)))
+  const fallback = LANGUAGES[locale].region
+  const regional = browserLanguages().find((lang) => new RegExp(`^${locale}-[a-z]{2}$`, 'i').test(String(lang)))
   if (!regional) return fallback
   try { return Intl.DateTimeFormat.supportedLocalesOf(regional)[0] || fallback } catch { return fallback }
 }
@@ -59,8 +81,8 @@ const missing = new Set()
 
 // Typographie française : espace fine insécable avant ? ! ;, insécable avant : et à l'intérieur
 // des « », insécable entre un nombre (ou une variable) et son unité. Appliquée au texte avant le
-// remplacement des variables, qui gardent leurs espaces (noms, adresses). Le dictionnaire anglais
-// reste indexé sur le français tel qu'écrit dans le code.
+// remplacement des variables, qui gardent leurs espaces (noms, adresses). Les dictionnaires
+// restent indexés sur le français tel qu'écrit dans le code.
 const NNBSP = '\u202F'
 const NBSP = '\u00A0'
 const typoCache = new Map()
@@ -78,15 +100,23 @@ export function frenchTypography(text) {
   return out
 }
 
-export function t(fr, vars) {
-  let text = locale === 'fr' ? frenchTypography(fr) : fr
-  if (locale === 'en') {
-    if (Object.prototype.hasOwnProperty.call(en, fr)) text = en[fr]
-    else if (import.meta.env?.DEV && !missing.has(fr)) {
-      missing.add(fr)
-      console.warn(`[i18n] traduction anglaise manquante : ${JSON.stringify(fr)}`)
-    }
+const has = (dictionary, key) => Boolean(dictionary) && Object.prototype.hasOwnProperty.call(dictionary, key)
+
+// Texte d'une clé dans une langue : son dictionnaire, sinon celui de la langue de repli, sinon le français
+export function translate(lang, fr) {
+  if (lang === 'fr') return frenchTypography(fr)
+  const own = LANGUAGES[lang]?.dictionary
+  if (has(own, fr)) return own[fr]
+  if (import.meta.env?.DEV && !missing.has(fr)) {
+    missing.add(fr)
+    console.warn(`[i18n] traduction manquante (${lang}) : ${JSON.stringify(fr)}`)
   }
+  const fallback = LANGUAGES[FALLBACK_LOCALE].dictionary
+  return has(fallback, fr) ? fallback[fr] : fr
+}
+
+export function t(fr, vars) {
+  const text = translate(locale, fr)
   if (!vars) return text
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match))
 }

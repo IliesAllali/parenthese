@@ -206,7 +206,9 @@ The Vite server proxies `/api`, `/trees`, `/auth` and `/health` to the local API
 
 ### Translations
 
-Interface text goes through `t()` from `frontend/src/i18n/index.js`. The French text is the key, and the English lives in `frontend/src/i18n/en/*.js`. A missing English entry falls back to French, and a test fails if any text passed to `t()` has no English entry.
+Interface text goes through `t()` from `frontend/src/i18n/index.js`. The French text is the key, and each other language has its own folder built like `frontend/src/i18n/en/*.js`. The languages are listed in `LANGUAGES` in the same file. A missing entry falls back to English, then to French. A test fails if any text passed to `t()` has no English entry. For the other languages, it only lists the texts that are not translated yet.
+
+To add a language: copy the structure of `i18n/en/`, add a line to `LANGUAGES`, and add a kinship namer in `frontend/src/utils/kinship/` (English is used otherwise). The help and privacy links point to the English pages of parenthese.io.
 
 ### Tests
 
