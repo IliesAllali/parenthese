@@ -421,6 +421,8 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     // dont les parents sont les charnières (badge sur eux), puis les parents seuls sont rebâtis au-dessus du conjoint
     function reduceToParents(entry) {
       const { block, anchorId: id, side, pu, pc, snap } = entry
+      // Arbre dessiné en entier (onglets par nom, ou pas d'onglets) : personne n'est caché derrière une pastille
+      if (!familyTabs) return block
       const pcPersons = pc.filter(x => byId.get(x)._type === 'person')
       const keep = new Set(pcPersons)
       const extra = [...block.members].filter(m => byId.get(m)?._type === 'person' && !keep.has(m) && chainOf.get(m) !== pc)
