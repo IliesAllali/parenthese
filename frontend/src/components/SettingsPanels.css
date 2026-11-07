@@ -62,6 +62,7 @@
 .ts-icon--letter { width: auto; padding: 0 12px; border-radius: 999px; font: 500 13px var(--pz-sans); color: var(--pz-ink-2); }
 .ts-icon[aria-checked="true"] { border-color: var(--pz-a500); background: var(--pz-a50); box-shadow: 0 0 0 3px var(--pz-a100); }
 .ts-icon:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
+.ts-icon:disabled { opacity: 0.5; cursor: default; }
 
 /* Cinq onglets : ils rétrécissent (texte sur deux lignes) au lieu de déborder du panneau sur un petit téléphone */
 .ts-tabs .pz-tab { min-width: 0; }
@@ -304,8 +305,3 @@
   .contrib-field-label { width: 88px; }
 }
 .tm-share-btn { justify-self: start; }
-
-.ts-min-count { display: grid; gap: 8px; margin: 0 0 12px 16px; font: 400 14px var(--pz-sans); color: var(--pz-ink-2); }
-.ts-min-count input[type=range] { width: 100%; max-width: 320px; accent-color: var(--pz-a500); }
-.ts-tab-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; color: var(--pz-faint); }
-.ts-tab-preview small { font-variant-numeric: tabular-nums; opacity: 0.7; }

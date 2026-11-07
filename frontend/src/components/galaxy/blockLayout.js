@@ -1,4 +1,4 @@
-import { computeLayout, componentOrderPerGen, chainGap } from './elkLayout'
+import { computeLayout, componentOrderPerGen, chainGap, coupleBarMeta, restoreCoupleBarMeta } from './elkLayout'
 import { persons as globalPersons, unions as globalUnions, filiations as globalFiliations } from '../../data/mockData'
 
 // ============================================================
@@ -924,3 +924,126 @@ export function lineToFamily(selfId, memberIds, graphData = null) {
   return line
 }
 
+// Les porteurs du nom d'une famille (Patch, 06/11 : « si un gonz a un nom de famille il fait partie de la famille
+// au même nom ») : un enfant d'un membre qui porte le nom de l'onglet en devient membre, puis ses enfants au même
+// nom, de génération en génération. Nom de naissance s'il est connu, sinon nom d'usage (une femme mariée notée au
+// nom de son mari reste chez elle). Seuls les enfants d'un membre comptent : un homonyme sans lien reste dehors.
+// Le couple d'un porteur est dessiné entier (`added` prend ses conjoints) ; l'autre parent d'un porteur ajouté,
+// sans le nom, est rendu à part (`coParents`) pour être estompé, comme un proche de l'autre côté.
+const nomCle = (s) => (s || '').trim().toLocaleLowerCase('fr')
+export function bearersOfName(memberIds, name, graphData = null) {
+  const added = new Set()
+  const coParents = new Set()
+  const target = nomCle(name)
+  if (!target) return { added, coParents }
+  const persons = graphData?.persons || globalPersons
+  const nameOf = new Map(persons.map(p => [String(p.id), nomCle(p.birthName || p.lastName)]))
+  const { parentsOf, childrenOf, partnersOf } = kinshipOf(graphData)
+  const members = new Set([...memberIds].map(String))
+  const bearers = []
+  const queue = [...members]
+  for (let i = 0; i < queue.length; i++) {
+    for (const c of childrenOf.get(queue[i]) || []) {
+      if (members.has(c) || added.has(c) || nameOf.get(c) !== target) continue
+      added.add(c); bearers.push(c); queue.push(c)
+    }
+  }
+  const inTab = (id) => members.has(id) || added.has(id)
+  for (const b of bearers) for (const p of partnersOf.get(b) || []) if (!inTab(p)) added.add(p)
+  for (const b of bearers) for (const p of parentsOf.get(b) || []) if (!inTab(p)) coParents.add(p)
+  return { added, coParents }
+}
+
+// Les proches de l'autre côté d'un onglet (réglage « Proches des autres familles ») : les personnes à `depth` pas
+// de parenté au plus d'un membre, chaque pas d'un enfant à un parent gardant l'autre parent. Estompées à l'écran.
+export function kinAround(memberIds, depth, graphData = null) {
+  const around = new Set()
+  if (!(depth > 0)) return around
+  const members = new Set([...memberIds].map(String))
+  const { next } = kinshipOf(graphData)
+  const dist = new Map([...members].map(id => [id, 0]))
+  const queue = [...members]
+  for (let i = 0; i < queue.length; i++) {
+    const d = dist.get(queue[i])
+    if (d >= depth) continue
+    for (const [nb, extra] of next.get(queue[i]) || []) {
+      for (const e of extra) if (!members.has(e)) around.add(e)
+      if (dist.has(nb)) continue
+      dist.set(nb, d + 1)
+      around.add(nb)
+      queue.push(nb)
+    }
+  }
+  for (const id of members) around.delete(id)
+  return around
+}
+
+// Toutes les familles d'un arbre, de proche en proche : l'arbre de la personne de départ, puis chaque grande
+// belle-famille qu'il cache (un onglet = ce bloc caché plus le conjoint charnière, posé avec lui comme
+// référence), puis celles que ces onglets cachent à leur tour. Chaque personne est dans un seul onglet, sauf
+// la charnière qui est des deux côtés. Ordre : celui de la découverte, la famille de départ en premier.
+export function familyTabsOf(graphData = null, referenceId = null) {
+  const root = { key: referenceId != null ? String(referenceId) : 'root', referenceId, parentKey: null, personIds: null, label: '', count: 0 }
+  const tabs = [root]
+  const seen = new Set([root.key])
+  for (let i = 0; i < tabs.length; i++) {
+    const tab = tabs[i]
+    const graph = tab.personIds ? subgraphOf(tab.personIds, graphData) : graphData
+    const result = computeBlockLayout(graph, tab.referenceId, { familyTabs: true })
+    const fams = result.families || []
+    if (fams[0]) { tab.label = fams[0].label; tab.count = fams[0].count }
+    // La personne de départ réellement retenue (l'arbre sans personne de départ en choisit une)
+    if (tab === root) root.resolvedRef = result.referenceId != null ? String(result.referenceId).replace(/^p-/, '') : null
+    // Le placement de la famille de départ est celui que l'arbre affiche ensuite : gardé pour takeRootLayout,
+    // il n'est pas recalculé (plusieurs secondes sur un arbre de quelques milliers de personnes)
+    if (tab === root && !graphData) Object.defineProperty(tabs, 'rootLayout', { value: { result, coupleBarMeta, referenceId }, writable: true })
+    for (const f of fams.slice(1)) {
+      if (f.drawn) continue
+      const key = String(f.anchorId).replace(/^p-/, '')
+      if (seen.has(key)) continue
+      seen.add(key)
+      const base = new Set([...f.members, ...f.hinges])
+      const { added, coParents } = bearersOfName(base, f.label, graphData)
+      tabs.push({ key, referenceId: key, parentKey: tab.key, personIds: new Set([...base, ...added]), faded: coParents, hinges: f.hinges, label: f.label, count: f.count + added.size })
+    }
+  }
+  // Deux onglets au même nom (homonymes, ou une branche sortie de sa propre lignée) : sauf le plus grand, chacun
+  // prend les prénoms de sa charnière, ceux que porte la pastille qui y mène (Patch, 20/10 : « plusieurs fois
+  // les mêmes familles »)
+  // 28/10 (Patch : « ptet le Joseph et Marie ») : l'onglet le plus petit prend d'abord le nom suivant le plus
+  // porté chez lui et pas encore pris par un autre onglet ; les prénoms de la charnière ne servent qu'en dernier recours.
+  const persons = graphData?.persons || globalPersons
+  const firstName = new Map(persons.map(p => [String(p.id), p.firstName]))
+  const familyName = new Map(persons.map(p => [String(p.id), (p.birthName || p.lastName || '').trim()]))
+  const namesByCount = (tb) => {
+    const n = new Map()
+    for (const id of tb.personIds || []) { const nom = familyName.get(String(id).replace(/^p-/, '')); if (nom) n.set(nom, (n.get(nom) || 0) + 1) }
+    return [...n].sort((x, y) => y[1] - x[1]).map(([nom]) => nom)
+  }
+  const byLabel = new Map()
+  for (const tb of tabs) { if (!byLabel.has(tb.label)) byLabel.set(tb.label, []); byLabel.get(tb.label).push(tb) }
+  const taken = new Set(tabs.map(tb => tb.label))
+  for (const group of byLabel.values()) {
+    if (group.length < 2) continue
+    const biggest = group.reduce((a, b) => (b.count > a.count ? b : a))
+    for (const tb of [...group].sort((a, b) => b.count - a.count)) {
+      if (tb === biggest) continue
+      const next = namesByCount(tb).find(nom => !taken.has(nom))
+      if (next) { tb.label = next; taken.add(next); continue }
+      const names = [...new Set((tb.hinges || [tb.referenceId]).map(id => firstName.get(String(id))).filter(Boolean))].slice(0, 2)
+      if (names.length) tb.label = `${tb.label} · ${names.join(' et ')}`
+    }
+  }
+  return tabs
+}
+
+// Le placement de la famille de départ calculé par familyTabsOf (arbre du module, onglets allumés), rendu une
+// seule fois : l'arbre affiché le modifie ensuite (pastilles, ligne directe, réordonnancement)
+export function takeRootLayout(tabs, referenceId) {
+  const kept = tabs?.rootLayout
+  if (!kept) return null
+  tabs.rootLayout = null
+  if (String(kept.referenceId ?? '') !== String(referenceId ?? '')) return null
+  restoreCoupleBarMeta(kept.coupleBarMeta)
+  return kept.result
+}

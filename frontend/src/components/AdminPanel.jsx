@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, ImagePlus, Trash2, Unplug, X } from 'lucide-react'
 import './SettingsPanels.css'
 import {
@@ -25,7 +25,6 @@ import { t } from '../i18n/index.js'
 import { readGedcomFile } from '../utils/gedcomText.js'
 import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
-import { nameTabsOf } from './galaxy/nameTabs.js'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -42,8 +41,8 @@ const TREE_ICONS = ['🌳', '🌿', '🌻', '🏡', '❤️', '🧡', '⭐', '�
 const AdminPanel = ({
   familyTabs = true,
   onFamilyTabsChange = null,
-  tabMinCount = 8,
-  onTabMinCountChange = null,
+  tabKinDepth = 1,
+  onTabKinDepthChange = null,
   fullNames = false,
   onFullNamesChange = null,
   visible,
@@ -63,16 +62,6 @@ const AdminPanel = ({
   onOpenPhotoStart,
 }) => {
   const [section, setSection] = useState('tree')
-  // Seuil des onglets : le curseur montre tout de suite les onglets qu'il crée ; l'arbre ne se recalcule qu'une
-  // fois le curseur posé
-  const [tabDraft, setTabDraft] = useState(tabMinCount)
-  useEffect(() => { setTabDraft(tabMinCount) }, [tabMinCount])
-  useEffect(() => {
-    if (tabDraft === tabMinCount) return undefined
-    const timer = setTimeout(() => onTabMinCountChange?.(tabDraft), 350)
-    return () => clearTimeout(timer)
-  }, [tabDraft, tabMinCount, onTabMinCountChange])
-  const tabPreview = useMemo(() => (visible && familyTabs ? nameTabsOf(null, tabDraft).slice(1) : []), [visible, familyTabs, tabDraft])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -551,47 +540,27 @@ const AdminPanel = ({
                     <p className="pz-small">{t('Réglages de ce navigateur.')}</p>
                     <label className={`ts-choice ${familyTabs ? 'is-active' : ''}`}>
                       <input
-                        type="radio"
+                        type="checkbox"
                         name="familyTabs"
                         checked={familyTabs}
-                        onChange={() => onFamilyTabsChange?.(true)}
+                        onChange={(event) => onFamilyTabsChange?.(event.target.checked)}
                       />
                       <span className="ts-choice-text">
-                        <strong>{t('Un onglet par nom de famille')}</strong>
-                        <small>{t("Chaque nom porté par assez de personnes reliées entre elles a son onglet, avec les conjoints. Le premier onglet montre tout l'arbre.")}</small>
+                        <strong>{t('Séparer les belles-familles en onglets')}</strong>
+                        <small>{t("Quand la famille d'un conjoint est trop large pour l'écran, elle s'ouvre dans un onglet en haut de l'arbre.")}</small>
                       </span>
                     </label>
-                    {familyTabs && (
-                      <div className="ts-min-count">
-                        <label htmlFor="settingsTabMinCount">{t('À partir de {n} personnes au même nom', { n: tabDraft })}</label>
-                        <input
-                          id="settingsTabMinCount"
-                          type="range"
-                          min={2}
-                          max={30}
-                          step={1}
-                          value={tabDraft}
-                          onChange={(event) => setTabDraft(Number(event.target.value))}
-                        />
-                        <p className="ts-tab-preview" aria-live="polite">
-                          {tabPreview.length
-                            ? tabPreview.map((tb) => <span key={tb.key} className="pz-tag">{tb.label} <small>{tb.count}</small></span>)
-                            : t("Aucun onglet à ce seuil : tout l'arbre sur une seule page.")}
-                        </p>
+                    <div className="pz-field">
+                      <span className="pz-label" id="settingsTabKinLabel">{t("Dans un onglet, montrer aussi les proches de l'autre côté")}</span>
+                      <div className="ts-icons" role="radiogroup" aria-labelledby="settingsTabKinLabel">
+                        {[[0, t('Ma ligne seulement')], [1, t('1 lien')], [2, t('2 liens')], [3, t('3 liens')]].map(([d, text]) => (
+                          <button key={d} type="button" role="radio" aria-checked={tabKinDepth === d} disabled={!familyTabs} className="ts-icon ts-icon--letter" onClick={() => onTabKinDepthChange?.(d)}>
+                            {text}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                    <label className={`ts-choice ${familyTabs ? '' : 'is-active'}`}>
-                      <input
-                        type="radio"
-                        name="familyTabs"
-                        checked={!familyTabs}
-                        onChange={() => onFamilyTabsChange?.(false)}
-                      />
-                      <span className="ts-choice-text">
-                        <strong>{t("Pas d'onglets")}</strong>
-                        <small>{t("Tout l'arbre sur une seule page.")}</small>
-                      </span>
-                    </label>
+                      <p className="pz-hint">{t('Un lien : un parent, un enfant ou un conjoint. Ils apparaissent en plus clair ; votre propre ligne reste toujours visible.')}</p>
+                    </div>
                     <label className={`ts-choice ${fullNames ? 'is-active' : ''}`}>
                       <input
                         type="checkbox"
