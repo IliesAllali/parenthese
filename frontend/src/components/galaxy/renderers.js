@@ -206,7 +206,10 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
 // useGalaxyInteractions.
 // ============================================================
 export const renvoiHitAreas = []
+// Badges « Famille X » sous les conjoints dont la famille est un onglet : { x0, y0, x1, y1, anchorId }
+export const familyHitAreas = []
 const renvoiPills = []
+const familyPills = [] // badges « Famille X » : { text, cx, cy, anchorId, tabKey, alpha }
 const RENVOI_FONT = '500 11px "DM Sans", system-ui, sans-serif'
 // Pastilles collées aux personnes : juste sous le couple, juste au-dessus du portrait de l'enfant
 const RENVOI_PARENT_DY = 38
@@ -239,6 +242,11 @@ function drawRenvoiPill(ctx, { text, cx, cy, target, alpha }) {
   if (alpha > 0.5) renvoiHitAreas.push({ x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2, ...target })
 }
 
+function drawFamilyPill(ctx, { text, cx, cy, anchorId, tabKey, alpha }) {
+  const { w, h } = drawPillShape(ctx, text, cx, cy, alpha)
+  if (alpha > 0.5) familyHitAreas.push({ x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2, anchorId, tabKey })
+}
+
 function drawRenvoi(ctx, edge, sourcePos, targetPos, targetNode, childR, view) {
   const scale = view?.scale ?? 1
   const labelAlpha = Math.min(1, Math.max(0, (scale - LOD_LABEL_FADE_OUT) / (LOD_LABEL_FADE_IN - LOD_LABEL_FADE_OUT)))
@@ -260,6 +268,7 @@ function drawRenvoi(ctx, edge, sourcePos, targetPos, targetNode, childR, view) {
 
 // Après drawNodes : les pastilles passent au-dessus des portraits et des souvenirs
 export function drawRenvoiPills(ctx) {
+  for (const p of familyPills) drawFamilyPill(ctx, p)
   renvoiPills.forEach(p => drawRenvoiPill(ctx, p))
   renvoiPills.length = 0
 }
@@ -270,6 +279,8 @@ export function drawRenvoiPills(ctx) {
 export function drawFiliations(ctx, edges, posMap, nodeMap, nodeRandomData, entrance, entranceActive, elapsed, view = null) {
   renvoiHitAreas.length = 0
   renvoiPills.length = 0
+  familyPills.length = 0
+  familyHitAreas.length = 0
   if (!edges) return
   const sibships = new Map()
 
@@ -680,6 +691,19 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   }
 
   ctx.restore()
+
+  // Sa famille est un onglet : une pastille le dit, un clic l'ouvre. Au-dessus du portrait, à la place de ses
+  // parents (l'orbite des souvenirs évite le haut). Même place pour le retour vers la famille d'où l'on vient :
+  // la charnière peut avoir des enfants dessous, jamais rien au-dessus que le fil de ses parents.
+  if (withDetail && node._familyTab) {
+    const tab = node._familyTab
+    // Retour vers la famille d'où l'on vient : même place que la pastille de l'aller (la charnière ne bouge pas),
+    // flèche retournée (Patch, 28/10, planche D)
+    const name = tab.label ? t('Famille {name}', { name: tab.label }) : t('Famille')
+    const text = tab.back ? `‹ ${name} · ${tab.count}` : `${name} · ${tab.count} ›`
+    const py = cy - PERSON_R * personScale - RENVOI_CHILD_GAP
+    familyPills.push({ text, cx, cy: py, anchorId: tab.anchorId, tabKey: tab.tabKey, alpha: nodeProgress * labelAlpha })
+  }
 }
 
 // ============================================================

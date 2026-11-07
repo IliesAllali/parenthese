@@ -309,5 +309,3 @@
 .ts-min-count input[type=range] { width: 100%; max-width: 320px; accent-color: var(--pz-a500); }
 .ts-tab-preview { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; color: var(--pz-faint); }
 .ts-tab-preview small { font-variant-numeric: tabular-nums; opacity: 0.7; }
-.ts-check { display: flex; align-items: center; gap: 8px; color: var(--pz-ink); cursor: pointer; }
-.ts-check input { accent-color: var(--pz-a500); width: 16px; height: 16px; }
