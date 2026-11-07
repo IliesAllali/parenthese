@@ -854,48 +854,10 @@ export function subgraphOf(personIds, graphData = null) {
   return { persons, unions, filiations }
 }
 
-// La parenté d'un arbre : pour chaque personne, ses voisins (conjoints, parents, enfants), chacun avec les personnes
-// que ce pas fait dessiner en plus. Chaque pas entre un enfant et un parent garde l'autre parent (le fil part de
-// leur union, et sans l'autre parent le placement dessine un conjoint « Inconnu »).
-function kinshipOf(graphData = null) {
-  const unions = graphData?.unions || globalUnions
-  const filiations = graphData?.filiations || globalFiliations
-  const unionById = new Map(unions.map(u => [String(u.id), u]))
-  const next = new Map()
-  const link = (a, b, extra = []) => { if (!next.has(a)) next.set(a, []); next.get(a).push([b, extra]) }
-  const partnersOf = new Map()
-  for (const u of unions) {
-    const a = String(u.partner1Id), b = String(u.partner2Id)
-    link(a, b); link(b, a)
-    if (!partnersOf.has(a)) partnersOf.set(a, new Set())
-    if (!partnersOf.has(b)) partnersOf.set(b, new Set())
-    partnersOf.get(a).add(b); partnersOf.get(b).add(a)
-  }
-  const parentsOf = new Map()
-  const childrenOf = new Map()
-  for (const f of filiations) {
-    const child = String(f.childId)
-    const u = f.unionId ? unionById.get(String(f.unionId)) : null
-    const parents = u ? [String(u.partner1Id), String(u.partner2Id)] : f.parentId != null ? [String(f.parentId)] : []
-    if (!parentsOf.has(child)) parentsOf.set(child, new Set())
-    for (const p of parents) {
-      parentsOf.get(child).add(p)
-      if (!childrenOf.has(p)) childrenOf.set(p, new Set())
-      childrenOf.get(p).add(child)
-    }
-  }
-  for (const [child, parents] of parentsOf) {
-    for (const p of parents) {
-      const couple = [...parents].filter(q => q !== p)
-      link(child, p, couple); link(p, child, couple)
-    }
-  }
-  return { next, parentsOf, childrenOf, partnersOf }
-}
-
 // La ligne directe d'une personne vers une famille (Patch, 21/10 : « je veux me voir tout le temps ») : le plus
 // court chemin de parenté (parents, enfants, conjoints) de `selfId` jusqu'au premier membre de `memberIds`,
-// sans fratries autour, chaque pas d'un enfant à un parent gardant ses deux parents.
+// sans fratries autour. Chaque pas d'un enfant à un parent garde ses deux parents (le fil part de leur union,
+// et sans l'autre parent le placement dessine un conjoint « Inconnu »).
 // Rend les personnes à ajouter (ni `selfId` déjà membre, ni chemin : ensemble vide).
 export function lineToFamily(selfId, memberIds, graphData = null) {
   const members = new Set([...memberIds].map(String))
@@ -903,7 +865,30 @@ export function lineToFamily(selfId, memberIds, graphData = null) {
   if (self == null || members.has(self)) return new Set()
   const persons = graphData?.persons || globalPersons
   if (!persons.some(p => String(p.id) === self)) return new Set()
-  const { next } = kinshipOf(graphData)
+  const unions = graphData?.unions || globalUnions
+  const filiations = graphData?.filiations || globalFiliations
+  const unionById = new Map(unions.map(u => [String(u.id), u]))
+  // Voisins : [voisin, personnes que ce pas fait dessiner en plus]
+  const next = new Map()
+  const link = (a, b, extra = []) => { if (!next.has(a)) next.set(a, []); next.get(a).push([b, extra]) }
+  for (const u of unions) {
+    const a = String(u.partner1Id), b = String(u.partner2Id)
+    link(a, b); link(b, a)
+  }
+  const parentsOf = new Map()
+  for (const f of filiations) {
+    const child = String(f.childId)
+    const u = f.unionId ? unionById.get(String(f.unionId)) : null
+    const parents = u ? [String(u.partner1Id), String(u.partner2Id)] : f.parentId != null ? [String(f.parentId)] : []
+    if (!parentsOf.has(child)) parentsOf.set(child, new Set())
+    for (const p of parents) parentsOf.get(child).add(p)
+  }
+  for (const [child, parents] of parentsOf) {
+    for (const p of parents) {
+      const couple = [...parents].filter(q => q !== p)
+      link(child, p, couple); link(p, child, couple)
+    }
+  }
   const from = new Map([[self, null]])
   const queue = [self]
   let hit = null
@@ -922,60 +907,6 @@ export function lineToFamily(selfId, memberIds, graphData = null) {
     if (!members.has(prev)) line.add(prev)
   }
   return line
-}
-
-// Les porteurs du nom d'une famille (Patch, 06/11 : « si un gonz a un nom de famille il fait partie de la famille
-// au même nom ») : un enfant d'un membre qui porte le nom de l'onglet en devient membre, puis ses enfants au même
-// nom, de génération en génération. Nom de naissance s'il est connu, sinon nom d'usage (une femme mariée notée au
-// nom de son mari reste chez elle). Seuls les enfants d'un membre comptent : un homonyme sans lien reste dehors.
-// Le couple d'un porteur est dessiné entier (`added` prend ses conjoints) ; l'autre parent d'un porteur ajouté,
-// sans le nom, est rendu à part (`coParents`) pour être estompé, comme un proche de l'autre côté.
-const nomCle = (s) => (s || '').trim().toLocaleLowerCase('fr')
-export function bearersOfName(memberIds, name, graphData = null) {
-  const added = new Set()
-  const coParents = new Set()
-  const target = nomCle(name)
-  if (!target) return { added, coParents }
-  const persons = graphData?.persons || globalPersons
-  const nameOf = new Map(persons.map(p => [String(p.id), nomCle(p.birthName || p.lastName)]))
-  const { parentsOf, childrenOf, partnersOf } = kinshipOf(graphData)
-  const members = new Set([...memberIds].map(String))
-  const bearers = []
-  const queue = [...members]
-  for (let i = 0; i < queue.length; i++) {
-    for (const c of childrenOf.get(queue[i]) || []) {
-      if (members.has(c) || added.has(c) || nameOf.get(c) !== target) continue
-      added.add(c); bearers.push(c); queue.push(c)
-    }
-  }
-  const inTab = (id) => members.has(id) || added.has(id)
-  for (const b of bearers) for (const p of partnersOf.get(b) || []) if (!inTab(p)) added.add(p)
-  for (const b of bearers) for (const p of parentsOf.get(b) || []) if (!inTab(p)) coParents.add(p)
-  return { added, coParents }
-}
-
-// Les proches de l'autre côté d'un onglet (réglage « Proches des autres familles ») : les personnes à `depth` pas
-// de parenté au plus d'un membre, chaque pas d'un enfant à un parent gardant l'autre parent. Estompées à l'écran.
-export function kinAround(memberIds, depth, graphData = null) {
-  const around = new Set()
-  if (!(depth > 0)) return around
-  const members = new Set([...memberIds].map(String))
-  const { next } = kinshipOf(graphData)
-  const dist = new Map([...members].map(id => [id, 0]))
-  const queue = [...members]
-  for (let i = 0; i < queue.length; i++) {
-    const d = dist.get(queue[i])
-    if (d >= depth) continue
-    for (const [nb, extra] of next.get(queue[i]) || []) {
-      for (const e of extra) if (!members.has(e)) around.add(e)
-      if (dist.has(nb)) continue
-      dist.set(nb, d + 1)
-      around.add(nb)
-      queue.push(nb)
-    }
-  }
-  for (const id of members) around.delete(id)
-  return around
 }
 
 // Toutes les familles d'un arbre, de proche en proche : l'arbre de la personne de départ, puis chaque grande
@@ -1002,9 +933,7 @@ export function familyTabsOf(graphData = null, referenceId = null) {
       const key = String(f.anchorId).replace(/^p-/, '')
       if (seen.has(key)) continue
       seen.add(key)
-      const base = new Set([...f.members, ...f.hinges])
-      const { added, coParents } = bearersOfName(base, f.label, graphData)
-      tabs.push({ key, referenceId: key, parentKey: tab.key, personIds: new Set([...base, ...added]), faded: coParents, hinges: f.hinges, label: f.label, count: f.count + added.size })
+      tabs.push({ key, referenceId: key, parentKey: tab.key, personIds: new Set([...f.members, ...f.hinges]), hinges: f.hinges, label: f.label, count: f.count })
     }
   }
   // Deux onglets au même nom (homonymes, ou une branche sortie de sa propre lignée) : sauf le plus grand, chacun

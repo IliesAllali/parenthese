@@ -62,7 +62,6 @@
 .ts-icon--letter { width: auto; padding: 0 12px; border-radius: 999px; font: 500 13px var(--pz-sans); color: var(--pz-ink-2); }
 .ts-icon[aria-checked="true"] { border-color: var(--pz-a500); background: var(--pz-a50); box-shadow: 0 0 0 3px var(--pz-a100); }
 .ts-icon:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
-.ts-icon:disabled { opacity: 0.5; cursor: default; }
 
 /* Cinq onglets : ils rétrécissent (texte sur deux lignes) au lieu de déborder du panneau sur un petit téléphone */
 .ts-tabs .pz-tab { min-width: 0; }

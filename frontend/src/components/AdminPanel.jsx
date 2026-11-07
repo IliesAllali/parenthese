@@ -41,8 +41,6 @@ const TREE_ICONS = ['🌳', '🌿', '🌻', '🏡', '❤️', '🧡', '⭐', '�
 const AdminPanel = ({
   familyTabs = true,
   onFamilyTabsChange = null,
-  tabKinDepth = 1,
-  onTabKinDepthChange = null,
   fullNames = false,
   onFullNamesChange = null,
   visible,
@@ -537,7 +535,6 @@ const AdminPanel = ({
 
                   <fieldset className="ts-policy">
                     <legend className="pz-eyebrow">{t('Affichage')}</legend>
-                    <p className="pz-small">{t('Réglages de ce navigateur.')}</p>
                     <label className={`ts-choice ${familyTabs ? 'is-active' : ''}`}>
                       <input
                         type="checkbox"
@@ -546,21 +543,10 @@ const AdminPanel = ({
                         onChange={(event) => onFamilyTabsChange?.(event.target.checked)}
                       />
                       <span className="ts-choice-text">
-                        <strong>{t('Séparer les belles-familles en onglets')}</strong>
-                        <small>{t("Quand la famille d'un conjoint est trop large pour l'écran, elle s'ouvre dans un onglet en haut de l'arbre.")}</small>
+                        <strong>{t('Les grandes familles par alliance dans des onglets')}</strong>
+                        <small>{t("Une belle-famille plus large qu'un écran s'ouvre dans son propre onglet au lieu d'être dessinée dans l'arbre. Réglage de ce navigateur.")}</small>
                       </span>
                     </label>
-                    <div className="pz-field">
-                      <span className="pz-label" id="settingsTabKinLabel">{t("Dans un onglet, montrer aussi les proches de l'autre côté")}</span>
-                      <div className="ts-icons" role="radiogroup" aria-labelledby="settingsTabKinLabel">
-                        {[[0, t('Ma ligne seulement')], [1, t('1 lien')], [2, t('2 liens')], [3, t('3 liens')]].map(([d, text]) => (
-                          <button key={d} type="button" role="radio" aria-checked={tabKinDepth === d} disabled={!familyTabs} className="ts-icon ts-icon--letter" onClick={() => onTabKinDepthChange?.(d)}>
-                            {text}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="pz-hint">{t('Un lien : un parent, un enfant ou un conjoint. Ils apparaissent en plus clair ; votre propre ligne reste toujours visible.')}</p>
-                    </div>
                     <label className={`ts-choice ${fullNames ? 'is-active' : ''}`}>
                       <input
                         type="checkbox"
@@ -569,8 +555,8 @@ const AdminPanel = ({
                         onChange={(event) => onFullNamesChange?.(event.target.checked)}
                       />
                       <span className="ts-choice-text">
-                        <strong>{t('Afficher le nom de famille')}</strong>
-                        <small>{t("Sous chaque prénom. Le nom de naissance s'il est connu.")}</small>
+                        <strong>{t("Le nom de famille sous le prénom")}</strong>
+                        <small>{t("Le nom de naissance quand il est connu, sinon le nom d'usage. Réglage de ce navigateur.")}</small>
                       </span>
                     </label>
                   </fieldset>
