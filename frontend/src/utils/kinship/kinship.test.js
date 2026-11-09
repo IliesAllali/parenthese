@@ -39,6 +39,12 @@ describe('nommage français', () => {
     expect(both(['spouse', 'up', 'sibling'])).toEqual(['Oncle par alliance', 'Tante par alliance', 'Oncle/Tante par alliance'])
   })
 
+  it('demi-frère par un seul parent, beau-frère par le conjoint d’un parent (#218)', () => {
+    expect(both(['up', 'down'])).toEqual(['Demi-frère', 'Demi-sœur', 'Demi-frère/sœur'])
+    expect(both(['up', 'spouse', 'down'])).toEqual(['Beau-frère', 'Belle-sœur', 'Beau-frère/sœur'])
+    expect(both(['sibling', 'spouse'])).toEqual(['Beau-frère', 'Belle-sœur', 'Beau-frère/sœur'])
+  })
+
   it('« Autre » prend les formes neutres ou doubles, comme non précisé', () => {
     const autre = (moves, lang) => nameKinship(path(moves, 'other'), lang)
     expect(['up', 'down', 'sibling', 'spouse'].map((m) => autre([m], 'fr'))).toEqual(['Parent', 'Enfant', 'Frère/Sœur', 'Conjoint(e)'])
@@ -67,6 +73,9 @@ describe('nommage anglais', () => {
     expect(bothEn(['spouse', 'down'])).toEqual(['Stepson', 'Stepdaughter', 'Stepchild'])
     expect(bothEn(['down', 'spouse'])).toEqual(['Son-in-law', 'Daughter-in-law', 'Child-in-law'])
     expect(bothEn(['spouse', 'sibling'])).toEqual(['Brother-in-law', 'Sister-in-law', 'Brother/sister-in-law'])
+    expect(bothEn(['sibling', 'spouse'])).toEqual(['Brother-in-law', 'Sister-in-law', 'Brother/sister-in-law'])
+    expect(bothEn(['up', 'spouse', 'down'])).toEqual(['Stepbrother', 'Stepsister', 'Stepsibling'])
+    expect(bothEn(['up', 'down'])).toEqual(['Half-brother', 'Half-sister', 'Half-sibling'])
     expect(bothEn(['spouse'])).toEqual(['Partner', 'Partner', 'Partner'])
     expect(bothEn(['up', 'sibling', 'down'])).toEqual(['First cousin', 'First cousin', 'First cousin'])
     expect(bothEn(['up', 'up', 'sibling', 'down', 'down'])).toEqual(['Second cousin', 'Second cousin', 'Second cousin'])

@@ -1,4 +1,4 @@
-import { kinshipFacts } from './facts.js'
+import { isHalfSibling, isStepSibling, kinshipFacts } from './facts.js'
 
 // Mot genré quand le sexe de la personne nommée est connu, forme neutre ou double sinon
 const g = (sex, male, female, neutral) => (sex === 'male' ? male : sex === 'female' ? female : neutral)
@@ -25,6 +25,8 @@ export default function nameEn(path) {
 
   // « Partner » reste neutre au lieu de supposer un mariage
   if (hasSpouse && ups === 0 && downs === 0) return 'Partner'
+  if (isHalfSibling(path)) return g(sex, 'Half-brother', 'Half-sister', 'Half-sibling')
+  if (isStepSibling(path)) return g(sex, 'Stepbrother', 'Stepsister', 'Stepsibling')
 
   if (hasSpouse) {
     // L'anglais distingue l'ordre : le parent du conjoint (in-law) n'est pas le conjoint du parent (step)

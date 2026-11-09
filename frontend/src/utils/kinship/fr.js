@@ -1,4 +1,4 @@
-import { kinshipFacts } from './facts.js'
+import { isHalfSibling, kinshipFacts } from './facts.js'
 
 // Mot genré quand le sexe de la personne nommée est connu, forme double sinon
 const g = (sex, male, female, both) => (sex === 'male' ? male : sex === 'female' ? female : both)
@@ -7,10 +7,12 @@ export default function nameFr(path) {
   const { ups, downs, hasSpouse, sex } = kinshipFacts(path)
 
   if (hasSpouse && ups === 0 && downs === 0) return g(sex, 'Conjoint', 'Conjointe', 'Conjoint(e)')
+  if (isHalfSibling(path)) return g(sex, 'Demi-frère', 'Demi-sœur', 'Demi-frère/sœur')
 
   if (hasSpouse) {
     if (ups === 1 && downs === 0) return g(sex, 'Beau-père', 'Belle-mère', 'Beau-parent')
     if (ups === 0 && downs === 1) return g(sex, 'Beau-fils', 'Belle-fille', 'Bel-enfant')
+    // Le français dit aussi beau-frère pour l'enfant du conjoint d'un parent (quasi-frère, peu employé)
     if (ups === 1 && downs === 1) return g(sex, 'Beau-frère', 'Belle-sœur', 'Beau-frère/sœur')
   }
 
