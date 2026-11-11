@@ -83,8 +83,14 @@ export function checkInvariants(result, coupleBarMeta, graph, referenceId = null
     if (!spousesOf.has(p1.id)) spousesOf.set(p1.id, new Set())
     if (!spousesOf.has(p2.id)) spousesOf.set(p2.id, new Set())
     spousesOf.get(p1.id).add(p2.id); spousesOf.get(p2.id).add(p1.id)
+  }
+  // Une personne ne touche que deux conjoints sur sa rangée, un de chaque côté : à partir de trois, les suivants
+  // s'enchaînent plus loin, ce n'est pas un défaut du placement
+  for (const c of coupleBarMeta) {
+    const p1 = byId.get(c.p1Key), p2 = byId.get(c.p2Key)
+    if (!p1 || !p2) continue
     if (p1._generation !== p2._generation) couples_rangee++
-    else if (Math.abs(p1.x - p2.x) > maxAdj) couples_separes++
+    else if (Math.abs(p1.x - p2.x) > maxAdj && spousesOf.get(p1.id).size <= 2 && spousesOf.get(p2.id).size <= 2) couples_separes++
   }
 
   // Fratries : contiguës (seuls les frères, sœurs et leurs conjoints entre le premier et le dernier) et dans l'ordre choisi

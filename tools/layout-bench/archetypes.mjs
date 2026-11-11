@@ -64,6 +64,26 @@ export const archetypes = [
     },
   },
   {
+    slug: 'plusieurs-petits-conjoints',
+    note: 'G a quatre conjoints : H1 (trois enfants), H2 (un enfant), H3 et H4 sans parent ni enfant dans l arbre. Les petits portraits ne se chevauchent pas, leurs noms non plus.',
+    reference: 'K1',
+    graph: {
+      persons: ids(['G', 'H1', 'H2', 'H3', 'H4', 'K1', 'K2', 'K3', 'K4']),
+      unions: [U('u1', 'H1', 'G', 1), U('u2', 'G', 'H2', 2), U('u3', 'G', 'H3', 3), U('u4', 'G', 'H4', 4)],
+      filiations: [L('K1', 'u1', 1), L('K2', 'u1', 2), L('K3', 'u1', 3), L('K4', 'u2')],
+    },
+  },
+  {
+    slug: 'trois-petits-conjoints',
+    note: 'G a trois conjoints sans parent ni enfant dans l arbre, et ses parents. Aucun petit portrait ni nom ne se chevauche.',
+    reference: 'G',
+    graph: {
+      persons: ids(['Pa', 'Ma', 'G', 'H1', 'H2', 'H3']),
+      unions: [U('u', 'Pa', 'Ma'), U('u1', 'G', 'H1', 1), U('u2', 'G', 'H2', 2), U('u3', 'G', 'H3', 3)],
+      filiations: [L('G', 'u')],
+    },
+  },
+  {
     slug: 'fratrie-12',
     note: 'Douze enfants, chacun marié, les six premiers avec deux enfants, les autres avec un. La ligne de fratrie est longue, c est normal.',
     reference: 'K1',
