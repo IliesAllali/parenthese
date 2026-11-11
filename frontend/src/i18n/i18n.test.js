@@ -2,8 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import en from './en/index.js'
-import { frenchTypography, t } from './index.js'
+import { FALLBACK_LOCALE, LANGUAGES, frenchTypography, pickLocale, t, translate } from './index.js'
 
 const SRC = fileURLToPath(new URL('..', import.meta.url))
 
@@ -30,19 +29,31 @@ describe('i18n', () => {
     expect(t('{n} personnes', { n: 3 })).toBe('3 personnes')
   })
 
+  // Textes passés à t() sans entrée dans le dictionnaire d'une langue
+  const usedKeys = () => sourceFiles(SRC).flatMap((file) => literalKeys(readFileSync(file, 'utf8')).map((key) => ({ file, key })))
+  const missingIn = (dictionary) => usedKeys()
+    .filter(({ key }) => !Object.prototype.hasOwnProperty.call(dictionary, key))
+    .map(({ file, key }) => `${file.slice(SRC.length)} : ${key}`)
+
   it('chaque texte passé à t() a sa traduction anglaise', () => {
-    const missing = []
-    for (const file of sourceFiles(SRC)) {
-      for (const key of literalKeys(readFileSync(file, 'utf8'))) {
-        if (!Object.prototype.hasOwnProperty.call(en, key)) missing.push(`${file.slice(SRC.length)} : ${key}`)
-      }
-    }
-    expect(missing).toEqual([])
+    expect(missingIn(LANGUAGES[FALLBACK_LOCALE].dictionary)).toEqual([])
   })
+
+  // Les autres langues retombent sur l'anglais : un texte pas encore traduit est signalé, sans faire
+  // échouer les tests, pour qu'un nouveau texte en français et en anglais suffise à une contribution.
+  for (const [code, { dictionary }] of Object.entries(LANGUAGES)) {
+    if (!dictionary || code === FALLBACK_LOCALE) continue
+    it(`signale les textes pas encore traduits (${code})`, () => {
+      const gaps = [...new Set(missingIn(dictionary))]
+      if (gaps.length) console.warn(`[i18n] ${gaps.length} texte(s) sans traduction (${code}), affichés en anglais :\n${gaps.join('\n')}`)
+    })
+  }
 
   it('les traductions gardent les mêmes variables', () => {
     const vars = (s) => (s.match(/\{\w+\}/g) ?? []).sort().join(',')
-    const mismatched = Object.entries(en).filter(([fr, english]) => vars(fr) !== vars(english)).map(([fr]) => fr)
+    const mismatched = Object.entries(LANGUAGES)
+      .filter(([, { dictionary }]) => dictionary)
+      .flatMap(([code, { dictionary }]) => Object.entries(dictionary).filter(([fr, text]) => vars(fr) !== vars(text)).map(([fr]) => `${code} : ${fr}`))
     expect(mismatched).toEqual([])
   })
 
@@ -53,5 +64,27 @@ describe('i18n', () => {
     expect(frenchTypography('Jusqu’à 20 Mo, {n} Mo')).toBe('Jusqu’à 20\u00A0Mo, {n}\u00A0Mo')
     expect(frenchTypography('https://app.parenthese.io/?lang=fr')).toBe('https://app.parenthese.io/?lang=fr')
     expect(frenchTypography('?')).toBe('?')
+  })
+
+  it('choisit la langue : adresse, puis choix mémorisé, puis navigateur, anglais à défaut', () => {
+    expect(pickLocale({ fromUrl: 'en', stored: 'fr', languages: ['fr'] })).toBe('en')
+    expect(pickLocale({ fromUrl: 'xx', stored: 'fr', languages: ['en'] })).toBe('fr')
+    expect(pickLocale({ stored: 'xx', languages: ['fr-CA'] })).toBe('fr')
+    expect(pickLocale({ languages: ['en-US', 'fr'] })).toBe('fr')
+    expect(pickLocale({ languages: ['en-US'] })).toBe('en')
+    expect(pickLocale({ languages: ['ja', 'es-ES'] })).toBe('en')
+    expect(pickLocale()).toBe('en')
+  })
+
+  it('retombe sur l’anglais puis sur le français pour un texte non traduit', () => {
+    LANGUAGES.xx = { name: 'Test', region: 'en-GB', dictionary: { 'Bonjour': 'Hallo' } }
+    try {
+      expect(translate('xx', 'Bonjour')).toBe('Hallo')
+      expect(translate('xx', 'Mot de passe')).toBe(LANGUAGES.en.dictionary['Mot de passe'])
+      expect(translate('xx', 'Texte inconnu ?')).toBe('Texte inconnu ?')
+      expect(translate('fr', 'Texte inconnu ?')).toBe('Texte inconnu\u202F?')
+    } finally {
+      delete LANGUAGES.xx
+    }
   })
 })
