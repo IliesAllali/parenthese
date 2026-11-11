@@ -33,7 +33,11 @@ export function chainGap(a, b, spacing) {
   const compactUnion = a?._compact && a._type === 'union' ? a : b?._compact && b._type === 'union' ? b : null
   if (!compactUnion) return spacing
   const other = compactUnion === a ? b : a
-  return other?._compact ? 0 : COMPACT_JOIN_GAP
+  if (other?.id === compactUnion._compactLone) return 0
+  if (other?.id === compactUnion._compactPartner) return COMPACT_JOIN_GAP
+  // Plusieurs conjoints isolés à la suite : le voisin n'est pas ce couple, l'écart normal laisse la place
+  // aux noms et aux dates (sinon les petits portraits s'enchaînaient à 40 px, libellés les uns sur les autres)
+  return spacing
 }
 
 function makePairKey(a, b) {
@@ -355,6 +359,7 @@ export function computeLayout(graphData = null, referenceId = null) {
   const isLoneSpouse = (pid) => !linkedByFiliation.has(pid) && unionCount.get(pid) === 1
   const compactPartnerOf = new Map() // conjoint isolé → partenaire
   const compactUnionIds = new Map() // union de conjoint isolé → partenaire
+  const compactLoneOfUnion = new Map() // union de conjoint isolé → le conjoint isolé
   unions.forEach(u => {
     if (!u.partner1Id || !u.partner2Id) return
     let lone = null, partner = null
@@ -363,6 +368,7 @@ export function computeLayout(graphData = null, referenceId = null) {
     if (!lone) return
     compactPartnerOf.set(lone, partner)
     compactUnionIds.set(`u-${u.id}`, `p-${partner}`)
+    compactLoneOfUnion.set(`u-${u.id}`, `p-${lone}`)
   })
 
   // ----------------------------------------------------------
@@ -522,7 +528,7 @@ export function computeLayout(graphData = null, referenceId = null) {
       for (const { unionElkId, otherKey } of neighbors) {
         pushNode({
           id: unionElkId, width: compactUnionIds.has(unionElkId) ? 0 : UNION_W, height: UNION_H,
-          ...(compactUnionIds.has(unionElkId) ? { _compact: true, _compactPartner: compactUnionIds.get(unionElkId) } : {}),
+          ...(compactUnionIds.has(unionElkId) ? { _compact: true, _compactPartner: compactUnionIds.get(unionElkId), _compactLone: compactLoneOfUnion.get(unionElkId) } : {}),
           _type: 'union',
           _data: unionEntryByElkId.get(unionElkId) || { id: unionElkId },
           _generation: gen,
