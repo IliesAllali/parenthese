@@ -16,7 +16,7 @@ import PortraitCropModal from './PortraitCropModal.jsx'
 import { imagePlacement } from '../utils/portraitCrop.js'
 import { t, dateLocale } from '../i18n/index.js'
 import { formatPlace } from '../utils/place.js'
-import { firstNameLabel, fullNameLabel, isFirstNameUnknown } from '../utils/personName.js'
+import { firstNameLabel, fullNameLabel, isFirstNameUnknown, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
 import { isYearOnly } from '../utils/dateInput.js'
 import { ageInYears } from '../utils/age.js'
 import DateField from './DateField.jsx'
@@ -589,7 +589,7 @@ const PersonCard = ({
   }
 
   // Rendu d'un champ éditable ou lecture seule
-  const renderEditableValue = ({ field, value, placeholder, type = 'text', format = null, emptyLabel = '-' }) => {
+  const renderEditableValue = ({ field, value, placeholder, type = 'text', format = null, emptyLabel = '-', caps = false }) => {
     if (!editMode) {
       const isEmptyValue = value === null || value === undefined || value === ''
       // Une date complète se lit « 22 octobre 1928 », une année seule « 1928 », pas « 1 janvier 1928 »
@@ -613,7 +613,7 @@ const PersonCard = ({
     return (
       <input
         type={type}
-        className="pc-input value--editable"
+        className={`pc-input value--editable${caps && isSurnameUppercase() ? ' pz-caps' : ''}`}
         value={getEditValue(field, value)}
         onChange={(e) => handleFieldChange(field, e.target.value)}
         placeholder={placeholder || '...'}
@@ -759,7 +759,7 @@ const PersonCard = ({
               />
               <input
                 type="text"
-                className="pc-input pc-input--name pc-input--last"
+                className={`pc-input pc-input--name pc-input--last${isSurnameUppercase() ? ' pz-caps' : ''}`}
                 value={getEditValue('lastName', person.lastName)}
                 onChange={(e) => {
                   setLastNameMissing(false)
@@ -774,7 +774,7 @@ const PersonCard = ({
           ) : (
             <h2 className="pc-name">
               {isFirstNameUnknown(person) ? <span className="pc-name-unknown">{firstNameLabel(person)}</span> : person.firstName}
-              {person.lastName && <>{' '}<em>{person.lastName}</em></>}
+              {person.lastName && <>{' '}<em>{surnameLabel(person.lastName)}</em></>}
             </h2>
           )}
           {!editMode && metaItems.length > 0 && (
@@ -972,7 +972,7 @@ const PersonCard = ({
               <div className="pc-rows">
                 {infoRow('birthYear', t('Naissance'), birthFilled, renderEditableValue({ field: 'birthYear', value: person.birthDate || person.birthYear, placeholder: t('Date de naissance'), type: 'date' }), true)}
                 {infoRow('birthPlace', t('Lieu'), isFilled(getEditValue('birthPlace', person.birthPlace)), renderEditableValue({ field: 'birthPlace', value: person.birthPlace || '', placeholder: t('Lieu de naissance'), format: formatPlace }))}
-                {infoRow('birthName', t('Nom de naissance'), isFilled(getEditValue('birthName', person.birthName)), renderEditableValue({ field: 'birthName', value: person.birthName || '', placeholder: t('Nom de naissance') }))}
+                {infoRow('birthName', t('Nom de naissance'), isFilled(getEditValue('birthName', person.birthName)), renderEditableValue({ field: 'birthName', value: person.birthName || '', placeholder: t('Nom de naissance'), format: surnameLabel, caps: true }))}
                 {infoRow('nickname', t('Surnom'), isFilled(getEditValue('nickname', person.nickname)), renderEditableValue({ field: 'nickname', value: person.nickname || '', placeholder: t('Surnom') }))}
                 {editMode && (
                   <div className="pc-row pc-row--seg" data-pc-field="sex">
@@ -1068,7 +1068,7 @@ const PersonCard = ({
                           const partnerId = u.partner1Id === person.id ? u.partner2Id : u.partner1Id
                           const partner = persons.find(p => p.id === partnerId)
                           const yearRange = u.startYear ? (u.endYear ? `${u.startYear}–${u.endYear}` : t('depuis {year}', { year: u.startYear })) : ''
-                          return `${partner ? firstNameLabel(partner) : '?'} ${partner?.lastName || ''}${yearRange ? ` (${yearRange})` : ''}`
+                          return `${partner ? firstNameLabel(partner) : '?'} ${surnameLabel(partner?.lastName)}${yearRange ? ` (${yearRange})` : ''}`
                         }).join(', ')}
                       </span>
                     </div>
@@ -1359,7 +1359,7 @@ const RelationSearchInline = forwardRef(function RelationSearchInline(
                 <span className="pc-rel-avatar" aria-hidden="true">
                   {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : <span>{p.firstName[0]}</span>}
                 </span>
-                <span className="pc-rel-name">{firstNameLabel(p)} <em>{p.lastName || ''}</em></span>
+                <span className="pc-rel-name">{firstNameLabel(p)} <em>{surnameLabel(p.lastName)}</em></span>
                 {p.birthYear && <span className="pc-rel-meta">{p.birthYear}</span>}
               </button>
             </li>

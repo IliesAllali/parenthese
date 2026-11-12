@@ -74,6 +74,7 @@ const patchTreeSettingsSchema = z
   .object({
     memberContributionPolicy: z.enum(['direct', 'pending']).optional(),
     contributorPolicy: z.enum(['direct', 'pending']).optional(),
+    surnameUppercase: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'at_least_one_setting_required',
@@ -1177,10 +1178,12 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         memberContributionPolicy: payload.data.memberContributionPolicy ?? 'pending',
         visitorPolicy: 'read_only',
         contributorPolicy: payload.data.contributorPolicy ?? 'pending',
+        surnameUppercase: payload.data.surnameUppercase ?? false,
       },
       update: {
         memberContributionPolicy: payload.data.memberContributionPolicy,
         contributorPolicy: payload.data.contributorPolicy,
+        surnameUppercase: payload.data.surnameUppercase,
       },
     })
 

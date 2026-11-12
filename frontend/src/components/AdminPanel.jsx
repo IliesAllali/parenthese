@@ -43,6 +43,8 @@ const AdminPanel = ({
   onFamilyTabsChange = null,
   fullNames = false,
   onFullNamesChange = null,
+  surnameUppercase = false,
+  onSurnameUppercaseChange = null,
   visible,
   treeId,
   authToken,
@@ -72,6 +74,7 @@ const AdminPanel = ({
   // Contributions de la famille : 'pending' = validées par l'admin, 'direct' = appliquées immédiatement
   const [contributionPolicy, setContributionPolicy] = useState('pending')
   const [savingPolicy, setSavingPolicy] = useState(false)
+  const [savingSurnames, setSavingSurnames] = useState(false)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -174,6 +177,23 @@ const AdminPanel = ({
       setErrorMessage(t("Impossible d'enregistrer ce réglage."))
     } finally {
       setSavingPolicy(false)
+    }
+  }
+
+  // Réglage de l'arbre, pas du navigateur : toute la famille voit les noms comme les gestionnaires l'ont choisi
+  const handleSurnameUppercaseChange = async (on) => {
+    if (!treeId || !authToken || savingSurnames) return
+    onSurnameUppercaseChange?.(on)
+    setSavingSurnames(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      await updateTreeSettings(treeId, { surnameUppercase: on }, authToken)
+    } catch {
+      onSurnameUppercaseChange?.(!on)
+      setErrorMessage(t("Impossible d'enregistrer ce réglage."))
+    } finally {
+      setSavingSurnames(false)
     }
   }
 
@@ -557,6 +577,19 @@ const AdminPanel = ({
                       <span className="ts-choice-text">
                         <strong>{t("Le nom de famille sous le prénom")}</strong>
                         <small>{t("Le nom de naissance quand il est connu, sinon le nom d'usage. Réglage de ce navigateur.")}</small>
+                      </span>
+                    </label>
+                    <label className={`ts-choice ${surnameUppercase ? 'is-active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        name="surnameUppercase"
+                        checked={surnameUppercase}
+                        disabled={savingSurnames}
+                        onChange={(event) => handleSurnameUppercaseChange(event.target.checked)}
+                      />
+                      <span className="ts-choice-text">
+                        <strong>{t('Les noms de famille en capitales')}</strong>
+                        <small>{t('Jeanne MARTIN plutôt que Jeanne Martin, pour toute la famille. Les noms restent enregistrés comme ils ont été tapés.')}</small>
                       </span>
                     </label>
                   </fieldset>

@@ -414,6 +414,19 @@ describe('Graph routes', () => {
     expect(body.graph.persons[0].firstName).toBe('Alice')
     expect(body.graph.unions).toHaveLength(0)
     expect(body.graph.filiations).toHaveLength(0)
+    expect(body.display).toEqual({ surnameUppercase: false })
+    await app.close()
+  })
+
+  it('envoie le réglage des noms en capitales avec le graphe, à tous ceux qui l ouvrent', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeSettings.findUnique.mockResolvedValue({ surnameUppercase: true })
+
+    const response = await app.inject({ method: 'GET', url: '/trees/tree-1/graph', headers: { authorization: `Bearer ${token}` } })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json().display).toEqual({ surnameUppercase: true })
     await app.close()
   })
 

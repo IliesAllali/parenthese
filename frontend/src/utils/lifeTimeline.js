@@ -6,7 +6,7 @@
 // enfant), limitée aux années où la personne a vécu. Une fiche sans aucun événement a donc déjà une frise.
 
 import { t, dateLocale } from '../i18n/index.js'
-import { firstNameLabel } from './personName.js'
+import { firstNameLabel, surnameLabel } from './personName.js'
 import { formatPlace } from './place.js'
 import { ageInYears } from './age.js'
 
@@ -62,7 +62,7 @@ const yearOf = (value) => {
   return match ? Number(match[1]) : null
 }
 
-const fullName = (p) => [p?.firstName, p?.lastName].filter(Boolean).join(' ')
+const fullName = (p) => [p?.firstName, surnameLabel(p?.lastName)].filter(Boolean).join(' ')
 
 // « 12 mars » pour une date complète, rien pour une année seule (stockée au 1er janvier)
 function dayMonth(value) {
