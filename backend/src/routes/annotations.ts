@@ -4,20 +4,13 @@ import { z } from 'zod'
 
 import {
   InvalidAnnotationContentError,
-  sanitizeAnnotationContentForRead,
   sanitizeAnnotationContentForWrite,
 } from '../lib/annotation-content.js'
 import { UPLOAD_BODY_LIMIT } from '../config/env.js'
-import { canReadTree } from '../lib/tree-access.js'
 import type { MembershipRole } from '../types/auth.js'
 
 const treeIdParamSchema = z.object({
   id: z.string().min(1),
-})
-
-const annotationParamsSchema = z.object({
-  id: z.string().min(1),
-  annotationId: z.string().min(1),
 })
 
 // Bornes : sans elles, un envoi groupé de 12 Mo par requête et sans limite de fréquence remplissait la base
@@ -39,18 +32,6 @@ const createAnnotationSchema = z.object({
   style: styleSchema.optional(),
   zIndex: z.number().int().optional(),
 })
-
-const patchAnnotationSchema = z
-  .object({
-    x: z.number().optional(),
-    y: z.number().optional(),
-    content: z.string().min(1).max(50000).optional(),
-    style: styleSchema.optional(),
-    zIndex: z.number().int().optional(),
-  })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'at_least_one_field_required',
-  })
 
 const batchAnnotationSchema = z.object({
   create: z.array(createAnnotationSchema).max(MAX_BATCH_ITEMS).optional().default([]),
@@ -117,167 +98,6 @@ async function exceedsAnnotationCap(app: FastifyInstance, treeId: string, incomi
 }
 
 export const annotationRoutes: FastifyPluginAsync = async (app) => {
-  // CREATE annotation
-  app.post('/trees/:id/annotations', { config: { rateLimit: ANNOTATION_RATE_LIMIT } }, async (request, reply) => {
-    const user = requireUser(request, reply)
-    if (!user) return
-
-    const params = treeIdParamSchema.safeParse(request.params)
-    if (!params.success) return reply.code(400).send({ error: 'invalid_tree_id' })
-
-    const payload = createAnnotationSchema.safeParse(request.body)
-    if (!payload.success) return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
-
-    const membership = await getAdminMembership(app, user.userId, params.data.id)
-    if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
-
-    if (await exceedsAnnotationCap(app, params.data.id, 1)) return reply.code(413).send({ error: 'annotation_limit_reached' })
-
-    const content = cleanContent(payload.data.content, params.data.id)
-    if (content === null) return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
-
-    const annotation = await app.prisma.annotation.create({
-      data: {
-        treeId: params.data.id,
-        type: payload.data.type,
-        x: payload.data.x,
-        y: payload.data.y,
-        content,
-        style: (payload.data.style ?? {}) as Prisma.InputJsonValue,
-        zIndex: payload.data.zIndex ?? 0,
-        createdBy: user.userId,
-      },
-    })
-
-    await app.prisma.auditLog.create({
-      data: {
-        treeId: params.data.id,
-        actorType: 'user',
-        actorId: user.userId,
-        action: 'annotation_created',
-        entityType: 'annotation',
-        entityId: annotation.id,
-        payloadJson: { type: annotation.type },
-      },
-    })
-
-    return reply.code(201).send({ annotation })
-  })
-
-  // LIST annotations
-  app.get('/trees/:id/annotations', async (request, reply) => {
-    const params = treeIdParamSchema.safeParse(request.params)
-    if (!params.success) return reply.code(400).send({ error: 'invalid_tree_id' })
-
-    if (!request.actor) return reply.code(401).send({ error: 'authentication_required' })
-    if (!(await canReadTree(app, params.data.id, request.actor))) return reply.code(403).send({ error: 'forbidden' })
-
-    const annotations = await app.prisma.annotation.findMany({
-      where: {
-        treeId: params.data.id,
-        deletedAt: null,
-      },
-      orderBy: [{ zIndex: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
-    })
-
-    return reply.send({
-      annotations: annotations.map((annotation) => ({ ...annotation, content: sanitizeAnnotationContentForRead(annotation.content) })),
-    })
-  })
-
-  // UPDATE annotation
-  app.patch('/trees/:id/annotations/:annotationId', async (request, reply) => {
-    const user = requireUser(request, reply)
-    if (!user) return
-
-    const params = annotationParamsSchema.safeParse(request.params)
-    if (!params.success) return reply.code(400).send({ error: 'invalid_params' })
-
-    const payload = patchAnnotationSchema.safeParse(request.body)
-    if (!payload.success) return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
-
-    const membership = await getAdminMembership(app, user.userId, params.data.id)
-    if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
-
-    const data: Record<string, unknown> = {}
-    if (payload.data.x !== undefined) data.x = payload.data.x
-    if (payload.data.y !== undefined) data.y = payload.data.y
-    if (payload.data.content !== undefined) {
-      const content = cleanContent(payload.data.content, params.data.id)
-      if (content === null) return reply.code(400).send({ error: 'invalid_annotation_photo_path' })
-      data.content = content
-    }
-    if (payload.data.style !== undefined) data.style = payload.data.style
-    if (payload.data.zIndex !== undefined) data.zIndex = payload.data.zIndex
-
-    const updated = await app.prisma.annotation.updateMany({
-      where: {
-        id: params.data.annotationId,
-        treeId: params.data.id,
-        deletedAt: null,
-      },
-      data,
-    })
-
-    if (updated.count === 0) return reply.code(404).send({ error: 'annotation_not_found' })
-
-    const annotation = await app.prisma.annotation.findUnique({
-      where: { id: params.data.annotationId },
-    })
-
-    await app.prisma.auditLog.create({
-      data: {
-        treeId: params.data.id,
-        actorType: 'user',
-        actorId: user.userId,
-        action: 'annotation_updated',
-        entityType: 'annotation',
-        entityId: params.data.annotationId,
-        payloadJson: { changedFields: Object.keys(payload.data) },
-      },
-    })
-
-    return reply.send({ annotation })
-  })
-
-  // DELETE annotation (soft delete)
-  app.delete('/trees/:id/annotations/:annotationId', async (request, reply) => {
-    const user = requireUser(request, reply)
-    if (!user) return
-
-    const params = annotationParamsSchema.safeParse(request.params)
-    if (!params.success) return reply.code(400).send({ error: 'invalid_params' })
-
-    const membership = await getAdminMembership(app, user.userId, params.data.id)
-    if (!hasActiveAdminMembership(membership)) return reply.code(403).send({ error: 'forbidden' })
-
-    const deleted = await app.prisma.annotation.updateMany({
-      where: {
-        id: params.data.annotationId,
-        treeId: params.data.id,
-        deletedAt: null,
-      },
-      data: {
-        deletedAt: new Date(),
-      },
-    })
-
-    if (deleted.count === 0) return reply.code(404).send({ error: 'annotation_not_found' })
-
-    await app.prisma.auditLog.create({
-      data: {
-        treeId: params.data.id,
-        actorType: 'user',
-        actorId: user.userId,
-        action: 'annotation_deleted',
-        entityType: 'annotation',
-        entityId: params.data.annotationId,
-      },
-    })
-
-    return reply.send({ ok: true })
-  })
-
   // BATCH annotations (create + update + delete in one request)
   app.post('/trees/:id/annotations/batch', { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: ANNOTATION_RATE_LIMIT } }, async (request, reply) => {
     const user = requireUser(request, reply)

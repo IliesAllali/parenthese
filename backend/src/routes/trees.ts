@@ -79,12 +79,6 @@ const patchTreeSettingsSchema = z
     message: 'at_least_one_setting_required',
   })
 
-const listAuditQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-  action: z.string().min(1).max(120).optional(),
-})
-
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
 
 const createPersonSchema = z.object({
@@ -1124,73 +1118,6 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true })
   })
 
-  app.get('/trees/:id/stats', async (request, reply) => {
-    const user = requireUser(request, reply)
-    if (!user) {
-      return
-    }
-
-    const params = treeIdParamSchema.safeParse(request.params)
-    if (!params.success) {
-      return reply.code(400).send({ error: 'invalid_tree_id' })
-    }
-
-    const membership = await getAdminMembership(app, user.userId, params.data.id)
-    if (!hasActiveAdminMembership(membership)) {
-      return reply.code(403).send({ error: 'forbidden' })
-    }
-
-    const [persons, unions, links, medias, pendingContributions, totalContributions] = await Promise.all([
-      app.prisma.person.count({
-        where: {
-          treeId: params.data.id,
-          deletedAt: null,
-        },
-      }),
-      app.prisma.union.count({
-        where: {
-          treeId: params.data.id,
-          deletedAt: null,
-        },
-      }),
-      app.prisma.parentChildLink.count({
-        where: {
-          treeId: params.data.id,
-          deletedAt: null,
-        },
-      }),
-      app.prisma.mediaItem.count({
-        where: {
-          treeId: params.data.id,
-          status: 'approved',
-          deletedAt: null,
-        },
-      }),
-      app.prisma.contributionSession.count({
-        where: {
-          treeId: params.data.id,
-          status: 'pending',
-        },
-      }),
-      app.prisma.contributionSession.count({
-        where: {
-          treeId: params.data.id,
-        },
-      }),
-    ])
-
-    return reply.send({
-      stats: {
-        persons,
-        unions,
-        filiations: links,
-        medias,
-        pendingContributions,
-        totalContributions,
-      },
-    })
-  })
-
   app.get('/trees/:id/settings', async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
@@ -1270,46 +1197,6 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     })
 
     return reply.send({ settings })
-  })
-
-  app.get('/trees/:id/audit', async (request, reply) => {
-    const user = requireUser(request, reply)
-    if (!user) {
-      return
-    }
-
-    const params = treeIdParamSchema.safeParse(request.params)
-    if (!params.success) {
-      return reply.code(400).send({ error: 'invalid_tree_id' })
-    }
-
-    const query = listAuditQuerySchema.safeParse(request.query)
-    if (!query.success) {
-      return reply.code(400).send({ error: 'invalid_query', details: query.error.flatten() })
-    }
-
-    const membership = await getAdminMembership(app, user.userId, params.data.id)
-    if (!hasActiveAdminMembership(membership)) {
-      return reply.code(403).send({ error: 'forbidden' })
-    }
-
-    const logs = await app.prisma.auditLog.findMany({
-      where: {
-        treeId: params.data.id,
-        action: query.data.action,
-      },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      skip: query.data.offset,
-      take: query.data.limit + 1,
-    })
-
-    const hasMore = logs.length > query.data.limit
-    const items = hasMore ? logs.slice(0, query.data.limit) : logs
-
-    return reply.send({
-      logs: items,
-      nextOffset: hasMore ? query.data.offset + query.data.limit : null,
-    })
   })
 
   app.post('/trees/:id/persons', async (request, reply) => {
