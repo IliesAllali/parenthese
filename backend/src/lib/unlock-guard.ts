@@ -40,12 +40,6 @@ export function reserveTreeUnlockAttempt(treeId: string, now = Date.now()): (() 
   }
 }
 
-export function recordTreeUnlockFailure(treeId: string, now = Date.now()): void {
-  const recent = recentAttempts(treeId, now)
-  recent.push(now)
-  attemptsByTree.set(treeId, recent)
-}
-
 export function resetTreeUnlockGuard(): void {
   attemptsByTree.clear()
 }

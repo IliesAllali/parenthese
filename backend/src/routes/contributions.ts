@@ -1450,7 +1450,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
 
       const rejectedMediaIds: string[] = []
       const filesToRemove: string[] = []
-      const { updatedSession, approvedCount, rejectedCount, conflictCount, status } = await app.prisma.$transaction(async (tx) => {
+      const { updatedSession, approvedCount, rejectedCount, conflictCount } = await app.prisma.$transaction(async (tx) => {
         // Deux relectures simultanées : la seconde attend le verrou de la ligne, puis ne trouve plus
         // la session en attente. Sans ce verrou, les deux appliquaient les mêmes ajouts.
         const claimed = await tx.contributionSession.updateMany({

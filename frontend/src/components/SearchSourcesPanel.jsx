@@ -10,6 +10,7 @@ import { changesFromResult, personFromResult } from '../utils/searchResultChange
 import { fullNameLabel } from '../utils/personName.js'
 import Skeleton from './Skeleton.jsx'
 import PortraitThumb from './PortraitThumb.jsx'
+import { withEmphasis } from '../utils/richText.jsx'
 
 // Ce que chaque source interrogée couvre et ce qui part vers elle : affiché avant qu'on coche
 const SOURCE_INFO = {
@@ -84,12 +85,6 @@ function personYears(person) {
   const birth = person.birthYear || person.birthDate?.slice(0, 4)
   const death = person.deathYear || person.deathDate?.slice(0, 4)
   return [birth, death].filter(Boolean).join(' – ')
-}
-
-// Titre traduit : le passage entre <em> et </em> garde son italique (comme « Ajouter quelqu'un »)
-function withEmphasis(text) {
-  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
-  return <>{before}<em>{emphasized}</em>{after}</>
 }
 
 // Mêmes libellés que « Ajouter quelqu'un » : la nouvelle personne est parent, enfant… de quelqu'un de l'arbre

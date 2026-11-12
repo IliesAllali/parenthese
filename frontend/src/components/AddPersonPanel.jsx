@@ -9,12 +9,7 @@ import { SEX_CHOICES } from '../utils/personSex.js'
 import { initialOf } from '../utils/initial.js'
 import { findLikelyDuplicates } from '../utils/duplicates.js'
 import PortraitThumb from './PortraitThumb.jsx'
-
-// Titre traduit d'un bloc : le passage entre <em> et </em> garde son italique
-function withEmphasis(text) {
-  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
-  return <>{before}<em>{emphasized}</em>{after}</>
-}
+import { withEmphasis } from '../utils/richText.jsx'
 
 /**
  * Panneau slide-in gauche pour ajouter une personne

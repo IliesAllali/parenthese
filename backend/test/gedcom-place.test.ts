@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cleanGedcomPlace } from '../src/routes/gedcom'
+import { cleanGedcomPlace } from '../src/lib/gedcom-events'
 
 describe('lieu importé d’un GEDCOM', () => {
   it('Heredis : colonnes vides et code INSEE retirés', () => {

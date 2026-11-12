@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import PersonCard from './PersonCard.jsx'
 import AdminPanel from './AdminPanel.jsx'
-import TreeDropdown from './navbar/TreeDropdown.jsx'
 
 // Co-gestion (issue #145) et « Modifier » de la fiche : ce que chaque rôle voit. Les droits eux-mêmes sont tenus
 // par le serveur (backend/test/co-gestion.db.test.ts) ; ici, l'interface ne propose pas ce qui serait refusé.
@@ -21,12 +20,6 @@ describe('fiche, « Modifier » d’un clic', () => {
 })
 
 describe('co-gestionnaire dans les menus', () => {
-  it('le menu des arbres nomme le rôle « Co-gestionnaire », plus « Admin »', () => {
-    const html = renderToStaticMarkup(<TreeDropdown trees={[{ id: 't1', name: 'Arbre de démo', role: 'admin' }]} activeTreeId="t1" onSelect={noop} onCreate={noop} />)
-    expect(html).toContain('Co-gestionnaire')
-    expect(html).not.toContain('>Admin<')
-  })
-
   it('le panneau a un onglet Gestion', () => {
     const html = renderToStaticMarkup(<AdminPanel visible treeId="t1" authToken="x" isAdmin onClose={noop} />)
     expect(html).toContain('Gestion')

@@ -73,6 +73,19 @@ export function useAuth() {
     return { trees, lastOpenedTree: lastTree }
   }
 
+  // Session ouverte : jeton et profil gardés sur l'appareil, puis les arbres du compte
+  const openSession = async (token, user) => {
+    localStorage.setItem(USER_TOKEN_STORAGE_KEY, token)
+    saveUserProfile(user || null)
+    setUserAuth({ token, user })
+    await Promise.all([
+      loadAccountTrees(token),
+      fetchLastOpenedTree(token).then((lastTree) => {
+        if (lastTree) setLastOpenedTree(lastTree)
+      }).catch(() => {}),
+    ])
+  }
+
   const handleLogin = (email, password) => signIn(() => loginUser(email, password))
 
   // Retour d'une connexion OIDC : le jeton de passage devient une session, comme une connexion par mot de passe
@@ -89,15 +102,7 @@ export function useAuth() {
         ...(storedProfile && storedProfile.email === result.user?.email ? storedProfile : {}),
         ...(result.user || {}),
       }
-      localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
-      saveUserProfile(mergedUser || null)
-      setUserAuth({ token: result.token, user: mergedUser })
-      await Promise.all([
-        loadAccountTrees(result.token),
-        fetchLastOpenedTree(result.token).then((lastTree) => {
-          if (lastTree) setLastOpenedTree(lastTree)
-        }).catch(() => {}),
-      ])
+      await openSession(result.token, mergedUser)
       return true
     } catch (error) {
       setAccountError(getAccountErrorMessage(error))
@@ -117,15 +122,7 @@ export function useAuth() {
         ...(result.user || {}),
         firstName: firstName || result.user?.firstName || '',
       }
-      localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
-      saveUserProfile(mergedUser || null)
-      setUserAuth({ token: result.token, user: mergedUser })
-      await Promise.all([
-        loadAccountTrees(result.token),
-        fetchLastOpenedTree(result.token).then((lastTree) => {
-          if (lastTree) setLastOpenedTree(lastTree)
-        }).catch(() => {}),
-      ])
+      await openSession(result.token, mergedUser)
       return true
     } catch (error) {
       setAccountError(getAccountErrorMessage(error))

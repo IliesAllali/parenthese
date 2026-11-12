@@ -5,11 +5,11 @@ type Db = PrismaClient | Prisma.TransactionClient
 
 // Personnes identifiées sur un souvenir. La liste envoyée remplace la précédente : retirer quelqu'un, c'est
 // renvoyer la liste sans lui. Le point (x, y) est facultatif, en proportion de l'image (0 à 1), et va par paire.
-export const MAX_PEOPLE_PER_MEDIA = 50
+const MAX_PEOPLE_PER_MEDIA = 50
 
 const coordinate = z.number().min(0).max(1).nullable().optional()
 
-export const mediaPersonSchema = z
+const mediaPersonSchema = z
   .object({
     personId: z.string().min(1).max(64),
     x: coordinate,
@@ -26,15 +26,6 @@ export type MediaPerson = { personId: string; x: number | null; y: number | null
 
 export function normalizeMediaPeople(people: z.infer<typeof mediaPeopleSchema>): MediaPerson[] {
   return people.map((person) => ({ personId: person.personId, x: person.x ?? null, y: person.y ?? null }))
-}
-
-export async function readMediaPeople(db: Db, treeId: string, mediaId: string): Promise<MediaPerson[]> {
-  const tags = await db.mediaPersonTag.findMany({
-    where: { treeId, mediaId },
-    select: { personId: true, x: true, y: true },
-    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-  })
-  return tags
 }
 
 // Remplace les personnes d'un souvenir. Une personne supprimée entre l'envoi et la relecture est écartée

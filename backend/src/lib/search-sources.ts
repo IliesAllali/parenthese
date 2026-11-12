@@ -36,7 +36,7 @@ const TIMEOUT_MS = 10_000
 const MAX_RESULTS = 10
 const USER_AGENT = 'Parenthese (+https://parenthese.io)'
 
-export function normalizeName(value: string): string {
+function normalizeName(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z]+/g, ' ').trim()
 }
 
