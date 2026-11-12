@@ -9,6 +9,7 @@ import { t } from '../i18n/index.js'
 import ImmichAssetPicker from './ImmichAssetPicker.jsx'
 import { fetchImmichConfig } from '../api/immichApi.js'
 import { blurPlaceholder } from '../utils/blurhash.js'
+import { youtubeWatchUrl } from '../utils/youtube.js'
 
 const MEDIA_TYPES = [
   { value: 'photo', label: t('Photo'), Icon: Image },
@@ -24,7 +25,6 @@ const FAMILY_TYPES = ['photo', 'video', 'audio', 'citation', 'document']
 const TYPE_NAMES = { photo: t('Photo'), video: t('Vidéo'), audio: t('Voix'), citation: t('Citation'), document: t('Document'), geojson: t('Carte'), gpx: t('Trace GPX') }
 const TYPE_SHORT = { video: t('Vidéo'), audio: t('Voix'), citation: '«', document: t('Doc') }
 
-const YOUTUBE_RE = /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//
 const HTTP_URL_RE = /^https?:\/\/\S+$/i
 
 const MediaManagerPanel = ({
@@ -90,7 +90,7 @@ const MediaManagerPanel = ({
     }
 
     if (isYoutubeVideo) {
-      return YOUTUBE_RE.test(youtubeUrl.trim())
+      return youtubeWatchUrl(youtubeUrl) !== null
     }
 
     return Boolean(file)
@@ -134,7 +134,7 @@ const MediaManagerPanel = ({
         source: source.trim() || null,
         mediaType,
         citationText: citationText.trim(),
-        youtubeUrl: isYoutubeVideo ? youtubeUrl.trim() : null,
+        youtubeUrl: isYoutubeVideo ? youtubeWatchUrl(youtubeUrl) : null,
         submittedByLabel: canManage ? null : contributorName.trim(),
       })
     }
@@ -280,7 +280,9 @@ const MediaManagerPanel = ({
               <label htmlFor="mediaUploadYoutube">{t('Lien de la vidéo')}</label>
               <input
                 id="mediaUploadYoutube"
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="off"
                 value={youtubeUrl}
                 onChange={(event) => setYoutubeUrl(event.target.value)}
                 placeholder="https://www.youtube.com/watch?v=…"
