@@ -95,7 +95,7 @@ export const COPY = {
         {
           href: '/cousinade/',
           title: 'Organiser une cousinade',
-          text: 'Retrouver toutes les branches, fixer la date, collecter les souvenirs le jour même, et garder une trace que tout le monde retrouve.',
+          text: "Ce qu'est une cousinade, qui inviter, un modèle d'invitation, des jeux, et garder une trace de la journée que tout le monde retrouve.",
         },
         {
           href: '/raconter-histoire-de-famille/',
