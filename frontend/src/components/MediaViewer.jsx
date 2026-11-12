@@ -11,6 +11,7 @@ import {
 import './MediaViewer.css'
 import { t } from '../i18n/index.js'
 import { firstNameLabel } from '../utils/personName.js'
+import { youtubeEmbedUrl } from '../utils/youtube.js'
 import { eventTitle } from '../utils/lifeTimeline.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
 import { growFromTransform, takeOrigin } from '../utils/openOrigin.js'
@@ -343,20 +344,15 @@ const MediaViewer = ({
     }
 
     if (normalizedMimeType === 'video/youtube') {
-      // Extract YouTube video ID and build embed URL
-      const watchMatch = mediaUrl.match(/[?&]v=([^&]+)/)
-      const shortMatch = mediaUrl.match(/youtu\.be\/([^/?]+)/)
-      const videoId = (watchMatch?.[1] || shortMatch?.[1] || '').split(/[?#]/)[0]
-      // Un identifiant YouTube fait 11 caractères : tout le reste est refusé plutôt qu'intégré
-      if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
+      // Toute forme de lien YouTube (barre d'adresse, partage, intégration, Short) ; le reste est refusé plutôt qu'intégré
+      const embedUrl = youtubeEmbedUrl(mediaUrl)
+      if (!embedUrl) {
         return (
           <div className="media-video-container">
             <div className="media-video-text">{t('Lien YouTube invalide')}</div>
           </div>
         )
       }
-      // youtube-nocookie : pas de cookie YouTube tant que la vidéo n'est pas lancée
-      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}`
       return (
         <div className="media-video-container media-video-container--youtube">
           <iframe
