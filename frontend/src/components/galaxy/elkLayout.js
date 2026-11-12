@@ -357,6 +357,18 @@ export function computeLayout(graphData = null, referenceId = null) {
     for (const pid of [u.partner1Id, u.partner2Id]) unionCount.set(pid, (unionCount.get(pid) || 0) + 1)
   })
   const isLoneSpouse = (pid) => !linkedByFiliation.has(pid) && unionCount.get(pid) === 1
+  // Trois conjoints ou plus qui ont une famille dans l'arbre (enfants ou parents) : la personne est au milieu de ses
+  // conjoints (voir starOf, phase 3). Ses conjoints isolés y prennent leur place dans l'ordre des mariages, à leur
+  // taille. Des conjoints tous isolés restent en petit collés à elle (archétypes trois-petits-conjoints, #223).
+  const STAR_MIN = 3
+  const familySpouses = new Map()
+  unions.forEach(u => {
+    if (!u.partner1Id || !u.partner2Id) return
+    for (const [pid, other] of [[u.partner1Id, u.partner2Id], [u.partner2Id, u.partner1Id]]) {
+      if (!isLoneSpouse(other)) familySpouses.set(pid, (familySpouses.get(pid) || 0) + 1)
+    }
+  })
+  const starCenters = new Set([...familySpouses].filter(([, n]) => n >= STAR_MIN).map(([pid]) => pid))
   const compactPartnerOf = new Map() // conjoint isolé → partenaire
   const compactUnionIds = new Map() // union de conjoint isolé → partenaire
   const compactLoneOfUnion = new Map() // union de conjoint isolé → le conjoint isolé
@@ -365,7 +377,7 @@ export function computeLayout(graphData = null, referenceId = null) {
     let lone = null, partner = null
     if (isLoneSpouse(u.partner2Id)) { lone = u.partner2Id; partner = u.partner1Id }
     else if (isLoneSpouse(u.partner1Id) && !isLoneSpouse(u.partner2Id)) { lone = u.partner1Id; partner = u.partner2Id }
-    if (!lone) return
+    if (!lone || starCenters.has(partner)) return
     compactPartnerOf.set(lone, partner)
     compactUnionIds.set(`u-${u.id}`, `p-${partner}`)
     compactLoneOfUnion.set(`u-${u.id}`, `p-${lone}`)
@@ -484,7 +496,79 @@ export function computeLayout(graphData = null, referenceId = null) {
   const sortedGens = [...genNodeKeys.keys()].sort((a, b) => a - b)
   componentOrderPerGen = new Map()
 
+  function pushPersonKey(key, gen) {
+    if (key.startsWith('p-')) {
+      const person = personByElkId.get(key)
+      if (!person) return
+      const compactPartner = compactPartnerOf.get(person.id)
+      pushNode({
+        id: key, width: compactPartner ? COMPACT_W : PERSON_W, height: PERSON_H,
+        _type: 'person', _data: person, _generation: gen,
+        ...(compactPartner ? { _compact: true, _compactPartner: `p-${compactPartner}` } : {}),
+      })
+    } else if (key.startsWith('unknown-')) {
+      pushNode({
+        id: key, width: UNKNOWN_W, height: UNKNOWN_H,
+        _type: 'unknown', _data: { label: 'Inconnu' }, _generation: gen,
+      })
+    }
+  }
+
+  function pushUnionKey(unionElkId, gen) {
+    pushNode({
+      id: unionElkId, width: compactUnionIds.has(unionElkId) ? 0 : UNION_W, height: UNION_H,
+      ...(compactUnionIds.has(unionElkId) ? { _compact: true, _compactPartner: compactUnionIds.get(unionElkId), _compactLone: compactLoneOfUnion.get(unionElkId) } : {}),
+      _type: 'union',
+      _data: unionEntryByElkId.get(unionElkId) || { id: unionElkId },
+      _generation: gen,
+    })
+  }
+
+  // Une union se date par son mariage, sinon par son premier enfant, sinon elle vient après les autres
+  function unionYear(unionElkId) {
+    const u = unionsById.get(unionElkId.slice(2))
+    const own = u?.startYear ?? (u?.startDate ? parseInt(String(u.startDate).slice(0, 4), 10) : null)
+    if (Number.isFinite(own)) return own
+    const years = (childrenBySourceId.get(unionElkId) || []).map(k => personByElkId.get(k)).filter(Boolean).map(birthYear).filter(y => y != null)
+    return years.length ? Math.min(...years) : Number.MAX_SAFE_INTEGER
+  }
+
+  // Étoile : une personne et au moins trois conjoints qui n'ont qu'elle dans la rangée. Parcourue d'un bout à
+  // l'autre, la chaîne mettait la personne au deuxième rang et ses traits passaient derrière les conjoints suivants
+  // (arbre « tout emmêlé », 12/11). Ici ses premiers conjoints sont à sa gauche, les suivants à sa droite, dans
+  // l'ordre des mariages de gauche à droite, chaque union entre deux voisins. L'union d'un conjoint qui n'est pas à
+  // côté d'elle porte _jump (le nombre de portraits enjambés) : son trait passe au-dessus (renderers.js).
+  function starOf(component) {
+    const partnersIn = (key) => (adj.get(key) || []).filter(n => component.has(n.otherKey))
+    for (const key of component) {
+      if (!starCenters.has(personByElkId.get(key)?.id)) continue
+      const partners = partnersIn(key)
+      if (partners.length < STAR_MIN || partners.length !== component.size - 1) continue
+      if (!partners.every(({ otherKey }) => partnersIn(otherKey).length === 1)) continue
+      const ordered = [...partners].sort((a, b) => {
+        const dy = unionYear(a.unionElkId) - unionYear(b.unionElkId)
+        if (dy) return dy
+        return compareByOrderThenId(unionsById.get(a.unionElkId.slice(2)) || {}, unionsById.get(b.unionElkId.slice(2)) || {})
+      })
+      return { center: key, ordered }
+    }
+    return null
+  }
+
+  function pushStar({ center, ordered }, gen) {
+    const left = Math.floor(ordered.length / 2)
+    ordered.forEach(({ unionElkId }, i) => {
+      const entry = unionEntryByElkId.get(unionElkId)
+      if (entry) { entry._jump = i < left ? left - 1 - i : i - left; entry._hub = center }
+    })
+    for (let i = 0; i < left; i++) { pushPersonKey(ordered[i].otherKey, gen); pushUnionKey(ordered[i].unionElkId, gen) }
+    pushPersonKey(center, gen)
+    for (let i = left; i < ordered.length; i++) { pushUnionKey(ordered[i].unionElkId, gen); pushPersonKey(ordered[i].otherKey, gen) }
+  }
+
   function traverseChain(component, gen, chainVisited) {
+    const star = component.size > STAR_MIN ? starOf(component) : null
+    if (star) { pushStar(star, gen); return }
     // Choisir le point de départ (extrémité de la chaîne)
     const leaves = [...component].filter(key =>
       (adj.get(key) || []).filter(n => component.has(n.otherKey)).length <= 1
@@ -505,34 +589,13 @@ export function computeLayout(graphData = null, referenceId = null) {
       if (chainVisited.has(key)) return
       chainVisited.add(key)
 
-      if (key.startsWith('p-')) {
-        const person = personByElkId.get(key)
-        if (person) {
-          const compactPartner = compactPartnerOf.get(person.id)
-          pushNode({
-            id: key, width: compactPartner ? COMPACT_W : PERSON_W, height: PERSON_H,
-            _type: 'person', _data: person, _generation: gen,
-            ...(compactPartner ? { _compact: true, _compactPartner: `p-${compactPartner}` } : {}),
-          })
-        }
-      } else if (key.startsWith('unknown-')) {
-        pushNode({
-          id: key, width: UNKNOWN_W, height: UNKNOWN_H,
-          _type: 'unknown', _data: { label: 'Inconnu' }, _generation: gen,
-        })
-      }
+      pushPersonKey(key, gen)
 
       const neighbors = (adj.get(key) || [])
         .filter(n => component.has(n.otherKey) && !chainVisited.has(n.otherKey))
 
       for (const { unionElkId, otherKey } of neighbors) {
-        pushNode({
-          id: unionElkId, width: compactUnionIds.has(unionElkId) ? 0 : UNION_W, height: UNION_H,
-          ...(compactUnionIds.has(unionElkId) ? { _compact: true, _compactPartner: compactUnionIds.get(unionElkId), _compactLone: compactLoneOfUnion.get(unionElkId) } : {}),
-          _type: 'union',
-          _data: unionEntryByElkId.get(unionElkId) || { id: unionElkId },
-          _generation: gen,
-        })
+        pushUnionKey(unionElkId, gen)
         traverse(otherKey)
       }
     }
