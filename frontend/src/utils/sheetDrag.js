@@ -7,10 +7,10 @@ export const PHONE_QUERY = '(max-width: 767px), (pointer: coarse)'
 export const SHEET_WIDTH_QUERY = '(max-width: 768px)'
 
 // Distance avant de trancher entre glisser vertical, horizontal et tap
-export const DIRECTION_LOCK_PX = 8
+const DIRECTION_LOCK_PX = 8
 // Lâcher rapide vers le bas : vitesse en px/ms, et course minimale pour qu'il compte
-export const FLICK_VELOCITY = 0.6
-export const FLICK_MIN_OFFSET = 24
+const FLICK_VELOCITY = 0.6
+const FLICK_MIN_OFFSET = 24
 // Deux points plus espacés que ça ne donnent pas une vitesse fiable
 const VELOCITY_WINDOW_MS = 120
 

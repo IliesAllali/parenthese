@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiRequest } from './client'
+import { API_BASE_URL, apiRequest, bearer } from './client'
 
 export async function loginUser(email, password) {
   const data = await apiRequest('/auth/login', {
@@ -22,9 +22,7 @@ export async function registerUser(firstName, email, password, invitationToken) 
 export async function logoutUser(token) {
   const data = await apiRequest('/auth/logout', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -34,9 +32,7 @@ export async function logoutUser(token) {
 export async function deleteAccount(token, confirmation) {
   const data = await apiRequest('/auth/me', {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(confirmation),
   })
 
@@ -47,9 +43,7 @@ export async function deleteAccount(token, confirmation) {
 export async function fetchAccountProfile(token) {
   const data = await apiRequest('/auth/me', {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -58,9 +52,7 @@ export async function fetchAccountProfile(token) {
 export async function fetchLastOpenedTree(token) {
   const data = await apiRequest('/auth/me/last-tree', {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data?.lastTree || null
@@ -69,9 +61,7 @@ export async function fetchLastOpenedTree(token) {
 export async function updateLastOpenedTree(token, payload) {
   const data = await apiRequest('/auth/me/last-tree', {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -92,9 +82,7 @@ export function oidcStartUrl(returnTo = '/') {
 export async function requestOidcLinkTicket(token) {
   const data = await apiRequest('/auth/oidc/link', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data?.ticket

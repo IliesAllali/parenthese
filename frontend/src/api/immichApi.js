@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiRequest } from './client.js'
+import { API_BASE_URL, apiRequest, bearer } from './client.js'
 
 // Reconnaissance des visages : la connexion Immich est propre à chaque arbre, configurée par
 // ses administrateurs. L'adresse est choisie parmi celles autorisées par l'opérateur du
@@ -7,7 +7,7 @@ import { API_BASE_URL, apiRequest } from './client.js'
 
 function withAuth(options = {}, token) {
   if (!token) return options
-  return { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` } }
+  return { ...options, headers: { ...(options.headers || {}), ...bearer(token) } }
 }
 
 export function getImmichErrorMessage(error, t) {
@@ -38,7 +38,7 @@ export function listImmichAssets(treeId, token, page = 1, type = 'IMAGE', { quer
 
 export async function fetchImmichAsset(treeId, assetId, token, variant = 'thumbnail', signal) {
   const response = await fetch(`${API_BASE_URL}/trees/${encodeURIComponent(treeId)}/immich/assets/${encodeURIComponent(assetId)}/${variant}`, {
-    headers: { Authorization: `Bearer ${token}` }, signal,
+    headers: bearer(token), signal,
   })
   if (!response.ok) {
     const error = new Error('immich_asset_failed')
@@ -106,7 +106,7 @@ export async function fetchImmichLink(treeId, personId, token) {
 export async function fetchImmichThumbnail(treeId, immichPersonId, token) {
   const path = `/trees/${encodeURIComponent(treeId)}/immich/thumbnail/${encodeURIComponent(immichPersonId)}`
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: token ? bearer(token) : {},
   })
   if (!response.ok) {
     throw new Error(`immich_thumbnail_failed_${response.status}`)

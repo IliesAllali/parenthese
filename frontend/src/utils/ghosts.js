@@ -118,7 +118,7 @@ export function ghostsFromChanges(changes = [], meta = {}, graph = {}) {
   return { persons, unions, filiations, annotations, patches }
 }
 
-export function emptyGhosts() {
+function emptyGhosts() {
   return { persons: [], unions: [], filiations: [], annotations: [], patches: new Map() }
 }
 

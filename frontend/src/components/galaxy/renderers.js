@@ -101,9 +101,9 @@ function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData, s
 // commune à la fratrie, chaque enfant s'en détache par une courbe.
 // Coins arrondis de rayon fixe (accolade franche, forme A).
 // ============================================================
-export const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
+const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
 // Proposé, pas encore relu (utils/ghosts.js) : pointillés terracotta, portrait délavé, étiquette au-dessus
-export const GHOST = { color: '#D2694A', dash: [5, 4], wash: 'rgba(251, 250, 247, 0.55)', annotationAlpha: 0.45 }
+const GHOST = { color: '#D2694A', dash: [5, 4], wash: 'rgba(251, 250, 247, 0.55)', annotationAlpha: 0.45 }
 const GHOST_LABELS = { draft: () => t('Brouillon'), sent: () => t('En attente'), pending: () => t('Proposé') }
 // Ligne de la fratrie : sous les prénoms et années des parents, au-dessus des enfants
 const BUS_DY = 100
@@ -1505,43 +1505,5 @@ function drawActiveDrawingPath(ctx, pathData) {
     ctx.lineTo(pathData.points[i].x, pathData.points[i].y)
   }
   ctx.stroke()
-  ctx.restore()
-}
-
-// ============================================================
-// Badge lien de parenté
-// ============================================================
-export function drawPathLabel(ctx, pathLabelRef, pathLabelAlpha, pathNodesRef, posMap) {
-  if (!pathLabelRef || pathLabelAlpha <= 0.02) return
-
-  const personNodesOnPath = pathNodesRef.filter(id => id.startsWith('p-'))
-  if (personNodesOnPath.length < 2) return
-
-  const midIdx = Math.floor(personNodesOnPath.length / 2)
-  const midPos1 = posMap.get(personNodesOnPath[midIdx - 1])
-  const midPos2 = posMap.get(personNodesOnPath[midIdx])
-  if (!midPos1 || !midPos2) return
-
-  const labelX = (midPos1.cx + midPos2.cx) / 2
-  const labelY = (midPos1.cy + midPos2.cy) / 2 - 20
-
-  ctx.save()
-  ctx.globalAlpha = pathLabelAlpha * 0.9
-
-  ctx.font = '500 11px "DM Sans", system-ui, sans-serif'
-  const metrics = ctx.measureText(pathLabelRef)
-  const pillW = metrics.width + 16
-  const pillH = 22
-
-  ctx.fillStyle = 'rgba(42, 38, 34, 0.85)'
-  ctx.beginPath()
-  ctx.roundRect(labelX - pillW / 2, labelY - pillH / 2, pillW, pillH, pillH / 2)
-  ctx.fill()
-
-  ctx.fillStyle = '#FFFFFF'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(pathLabelRef, labelX, labelY)
-
   ctx.restore()
 }

@@ -24,9 +24,9 @@ import DraftRestoreBanner from './components/DraftRestoreBanner'
 import AddPersonPanel from './components/AddPersonPanel'
 import SearchSourcesPanel from './components/SearchSourcesPanel.jsx'
 import ContributionSessionModal from './components/ContributionSessionModal'
-import { ContextualNavbar } from './components/navbar'
+import ContextualNavbar from './components/navbar/ContextualNavbar'
 import ZoomControl from './components/ZoomControl'
-import { ExpandableSearch } from './components/search'
+import ExpandableSearch from './components/search/ExpandableSearch'
 import { t, dateLocale } from './i18n/index.js'
 import {
   createParentChildLink,

@@ -355,28 +355,6 @@ export function getPersonById(personId) {
   return personsById.get(String(personId)) || null
 }
 
-export function upsertPersonFromGraphPayload(person) {
-  if (!person?.id) {
-    return null
-  }
-
-  const index = persons.findIndex((candidate) => String(candidate.id) === String(person.id))
-  const current = index >= 0 ? persons[index] : null
-  const localPerson = mapRemotePersonToLocal(person, current)
-
-  if (index >= 0) {
-    persons = [
-      ...persons.slice(0, index),
-      localPerson,
-      ...persons.slice(index + 1),
-    ]
-  } else {
-    persons = [...persons, localPerson]
-  }
-
-  return localPerson
-}
-
 export function getParents(personId) {
   const fil = filiations.filter((filiation) => filiation.childId === personId)
   const result = []
@@ -436,18 +414,6 @@ export function getPersonUnions(personId) {
   return unions
     .filter((union) => union.partner1Id === personId || union.partner2Id === personId)
     .sort((a, b) => a.displayOrder - b.displayOrder)
-}
-
-export function getUnionChildren(unionId) {
-  return filiations
-    .filter((filiation) => filiation.unionId === unionId)
-    .sort((a, b) => a.displayOrder - b.displayOrder)
-    .map((filiation) => persons.find((person) => person.id === filiation.childId))
-    .filter(Boolean)
-}
-
-export function getChildFiliation(childId) {
-  return filiations.find((filiation) => filiation.childId === childId) || null
 }
 
 // ---- Annotations helpers ----

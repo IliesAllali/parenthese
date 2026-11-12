@@ -7,10 +7,6 @@ export function setMediaToken(token) {
   currentMediaToken = typeof token === 'string' ? token : ''
 }
 
-export function getMediaToken() {
-  return currentMediaToken
-}
-
 // Adresse d'un fichier servi par l'API. Une adresse externe (YouTube) ne reçoit jamais de jeton.
 export function buildMediaUrl(pathOrUrl, apiBaseUrl = '', token = currentMediaToken) {
   if (!pathOrUrl) {

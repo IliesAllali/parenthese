@@ -2,14 +2,14 @@
 // (1 = l'image entière recouvre le cadre, 4 = gros plan). Null = cadrage par défaut (centré, zoom 1).
 // Ce module ne fait que des calculs : l'éditeur, la fiche et le canevas s'y réfèrent tous.
 
-export const CROP_MAX_ZOOM = 4
+const CROP_MAX_ZOOM = 4
 export const DEFAULT_CROP = { x: 0.5, y: 0.5, zoom: 1 }
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 // Formes qu'on choisit au recadrage, gardées dans le cadrage (crop.shape). Sans choix, la forme suit la photo
 // (très large ou très haute) ou le cadre tiré au hasard pour la personne.
-export const FRAME_SHAPES = ['round', 'square', 'polaroid', 'portrait', 'landscape']
+const FRAME_SHAPES = ['round', 'square', 'polaroid', 'portrait', 'landscape']
 export const cropShape = (crop) => (FRAME_SHAPES.includes(crop?.shape) ? crop.shape : null)
 
 // Forme du cadre dans le canevas : même règle que resolveFrameType et drawFrame (renderers.js).

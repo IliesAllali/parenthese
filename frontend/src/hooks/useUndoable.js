@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Délai pendant lequel une suppression reste annulable avant de partir au serveur
-export const UNDO_DELAY_MS = 6000
+const UNDO_DELAY_MS = 6000
 
 // Une suppression annulable à la fois. L'écran change tout de suite ; la requête ne part qu'à la fin du délai,
 // à la suppression suivante, ou à la fermeture de la page (fetch keepalive).
