@@ -74,7 +74,7 @@ describe.skipIf(!TEST_DB)('propositions de la famille sur l\'arbre, vraie base',
   const photoAnnotation = (photoPath: string) => ({ type: 'photo', x: 10, y: 20, content: JSON.stringify({ photoPath, width: 1, height: 1 }), style: {}, zIndex: 1 })
   const propose = (token: string, changes: unknown[]) => call('POST', `/trees/${treeId}/contributions/sessions`, token, { title: 'Proposition de la famille', submittedByLabel: 'Cousine', changes })
   const review = (sessionId: string, decision: 'approved' | 'rejected') => call('POST', `/trees/${treeId}/contributions/sessions/${sessionId}/review`, owner.token, { decision })
-  const annotations = async () => (await call('GET', `/trees/${treeId}/annotations`, owner.token)).body.annotations as Array<{ id: string; type: string; content: string }>
+  const annotations = async () => (await call('GET', `/trees/${treeId}/graph`, owner.token)).body.graph.annotations as Array<{ id: string; type: string; content: string }>
   const fileOf = async (photoId: string) => (await prisma.annotationPhotoUpload.findUnique({ where: { id: photoId } }))?.filePath
 
   it("personne d'extérieur ne pose une photo : sans jeton 401, un compte sans lien avec l'arbre 403", async () => {

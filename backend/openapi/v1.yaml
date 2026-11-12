@@ -155,46 +155,6 @@ components:
           type: string
           format: date-time
       required: [treeId, memberContributionPolicy, visitorPolicy, contributorPolicy]
-    TreeStats:
-      type: object
-      properties:
-        persons:
-          type: integer
-        unions:
-          type: integer
-        filiations:
-          type: integer
-        medias:
-          type: integer
-        pendingContributions:
-          type: integer
-        totalContributions:
-          type: integer
-      required: [persons, unions, filiations, medias, pendingContributions, totalContributions]
-    AuditLogEntry:
-      type: object
-      properties:
-        id:
-          type: string
-        treeId:
-          type: string
-        actorType:
-          type: string
-        actorId:
-          type: string
-          nullable: true
-        action:
-          type: string
-        entityType:
-          type: string
-        entityId:
-          type: string
-        payloadJson:
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
-      required: [id, treeId, actorType, action, entityType, entityId, createdAt]
     CreatePersonRequest:
       type: object
       properties:
@@ -1067,48 +1027,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /trees/{id}/stats:
-    get:
-      tags: [Trees]
-      summary: Get admin statistics for a tree
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Tree statistics
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  stats:
-                    $ref: '#/components/schemas/TreeStats'
-                required: [stats]
-        '400':
-          description: Invalid tree id
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /trees/{id}/settings:
     get:
       tags: [Trees]
@@ -1180,71 +1098,6 @@ paths:
                 required: [settings]
         '400':
           description: Invalid payload or tree id
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /trees/{id}/audit:
-    get:
-      tags: [Trees]
-      summary: List admin audit logs for a tree
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-        - in: query
-          name: limit
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-        - in: query
-          name: offset
-          required: false
-          schema:
-            type: integer
-            minimum: 0
-        - in: query
-          name: action
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Audit log entries
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  logs:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/AuditLogEntry'
-                  nextOffset:
-                    type: integer
-                    nullable: true
-                required: [logs, nextOffset]
-        '400':
-          description: Invalid query or tree id
           content:
             application/json:
               schema:

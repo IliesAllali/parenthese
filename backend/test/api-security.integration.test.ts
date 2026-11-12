@@ -1572,55 +1572,6 @@ describe('API security and authz', () => {
     await app.close()
   })
 
-  it('allows owner to read tree stats', async () => {
-    const app = createApp()
-    const token = await createUserToken(app)
-
-    prismaMock.mediaItem.count.mockResolvedValue(3)
-    prismaMock.contributionSession.count
-      .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(9)
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/trees/tree-1/stats',
-      headers: { authorization: `Bearer ${token}` },
-    })
-
-    expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({
-      stats: {
-        persons: 2,
-        unions: 1,
-        filiations: 1,
-        medias: 3,
-        pendingContributions: 4,
-        totalContributions: 9,
-      },
-    })
-    await app.close()
-  })
-
-  it('forbids non-admin from reading tree stats', async () => {
-    const app = createApp()
-    const token = await createUserToken(app)
-    prismaMock.treeMembership.findUnique.mockResolvedValue({
-      treeId: 'tree-1',
-      userId: 'user-1',
-      role: 'member',
-      tree: { deletedAt: null, rootPersonId: null },
-    })
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/trees/tree-1/stats',
-      headers: { authorization: `Bearer ${token}` },
-    })
-
-    expect(response.statusCode).toBe(403)
-    await app.close()
-  })
-
   it('allows owner to update tree settings policy', async () => {
     const app = createApp()
     const token = await createUserToken(app)
@@ -1647,67 +1598,7 @@ describe('API security and authz', () => {
     await app.close()
   })
 
-  it('lists audit logs for admin with pagination cursor', async () => {
-    const app = createApp()
-    const token = await createUserToken(app)
-    prismaMock.auditLog.findMany.mockResolvedValue([
-      {
-        id: 'audit-2',
-        treeId: 'tree-1',
-        actorType: 'user',
-        actorId: 'user-1',
-        action: 'tree_settings_updated',
-        entityType: 'tree_settings',
-        entityId: 'tree-1',
-        payloadJson: { memberContributionPolicy: 'direct' },
-        createdAt: new Date('2026-02-11T12:00:00.000Z'),
-      },
-    ])
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/trees/tree-1/audit?limit=20&offset=0',
-      headers: { authorization: `Bearer ${token}` },
-    })
-
-    expect(response.statusCode).toBe(200)
-    expect(response.json()).toEqual({
-      logs: [
-        {
-          id: 'audit-2',
-          treeId: 'tree-1',
-          actorType: 'user',
-          actorId: 'user-1',
-          action: 'tree_settings_updated',
-          entityType: 'tree_settings',
-          entityId: 'tree-1',
-          payloadJson: { memberContributionPolicy: 'direct' },
-          createdAt: '2026-02-11T12:00:00.000Z',
-        },
-      ],
-      nextOffset: null,
-    })
-    await app.close()
-  })
-
   // Audit 1.0 (30/09/2026)
-  it('refuses the annotations of a tree the account has no access to', async () => {
-    const app = createApp()
-    const token = await createUserToken(app, 'stranger')
-    prismaMock.treeMembership.findUnique.mockResolvedValue(null)
-    prismaMock.userTreeAccess.findUnique.mockResolvedValue(null)
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/trees/tree-1/annotations',
-      headers: { authorization: `Bearer ${token}` },
-    })
-
-    expect(response.statusCode).toBe(403)
-    expect(prismaMock.annotation.findMany).not.toHaveBeenCalled()
-    await app.close()
-  })
-
   it('no longer accepts an account session in a media address', async () => {
     const app = createApp()
     const token = await createUserToken(app)
