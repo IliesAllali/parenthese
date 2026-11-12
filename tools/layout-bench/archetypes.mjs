@@ -84,6 +84,20 @@ export const archetypes = [
     },
   },
   {
+    slug: 'cinq-conjoints',
+    note: 'A a eu cinq conjoints, quatre avec des enfants, le dernier sans. Unions toutes au même ordre (saisie à la main) : elles se rangent par le premier enfant. A au milieu, chaque union au-dessus de sa fratrie, sauts au-dessus des portraits.',
+    reference: 'A',
+    graph: (() => {
+      const persons = [P('A', { birthDate: '1917' }), P('C1'), P('C2'), P('C3'), P('C4'), P('C5')]
+      // créées dans le désordre : l'ordre vient des enfants, pas des identifiants
+      const unions = [U('u3', 'A', 'C3'), U('u1', 'A', 'C1'), U('u5', 'A', 'C5'), U('u4', 'A', 'C4'), U('u2', 'A', 'C2')]
+      const filiations = []
+      const kids = { u1: [1935, 1937, 1938], u2: [1942, 1943, 1946], u3: [1948, 1949, 1951, 1953], u4: [1957, 1958, 1960] }
+      for (const [u, years] of Object.entries(kids)) years.forEach((y, i) => { const id = `${u.slice(1)}${String.fromCharCode(97 + i)}`; persons.push(P(id, { birthDate: String(y) })); filiations.push(L(id, u, i + 1)) })
+      return { persons, unions, filiations }
+    })(),
+  },
+  {
     slug: 'fratrie-12',
     note: 'Douze enfants, chacun marié, les six premiers avec deux enfants, les autres avec un. La ligne de fratrie est longue, c est normal.',
     reference: 'K1',
