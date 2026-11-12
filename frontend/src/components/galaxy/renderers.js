@@ -149,11 +149,49 @@ export function traceSibship(ctx, sourceId, sourcePos, items, lift = 0) {
   ctx.stroke()
 }
 
+// Saut : le trait de la personne au milieu de ses conjoints (elkLayout, starOf) vers l'union d'un conjoint qui
+// n'est pas à côté d'elle. Il part du haut de son portrait, passe au-dessus des portraits enjambés, un étage par
+// portrait, et redescend sur l'union. Le saut le plus haut part le plus près du centre : sa montée ne coupe pas
+// les sauts plus bas.
+const JUMP = { rise: 20, step: 12, r: 10 }
+function traceJump(ctx, hubPos, hubR, jx, jy, level) {
+  const dir = Math.sign(jx - hubPos.cx) || 1
+  const off = Math.max(3, hubR * 0.7 - (level - 1) * 7)
+  const x0 = hubPos.cx + dir * off
+  const y0 = hubPos.cy - Math.sqrt(Math.max(0, hubR * hubR - off * off))
+  const top = hubPos.cy - hubR - JUMP.rise - (level - 1) * JUMP.step
+  const k = Math.min(JUMP.r, Math.abs(jx - x0) / 2)
+  ctx.beginPath()
+  ctx.moveTo(x0, y0)
+  ctx.lineTo(x0, top + k)
+  ctx.arcTo(x0, top, x0 + dir * k, top, k)
+  ctx.lineTo(jx - dir * k, top)
+  ctx.arcTo(jx, top, jx, top + k, k)
+  ctx.lineTo(jx, jy)
+  ctx.stroke()
+}
+
+// Les deux côtés d'un couple jusqu'à l'union. `progress` < 1 pendant l'entrée : le saut n'a pas d'entrée partielle,
+// il est dessiné entier (l'alpha du couple le fait apparaître)
+function strokeCouple(ctx, meta, points, p1Pos, p2Pos, p1R, p2R, progress) {
+  const { sLx, sLy, sRx, sRy, jx, jy } = points
+  const hubIsLeft = meta._jump > 0 && meta._hub
+    ? (meta._hub === meta.p1Key) === (p1Pos.cx < p2Pos.cx)
+    : null
+  const hubPos = meta._hub === meta.p1Key ? p1Pos : p2Pos
+  const hubR = meta._hub === meta.p1Key ? p1R : p2R
+  if (hubIsLeft === true) traceJump(ctx, hubPos, hubR, jx, jy, meta._jump)
+  else drawPartialBezier(ctx, sLx, sLy, sLx + (jx - sLx) * 0.55, sLy, jx - (jx - sLx) * 0.1, jy, jx, jy, progress)
+  if (hubIsLeft === false) traceJump(ctx, hubPos, hubR, jx, jy, meta._jump)
+  else drawPartialBezier(ctx, sRx, sRy, sRx + (jx - sRx) * 0.55, sRy, jx - (jx - sRx) * 0.1, jy, jx, jy, progress)
+}
+
 // ============================================================
 // Courbes de couple (Bézier)
 // ============================================================
 export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomData, entrance, entranceActive, elapsed, view = null) {
-  coupleBarMeta.forEach(({ elkId, p1Key, p2Key, virtual, ghost }) => {
+  coupleBarMeta.forEach((meta) => {
+    const { elkId, p1Key, p2Key, virtual, ghost } = meta
     const p1Pos = posMap.get(p1Key)
     const p2Pos = posMap.get(p2Key)
     const unionPos = posMap.get(elkId)
@@ -188,10 +226,7 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
     ctx.lineCap = 'round'
     ctx.globalAlpha = coupleProgress
 
-    drawPartialBezier(ctx, sLx, sLy,
-      sLx + (jx - sLx) * 0.55, sLy, jx - (jx - sLx) * 0.1, jy, jx, jy, coupleProgress)
-    drawPartialBezier(ctx, sRx, sRy,
-      sRx + (jx - sRx) * 0.55, sRy, jx - (jx - sRx) * 0.1, jy, jx, jy, coupleProgress)
+    strokeCouple(ctx, meta, { sLx, sLy, sRx, sRy, jx, jy }, p1Pos, p2Pos, p1R, p2R, coupleProgress)
 
     ctx.globalAlpha = 1
     ctx.setLineDash([])
@@ -361,7 +396,8 @@ export function drawPathHighlight(ctx, {
   )
 
   // Re-dessiner les couples du chemin par-dessus
-  coupleBarMeta.forEach(({ elkId, p1Key, p2Key }) => {
+  coupleBarMeta.forEach((meta) => {
+    const { elkId, p1Key, p2Key } = meta
     if (!highlightCoupleIds.has(elkId)) return
     const hp = pathProgressRef.get(elkId) || 0
     if (hp < 0.01) return
@@ -388,10 +424,7 @@ export function drawPathHighlight(ctx, {
     ctx.lineCap = 'round'
     ctx.globalAlpha = 1
 
-    drawPartialBezier(ctx, sLx, sLy,
-      sLx + (jx - sLx) * 0.55, sLy, jx - (jx - sLx) * 0.1, jy, jx, jy, hp)
-    drawPartialBezier(ctx, sRx, sRy,
-      sRx + (jx - sRx) * 0.55, sRy, jx - (jx - sRx) * 0.1, jy, jx, jy, hp)
+    strokeCouple(ctx, meta, { sLx, sLy, sRx, sRy, jx, jy }, p1Pos, p2Pos, p1R, p2R, hp)
   })
 
   // Re-dessiner les filiations du chemin par-dessus

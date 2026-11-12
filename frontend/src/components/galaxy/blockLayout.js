@@ -27,6 +27,12 @@ import { persons as globalPersons, unions as globalUnions, filiations as globalF
 //   L'ordre ne dépend jamais des effectifs : rangée, année de naissance,
 //   identifiant. Ajouter une personne ne bouge que son foyer.
 //
+//   Trois conjoints ou plus qui ont une famille dans l'arbre : la personne
+//   est au milieu, ses premiers conjoints à gauche, les suivants à droite
+//   (ordre des mariages, sinon du premier enfant), chaque union au-dessus
+//   de sa fratrie. Le trait vers un conjoint qui n'est pas à côté d'elle
+//   passe au-dessus des portraits (elkLayout starOf, renderers traceJump).
+//
 // Banc, archétypes et témoins : tools/layout-bench/.
 // ============================================================
 
@@ -208,6 +214,40 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     let x = 0
     chain.forEach((id, i) => { offsets.set(id, x); x += byId.get(id).width + (i < chain.length - 1 ? gapAfter(chain, i) : 0) })
     return offsets
+  }
+
+  // Chaîne en étoile posée sur ses enfants : chaque union qui a des enfants au-dessus du centre de sa fratrie,
+  // les autres nœuds serrés à l'écart minimal, les conjoints entre deux unions centrés dans la place qui reste.
+  // Rend la position de la chaîne, sa largeur et l'écart de chaque nœud à son bord gauche.
+  const spreadStar = (chain, unionsOfChain, childBlocks, packed) => {
+    const want = new Map()
+    for (const u of unionsOfChain) {
+      const g = childBlocks.map((b, i) => (b.unionId === u ? [packed.xs[i] + b.chain[0], packed.xs[i] + b.chain[1]] : null)).filter(Boolean)
+      if (g.length) want.set(u, (Math.min(...g.map(r => r[0])) + Math.max(...g.map(r => r[1]))) / 2 - byId.get(u).width / 2)
+    }
+    const anchors = chain.map((id, i) => (want.has(id) ? i : -1)).filter(i => i >= 0)
+    if (!anchors.length) return null
+    const w = (i) => byId.get(chain[i]).width
+    const step = (i) => w(i) + gapAfter(chain, i) // du bord gauche du nœud i au bord gauche du suivant
+    const pos = new Array(chain.length)
+    pos[anchors[0]] = want.get(chain[anchors[0]])
+    for (let i = anchors[0] + 1; i < chain.length; i++) {
+      const min = pos[i - 1] + step(i - 1)
+      pos[i] = want.has(chain[i]) ? Math.max(min, want.get(chain[i])) : min
+    }
+    for (let i = anchors[0] - 1; i >= 0; i--) pos[i] = pos[i + 1] - step(i)
+    for (let k = 0; k < anchors.length - 1; k++) {
+      const a = anchors[k], b = anchors[k + 1]
+      if (b - a < 2) continue
+      const slack = pos[b] - (pos[b - 1] + step(b - 1))
+      for (let i = a + 1; i < b; i++) pos[i] += slack / 2
+    }
+    const left = pos[0]
+    return {
+      rowX: left,
+      rowW: pos[chain.length - 1] + w(chain.length - 1) - left,
+      offsets: new Map(chain.map((id, i) => [id, pos[i] - left])),
+    }
   }
 
   // La chaîne la plus haute d'une famille : on remonte de parents en parents, par le sang de la référence
@@ -520,7 +560,7 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
 
     // Chaîne centrée sur la rangée de ses enfants directs (fantômes compris), décalée au plus près si une
     // famille de conjoint occupe déjà cette rangée
-    const rowW = chainWidth(chain)
+    let rowW = chainWidth(chain)
     let offsets = chainOffsets(chain)
     const kidRowL = childBlocks.length ? Math.min(...childBlocks.map((b, i) => packed.xs[i] + b.chain[0])) : 0
     const kidRowR = childBlocks.length ? Math.max(...childBlocks.map((b, i) => packed.xs[i] + b.chain[1])) : rowW
@@ -536,7 +576,13 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       return pool.length ? pool.reduce((best, c) => (Math.abs(c - x) < Math.abs(best - x) ? c : best)) : x
     }
     let rowX = (kidRowL + kidRowR) / 2 - rowW / 2
-    if (childBlocks.length) {
+    // Une personne au milieu de trois conjoints ou plus (elkLayout, starOf) : la chaîne s'écarte pour que chaque
+    // union soit au-dessus de sa fratrie, au lieu d'une rangée serrée d'où les fratries partaient en éventail
+    const starRow = childBlocks.length && unionsOfChain.some(u => byId.get(u)?._data?._hub) ? spreadStar(chain, unionsOfChain, childBlocks, packed) : null
+    if (starRow) {
+      ({ rowX, rowW, offsets } = starRow)
+      rowX = avoidObstacles(rowX)
+    } else if (childBlocks.length) {
       // Remariage : chaque union au plus près au-dessus de ses propres enfants. Parmi les positions qui
       // alignent une union sur un bord ou le centre de son groupe, on garde celle où les lignes de fratrie
       // débordent le moins au-dessus des demi-frères et demi-sœurs (égalité : la plus proche du centrage).
