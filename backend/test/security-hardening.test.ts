@@ -6,7 +6,6 @@ import { isMimeAllowedForType, sanitizeImage, scrubMp4Location, sniffMimeType } 
 import { matchSharePassword } from '../src/lib/password-variants.js'
 import {
   isTreeUnlockLocked,
-  recordTreeUnlockFailure,
   reserveTreeUnlockAttempt,
   resetTreeUnlockGuard,
   serializePasswordCheck,
@@ -159,9 +158,9 @@ describe('mot de passe de partage', () => {
   it('verrouille un arbre après 30 échecs dans la fenêtre, puis le libère', () => {
     resetTreeUnlockGuard()
     const now = Date.now()
-    for (let i = 0; i < 29; i += 1) recordTreeUnlockFailure('tree-x', now)
+    for (let i = 0; i < 29; i += 1) reserveTreeUnlockAttempt('tree-x', now)
     expect(isTreeUnlockLocked('tree-x', now)).toBe(false)
-    recordTreeUnlockFailure('tree-x', now)
+    reserveTreeUnlockAttempt('tree-x', now)
     expect(isTreeUnlockLocked('tree-x', now)).toBe(true)
     expect(isTreeUnlockLocked('tree-autre', now)).toBe(false)
     expect(isTreeUnlockLocked('tree-x', now + 16 * 60 * 1000)).toBe(false)

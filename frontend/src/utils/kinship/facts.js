@@ -25,7 +25,7 @@ export function kinshipFacts(path) {
 }
 
 // Suite des pas d'un chemin, pour reconnaître les liens que le compte des générations confond (#218)
-export const movesOf = (path) => path.steps.map((step) => step.move).join(',')
+const movesOf = (path) => path.steps.map((step) => step.move).join(',')
 // Demi-frère ou demi-sœur : un seul parent en commun. Deux enfants du même couple passent par 'sibling'
 // (le chemin le plus court) ; deux enfants d'un même parent avec deux conjoints passent par ce parent.
 export const isHalfSibling = (path) => movesOf(path) === 'up,down'

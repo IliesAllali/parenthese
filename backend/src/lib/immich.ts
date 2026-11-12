@@ -61,7 +61,7 @@ type ImmichPeoplePage = {
   hasNextPage?: unknown
 }
 
-export class ImmichClient {
+class ImmichClient {
   private readonly apiUrl: string
   private readonly apiKey: string
 
@@ -274,7 +274,7 @@ export type ImmichInstance = {
 
 let instancesCache: ImmichInstance[] | undefined
 
-export function immichInstanceId(apiUrl: string): string {
+function immichInstanceId(apiUrl: string): string {
   return createHash('sha256').update(apiUrl).digest('hex').slice(0, 16)
 }
 

@@ -31,7 +31,6 @@
   --pz-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --pz-ease: cubic-bezier(.23, 1, .32, 1);
   --pz-ease-drawer: cubic-bezier(.32, .72, 0, 1);
-  --pz-ease-pop: cubic-bezier(.34, 1.4, .64, 1);
   --pz-r-s: 10px;
   --pz-r-m: 14px;
   --pz-r-l: 22px;
@@ -46,8 +45,6 @@ p, li, blockquote, figcaption, dd, .pz-sub, .pz-small, .pz-hint, .pz-error, .pz-
 .pz-eyebrow { font: 500 12px/1.3 var(--pz-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--pz-muted); margin: 0; }
 .pz-title { font: 400 30px/1.1 var(--pz-serif); letter-spacing: -.01em; color: var(--pz-ink); margin: 0; text-wrap: balance; }
 .pz-title em { font-style: italic; font-weight: 300; }
-.pz-title-lg { font: 300 clamp(36px, 5vw, 48px)/1.04 var(--pz-serif); letter-spacing: -.02em; color: var(--pz-ink); margin: 0; text-wrap: balance; }
-.pz-title-lg em { font-style: italic; }
 .pz-sub { font: 400 15px/1.55 var(--pz-sans); color: var(--pz-ink-2); margin: 0; }
 .pz-small { font: 400 13px/1.5 var(--pz-sans); color: var(--pz-muted); margin: 0; }
 .pz-small a, .pz-sub a { color: var(--pz-a700); text-underline-offset: 3px; }
@@ -190,8 +187,6 @@ p, li, blockquote, figcaption, dd, .pz-sub, .pz-small, .pz-hint, .pz-error, .pz-
 .pz-menu-item--danger { color: var(--pz-danger); }
 .pz-menu-item--danger svg { color: var(--pz-danger); }
 @media (hover: hover) and (pointer: fine) { .pz-menu-item:hover { background: var(--pz-line-soft); } .pz-menu-item.is-active:hover { background: var(--pz-a100); } }
-.pz-menu-sep { height: 1px; margin: 4px 6px; background: var(--pz-line); }
-.pz-menu-label { padding: 8px 12px 4px; font: 500 11.5px var(--pz-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--pz-faint); }
 
 /* ── Le rond qui attend (motion validée le 25/09/2026) ────────── */
 /* Le rond se divise en trois points qui respirent, puis se referme avec un léger rebond. */
@@ -200,13 +195,6 @@ p, li, blockquote, figcaption, dd, .pz-sub, .pz-small, .pz-hint, .pz-error, .pz-
 .pz-mark-c { fill: var(--pz-a500); transform-box: fill-box; transform-origin: center; }
 .pz-mark-p { transition: transform 420ms var(--pz-ease); }
 .pz-mark-s { transform-box: fill-box; transform-origin: center; transition: transform 420ms var(--pz-ease); }
-.pz-mark.is-loading .pz-mark-p0 { transform: translateX(-300px); }
-.pz-mark.is-loading .pz-mark-p2 { transform: translateX(300px); }
-.pz-mark.is-loading .pz-mark-s { transform: scale(.27); }
-.pz-mark.is-loading .pz-mark-c { animation: pz-souffle 1200ms ease-in-out 420ms infinite; }
-.pz-mark.is-loading .pz-mark-p1 .pz-mark-c { animation-delay: 580ms; }
-.pz-mark.is-loading .pz-mark-p2 .pz-mark-c { animation-delay: 740ms; }
-.pz-mark.is-merging .pz-mark-p, .pz-mark.is-merging .pz-mark-s { transition-duration: 560ms; transition-timing-function: var(--pz-ease-pop); }
 @keyframes pz-souffle { 0%, 100% { opacity: 1; transform: none; } 50% { opacity: .32; transform: scale(.78); } }
 
 .pz-boot {
@@ -238,7 +226,7 @@ button:disabled:has(.pz-busy.is-busy) { opacity: 1; cursor: progress; }
   .pz-btn:active:not(:disabled) { transform: none; }
   /* les points apparaissent sur place et clignotent en fondu, sans déplacement */
   .pz-mark-p, .pz-mark-s, .pz-boot .pz-mark { transition-duration: 1ms !important; }
-  .pz-mark.is-loading .pz-mark-c, .pz-busy.is-busy .pz-dots i { animation-name: pz-fade-pulse !important; }
+  .pz-busy.is-busy .pz-dots i { animation-name: pz-fade-pulse !important; }
   .pz-busy.is-busy .pz-busy-lbl { filter: none; transform: none; }
 }
 @keyframes pz-fade-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
@@ -256,14 +244,6 @@ button:disabled:has(.pz-busy.is-busy) { opacity: 1; cursor: progress; }
 .pz-lang .pz-lang-opt:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .pz-lang .pz-lang-opt:not(.is-active):hover { color: var(--pz-ink); background: var(--pz-line-soft); } }
 .pz-lang-sep { font: 400 12px/1 var(--pz-sans); color: var(--pz-faint); user-select: none; }
-/* Ligne de menu : libellé à gauche, choix à droite */
-.pz-lang-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 4px 6px 4px 12px;
-  font: 500 14px/1.3 var(--pz-sans); color: var(--pz-ink);
-}
-.pz-lang-row-label { display: inline-flex; align-items: center; gap: 10px; }
-.pz-lang-row-label svg { color: var(--pz-muted); flex: none; }
-/* Dans la barre d'actions, séparé des boutons par un filet */
 /* Sous les écrans d'accès et de connexion */
 .pz-lang--screen { justify-self: center; }
 

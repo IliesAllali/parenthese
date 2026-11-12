@@ -10,7 +10,7 @@ export type PurgeLogger = {
   error: (details: Record<string, unknown>, message: string) => void
 }
 
-export function getMediaStorageRoot(): string {
+function getMediaStorageRoot(): string {
   return path.resolve(env.MEDIA_STORAGE_PATH)
 }
 

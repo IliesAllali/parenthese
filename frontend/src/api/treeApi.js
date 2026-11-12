@@ -1,4 +1,4 @@
-import { apiRequest } from './client'
+import { API_BASE_URL, apiRequest, bearer } from './client'
 import { readContributorName } from '../utils/contributorName.js'
 
 export async function resolveTreeBySlug(slug) {
@@ -12,14 +12,9 @@ export async function resolveTreeBySlug(slug) {
 }
 
 export async function unlockTreeAccess(treeId, password, userToken = '') {
-  const headers = {}
-  if (userToken) {
-    headers.Authorization = `Bearer ${userToken}`
-  }
-
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/access/unlock`, {
     method: 'POST',
-    headers,
+    headers: userToken ? bearer(userToken) : {},
     body: JSON.stringify({ password }),
   })
 
@@ -30,9 +25,7 @@ export async function unlockTreeAccess(treeId, password, userToken = '') {
 export async function linkTreeAccess(treeId, accessToken, userToken) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/access/link`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${userToken}`,
-    },
+    headers: bearer(userToken),
     body: JSON.stringify({ accessToken }),
   })
 
@@ -46,7 +39,7 @@ export async function fetchTreeGraph(treeId, token) {
     method: 'GET',
     cache: 'no-store',
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...bearer(token),
       ...(visitorName ? { 'X-Visitor-Name': encodeURIComponent(visitorName) } : {}),
     },
   })
@@ -63,7 +56,7 @@ export async function fetchTreeGraph(treeId, token) {
 export async function fetchPersonLife(treeId, personId, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/life`, {
     method: 'GET',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
   })
 }
 
@@ -72,7 +65,7 @@ export async function createLifeEvent(treeId, personId, payload, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/life/events`, {
     method: 'POST',
     idempotent: true,
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 }
@@ -80,7 +73,7 @@ export async function createLifeEvent(treeId, personId, payload, token) {
 export async function updateLifeEvent(treeId, eventId, payload, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/life/events/${encodeURIComponent(eventId)}`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 }
@@ -89,16 +82,14 @@ export async function deleteLifeEvent(treeId, eventId, token, { keepalive = fals
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/life/events/${encodeURIComponent(eventId)}`, {
     method: 'DELETE',
     keepalive,
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
   })
 }
 
 export async function listTrees(token) {
   const data = await apiRequest('/trees', {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return {
@@ -110,9 +101,7 @@ export async function listTrees(token) {
 export async function getTree(treeId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return {
@@ -124,9 +113,7 @@ export async function getTree(treeId, token) {
 export async function createTree(payload, token) {
   const data = await apiRequest('/trees', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -136,9 +123,7 @@ export async function createTree(payload, token) {
 export async function updateTree(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -148,9 +133,7 @@ export async function updateTree(treeId, payload, token) {
 export async function deleteTree(treeId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -159,9 +142,7 @@ export async function deleteTree(treeId, token) {
 export async function createPerson(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -171,9 +152,7 @@ export async function createPerson(treeId, payload, token) {
 export async function updatePerson(treeId, personId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -184,9 +163,7 @@ export async function deletePerson(treeId, personId, token, { keepalive = false 
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}`, {
     method: 'DELETE',
     keepalive,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -195,9 +172,7 @@ export async function deletePerson(treeId, personId, token, { keepalive = false 
 export async function createUnion(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/unions`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -207,9 +182,7 @@ export async function createUnion(treeId, payload, token) {
 export async function createParentChildLink(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/links`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -220,9 +193,7 @@ export async function createParentChildLink(treeId, payload, token) {
 export async function updateUnion(treeId, unionId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/unions/${encodeURIComponent(unionId)}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -232,9 +203,7 @@ export async function updateUnion(treeId, unionId, payload, token) {
 export async function deleteUnion(treeId, unionId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/unions/${encodeURIComponent(unionId)}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -244,9 +213,7 @@ export async function deleteUnion(treeId, unionId, token) {
 export async function reorderSiblings(treeId, order, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/links/order`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify({ order }),
   })
 }
@@ -255,9 +222,7 @@ export async function reorderSiblings(treeId, order, token) {
 export async function updateParentChildLink(treeId, linkId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/links/${encodeURIComponent(linkId)}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -267,9 +232,7 @@ export async function updateParentChildLink(treeId, linkId, payload, token) {
 export async function deleteParentChildLink(treeId, linkId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/links/${encodeURIComponent(linkId)}`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -278,9 +241,7 @@ export async function deleteParentChildLink(treeId, linkId, token) {
 export async function rotateTreePasswords(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/access/passwords`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -290,39 +251,22 @@ export async function rotateTreePasswords(treeId, payload, token) {
 export async function fetchSharePassword(treeId, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/access/passwords`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 }
 
 export async function rememberSharePassword(treeId, password, token) {
   return apiRequest(`/trees/${encodeURIComponent(treeId)}/access/passwords/remember`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify({ password }),
   })
-}
-
-export async function fetchTreeStats(treeId, token) {
-  const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/stats`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  return data?.stats || null
 }
 
 export async function fetchTreeSettings(treeId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/settings`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data?.settings || null
@@ -331,51 +275,18 @@ export async function fetchTreeSettings(treeId, token) {
 export async function updateTreeSettings(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/settings`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
   return data?.settings || null
 }
 
-export async function listTreeAuditLogs(treeId, token, options = {}) {
-  const queryParams = new URLSearchParams()
-
-  if (options.limit) {
-    queryParams.set('limit', String(options.limit))
-  }
-
-  if (options.offset !== undefined && options.offset !== null) {
-    queryParams.set('offset', String(options.offset))
-  }
-
-  if (options.action) {
-    queryParams.set('action', options.action)
-  }
-
-  const query = queryParams.toString()
-  const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/audit${query ? `?${query}` : ''}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  return {
-    logs: Array.isArray(data?.logs) ? data.logs : [],
-    nextOffset: typeof data?.nextOffset === 'number' ? data.nextOffset : null,
-  }
-}
-
 // Journal des visites (administrateurs de l'arbre)
 export async function listTreeVisits(treeId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/visits`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return {
@@ -388,9 +299,7 @@ export async function submitContributionSession(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/contributions/sessions`, {
     method: 'POST',
     idempotent: true,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -401,9 +310,7 @@ export async function listContributionSessions(treeId, token, status = 'pending'
   const query = status ? `?status=${encodeURIComponent(status)}` : ''
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/contributions/sessions${query}`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return Array.isArray(data?.sessions) ? data.sessions : []
@@ -412,9 +319,7 @@ export async function listContributionSessions(treeId, token, status = 'pending'
 export async function reviewContributionSession(treeId, sessionId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/contributions/sessions/${encodeURIComponent(sessionId)}/review`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -425,9 +330,7 @@ export async function reviewContributionSession(treeId, sessionId, payload, toke
 export async function fetchContributionStatus(treeId, sessionId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/contributions/sessions/${encodeURIComponent(sessionId)}/status`, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data?.status || null
@@ -437,9 +340,7 @@ export async function uploadAnnotationPhoto(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/annotation-photos`, {
     method: 'POST',
     idempotent: true,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -450,9 +351,7 @@ export async function uploadPersonMedia(treeId, personId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/media`, {
     method: 'POST',
     idempotent: true,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -462,9 +361,7 @@ export async function uploadPersonMedia(treeId, personId, payload, token) {
 export async function reorderPersonMedia(treeId, personId, orderedMediaIds, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/media/reorder`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify({ orderedMediaIds }),
   })
 
@@ -477,9 +374,7 @@ export async function deletePersonMedia(treeId, personId, mediaId, token, { keep
     {
       method: 'DELETE',
       keepalive,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: bearer(token),
     },
   )
 
@@ -492,9 +387,7 @@ export async function updatePersonMedia(treeId, personId, mediaId, payload, toke
     `/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/media/${encodeURIComponent(mediaId)}`,
     {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: bearer(token),
       body: JSON.stringify(payload),
     },
   )
@@ -509,9 +402,7 @@ export async function updateMediaPeople(treeId, mediaId, payload, token) {
     `/trees/${encodeURIComponent(treeId)}/media/${encodeURIComponent(mediaId)}/people`,
     {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: bearer(token),
       body: JSON.stringify(payload),
     },
   )
@@ -520,9 +411,7 @@ export async function updateMediaPeople(treeId, mediaId, payload, token) {
 export async function uploadPersonAvatar(treeId, personId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/avatar`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -533,9 +422,7 @@ export async function uploadPersonAvatar(treeId, personId, payload, token) {
 export async function saveAvatarCrop(treeId, personId, crop, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/avatar/crop`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify({ crop }),
   })
 
@@ -545,9 +432,7 @@ export async function saveAvatarCrop(treeId, personId, crop, token) {
 export async function deletePersonAvatar(treeId, personId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/avatar`, {
     method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
   })
 
   return data
@@ -556,9 +441,7 @@ export async function deletePersonAvatar(treeId, personId, token) {
 export async function batchAnnotations(treeId, payload, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/annotations/batch`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: bearer(token),
     body: JSON.stringify(payload),
   })
 
@@ -566,9 +449,8 @@ export async function batchAnnotations(treeId, payload, token) {
 }
 
 export async function exportGedcom(treeId, token) {
-  const { API_BASE_URL } = await import('./client')
   const resp = await fetch(`${API_BASE_URL}/trees/${encodeURIComponent(treeId)}/export/gedcom`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
   })
   if (!resp.ok) {
     throw new Error('export_failed')
@@ -583,7 +465,7 @@ export async function exportGedcom(treeId, token) {
 export async function importGedcom(treeId, fileContent, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/import/gedcom`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearer(token),
     body: JSON.stringify({ content: fileContent }),
     // Un gros arbre se crée en une transaction d'une minute au plus côté serveur
     timeoutMs: 3 * 60_000,

@@ -45,8 +45,11 @@ const clip = (value: string | null | undefined, max: number) => {
 
 const child = (node: Node | undefined, tag: string) => node?.children.find((c) => c.tag === tag)
 
-// Même règle que le lieu de naissance : noms seulement, sans case vide ni code INSEE ou postal
-export function cleanPlace(value: string | null | undefined): string | null {
+// Lieu d'un GEDCOM : les logiciels remplissent toutes les colonnes de leur format de lieu, même vides, et y
+// glissent des codes. Heredis écrit « La Roche-sur-Yon,85191,Vendée,Pays de la Loire,France, » (ville, code
+// INSEE, département, région, pays, subdivision). On garde les noms, sans case vide, sans code INSEE ni
+// postal, sans répétition : « La Roche-sur-Yon, Vendée, Pays de la Loire, France ».
+export function cleanGedcomPlace(value: string | null | undefined): string | null {
   if (!value) return null
   const parts: string[] = []
   for (const raw of value.split(',')) {
@@ -58,7 +61,7 @@ export function cleanPlace(value: string | null | undefined): string | null {
   return parts.length ? parts.join(', ') : null
 }
 
-export function isoToDbDate(iso: string | null | undefined): Date | null {
+function isoToDbDate(iso: string | null | undefined): Date | null {
   if (!iso) return null
   if (/^\d{4}$/.test(iso)) return new Date(`${iso}-01-01T00:00:00.000Z`)
   if (/^\d{4}-\d{2}$/.test(iso)) return new Date(`${iso}-01T00:00:00.000Z`)
@@ -76,7 +79,7 @@ function eventSources(node: Node, records: GedcomRecords): string | null {
 }
 
 // Ce qu'on lit d'un événement : date et précision, lieu (ou adresse), description, notes, sources
-export function readEvent(node: Node, type: string, records: GedcomRecords): ImportedEvent {
+function readEvent(node: Node, type: string, records: GedcomRecords): ImportedEvent {
   const dateText = child(node, 'DATE')?.value ?? null
   const parsed = parseGedcomDate(dateText)
   const addr = child(node, 'ADDR')
@@ -84,7 +87,7 @@ export function readEvent(node: Node, type: string, records: GedcomRecords): Imp
     .map((part) => part.trim())
     .filter(Boolean)
     .join(', ')
-  const place = cleanPlace(child(node, 'PLAC')?.value) ?? clip(address, 300)
+  const place = cleanGedcomPlace(child(node, 'PLAC')?.value) ?? clip(address, 300)
   const typeLabel = joinedText(child(node, 'TYPE'))
   const value = node.value && node.value.toUpperCase() !== 'Y' ? node.value : ''
   return {
@@ -142,7 +145,7 @@ export function personExtras(indi: Node, records: GedcomRecords): PersonExtras {
     birthDateEnd: isoToDbDate(birthDate?.endIso),
     deathDatePrecision: deathDate && deathDate.precision !== 'exact' ? deathDate.precision : null,
     deathDateEnd: isoToDbDate(deathDate?.endIso),
-    deathPlace: clip(cleanPlace(child(death, 'PLAC')?.value), 200),
+    deathPlace: clip(cleanGedcomPlace(child(death, 'PLAC')?.value), 200),
     nickname: clip(child(nameNode, 'NICK')?.value ?? child(indi, 'NICK')?.value, 120),
     events,
   }
@@ -171,7 +174,7 @@ export function familyExtras(fam: Node, records: GedcomRecords): UnionExtras {
     events.push(event)
   }
   return {
-    startPlace: clip(cleanPlace(child(marriage, 'PLAC')?.value), 300),
+    startPlace: clip(cleanGedcomPlace(child(marriage, 'PLAC')?.value), 300),
     startDatePrecision: date && date.precision !== 'exact' ? date.precision : null,
     events,
   }

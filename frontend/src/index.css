@@ -39,14 +39,10 @@
   /* DM Sans pour les petits éléments UI : labels, meta, nav, badges */
   button, input, select, textarea,
   label,
-  .tree-meta, .admin-meta, .admin-stat-card span,
-  .contrib-invite-header span, .contrib-item-meta span,
+  .contrib-item-meta span,
   .contrib-session-date, .contrib-role-badge,
-  .contrib-link-url, .contrib-pass-value, .contrib-pass-reveal,
-  .access-gate-tree-meta, .media-manager-meta span,
-  .admin-audit-main span, .admin-audit-meta,
-  .admin-person-item span,
-  .account-help {
+  .contrib-link-url, .contrib-pass-reveal,
+  .access-gate-tree-meta {
     font-family: 'DM Sans', system-ui, sans-serif;
   }
 }

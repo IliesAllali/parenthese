@@ -300,15 +300,6 @@
   transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* --- Add person button --- */
-.nav-annot-btn--add {
-  color: #93402A;
-}
-
-.nav-annot-btn--add:hover:not(:disabled) {
-  color: #3D3731;
-}
-
 /* --- Sub-panel (options) above navbar --- */
 .navbar-annot-panel {
   position: absolute;

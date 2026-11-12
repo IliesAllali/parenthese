@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { UPLOAD_BODY_LIMIT } from '../config/env.js'
 import { parseGedcomDate } from '../lib/gedcom-dates.js'
-import { adoptedFamilies, FAMILY_EVENT_TYPES, familyExtras, PERSON_EVENT_TYPES, personExtras } from '../lib/gedcom-events.js'
+import { adoptedFamilies, cleanGedcomPlace, FAMILY_EVENT_TYPES, familyExtras, PERSON_EVENT_TYPES, personExtras } from '../lib/gedcom-events.js'
 import { indexGedcomRecords, mediaRefsForPerson, noteText, photoPathForPerson } from '../lib/gedcom-photos.js'
 import type { GedcomRecords } from '../lib/gedcom-photos.js'
 import type { MembershipRole } from '../types/auth.js'
@@ -42,22 +42,6 @@ function clip(value: string | null, max: number): string | null {
   if (value === null) return null
   const trimmed = value.trim()
   return trimmed ? trimmed.slice(0, max) : null
-}
-
-// Lieu d'un GEDCOM : les logiciels remplissent toutes les colonnes de leur format de lieu, même vides, et y
-// glissent des codes. Heredis écrit « La Roche-sur-Yon,85191,Vendée,Pays de la Loire,France, » (ville, code
-// INSEE, département, région, pays, subdivision). On garde les noms, sans case vide, sans code INSEE ni
-// postal, sans répétition : « La Roche-sur-Yon, Vendée, Pays de la Loire, France ».
-export function cleanGedcomPlace(value: string | null | undefined): string | null {
-  if (!value) return null
-  const parts: string[] = []
-  for (const raw of value.split(',')) {
-    const part = raw.trim()
-    if (!part || /^(\d{4,5}|2[AB]\d{3})$/i.test(part)) continue
-    if (parts.length && parts[parts.length - 1].toLowerCase() === part.toLowerCase()) continue
-    parts.push(part)
-  }
-  return parts.length ? parts.join(', ') : null
 }
 
 // Export : un champ sur une ligne ne doit jamais en créer une autre (enregistrement injecté)

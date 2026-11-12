@@ -2,12 +2,10 @@ import { memo, useEffect, useImperativeHandle, useRef, useState, useCallback } f
 import { getPersonMedias, getParents, getChildren, getPersonUnions, persons as graphPersons, unions as graphUnions, filiations as graphFiliations } from '../data/mockData'
 import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
 import { easeOutCubic } from './galaxy/utils'
-import { computeLayout, generateNodeRandomData, coupleBarMeta, restoreCoupleBarMeta } from './galaxy/elkLayout'
+import { generateNodeRandomData, coupleBarMeta, restoreCoupleBarMeta } from './galaxy/elkLayout'
 import { computeBlockLayout, familyTabsOf, lineToFamily, subgraphOf, takeRootLayout } from './galaxy/blockLayout'
 import { hasGhosts, withGhosts } from '../utils/ghosts'
 
-// Placement par blocs familiaux par défaut (mesures : tools/layout-bench). ?layout=sugiyama = placement Sugiyama.
-const USE_BLOCK_LAYOUT = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('layout') !== 'sugiyama'
 import { findPathBFS } from './galaxy/pathfinding'
 import { drawBackground, drawCoupleLinks, drawFiliations, drawAnnotations, drawPathHighlight, drawNodes, drawRenvoiPills, nodeRadius } from './galaxy/renderers'
 import { buildSiblingGroups, moveInOrder, pickSlot, rubberBand, springStep, isSettled, buildOrderPayload, filiationsWithOrder } from './galaxy/siblingReorder'
@@ -277,7 +275,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   }, [])
 
   const canReorderNow = useCallback(() => (
-    reorderEnabledRef.current && USE_BLOCK_LAYOUT && Boolean(layoutDataRef.current) && Boolean(entranceRef.current?.finished)
+    reorderEnabledRef.current && Boolean(layoutDataRef.current) && Boolean(entranceRef.current?.finished)
   ), [])
 
   const worldX = useCallback((clientX) => {
@@ -458,7 +456,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   }, [canReorderNow, getSiblingGroups, swapLayout, layoutForOrder, commitOrder])
 
   const getSiblingPlace = useCallback((personId) => {
-    if (!USE_BLOCK_LAYOUT || !layoutDataRef.current) return null
+    if (!layoutDataRef.current) return null
     const group = getSiblingGroups().get(`p-${personId}`)
     return group ? { index: group.ids.indexOf(`p-${personId}`), count: group.ids.length } : null
   }, [getSiblingGroups])
@@ -640,7 +638,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     let freshTabs = null
     // Liste en attente du worker : l'arbre affiché est celui de la famille de départ
     let tabsPending = false
-    if (USE_BLOCK_LAYOUT && familyTabs && (cache.rev !== graphRevision || cache.start !== start)) {
+    if (familyTabs && (cache.rev !== graphRevision || cache.start !== start)) {
       const pending = tabsRequestRef.current
       // Dans un onglet d'une autre famille, ou à l'arrivée par le lien d'un onglet, l'arbre affiché dépend de la
       // liste : elle est calculée sur place
@@ -682,10 +680,10 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     // Annotations d'avant l'ancrage (x, y seuls) : rattachées une fois à la personne la plus proche dans le
     // placement de l'onglet de départ, puis enregistrées. Calculé avant l'arbre affiché (coupleBarMeta, voir plus haut)
     const legacy = annotationData.some((a) => !readAnchor(a))
-    const departure = legacy && USE_BLOCK_LAYOUT && graph ? computeBlockLayout(null, startRefRef.current, { familyTabs }) : null
+    const departure = legacy && graph ? computeBlockLayout(null, startRefRef.current, { familyTabs }) : null
     // Famille de départ sans propositions : son placement vient d'être calculé avec la liste des onglets
-    const kept = USE_BLOCK_LAYOUT && !graph && tab === freshTabs?.[0] ? takeRootLayout(freshTabs, focusPersonIdRef.current) : null
-    const result = kept || (USE_BLOCK_LAYOUT ? computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs }) : computeLayout(null, focusPersonIdRef.current))
+    const kept = !graph && tab === freshTabs?.[0] ? takeRootLayout(freshTabs, focusPersonIdRef.current) : null
+    const result = kept || computeBlockLayout(graph, focusPersonIdRef.current, { familyTabs })
     if (legacy) {
       const anchored = anchorLegacy(annotationData, layoutCenters(departure || result))
       for (const ann of anchored) updateAnnotationInStore(ann.id, { style: ann.style })

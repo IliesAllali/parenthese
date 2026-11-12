@@ -3,6 +3,7 @@ import { FileUp, ImagePlus } from 'lucide-react'
 import './TreeCreationWizard.css'
 import PzBusy from './PzBusy.jsx'
 import { t } from '../i18n/index.js'
+import { withEmphasis } from '../utils/richText.jsx'
 
 const INITIAL_STATE = {
   treeName: '',
@@ -13,12 +14,6 @@ const INITIAL_STATE = {
   // « J'ai déjà un arbre » : fichier GEDCOM exporté d'un logiciel, importé à la création
   start: 'self',
   gedcomFile: null,
-}
-
-// Titre traduit d'un bloc : le passage entre <em> et </em> garde son italique
-function withEmphasis(text) {
-  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
-  return <>{before}<em>{emphasized}</em>{after}</>
 }
 
 function TreeCreationWizard({

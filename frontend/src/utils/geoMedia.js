@@ -1,8 +1,8 @@
-export const DEFAULT_MAP_VIEWBOX_WIDTH = 420
-export const DEFAULT_MAP_VIEWBOX_HEIGHT = 280
-export const MAX_MERCATOR_LAT = 85.05112878
+const DEFAULT_MAP_VIEWBOX_WIDTH = 420
+const DEFAULT_MAP_VIEWBOX_HEIGHT = 280
+const MAX_MERCATOR_LAT = 85.05112878
 
-export function clamp(value, min, max) {
+function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
 

@@ -6,11 +6,7 @@ import { t } from '../i18n/index.js'
 import { matchPhotoFiles } from '../utils/photoImport.js'
 import { materializeFile } from '../utils/zipReader.js'
 import { initialsOf } from '../utils/initial.js'
-
-function withEmphasis(text) {
-  const [before, emphasized = '', after = ''] = text.split(/<\/?em>/)
-  return <>{before}<em>{emphasized}</em>{after}</>
-}
+import { withEmphasis } from '../utils/richText.jsx'
 
 function lifeYears(person) {
   if (!person.birthYear) return ''

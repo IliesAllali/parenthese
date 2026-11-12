@@ -104,4 +104,7 @@ async function apiRequest(path, options = {}) {
   return payload
 }
 
-export { ApiError, API_BASE_URL, apiRequest }
+// En-tête d'un appel fait au nom d'un compte ou d'un accès partagé
+const bearer = (token) => ({ Authorization: `Bearer ${token}` })
+
+export { ApiError, API_BASE_URL, apiRequest, bearer }

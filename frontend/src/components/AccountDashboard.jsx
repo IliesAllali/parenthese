@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronRight, KeyRound, LogIn, LogOut, Plus, Sparkles, X } from 'lucide-react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
@@ -7,15 +7,7 @@ import LanguageSwitch from './navbar/LanguageSwitch'
 import { t } from '../i18n/index.js'
 import { PRIVACY_URL } from '../utils/siteLinks.js'
 import { initialOf } from '../utils/initial.js'
-
-// Phrase traduite d'un bloc : les passages entre astérisques passent en <em>, {slot} reçoit un nœud.
-function richText(text, slotNode = null) {
-  return text.split(/(\{slot\})/).flatMap((chunk, chunkIndex) => (
-    chunk === '{slot}'
-      ? [<Fragment key={`s${chunkIndex}`}>{slotNode}</Fragment>]
-      : chunk.split('*').map((part, index) => (index % 2 ? <em key={`${chunkIndex}-${index}`}>{part}</em> : part))
-  ))
-}
+import { richText } from '../utils/richText.jsx'
 
 const AccountDashboard = ({
   authenticated,

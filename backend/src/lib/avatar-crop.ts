@@ -6,7 +6,7 @@ import { z } from 'zod'
 export const FRAME_SHAPES = ['round', 'square', 'polaroid', 'portrait', 'landscape'] as const
 export type AvatarCrop = { x: number; y: number; zoom: number; shape?: (typeof FRAME_SHAPES)[number] }
 
-export const AVATAR_CROP_MAX_ZOOM = 4
+const AVATAR_CROP_MAX_ZOOM = 4
 
 export const avatarCropInputSchema = z.object({
   crop: z

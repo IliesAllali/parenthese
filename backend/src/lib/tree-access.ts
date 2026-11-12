@@ -36,7 +36,7 @@ export async function canReadTree(app: FastifyInstance, treeId: string, actor: A
 // Les images sont chargées par <img src>, qui ne peut pas envoyer d'en-tête : leur adresse porte un jeton.
 // Ce jeton ne sert qu'à lire les médias d'un arbre, jamais la session du compte (qui finissait dans les
 // journaux, l'historique et les liens copiés).
-export const MEDIA_TOKEN_TTL = '12h'
+const MEDIA_TOKEN_TTL = '12h'
 
 export function signMediaToken(app: FastifyInstance, treeId: string, actor: NonNullable<Actor>): string {
   const payload: MediaJwtPayload = {

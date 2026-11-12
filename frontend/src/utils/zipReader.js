@@ -33,7 +33,7 @@ function decodeName(bytes, utf8) {
   return out
 }
 
-export function isZipSignature(bytes) {
+function isZipSignature(bytes) {
   return bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && (bytes[2] === 0x03 || bytes[2] === 0x05) && (bytes[3] === 0x04 || bytes[3] === 0x06)
 }
 
@@ -104,7 +104,7 @@ const MIME_BY_EXTENSION = {
 }
 
 export const extensionOf = (name) => (String(name).match(/\.([a-z0-9]{1,5})$/i)?.[1] || '').toLowerCase()
-export const mimeTypeOf = (name) => MIME_BY_EXTENSION[extensionOf(name)] || ''
+const mimeTypeOf = (name) => MIME_BY_EXTENSION[extensionOf(name)] || ''
 
 // Fichier du zip qu'on peut rapprocher comme un fichier de dossier (nom, chemin), et ne lire qu'au moment
 // de l'envoyer : toFile() le décompresse et renvoie un vrai File

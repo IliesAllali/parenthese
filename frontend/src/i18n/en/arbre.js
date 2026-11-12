@@ -17,7 +17,7 @@ export default {
 
   // Le lien de parenté affiché au survol se nomme langue par langue dans utils/kinship/
 
-  // Glisser pour ajouter une personne (components/ProximityFeedback.jsx)
+  // Ajouter un proche
   'Conjoint': 'Partner',
   'Frère·Sœur': 'Sibling',
   'Lien': 'Link',
@@ -38,8 +38,6 @@ export default {
   'Épais': 'Thick',
   'Couleur': 'Color',
   'Épaisseur': 'Thickness',
-  'Relâcher pour supprimer': 'Release to delete',
-  'Glisser ici pour supprimer': 'Drag here to delete',
   'Stickers': 'Stickers',
   'Cliquez sur le canvas': 'Click on the canvas',
   'Saisir du texte...': 'Type some text...',

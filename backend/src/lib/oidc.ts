@@ -31,7 +31,7 @@ export function isOidcEnabled(): boolean {
 let configuration: Promise<client.Configuration> | null = null
 
 // Découverte faite au premier besoin puis gardée ; un échec (fournisseur injoignable) sera retenté à la connexion suivante
-export function getOidcConfiguration(): Promise<client.Configuration> {
+function getOidcConfiguration(): Promise<client.Configuration> {
   configuration ??= discover().catch((error: unknown) => {
     configuration = null
     throw error
@@ -121,9 +121,4 @@ export async function finishAuthorization(callbackQuery: string, pending: OidcPe
     emailVerified,
     firstName: firstName?.slice(0, 60) ?? null,
   }
-}
-
-// Pour les tests : oublie la configuration découverte
-export function resetOidcConfiguration() {
-  configuration = null
 }

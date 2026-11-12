@@ -1,5 +1,3 @@
-import path from 'node:path'
-
 import { Prisma, type PrismaClient } from '../generated/prisma/client.js'
 import { z } from 'zod'
 
@@ -15,9 +13,9 @@ type Db = PrismaClient | Tx
 
 export const MAX_ANNOTATIONS_PER_TREE = 5000
 // Un envoi de photo jamais proposé vit le temps d'un brouillon de la famille
-export const PENDING_PHOTO_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const PENDING_PHOTO_TTL_MS = 7 * 24 * 60 * 60 * 1000
 // Une famille pose quelques photos à la fois ; au-delà, c'est un envoi en boucle
-export const MAX_PENDING_PHOTOS_PER_TREE = 50
+const MAX_PENDING_PHOTOS_PER_TREE = 50
 
 const MAX_STYLE_CHARS = 4000
 const styleSchema = z.record(z.string(), z.unknown()).refine(
@@ -93,7 +91,7 @@ export function normalizedAnnotationAfter(change: AnnotationChange, treeId: stri
 }
 
 // Identifiant de la photo d'une annotation (contenu JSON { photoPath }), ou null
-export function annotationPhotoId(after: unknown, treeId: string): string | null {
+function annotationPhotoId(after: unknown, treeId: string): string | null {
   if (!after || typeof after !== 'object' || Array.isArray(after)) return null
   const content = (after as { content?: unknown }).content
   if (typeof content !== 'string' || !content.startsWith('{')) return null
@@ -226,9 +224,4 @@ export async function reservePendingPhoto(prisma: PrismaClient, treeId: string, 
 
 export async function forgetPendingPhoto(db: Db, photoId: string): Promise<void> {
   await db.annotationPhotoUpload.deleteMany({ where: { id: photoId } })
-}
-
-// Chemin relatif sûr d'une photo d'annotation (sous <treeId>/annotation-photos/)
-export function annotationPhotoRelativePath(treeId: string, photoId: string, extension: string): string {
-  return path.posix.join(treeId, 'annotation-photos', `${photoId}${extension}`)
 }

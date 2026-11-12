@@ -5,7 +5,7 @@ import { env } from '../config/env.js'
 
 // Une ouverture d'arbre = une visite. Les rechargements du même visiteur dans cette fenêtre
 // (graphe rechargé après une modification, onglet rouvert) ne comptent qu'une fois.
-export const VISIT_DEDUP_WINDOW_MS = 30 * 60 * 1000
+const VISIT_DEDUP_WINDOW_MS = 30 * 60 * 1000
 // Au-delà, les visites sont effacées : à l'enregistrement d'une visite (au plus une fois par heure,
 // pour tous les arbres) et à la lecture de l'onglet Visites
 export const VISIT_RETENTION_DAYS = 365
@@ -14,14 +14,14 @@ let lastPurgeAt = 0
 
 export type VisitAccessKind = 'share' | 'member' | 'shared_account'
 
-export function deviceFromUserAgent(userAgent: string): 'phone' | 'tablet' | 'desktop' {
+function deviceFromUserAgent(userAgent: string): 'phone' | 'tablet' | 'desktop' {
   if (/iPad|Tablet/i.test(userAgent)) return 'tablet'
   if (/Mobi|Android|iPhone|iPod/i.test(userAgent)) return 'phone'
   return 'desktop'
 }
 
 // Prénom envoyé par l'app en en-tête X-Visitor-Name (encodé en URI pour les accents)
-export function visitorNameFromHeader(value: unknown): string | null {
+function visitorNameFromHeader(value: unknown): string | null {
   if (typeof value !== 'string' || !value) return null
   let decoded = value
   try {
@@ -33,7 +33,7 @@ export function visitorNameFromHeader(value: unknown): string | null {
   return trimmed || null
 }
 
-export function visitorKeyOf(treeId: string, ip: string, userAgent: string): string {
+function visitorKeyOf(treeId: string, ip: string, userAgent: string): string {
   return createHash('sha256').update(`${env.JWT_SECRET}|${treeId}|${ip}|${userAgent}`).digest('hex').slice(0, 32)
 }
 
