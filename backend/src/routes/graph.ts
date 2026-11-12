@@ -119,7 +119,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
     // Journal des visites (onglet Visites des administrateurs), sans attendre
     void recordTreeVisit(app, request, treeId, visitKind, actor.kind === 'user' ? actor.userId : null)
 
-    const [persons, unions, links, medias, annotations, mediaPeople] = await Promise.all([
+    const [persons, unions, links, medias, annotations, mediaPeople, settings] = await Promise.all([
       app.prisma.person.findMany({
         where: {
           treeId,
@@ -161,6 +161,10 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
         select: { mediaId: true, personId: true, x: true, y: true },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       }),
+      app.prisma.treeSettings.findUnique({
+        where: { treeId },
+        select: { surnameUppercase: true },
+      }),
     ])
 
     const graph = buildGraphPayload(treeId, persons, unions, links, medias, annotations, mediaPeople)
@@ -169,6 +173,8 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       treeId,
       rootPersonId,
       graph,
+      // Réglages d'affichage choisis par les gestionnaires, les mêmes pour tous ceux qui ouvrent l'arbre
+      display: { surnameUppercase: Boolean(settings?.surnameUppercase) },
       // Pour l'adresse des images (<img src> n'envoie pas la session) : lecture des médias de cet arbre seulement
       mediaToken: signMediaToken(app, treeId, actor),
     })

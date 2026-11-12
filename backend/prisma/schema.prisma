@@ -262,6 +262,8 @@ model TreeSettings {
   memberContributionPolicy ContributionPolicy @default(pending)
   visitorPolicy            VisitorPolicy      @default(read_only)
   contributorPolicy        ContributionPolicy @default(pending)
+  // Noms de famille affichés en capitales pour tous ceux qui ouvrent l'arbre ; ils restent enregistrés tels que tapés
+  surnameUppercase         Boolean            @default(false)
   updatedAt                DateTime           @updatedAt
   tree                     Tree               @relation(fields: [treeId], references: [id], onDelete: Cascade)
 

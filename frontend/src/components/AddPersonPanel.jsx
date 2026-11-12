@@ -4,7 +4,7 @@ import { UserPlus, X, Search, ChevronDown } from 'lucide-react'
 import './AddPersonPanel.css'
 import PzBusy from './PzBusy.jsx'
 import { t } from '../i18n/index.js'
-import { firstNameLabel } from '../utils/personName.js'
+import { firstNameLabel, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
 import { SEX_CHOICES } from '../utils/personSex.js'
 import { initialOf } from '../utils/initial.js'
 import { findLikelyDuplicates } from '../utils/duplicates.js'
@@ -147,7 +147,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
 
     setRelations((prev) => [
       ...prev,
-      { personId: person.id, personName: `${firstNameLabel(person)} ${person.lastName || ''}`.trim(), type: selectedRelationType },
+      { personId: person.id, personName: `${firstNameLabel(person)} ${surnameLabel(person.lastName)}`.trim(), type: selectedRelationType },
     ])
     setRelationSearch('')
     setRelationDropdownOpen(false)
@@ -255,6 +255,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               <input
                 id="ap-lastName"
                 type="text"
+                className={isSurnameUppercase() ? 'pz-caps' : undefined}
                 value={lastName}
                 onChange={(e) => {
                   setLastName(e.target.value)
@@ -274,8 +275,8 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               {duplicates.map((p) => (
                 <p key={p.id} className="apn-duplicate-line">
                   <span>{p.birthYear
-                    ? t('{name} ({year}) est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${p.lastName || ''}`.trim(), year: p.birthYear })
-                    : t('{name} est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${p.lastName || ''}`.trim() })}</span>
+                    ? t('{name} ({year}) est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim(), year: p.birthYear })
+                    : t('{name} est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim() })}</span>
                   {onOpenPerson && (
                     <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onOpenPerson(p)}>{t('Ouvrir sa fiche')}</button>
                   )}
@@ -290,6 +291,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
             <input
               id="ap-birthName"
               type="text"
+              className={isSurnameUppercase() ? 'pz-caps' : undefined}
               value={birthName}
               onChange={(e) => setBirthName(e.target.value)}
               placeholder={t('Martin')}
@@ -390,7 +392,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                         <span className="apn-avatar" aria-hidden="true">
                           {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : initialOf(p.firstName)}
                         </span>
-                        <span className="apn-dropdown-name">{firstNameLabel(p)} <em>{p.lastName || ''}</em></span>
+                        <span className="apn-dropdown-name">{firstNameLabel(p)} <em>{surnameLabel(p.lastName)}</em></span>
                         {(p.birthYear || p.birthDate) && (
                           <span className="apn-dropdown-date">{p.birthYear || String(p.birthDate).slice(0, 4)}</span>
                         )}

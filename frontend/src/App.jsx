@@ -4,7 +4,7 @@ import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
 import { FamilyWelcome, SouvenirPicker } from './components/FamilyOnboarding.jsx'
 import { HELP_URL } from './utils/siteLinks.js'
-import { firstNameLabel } from './utils/personName.js'
+import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
 import { useUndoable } from './hooks/useUndoable.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
 import MediaViewer from './components/MediaViewer'
@@ -452,13 +452,13 @@ function buildContribChangesList(draft = {}) {
 
   for (const entry of addedPersonEntries) {
     const d = entry && typeof entry === 'object' ? entry : (draft.modifiedPersons?.[String(entry)] || {})
-    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || t('Nouvelle personne')
+    const name = `${d.firstName || ''} ${surnameLabel(d.lastName)}`.trim() || t('Nouvelle personne')
     items.push({ entityType: 'person', action: 'create', label: name })
   }
 
   for (const [id, d] of Object.entries(draft.modifiedPersons || {})) {
     if (addedPersonIds.includes(String(id))) continue
-    const name = `${d.firstName || ''} ${d.lastName || ''}`.trim() || t('Personne')
+    const name = `${d.firstName || ''} ${surnameLabel(d.lastName)}`.trim() || t('Personne')
     items.push({ entityType: 'person', action: 'update', label: name })
   }
 
@@ -639,7 +639,10 @@ function App() {
     message: '',
   })
 
-  const buildEmptyTreeContext = useCallback((overrides = {}) => ({
+  const buildEmptyTreeContext = useCallback((overrides = {}) => {
+    // Sans arbre ouvert, les noms s'affichent tels qu'ils ont été tapés
+    setSurnameUppercase(false)
+    return {
     treeId: '',
     treeName: '',
     treeDescription: '',
@@ -649,8 +652,10 @@ function App() {
     accessMode: '',
     rootPersonId: null,
     accessToken: '',
+    surnameUppercase: false,
     ...overrides,
-  }), [])
+    }
+  }, [])
 
   // Déterminer le rôle et permissions de l'utilisateur
   const userRole = useUserRole({
@@ -721,7 +726,7 @@ function App() {
 
   const accountDisplayName = useMemo(() => {
     if (linkedSelfPerson) {
-      const fullName = `${linkedSelfPerson.firstName || ''} ${linkedSelfPerson.lastName || ''}`.trim()
+      const fullName = `${linkedSelfPerson.firstName || ''} ${surnameLabel(linkedSelfPerson.lastName)}`.trim()
       if (fullName) {
         return fullName
       }
@@ -1176,7 +1181,7 @@ function App() {
     const [first = '', ...rest] = String(query).trim().split(/\s+/)
     const inheritsName = type === 'child' || type === 'sibling'
     const lastName = rest.join(' ') || (inheritsName ? person.lastName || '' : '')
-    const personName = [person.firstName, person.lastName].filter(Boolean).join(' ')
+    const personName = [person.firstName, surnameLabel(person.lastName)].filter(Boolean).join(' ')
     if (!(await leaveSelectedPerson())) return
     await chooseSelectedPerson(null)
     setAddPersonPrefill({ nonce: Date.now(), firstName: first, lastName, relation: { type, personId: person.id, personName } })
@@ -1234,7 +1239,7 @@ function App() {
           const links = getSiblingParentLinks(rel.personId, filiations, unions)
           if (links.length === 0) {
             const sibling = persons.find((person) => String(person.id) === String(rel.personId))
-            const siblingName = [sibling?.firstName, sibling?.lastName].filter(Boolean).join(' ')
+            const siblingName = [sibling?.firstName, surnameLabel(sibling?.lastName)].filter(Boolean).join(' ')
             setAddPersonError(siblingName
               ? t("Ajoutez d'abord un parent à {name} pour pouvoir lui rattacher un frère ou une sœur.", { name: siblingName })
               : t("Ajoutez d'abord un parent à cette personne pour pouvoir lui rattacher un frère ou une sœur."))
@@ -1372,7 +1377,7 @@ function App() {
           // fois avec le bouton « Envoyer » de la barre (Patch, 25/10). Avant, la fenêtre d'envoi s'ouvrait d'office,
           // seule façon de montrer qu'un ajout invisible comptait.
           setAddPersonPanelVisible(false)
-          setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: [formData.firstName, formData.lastName].filter(Boolean).join(' ') || t('Nouvelle personne') }))
+          setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: [formData.firstName, surnameLabel(formData.lastName)].filter(Boolean).join(' ') || t('Nouvelle personne') }))
           return { proposed: true, id: isDemoMode ? null : `ghost:brouillon:${ref}`, demoPerson: isDemoMode ? persons[persons.length - 1] : null }
         }
 
@@ -1461,7 +1466,7 @@ function App() {
       const addedIds = added.map((result) => result.demoPerson?.id ?? result.id).filter((id) => id != null)
       if (added[0].proposed) {
         const names = joinFirstNames(firstNames.slice(0, added.length), t('et'))
-        setDraftNotice(t("{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { names: [names, formData.lastName].filter(Boolean).join(' ') }))
+        setDraftNotice(t("{names} sont sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { names: [names, surnameLabel(formData.lastName)].filter(Boolean).join(' ') }))
       }
       // Sur téléphone, une fiche ouverte couvrirait la fratrie : pas de fiche, la caméra les cadre tous
       if (window.matchMedia?.('(max-width: 768px)').matches) {
@@ -3541,7 +3546,7 @@ function App() {
         userEmail={accountEmail}
         userAvatarPhoto={accountAvatarPhoto}
         userAvatarCrop={linkedSelfPerson?.avatarCrop ?? null}
-        linkedPersonName={linkedSelfPerson ? `${linkedSelfPerson.firstName || ''} ${linkedSelfPerson.lastName || ''}`.trim() : ''}
+        linkedPersonName={linkedSelfPerson ? `${linkedSelfPerson.firstName || ''} ${surnameLabel(linkedSelfPerson.lastName)}`.trim() : ''}
         activeTreeName={activeAccountTreeName}
         annotationTools={editMode.isActive ? {
           activeTool: annot.activeTool,
@@ -3572,6 +3577,7 @@ function App() {
         onReorderSiblings={handleReorderSiblings}
         familyTabs={familyTabs}
         fullNames={fullNames}
+        surnameUppercase={tree.treeContext.surnameUppercase}
         annotationViewRef={annotationViewRef}
         onAnnotationsAnchored={persistAnnotationAnchors}
         selfPersonId={linkedSelfPersonId || null}
@@ -3754,6 +3760,8 @@ function App() {
         onFamilyTabsChange={setFamilyTabs}
         fullNames={fullNames}
         onFullNamesChange={setFullNames}
+        surnameUppercase={tree.treeContext.surnameUppercase}
+        onSurnameUppercaseChange={(on) => { setSurnameUppercase(on); tree.setTreeContext((current) => ({ ...current, surnameUppercase: on })) }}
       />
       <PhotoStartPanel
         visible={photoStart.visible}

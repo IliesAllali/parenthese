@@ -1,3 +1,4 @@
+import { surnameLabel } from '../utils/personName.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Search, Unlink, UserRound, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -233,7 +234,7 @@ const ImmichFacePanel = ({ person, treeId, token, onClose, onImmichChange }) => 
   // ne dit que l'origine du portrait (avatarFromImmich), jamais l'identifiant Immich.
   const unassignBlock = person.avatarFromImmich && (
     <div className="immich-current">
-      <p>{t('{name} est déjà associée à une personne Immich.', { name: person.firstName || person.lastName })}</p>
+      <p>{t('{name} est déjà associée à une personne Immich.', { name: person.firstName || surnameLabel(person.lastName) })}</p>
       <button type="button" className="pz-btn pz-btn--danger-ghost" onClick={handleUnassign} disabled={actionLoading}>
         <Unlink size={16} aria-hidden="true" /> {t('Retirer l’association')}
       </button>
@@ -245,7 +246,7 @@ const ImmichFacePanel = ({ person, treeId, token, onClose, onImmichChange }) => 
       <div className="pz-modal immich-modal-card" role="dialog" aria-modal="true" aria-labelledby="immichFaceTitle">
         <div className="pz-modal-head">
           <p className="pz-eyebrow">{t('Reconnaissance des visages')}</p>
-          <h1 id="immichFaceTitle" className="pz-title">{person.firstName} <em>{person.lastName}</em></h1>
+          <h1 id="immichFaceTitle" className="pz-title">{person.firstName} <em>{surnameLabel(person.lastName)}</em></h1>
         </div>
         <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} aria-hidden="true" />

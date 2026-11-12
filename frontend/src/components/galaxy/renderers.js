@@ -12,7 +12,7 @@ import {
 } from './constants'
 import { getEntranceProgress, drawPartialBezier } from './utils'
 import { fitNickname } from '../../utils/nickname.js'
-import { firstNameLabel, isFirstNameUnknown } from '../../utils/personName.js'
+import { firstNameLabel, isFirstNameUnknown, surnameLabel } from '../../utils/personName.js'
 import { initialsOf } from '../../utils/initial.js'
 import { blurhashCanvas } from '../../utils/blurhash.js'
 
@@ -634,7 +634,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   // Réglage « nom de famille sous le prénom » (#168) : celui de naissance s'il est connu, coupé comme le surnom
-  const familyName = fullNames && withDetail ? String(person.birthName || person.lastName || '').trim() : ''
+  const familyName = fullNames && withDetail ? surnameLabel(person.birthName || person.lastName) : ''
   const familyLabel = familyName ? fitNickname(ctx, familyName, NICKNAME_MAX_W) : ''
   const lineShift = familyLabel ? 15 : 0
   if (nameLabel) {

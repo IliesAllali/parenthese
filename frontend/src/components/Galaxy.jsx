@@ -1,3 +1,4 @@
+import { surnameLabel } from '../utils/personName.js'
 import { memo, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
 import { getPersonMedias, getParents, getChildren, getPersonUnions, persons as graphPersons, unions as graphUnions, filiations as graphFiliations } from '../data/mockData'
 import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
@@ -75,7 +76,7 @@ function barTabs(tabs, activeKey) {
   })
 }
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, surnameUppercase = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`) : la liste des familles de l'arbre, calculée une fois par
@@ -110,6 +111,8 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   const ghostsRef = useRef(ghosts)
   const fullNamesRef = useRef(fullNames)
   useEffect(() => { fullNamesRef.current = fullNames; needsRedrawRef.current = true }, [fullNames])
+  // Noms en capitales : le libellé se relit au dessin (surnameLabel), il suffit de redessiner
+  useEffect(() => { needsRedrawRef.current = true }, [surnameUppercase])
   useEffect(() => { ghostsRef.current = ghosts; needsRedrawRef.current = true }, [ghosts])
   const onAnnotationsAnchoredRef = useRef(onAnnotationsAnchored)
   useEffect(() => { onAnnotationsAnchoredRef.current = onAnnotationsAnchored }, [onAnnotationsAnchored])
@@ -1361,7 +1364,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
               onFocus={() => { if (!active) hoverTab(tb.key) }}
               onBlur={leaveTab}
             >
-              <span className="family-tab-name">{tb.label ? tr('Famille {name}', { name: tb.label }) : tr('Famille')}</span>
+              <span className="family-tab-name">{tb.label ? tr('Famille {name}', { name: surnameLabel(tb.label) }) : tr('Famille')}</span>
               <span className="family-tab-count" title={tr('{n} personnes', { n: tb.count })}>{tb.count}</span>
             </button>
           )

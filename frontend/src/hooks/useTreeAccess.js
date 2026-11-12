@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { setMediaToken } from '../utils/mediaToken.js'
+import { setSurnameUppercase } from '../utils/personName.js'
 import { API_BASE_URL } from '../api/client'
 import { fetchTreeGraph, unlockTreeAccess } from '../api/treeApi'
 import { loadGraphData, persons as graphPersons, resetToDemoData } from '../data/mockData'
@@ -41,6 +42,7 @@ export function useTreeAccess() {
     accessMode: '',
     rootPersonId: null,
     accessToken: '',
+    surnameUppercase: false,
   })
   const [bootState, setBootState] = useState('loading')
   const [gateLoading, setGateLoading] = useState(false)
@@ -68,6 +70,7 @@ export function useTreeAccess() {
   const openTreeGraph = async (treeId, token, options = {}) => {
     const graphPayload = await fetchTreeGraph(treeId, token)
     setMediaToken(graphPayload.mediaToken)
+    setSurnameUppercase(graphPayload.surnameUppercase)
     loadGraphData(graphPayload.graph, {
       mediaToken: graphPayload.mediaToken,
       apiBaseUrl: API_BASE_URL,
@@ -99,6 +102,7 @@ export function useTreeAccess() {
       accessMode: options.accessMode ?? current.accessMode,
       rootPersonId: preferredRootPersonId,
       accessToken: token,
+      surnameUppercase: graphPayload.surnameUppercase,
     }))
 
     const effectiveRole = normalizeRole(options.role)
@@ -195,7 +199,9 @@ export function useTreeAccess() {
       accessMode: 'demo',
       rootPersonId: null,
       accessToken: '',
+      surnameUppercase: false,
     })
+    setSurnameUppercase(false)
     setBootState('ready')
   }
 

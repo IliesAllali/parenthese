@@ -1,3 +1,4 @@
+import { surnameLabel } from '../utils/personName.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
@@ -121,7 +122,7 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
                   {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <span>{person.firstName?.[0] || '?'}</span>}
                 </span>
                 <span className="fo-name">
-                  <strong>{person.firstName} {person.lastName}</strong>
+                  <strong>{person.firstName} {surnameLabel(person.lastName)}</strong>
                   {lifeYears(person) && <small>{lifeYears(person)}</small>}
                 </span>
               </button>

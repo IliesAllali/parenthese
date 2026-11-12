@@ -7,7 +7,7 @@ import { t, dateLocale } from '../i18n/index.js'
 import { fetchSearchSources, searchSource } from '../api/searchSourcesApi.js'
 import { SEARCH_LINKS, SEARCH_LINK_REGIONS } from '../data/searchLinks.js'
 import { changesFromResult, personFromResult } from '../utils/searchResultChanges.js'
-import { fullNameLabel } from '../utils/personName.js'
+import { fullNameLabel, surnameLabel } from '../utils/personName.js'
 import Skeleton from './Skeleton.jsx'
 import PortraitThumb from './PortraitThumb.jsx'
 import { withEmphasis } from '../utils/richText.jsx'
@@ -384,7 +384,7 @@ function SearchSourcesPanel({ visible, treeId, token, persons = [], canApply = f
                           <li key={person.id}>
                             <button type="button" className={`apn-dropdown-item${picker.relative?.id === person.id ? ' is-selected' : ''}`} aria-pressed={picker.mode === 'new' ? picker.relative?.id === person.id : undefined} onClick={() => handlePick(person)} disabled={picker.saving}>
                               <span className="apn-avatar" aria-hidden="true">{person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : (person.firstName || '?').charAt(0)}</span>
-                              <span className="apn-dropdown-name">{person.firstName} <em>{person.lastName}</em></span>
+                              <span className="apn-dropdown-name">{person.firstName} <em>{surnameLabel(person.lastName)}</em></span>
                               <span className={`apn-dropdown-date${yearOff && picker.mode === 'existing' ? ' sp-year-off' : ''}`} title={yearOff && picker.mode === 'existing' ? t("Pas la même année de naissance que ce résultat") : undefined}>{personYears(person)}</span>
                             </button>
                           </li>

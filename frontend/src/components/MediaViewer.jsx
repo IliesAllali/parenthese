@@ -10,7 +10,7 @@ import {
 } from '../utils/geoMedia'
 import './MediaViewer.css'
 import { t } from '../i18n/index.js'
-import { firstNameLabel } from '../utils/personName.js'
+import { firstNameLabel, surnameLabel } from '../utils/personName.js'
 import { youtubeEmbedUrl } from '../utils/youtube.js'
 import { eventTitle } from '../utils/lifeTimeline.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
@@ -649,7 +649,7 @@ const MediaViewer = ({
               ) : (
                 <span className="mv-person-avatar mv-person-initial">{person?.firstName?.[0] || '?'}</span>
               )}
-              <span className="mv-person-name">{person ? firstNameLabel(person) : ''} <em>{person?.lastName}</em></span>
+              <span className="mv-person-name">{person ? firstNameLabel(person) : ''} <em>{surnameLabel(person?.lastName)}</em></span>
               {personYears && <span className="mv-person-years">{personYears}</span>}
             </span>
             <span className="pz-tag">{typeLabels[mediaType] || mediaType}</span>

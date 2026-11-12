@@ -1598,6 +1598,22 @@ describe('API security and authz', () => {
     await app.close()
   })
 
+  it('enregistre les noms de famille en capitales, et refuse une valeur qui n est pas un booléen', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    const patch = (payload: object) => app.inject({ method: 'PATCH', url: '/trees/tree-1/settings', headers: { authorization: `Bearer ${token}` }, payload })
+
+    expect((await patch({ surnameUppercase: true })).statusCode).toBe(200)
+    expect(prismaMock.treeSettings.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ surnameUppercase: true, contributorPolicy: 'pending' }),
+        update: expect.objectContaining({ surnameUppercase: true, contributorPolicy: undefined }),
+      }),
+    )
+    expect((await patch({ surnameUppercase: 'oui' })).statusCode).toBe(400)
+    await app.close()
+  })
+
   // Audit 1.0 (30/09/2026)
   it('no longer accepts an account session in a media address', async () => {
     const app = createApp()
