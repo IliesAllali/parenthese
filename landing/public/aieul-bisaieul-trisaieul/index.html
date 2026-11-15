@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FBFAF7" />
+  <title>Aïeul, bisaïeul, trisaïeul : les générations et le numéro Sosa</title>
+  <meta name="description" content="L'aïeul est le grand-père, le bisaïeul l'arrière-grand-père, le trisaïeul le père de celui-ci. Chaque génération en tableau, et la numérotation Sosa expliquée." />
+  <link rel="canonical" href="https://parenthese.io/aieul-bisaieul-trisaieul/" />
+  <link rel="alternate" hreflang="fr" href="https://parenthese.io/aieul-bisaieul-trisaieul/" />
+  <link rel="alternate" hreflang="x-default" href="https://parenthese.io/aieul-bisaieul-trisaieul/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Parenthèse" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://parenthese.io/aieul-bisaieul-trisaieul/" />
+  <meta property="og:title" content="Aïeul, bisaïeul, trisaïeul : les générations et le numéro Sosa" />
+  <meta property="og:description" content="Le nom de chaque ancêtre, génération par génération, combien vous en avez, et comment les numéroter avec la méthode Sosa." />
+  <meta property="og:image" content="https://parenthese.io/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/guides.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Aïeul, bisaïeul, trisaïeul : les générations et le numéro Sosa",
+        "inLanguage": "fr-FR",
+        "datePublished": "2026-11-16",
+        "dateModified": "2026-11-16",
+        "author": { "@type": "Person", "name": "Ilies Allali", "url": "https://iliesallali.design/" },
+        "publisher": { "@id": "https://parenthese.io/#organization" },
+        "mainEntityOfPage": "https://parenthese.io/aieul-bisaieul-trisaieul/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Que veut dire aïeul ?", "acceptedAnswer": { "@type": "Answer", "text": "Au sens strict, l'aïeul est le grand-père et l'aïeule la grand-mère. Au sens large, le mot désigne un ancêtre, une personne dont on descend." } },
+          { "@type": "Question", "name": "Quelle est la différence entre un bisaïeul et un trisaïeul ?", "acceptedAnswer": { "@type": "Answer", "text": "Le bisaïeul est votre arrière-grand-père. Le trisaïeul est son père, votre arrière-arrière-grand-père, une génération plus haut." } },
+          { "@type": "Question", "name": "Faut-il écrire aïeuls ou aïeux ?", "acceptedAnswer": { "@type": "Answer", "text": "Les deux existent. On écrit aïeuls pour parler des grands-parents, et aïeux pour parler des ancêtres en général." } },
+          { "@type": "Question", "name": "Comment trouver le numéro Sosa d'un ancêtre ?", "acceptedAnswer": { "@type": "Answer", "text": "Partez de vous, qui portez le numéro 1. Pour aller au père d'une personne, doublez son numéro. Pour aller à sa mère, doublez-le et ajoutez 1." } },
+          { "@type": "Question", "name": "Combien a-t-on d'ancêtres à la dixième génération ?", "acceptedAnswer": { "@type": "Answer", "text": "En théorie 1 024, puisque leur nombre double à chaque génération. Dans les faits, il y en a souvent moins, car un même ancêtre peut apparaître plusieurs fois dans l'arbre." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Pages du site préparées en avance quand on survole un lien (appui sur téléphone) : elles s'ouvrent presque
+       tout de suite. Seulement les pages, pas les fichiers ; l'application (app.parenthese.io) n'est pas concernée.
+       Un navigateur qui ne connaît pas ces règles les ignore. -->
+  <script type="speculationrules">{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/*.*"}}]},"eagerness":"moderate"}]}</script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Parenthèse, accueil">
+        <img src="/logo.svg" alt="" width="166" height="22" />
+      </a>
+      <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-ancetres">Créer mon arbre</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap">
+      <span class="eyebrow">Guide</span>
+      <h1>Aïeul, bisaïeul, trisaïeul : les générations et le numéro Sosa</h1>
+      <p class="lead">L'aïeul est votre grand-père, le bisaïeul votre arrière-grand-père, et le trisaïeul le père de ce dernier. Chaque nom monte d'une génération dans votre ascendance.</p>
+
+      <h2>Les ancêtres, génération par génération</h2>
+      <table>
+        <thead><tr><th>Génération au-dessus de vous</th><th>Nom courant</th><th>Nom ancien</th><th>Combien</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Père, mère</td><td>Père, mère</td><td>2</td></tr>
+          <tr><td>2</td><td>Grand-père, grand-mère</td><td>Aïeul, aïeule</td><td>4</td></tr>
+          <tr><td>3</td><td>Arrière-grand-père, arrière-grand-mère</td><td>Bisaïeul, bisaïeule</td><td>8</td></tr>
+          <tr><td>4</td><td>Arrière-arrière-grand-père, arrière-arrière-grand-mère</td><td>Trisaïeul, trisaïeule</td><td>16</td></tr>
+          <tr><td>5</td><td>Arrière-arrière-arrière-grand-père, arrière-arrière-arrière-grand-mère</td><td>Quadrisaïeul, quadrisaïeule</td><td>32</td></tr>
+        </tbody>
+      </table>
+      <p>Le féminin se forme en ajoutant un e : aïeule, bisaïeule, trisaïeule, quadrisaïeule. Au pluriel, on écrit bisaïeuls, trisaïeuls, quadrisaïeuls.</p>
+
+      <h2>Le piège du préfixe</h2>
+      <p>Le préfixe ne donne pas le numéro de la génération. Le bisaïeul porte « bis », qui veut dire deux fois, et pourtant il est trois générations au-dessus de vous. Le quadrisaïeul porte « quadri », et il est cinq générations au-dessus.</p>
+      <p>Le préfixe compte les crans au-dessus de l'aïeul, qui est déjà le grand-parent. Pour ne pas se tromper, retenez que le trisaïeul est le père du bisaïeul, et le quadrisaïeul le père du trisaïeul. C'est ainsi que les définissent les dictionnaires.</p>
+      <p>Au-delà du quadrisaïeul, on ne cherche plus de nom. On compte les générations, ou on donne le numéro Sosa de l'ancêtre, ce qui est plus précis. L'arbre de Parenthèse fait de même : passé l'arrière-grand-parent, il écrit « Aïeul 4<sup>e</sup> gén. », « Aïeul 5<sup>e</sup> gén. », et ainsi de suite. Votre trisaïeul y apparaît donc comme « Aïeul 4<sup>e</sup> gén. ».</p>
+
+      <h2>Aïeuls ou aïeux, deux pluriels et deux sens</h2>
+      <p>Le mot aïeul a deux sens, et chacun a son pluriel.</p>
+      <ul>
+        <li><strong>Aïeuls</strong> désigne les grands-parents, du côté du père ou de la mère. « Ses deux aïeuls vivent encore » veut dire que deux de ses grands-parents sont en vie.</li>
+        <li><strong>Aïeux</strong> désigne les ancêtres en général, toutes les personnes dont on descend. « Nos aïeux étaient paysans » parle de plusieurs siècles de famille.</li>
+      </ul>
+      <p>Au féminin, le pluriel est aïeules dans les deux cas. L'Académie française ajoute qu'aïeul se dit parfois d'un arrière-grand-parent.</p>
+
+      <h2>Combien d'ancêtres à chaque génération</h2>
+      <p>Chacun a deux parents, qui ont chacun deux parents. Le nombre d'ancêtres double donc à chaque génération : 2 parents, 4 grands-parents, 8 arrière-grands-parents, 16 trisaïeuls, 32 quadrisaïeuls.</p>
+      <p>À la dixième génération, le calcul donne 1 024 ancêtres. Si l'on compte entre 25 et 30 ans par génération, ils vivaient il y a deux à trois siècles. En ajoutant toutes les générations de 1 à 10, vous avez 2 046 ancêtres à retrouver.</p>
+      <p>Si l'on poursuit le calcul, on dépasse le milliard d'ancêtres à la trentième génération, ce qui ne tient pas. La raison est simple. Quand deux cousins se marient, leurs enfants ont les mêmes arrière-grands-parents des deux côtés, et le même couple occupe deux places dans l'arbre. Plus on remonte, plus ces doublons sont nombreux.</p>
+
+      <h2>La numérotation Sosa</h2>
+      <p>Pour s'y retrouver parmi des centaines d'ancêtres, les généalogistes donnent à chacun un numéro. La méthode la plus répandue porte le nom de Jérôme de Sosa, un franciscain espagnol qui l'a publiée en 1676, et de Stephan Kekulé von Stradonitz, qui l'a diffusée en 1898. On parle de numérotation Sosa-Stradonitz, ou simplement de numéro Sosa.</p>
+      <p>Elle tient en trois règles.</p>
+      <ol>
+        <li>Vous portez le numéro 1. C'est la personne dont on dresse l'ascendance.</li>
+        <li>Le père d'une personne porte le double de son numéro.</li>
+        <li>La mère d'une personne porte le double de son numéro, plus 1.</li>
+      </ol>
+      <p>Votre père est donc le 2 et votre mère le 3. Le père de votre père est le 4, sa mère le 5. Le père de votre mère est le 6, sa mère le 7.</p>
+      <table>
+        <thead><tr><th>Génération</th><th>Qui</th><th>Numéros Sosa</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>Vous</td><td>1</td></tr>
+          <tr><td>1</td><td>Parents</td><td>2 et 3</td></tr>
+          <tr><td>2</td><td>Grands-parents (aïeuls)</td><td>4 à 7</td></tr>
+          <tr><td>3</td><td>Arrière-grands-parents (bisaïeuls)</td><td>8 à 15</td></tr>
+          <tr><td>4</td><td>Trisaïeuls</td><td>16 à 31</td></tr>
+          <tr><td>5</td><td>Quadrisaïeuls</td><td>32 à 63</td></tr>
+        </tbody>
+      </table>
+      <p>Chaque génération commence au double du premier numéro de la précédente. Les 1 024 ancêtres de la dixième génération portent les numéros 1 024 à 2 047.</p>
+
+      <h2>Ce qu'un numéro Sosa vous dit</h2>
+      <p>Un numéro suffit pour savoir où se trouve un ancêtre, sans dessiner l'arbre.</p>
+      <ul>
+        <li><strong>Son sexe.</strong> Les hommes ont des numéros pairs et les femmes des numéros impairs. Seul le 1 fait exception, puisque vous pouvez être un homme ou une femme.</li>
+        <li><strong>Son conjoint.</strong> Le mari d'une femme porte le numéro juste avant le sien, la femme d'un homme le numéro juste après. Le 12 et le 13 forment un couple.</li>
+        <li><strong>Son enfant dans votre lignée.</strong> Divisez le numéro par 2 et gardez la partie entière. L'enfant du 13 est le 6, celui du 6 est le 3, votre mère.</li>
+      </ul>
+      <p>Prenons le numéro 13. Il est impair, c'est donc une femme. Son enfant est le 6, le père de votre mère, et le 6 est un enfant du 3, votre mère. Le 13 est ainsi la mère de votre grand-père maternel, l'une de vos bisaïeules.</p>
+      <div class="note">
+        <p><strong>Un ancêtre peut avoir deux numéros.</strong> Si vos arrière-grands-parents étaient cousins, un même ancêtre se retrouve par deux chemins et reçoit deux numéros Sosa. On le note sous les deux, en signalant qu'il s'agit de la même personne.</p>
+      </div>
+      <p>Les modèles d'<a href="/arbre-genealogique-a-remplir/">arbre généalogique à remplir</a> suivent cette numérotation dans leurs cases. Pour remonter les générations dans les archives, le guide pour <a href="/commencer-sa-genealogie/">commencer sa généalogie</a> donne les étapes.</p>
+
+      <h2>Et les oncles, les cousins ?</h2>
+      <p>Le numéro Sosa ne compte que la ligne directe, les personnes dont vous descendez. Les frères et sœurs de vos ancêtres, leurs enfants et vos cousins n'en ont pas. Leur nom se trouve dans le guide des <a href="/liens-de-parente/">liens de parenté</a>, avec un calculateur qui trouve le lien à partir du chemin qui mène à la personne.</p>
+
+      <h2>Questions fréquentes</h2>
+      <div class="faq">
+        <details>
+          <summary>Que veut dire aïeul ?</summary>
+          <p>Au sens strict, l'aïeul est le grand-père et l'aïeule la grand-mère. Au sens large, le mot désigne un ancêtre, une personne dont on descend.</p>
+        </details>
+        <details>
+          <summary>Quelle est la différence entre un bisaïeul et un trisaïeul ?</summary>
+          <p>Le bisaïeul est votre arrière-grand-père. Le trisaïeul est son père, votre arrière-arrière-grand-père, une génération plus haut.</p>
+        </details>
+        <details>
+          <summary>Faut-il écrire aïeuls ou aïeux ?</summary>
+          <p>Les deux existent. On écrit aïeuls pour parler des grands-parents, et aïeux pour parler des ancêtres en général.</p>
+        </details>
+        <details>
+          <summary>Comment trouver le numéro Sosa d'un ancêtre ?</summary>
+          <p>Partez de vous, qui portez le numéro 1. Pour aller au père d'une personne, doublez son numéro. Pour aller à sa mère, doublez-le et ajoutez 1.</p>
+        </details>
+        <details>
+          <summary>Combien a-t-on d'ancêtres à la dixième génération ?</summary>
+          <p>En théorie 1 024, puisque leur nombre double à chaque génération. Dans les faits, il y en a souvent moins, car un même ancêtre peut apparaître plusieurs fois dans l'arbre.</p>
+        </details>
+      </div>
+
+      <section class="cta">
+        <h2>Donnez un visage à vos aïeux</h2>
+        <p>Dans un arbre, chaque ancêtre a sa fiche avec ses photos, ses documents et ce qu'on raconte de lui, et la famille l'ouvre par un lien pour ajouter ce qui manque.</p>
+        <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-ancetres">Créer mon arbre</a>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Parenthèse · <a href="/">parenthese.io</a> · <a href="/en/" hreflang="en" lang="en">English</a></span>
+      <nav aria-label="Guides">
+        <a href="/comment-faire-un-arbre-genealogique/">Comment faire un arbre généalogique</a>
+        <a href="/commencer-sa-genealogie/">Commencer sa généalogie gratuitement</a>
+        <a href="/arbre-genealogique-a-remplir/">Arbre généalogique à remplir</a>
+        <a href="/application-arbre-genealogique/">Quelle application choisir</a>
+        <a href="/arbre-genealogique-avec-photos/">Arbre généalogique avec photos</a>
+        <a href="/raconter-histoire-de-famille/">Raconter l'histoire de sa famille</a>
+        <a href="/liens-de-parente/">Les liens de parenté</a>
+        <a href="/cousinade/">Organiser une cousinade</a>
+        <a href="/donnees-et-vie-privee/">Données et vie privée</a>
+        <a href="/arbre-genealogique-cadeau-noel/">Arbre généalogique en cadeau de Noël</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

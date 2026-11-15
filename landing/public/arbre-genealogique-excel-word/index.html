@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FBFAF7" />
+  <title>Arbre généalogique sur Excel, Word, PowerPoint ou Canva</title>
+  <meta name="description" content="Faire un arbre généalogique avec Excel, Word, PowerPoint ou Canva, pas à pas : ce que chaque outil fait bien, où il bloque, et quand passer à une application." />
+  <link rel="canonical" href="https://parenthese.io/arbre-genealogique-excel-word/" />
+  <link rel="alternate" hreflang="fr" href="https://parenthese.io/arbre-genealogique-excel-word/" />
+  <link rel="alternate" hreflang="x-default" href="https://parenthese.io/arbre-genealogique-excel-word/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Parenthèse" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://parenthese.io/arbre-genealogique-excel-word/" />
+  <meta property="og:title" content="Arbre généalogique sur Excel, Word, PowerPoint ou Canva" />
+  <meta property="og:description" content="Les étapes dans chaque outil, ce qu'il fait bien, où il bloque, et le moment où une application devient plus simple." />
+  <meta property="og:image" content="https://parenthese.io/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/guides.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Arbre généalogique sur Excel, Word, PowerPoint ou Canva",
+        "inLanguage": "fr-FR",
+        "datePublished": "2026-11-16",
+        "dateModified": "2026-11-16",
+        "author": { "@type": "Person", "name": "Ilies Allali", "url": "https://iliesallali.design/" },
+        "publisher": { "@id": "https://parenthese.io/#organization" },
+        "mainEntityOfPage": "https://parenthese.io/arbre-genealogique-excel-word/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Existe-t-il un modèle d'arbre généalogique dans Word ?", "acceptedAnswer": { "@type": "Answer", "text": "Word n'a pas d'arbre généalogique tout fait, mais le graphique SmartArt de type Organigramme, dans la catégorie Hiérarchie, en donne la structure. Vous remplacez les postes par des prénoms et vous ajoutez les boîtes une à une." } },
+          { "@type": "Question", "name": "Excel ou Word, lequel choisir ?", "acceptedAnswer": { "@type": "Answer", "text": "Excel pour noter les personnes et leurs dates proprement, Word ou PowerPoint pour dessiner l'arbre. Le plus solide est de tenir la liste dans Excel et de faire le dessin à part, quand la liste est prête." } },
+          { "@type": "Question", "name": "Combien de générations tiennent sur une page A4 ?", "acceptedAnswer": { "@type": "Answer", "text": "Quatre générations d'ascendants font quinze personnes, et la dernière ligne en compte huit. C'est lisible sur une page en paysage. À cinq générations, la dernière ligne passe à seize personnes et les noms deviennent trop petits." } },
+          { "@type": "Question", "name": "Peut-on importer un fichier Excel dans un logiciel de généalogie ?", "acceptedAnswer": { "@type": "Answer", "text": "Les logiciels et les applications échangent leurs arbres dans le format GEDCOM, pas en fichier Excel. Parenthèse, par exemple, importe et exporte le GEDCOM mais ne lit pas de tableau Excel. Avec une liste propre, la saisie reste rapide, parce que vous recopiez des lignes déjà vérifiées." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Pages du site préparées en avance quand on survole un lien (appui sur téléphone) : elles s'ouvrent presque
+       tout de suite. Seulement les pages, pas les fichiers ; l'application (app.parenthese.io) n'est pas concernée.
+       Un navigateur qui ne connaît pas ces règles les ignore. -->
+  <script type="speculationrules">{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/*.*"}}]},"eagerness":"moderate"}]}</script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Parenthèse, accueil">
+        <img src="/logo.svg" alt="" width="166" height="22" />
+      </a>
+      <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-excel-word">Créer mon arbre</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap">
+      <span class="eyebrow">Guide</span>
+      <h1>Faire un arbre généalogique sur Excel, Word, PowerPoint ou Canva</h1>
+      <p class="lead">Excel sert à tenir la liste des personnes, Word et PowerPoint dessinent l'arbre avec un organigramme SmartArt, et Canva part d'un modèle déjà joli. Les quatre conviennent bien à une petite famille sur trois générations. Au-delà, ils demandent beaucoup de travail à la main.</p>
+
+      <h2>Avec Excel, une ligne par personne</h2>
+      <p>Excel ne dessine pas bien les arbres, mais il est très bon pour la partie qu'on néglige le plus, la liste. Une liste propre vous évite de chercher plus tard quelle date est la bonne, et elle sert ensuite à n'importe quel dessin.</p>
+      <ol>
+        <li>Créez une colonne <strong>Identifiant</strong> et donnez un numéro à chaque personne, sans jamais le réutiliser.</li>
+        <li>Ajoutez les colonnes Prénoms, Nom (le nom de naissance pour les femmes mariées), Date de naissance, Lieu de naissance, Date de décès, Lieu de décès.</li>
+        <li>Ajoutez deux colonnes <strong>Père</strong> et <strong>Mère</strong>, où vous écrivez l'identifiant du parent, pas son nom.</li>
+        <li>Gardez une dernière colonne Sources, pour noter d'où vient chaque date (livret de famille, acte, souvenir de votre tante).</li>
+      </ol>
+      <p>Avec quatre personnes, ça donne ceci.</p>
+      <div class="tableau" tabindex="0" role="region" aria-label="Exemple de liste dans Excel">
+        <table>
+          <thead><tr><th>Identifiant</th><th>Qui</th><th>Naissance</th><th>Père</th><th>Mère</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Vous</td><td>1988, Lyon</td><td>2</td><td>3</td></tr>
+            <tr><td>2</td><td>Votre père</td><td>1959, Mâcon</td><td>4</td><td></td></tr>
+            <tr><td>3</td><td>Votre mère</td><td>1961, Lyon</td><td></td><td></td></tr>
+            <tr><td>4</td><td>Votre grand-père paternel</td><td>1931</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Les identifiants règlent les homonymes, qui sont nombreux dans les familles où l'on donne au fils le prénom du grand-père. Ils permettent aussi de laisser une case vide quand vous ne savez pas encore, sans casser le reste. Si vous voulez voir le nom du père à côté de son numéro, la fonction RECHERCHEX va le chercher dans le tableau. Elle existe dans Microsoft 365, Excel 2021 et Excel 2024, pas dans Excel 2016 ni 2019.</p>
+      <p>Pour le dessin, Excel propose les mêmes graphiques SmartArt que Word et PowerPoint, et vous pouvez aussi tracer des formes reliées par des traits. Dans la pratique, une feuille de calcul s'imprime mal en grand format. Le plus simple est de garder Excel pour la liste et de faire le dessin dans PowerPoint, ou de recopier la liste sur un <a href="/arbre-genealogique-a-remplir/">modèle d'arbre à remplir</a>.</p>
+
+      <h2>Avec Word ou PowerPoint, l'organigramme SmartArt</h2>
+      <p>Ni Word ni PowerPoint n'ont d'arbre généalogique tout fait. On détourne l'organigramme, qui range des boîtes en niveaux reliés par des traits. Les étapes sont les mêmes dans les deux logiciels, d'après le support de Microsoft.</p>
+      <ol>
+        <li>Dans l'onglet <strong>Insertion</strong>, groupe <strong>Illustrations</strong>, cliquez sur <strong>SmartArt</strong>.</li>
+        <li>Choisissez la catégorie <strong>Hiérarchie</strong>, puis la disposition <strong>Organigramme</strong>. Pour mettre une photo par personne, prenez <strong>Organigramme avec images</strong> ou <strong>Hiérarchie avec images rondes</strong>.</li>
+        <li>Tapez les prénoms dans les boîtes, ou dans le volet Texte, plus pratique pour une longue liste.</li>
+        <li>Pour ajouter quelqu'un, sélectionnez une boîte, puis ouvrez le menu <strong>Ajouter une forme</strong> dans l'onglet de création SmartArt. Il propose d'ajouter la forme avant, après, au-dessus ou en dessous.</li>
+      </ol>
+      <p>L'organigramme a été pensé pour une entreprise, où chaque boîte a un seul chef au-dessus d'elle. Pour un arbre de descendants, ça marche très bien. Vous mettez le couple d'ancêtres dans la boîte du haut (« Grand-père et grand-mère »), leurs enfants en dessous, puis les petits-enfants. Pour un arbre d'ascendants, mettez-vous dans la boîte du haut et vos parents en dessous : l'arbre se lit alors vers le bas, de vous jusqu'aux arrière-grands-parents.</p>
+      <p>Word convient à une page A4 à imprimer ou à glisser dans un dossier. PowerPoint laisse plus de place sur une diapositive, s'exporte en PDF pour une impression en grand, et se projette bien pendant un repas de famille.</p>
+
+      <h2>Avec Canva, partir d'un modèle</h2>
+      <p>Canva propose des modèles d'arbre généalogique en français, en document A4, en graphique ou en tableau blanc (on en trouve en cherchant « arbre » dans ses modèles, le 15 novembre 2026). Vous changez les prénoms, les couleurs, ajoutez des photos, et le résultat est présentable tout de suite. Vérifiez que le modèle choisi est gratuit, car une partie des modèles et des éléments de Canva est réservée à l'abonnement payant.</p>
+      <p>C'est le meilleur des quatre outils pour une affiche ou un cadeau. Un modèle est fait pour un nombre de personnes donné, avec des cases placées à la main. Ajouter un oncle dont vous ne connaissiez pas l'existence demande souvent de redéplacer tout un côté de l'arbre. Si l'arbre est pour offrir, le guide de l'<a href="/arbre-genealogique-cadeau-noel/">arbre en cadeau de Noël</a> donne les étapes pour le préparer à temps.</p>
+
+      <h2>Là où ces outils bloquent</h2>
+      <p>Le premier mur est le nombre de personnes. Chaque génération double le nombre d'ascendants : deux parents, quatre grands-parents, huit arrière-grands-parents. Sur cinq générations, il faut trente et une boîtes, dont seize sur la dernière ligne. À ce stade, une page A4 ne suffit plus, et un SmartArt devient difficile à manier.</p>
+      <p>Le deuxième, ce sont les deux parents. Un organigramme ne rattache une boîte qu'à une seule boîte au-dessus. Il faut donc mettre les deux parents dans une même boîte, ce qui marche tant qu'ils forment un seul couple.</p>
+      <p>Les familles recomposées cassent ce bricolage. Un demi-frère a un parent en commun avec vous, pas les deux. Un grand-père qui s'est marié deux fois a des enfants de deux unions. Dans un organigramme ou un modèle Canva, il faut alors dupliquer des personnes ou tracer des traits à la main, et l'arbre devient difficile à lire.</p>
+      <p>Restent la mise à jour et le partage. Chaque naissance, chaque date retrouvée oblige à rouvrir le fichier et à reprendre la mise en page. Envoyé par mail, le fichier part en plusieurs copies, et au bout de quelques mois personne ne sait plus laquelle est la bonne. Excel s'en sort mieux sur ce point que les autres, parce qu'une ligne s'ajoute sans rien déplacer.</p>
+
+      <h2>Les quatre outils côte à côte</h2>
+      <div class="tableau" tabindex="0" role="region" aria-label="Les quatre outils côte à côte">
+        <table>
+          <thead><tr><th>Outil</th><th>Fait bien</th><th>Taille confortable</th><th>Deux parents, familles recomposées</th><th>Mise à jour et partage</th></tr></thead>
+          <tbody>
+            <tr><td>Excel</td><td>Une liste propre, avec dates, lieux et sources</td><td>Des centaines de lignes, mais pas de dessin lisible</td><td>Oui, avec les colonnes Père et Mère</td><td>Facile à compléter, une copie par personne si vous l'envoyez</td></tr>
+            <tr><td>Word</td><td>Une page A4 à imprimer</td><td>Trois générations</td><td>Les deux parents dans une même boîte, recomposées difficiles</td><td>Mise en page à reprendre à chaque ajout</td></tr>
+            <tr><td>PowerPoint</td><td>Un grand dessin, une projection en famille</td><td>Trois ou quatre générations</td><td>Comme Word</td><td>Comme Word</td></tr>
+            <tr><td>Canva</td><td>Une affiche, un cadeau, avec photos</td><td>Le nombre de cases du modèle</td><td>Selon le modèle, à la main</td><td>Cases à redéplacer à la main</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Quand passer à un logiciel ou une application</h2>
+      <p>Passez à un outil de généalogie quand l'arbre dépasse trois générations, quand une famille recomposée entre en jeu, ou quand vous voulez que d'autres le complètent. Un logiciel ou une application range les personnes et leurs liens, et c'est lui qui dessine l'arbre. Vous ajoutez une personne, il la place. Le guide pour <a href="/application-arbre-genealogique/">choisir une application d'arbre généalogique</a> compare les principales selon ce que vous cherchez.</p>
+      <p>Votre fichier Excel ne sera pas perdu. Les outils de généalogie échangent leurs arbres en format GEDCOM et ne lisent pas les tableaux Excel, donc il faudra ressaisir, mais en recopiant des lignes déjà vérifiées. Dans Parenthèse, la famille ouvre l'arbre par un lien et un mot de passe, sans créer de compte, et propose ses ajouts, que vous validez avant qu'ils entrent dans l'arbre.</p>
+      <p>Si vous voulez seulement un arbre sur papier, sans logiciel, nos <a href="/arbre-genealogique-a-remplir/">modèles PDF gratuits</a> vont de trois à cinq générations et s'impriment en A4.</p>
+
+      <h2>Questions fréquentes</h2>
+      <div class="faq">
+        <details>
+          <summary>Existe-t-il un modèle d'arbre généalogique dans Word ?</summary>
+          <p>Word n'a pas d'arbre généalogique tout fait, mais le graphique SmartArt de type Organigramme, dans la catégorie Hiérarchie, en donne la structure. Vous remplacez les postes par des prénoms et vous ajoutez les boîtes une à une.</p>
+        </details>
+        <details>
+          <summary>Excel ou Word, lequel choisir ?</summary>
+          <p>Excel pour noter les personnes et leurs dates proprement, Word ou PowerPoint pour dessiner l'arbre. Le plus solide est de tenir la liste dans Excel et de faire le dessin à part, quand la liste est prête.</p>
+        </details>
+        <details>
+          <summary>Combien de générations tiennent sur une page A4 ?</summary>
+          <p>Quatre générations d'ascendants font quinze personnes, et la dernière ligne en compte huit. C'est lisible sur une page en paysage. À cinq générations, la dernière ligne passe à seize personnes et les noms deviennent trop petits.</p>
+        </details>
+        <details>
+          <summary>Peut-on importer un fichier Excel dans un logiciel de généalogie ?</summary>
+          <p>Les logiciels et les applications échangent leurs arbres dans le format GEDCOM, pas en fichier Excel. Parenthèse, par exemple, importe et exporte le GEDCOM mais ne lit pas de tableau Excel. Avec une liste propre, la saisie reste rapide, parce que vous recopiez des lignes déjà vérifiées.</p>
+        </details>
+      </div>
+
+      <section class="cta">
+        <h2>Un arbre qui se range tout seul</h2>
+        <p>Dans Parenthèse, vous ajoutez une personne et l'arbre la place. Chaque fiche garde ses photos, sa voix et ses souvenirs, et la famille complète par un lien. C'est gratuit et en code ouvert.</p>
+        <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-excel-word">Créer mon arbre</a>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Parenthèse · <a href="/">parenthese.io</a> · <a href="/en/" hreflang="en" lang="en">English</a></span>
+      <nav aria-label="Guides">
+        <a href="/comment-faire-un-arbre-genealogique/">Comment faire un arbre généalogique</a>
+        <a href="/commencer-sa-genealogie/">Commencer sa généalogie gratuitement</a>
+        <a href="/retrouver-un-acte-etat-civil/">Retrouver un acte d'état civil</a>
+        <a href="/arbre-genealogique-a-remplir/">Arbre généalogique à remplir</a>
+        <a href="/application-arbre-genealogique/">Quelle application choisir</a>
+        <a href="/gedcom/">Le fichier GEDCOM</a>
+        <a href="/arbre-genealogique-avec-photos/">Arbre généalogique avec photos</a>
+        <a href="/photos-de-famille-anciennes/">Photos de famille anciennes</a>
+        <a href="/raconter-histoire-de-famille/">Raconter l'histoire de sa famille</a>
+        <a href="/recit-de-vie-livre-de-famille/">Récit de vie et livre de famille</a>
+        <a href="/liens-de-parente/">Les liens de parenté</a>
+        <a href="/cousin-germain/">Cousin germain, issu de germain</a>
+        <a href="/aieul-bisaieul-trisaieul/">Aïeul, bisaïeul, trisaïeul</a>
+        <a href="/gendre-bru-beau-frere/">Gendre, bru, beau-frère</a>
+        <a href="/famille-recomposee-arbre/">Famille recomposée</a>
+        <a href="/cousinade/">Organiser une cousinade</a>
+        <a href="/cadeau-grands-parents/">Cadeau pour ses grands-parents</a>
+        <a href="/arbre-genealogique-cadeau-noel/">Arbre généalogique en cadeau de Noël</a>
+        <a href="/donnees-et-vie-privee/">Données et vie privée</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

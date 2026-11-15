@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FBFAF7" />
+  <title>Fichier GEDCOM : ce qu'il contient, l'exporter et l'ouvrir</title>
+  <meta name="description" content="Un fichier GEDCOM (.ged) est le format texte qui fait passer un arbre d'un logiciel de généalogie à un autre. Ce qu'il garde, ce qu'il perd, comment l'exporter." />
+  <link rel="canonical" href="https://parenthese.io/gedcom/" />
+  <link rel="alternate" hreflang="fr" href="https://parenthese.io/gedcom/" />
+  <link rel="alternate" hreflang="x-default" href="https://parenthese.io/gedcom/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Parenthèse" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://parenthese.io/gedcom/" />
+  <meta property="og:title" content="Fichier GEDCOM : ce qu'il contient, l'exporter et l'ouvrir" />
+  <meta property="og:description" content="Le format qui fait passer un arbre d'un logiciel de généalogie à un autre, ce qu'il transporte bien, ce qu'il laisse en route, et comment l'exporter." />
+  <meta property="og:image" content="https://parenthese.io/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/guides.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Fichier GEDCOM : ce qu'il contient, l'exporter et l'ouvrir",
+        "inLanguage": "fr-FR",
+        "datePublished": "2026-11-16",
+        "dateModified": "2026-11-16",
+        "author": { "@type": "Person", "name": "Ilies Allali", "url": "https://iliesallali.design/" },
+        "publisher": { "@id": "https://parenthese.io/#organization" },
+        "mainEntityOfPage": "https://parenthese.io/gedcom/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Qu'est-ce qu'un fichier GEDCOM ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est un fichier texte, d'extension .ged, qui décrit un arbre généalogique : les personnes, leurs dates, leurs lieux, leurs unions et leurs filiations. Presque tous les logiciels et sites de généalogie savent l'écrire et le lire, ce qui permet de passer de l'un à l'autre sans tout ressaisir." } },
+          { "@type": "Question", "name": "Un fichier GEDCOM contient-il les photos ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Il contient au mieux le chemin ou l'adresse de chaque photo. Les fichiers eux-mêmes voyagent à part, dans un dossier à côté du .ged ou dans un zip, selon ce que propose votre logiciel." } },
+          { "@type": "Question", "name": "Comment ouvrir un fichier .ged ?", "acceptedAnswer": { "@type": "Answer", "text": "Pour le lire, n'importe quel éditeur de texte suffit, comme le Bloc-notes sur Windows ou TextEdit sur Mac. Pour le voir sous forme d'arbre, importez-le dans un logiciel ou un site de généalogie." } },
+          { "@type": "Question", "name": "Quelle version de GEDCOM choisir à l'export ?", "acceptedAnswer": { "@type": "Answer", "text": "La 5.5.1 reste la plus répandue chez les logiciels. La 7.0, publiée en 2021, n'accepte que l'UTF-8 et prévoit un zip qui réunit le fichier et ses médias, mais tous les outils ne la lisent pas encore. Si on vous laisse le choix de l'encodage, prenez l'UTF-8 quand le logiciel qui recevra le fichier le lit." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Pages du site préparées en avance quand on survole un lien (appui sur téléphone) : elles s'ouvrent presque
+       tout de suite. Seulement les pages, pas les fichiers ; l'application (app.parenthese.io) n'est pas concernée.
+       Un navigateur qui ne connaît pas ces règles les ignore. -->
+  <script type="speculationrules">{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/*.*"}}]},"eagerness":"moderate"}]}</script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Parenthèse, accueil">
+        <img src="/logo.svg" alt="" width="166" height="22" />
+      </a>
+      <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-gedcom">Créer mon arbre</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap">
+      <span class="eyebrow">Guide</span>
+      <h1>Le fichier GEDCOM : ce qu'il contient, comment l'exporter et l'ouvrir</h1>
+      <p class="lead">Un fichier GEDCOM est un fichier texte, d'extension .ged, qui décrit un arbre généalogique. Vous l'exportez d'un logiciel ou d'un site, vous l'importez dans un autre, et vos personnes arrivent avec leurs dates, leurs lieux et leurs liens, sans rien ressaisir.</p>
+
+      <h2>Un format d'échange entre logiciels</h2>
+      <p>GEDCOM veut dire <em>Genealogical Data Communication</em>. Le format a été créé par l'Église de Jésus-Christ des saints des derniers jours, qui gère FamilySearch, et sa première version date de 1984. Il sert à une seule chose : faire passer un arbre d'un outil à un autre.</p>
+      <p>Trois versions comptent aujourd'hui. La 5.5, publiée en 1996, a longtemps servi de référence. La 5.5.1 a été publiée officiellement en 2019, et c'est encore la plus répandue : Heredis l'emploie par exemple à l'export. La 7.0, publiée en 2021, n'accepte plus que l'encodage UTF-8 et ajoute un format zip qui réunit le fichier et ses médias.</p>
+      <p>Les situations où vous en avez besoin sont simples. Vous changez de logiciel. Vous voulez mettre en ligne un arbre tenu sur votre ordinateur. Un cousin vous envoie sa branche et vous voulez la joindre à la vôtre. Ou vous gardez une copie de votre arbre hors du site où il vit.</p>
+
+      <h2>À quoi ressemble un fichier .ged</h2>
+      <p>Ouvert dans un éditeur de texte, un GEDCOM est une suite de lignes courtes. Chaque ligne commence par un niveau (0 pour une nouvelle fiche, 1 pour ce qu'elle contient, 2 pour un détail), puis une étiquette en anglais abrégé. Voici une personne, sa naissance et son union, avec des noms d'exemple.</p>
+      <table>
+        <thead><tr><th>Ligne</th><th>Ce qu'elle dit</th></tr></thead>
+        <tbody>
+          <tr><td>0 @I1@ INDI</td><td>Début de la fiche d'une personne, numérotée I1 dans ce fichier</td></tr>
+          <tr><td>1 NAME Jeanne /Martin/</td><td>Le prénom, puis le nom entre deux barres obliques</td></tr>
+          <tr><td>1 SEX F</td><td>Le sexe</td></tr>
+          <tr><td>1 BIRT</td><td>La naissance, détaillée par les lignes de niveau 2</td></tr>
+          <tr><td>2 DATE 12 MAR 1890</td><td>La date, avec le mois abrégé en anglais</td></tr>
+          <tr><td>2 PLAC Nantes, Loire-Atlantique, France</td><td>Le lieu, de la commune au pays</td></tr>
+          <tr><td>1 FAMS @F1@</td><td>Elle est conjointe dans l'union F1</td></tr>
+          <tr><td>0 @F1@ FAM</td><td>Début de la fiche de l'union F1, avec ses lignes HUSB, WIFE et CHIL pour le mari, la femme et chaque enfant</td></tr>
+        </tbody>
+      </table>
+      <p>Les numéros comme I1 ou F1 ne valent que dans ce fichier. Ils relient les fiches entre elles, mais ils ne disent pas qui est la personne d'un fichier à l'autre.</p>
+
+      <h2>Ce qu'il transporte bien, et ce qu'il perd en route</h2>
+      <p>Le cœur de l'arbre passe sans souci : les noms, les dates et les lieux de naissance, de mariage et de décès, les unions, les enfants de chaque union, les métiers et les autres événements (baptême, inhumation, résidence). Les sources citées et les notes passent aussi, sous forme de texte.</p>
+      <p>Le reste dépend des deux logiciels, celui qui écrit et celui qui lit.</p>
+      <ul>
+        <li><strong>Les photos et les documents.</strong> Le GEDCOM est du texte. Il contient au mieux le chemin de chaque fichier sur l'ordinateur d'origine, ou son adresse en ligne. MyHeritage le dit dans son aide, et Ancestry précise que ses exports ne contiennent pas les médias. Heredis propose à l'export de créer un dossier de médias à côté du .ged.</li>
+        <li><strong>La mise en forme des notes.</strong> Une note GEDCOM est du texte brut. Heredis vous laisse choisir à l'export entre garder le format du texte ou non, et un autre logiciel ne relira pas forcément ce format.</li>
+        <li><strong>Les accents.</strong> Les anciennes versions acceptaient plusieurs encodages, dont l'ANSEL, celui par défaut. Si le logiciel qui lit ne devine pas le bon, « Hélène » s'affiche « HÃ©lÃ¨ne » ou avec des points d'interrogation. L'aide de Geneanet conseille ainsi, pour un export depuis Heredis, l'option Windows (Ansi) plutôt que l'ANSEL.</li>
+      </ul>
+
+      <h2>Exporter un GEDCOM depuis votre outil actuel</h2>
+      <p>Chaque outil range l'export à sa façon. Voici où le trouver, d'après l'aide de chacun.</p>
+      <ul>
+        <li><strong>Geneanet.</strong> Sur votre arbre, ouvrez le menu à côté de son titre et choisissez « Exporter &amp; Restaurer », puis « Exports et sauvegardes ». Cochez le type d'export (l'arbre entier ou une branche) et choisissez le format GEDCOM dans le menu déroulant.</li>
+        <li><strong>Heredis.</strong> Menu Fichier, puis Exporter, puis GEDCOM. Choisissez tout le fichier (sur Mac, toutes les branches), l'encodage, et cochez la création du dossier de médias si vous voulez récupérer les photos.</li>
+        <li><strong>Ancestry.</strong> L'export se trouve dans les paramètres de l'arbre, dans la partie qui sert à le gérer. Ancestry prépare le fichier, puis un bouton permet de le télécharger. Seul le propriétaire de l'arbre peut l'exporter.</li>
+        <li><strong>MyHeritage.</strong> Menu Arbre, puis « Gérer arbres », puis « Exporter vers GEDCOM » dans la colonne Actions. MyHeritage vous demande ensuite si vous voulez inclure les photos, c'est-à-dire leurs liens.</li>
+        <li><strong>Filae.</strong> Arbre affiché, cliquez sur l'icône Réglages en haut à droite, puis sur Gedcom et « Exporter l'arbre ». Quand le fichier est prêt, cliquez sur « Télécharger le fichier gedcom ». Vous pouvez aussi exporter une seule branche, en ascendance ou en descendance.</li>
+        <li><strong>Gramps.</strong> Ce logiciel libre exporte par le menu des arbres familiaux, commande d'export (Ctrl + E), qui ouvre un assistant où vous choisissez le format GEDCOM. Pour garder les médias entre deux installations de Gramps, son propre format Gramps XML Package les emporte avec l'arbre.</li>
+      </ul>
+      <p>Un export complet vaut mieux qu'une branche quand vous déménagez votre arbre. Une branche coupe les liens avec les personnes laissées de côté.</p>
+
+      <h2>Ouvrir un fichier GEDCOM</h2>
+      <p>Pour le lire, un éditeur de texte suffit (le Bloc-notes sur Windows, TextEdit sur Mac). C'est utile pour vérifier qu'une personne est bien dedans, ou repérer d'où vient un caractère cassé.</p>
+      <p>Pour le voir comme un arbre, importez-le dans un logiciel ou un site de généalogie. Si vous cherchez lequel, le guide pour <a href="/application-arbre-genealogique/">choisir une application d'arbre généalogique</a> compare les principaux. Faites l'essai dans un arbre neuf plutôt que dans votre arbre principal, pour pouvoir recommencer.</p>
+
+      <h2>Les pièges les plus courants</h2>
+      <ul>
+        <li><strong>Les doublons.</strong> Importer deux fois le même fichier, ou joindre la branche d'un cousin qui contient vos grands-parents, crée souvent deux fiches pour la même personne. Comme les numéros I1, I2 ne valent que dans un fichier, le logiciel ne peut pas savoir seul que c'est la même. Comptez du temps pour fusionner après coup.</li>
+        <li><strong>Les lieux mal formés.</strong> Certains logiciels écrivent toutes les colonnes de leur format de lieu, même vides, avec le code INSEE au milieu. Vous recevez alors des lieux comme « Nantes,44109,Loire-Atlantique,,France, ».</li>
+        <li><strong>Les dates en texte.</strong> La norme attend des mois abrégés en anglais et des mots-clés comme ABT (vers), BEF (avant) ou AFT (après). Une date tapée « vers 1880 » ou « printemps 1915 » reste un texte, que le logiciel suivant ne sait ni trier ni calculer.</li>
+        <li><strong>Les photos introuvables.</strong> Le fichier indique « C:\Généalogie\Photos\jeanne.jpg », mais ce chemin n'existe que sur l'ancien ordinateur. Gardez le dossier des photos avec le .ged.</li>
+      </ul>
+
+      <h2>Le GEDCOM dans Parenthèse</h2>
+      <p>Dans les paramètres de l'arbre, section Données, l'administrateur importe un fichier .ged, ou un zip qui contient le .ged et ses photos (un export avec médias, un GEDZIP .gdz de la version 7, ou un dossier compressé à la main). Les personnes et les liens du fichier s'ajoutent à l'arbre. Les accents sont lus quel que soit l'encodage (UTF-8, ANSEL, Windows ou Mac), les dates « vers », « avant », « entre » et celles du calendrier républicain sont comprises, et les codes INSEE et les cases vides sont retirés des lieux. Un second import du même fichier complète l'arbre sans recréer les personnes déjà présentes avec le même prénom, le même nom et les mêmes dates de naissance et de décès.</p>
+      <p>Les photos et les actes du zip sont rapprochés des fichiers que le logiciel d'origine citait : le portrait va sur la fiche, le reste rejoint les souvenirs de la personne. Sans zip, Parenthèse vous montre les photos attendues et vous demande le dossier où votre ancien logiciel les rangeait. Dans l'autre sens, le bouton « Télécharger .ged » produit un GEDCOM 5.5.1 en UTF-8, avec les personnes, les unions, les filiations, les dates, les lieux, les notes et les sources, mais sans les photos ni les autres médias. Pour aller plus loin avec les photos, le guide de l'<a href="/arbre-genealogique-avec-photos/">arbre généalogique avec photos</a> détaille la méthode, et la page <a href="/donnees-et-vie-privee/">données et vie privée</a> dit qui peut exporter un arbre partagé.</p>
+
+      <h2>Questions fréquentes</h2>
+      <div class="faq">
+        <details>
+          <summary>Qu'est-ce qu'un fichier GEDCOM ?</summary>
+          <p>C'est un fichier texte, d'extension .ged, qui décrit un arbre généalogique : les personnes, leurs dates, leurs lieux, leurs unions et leurs filiations. Presque tous les logiciels et sites de généalogie savent l'écrire et le lire, ce qui permet de passer de l'un à l'autre sans tout ressaisir.</p>
+        </details>
+        <details>
+          <summary>Un fichier GEDCOM contient-il les photos ?</summary>
+          <p>Non. Il contient au mieux le chemin ou l'adresse de chaque photo. Les fichiers eux-mêmes voyagent à part, dans un dossier à côté du .ged ou dans un zip, selon ce que propose votre logiciel.</p>
+        </details>
+        <details>
+          <summary>Comment ouvrir un fichier .ged ?</summary>
+          <p>Pour le lire, n'importe quel éditeur de texte suffit, comme le Bloc-notes sur Windows ou TextEdit sur Mac. Pour le voir sous forme d'arbre, importez-le dans un logiciel ou un site de généalogie.</p>
+        </details>
+        <details>
+          <summary>Quelle version de GEDCOM choisir à l'export ?</summary>
+          <p>La 5.5.1 reste la plus répandue chez les logiciels. La 7.0, publiée en 2021, n'accepte que l'UTF-8 et prévoit un zip qui réunit le fichier et ses médias, mais tous les outils ne la lisent pas encore. Si on vous laisse le choix de l'encodage, prenez l'UTF-8 quand le logiciel qui recevra le fichier le lit.</p>
+        </details>
+      </div>
+
+      <p class="source">Sources : <a href="https://gedcom.io/about/" rel="noopener">gedcom.io</a> et la <a href="https://gedcom.io/specifications/FamilySearchGEDCOMv7.html" rel="noopener">spécification GEDCOM 7.0</a> (FamilySearch), aides officielles de <a href="https://www.geneanet.org/aide/comment-sauvegarder-mon-arbre" rel="noopener">Geneanet</a>, <a href="https://help.heredis.com/en/?p=50882" rel="noopener">Heredis</a>, <a href="https://help.ancestry.com/hc/en-us/articles/53933352542867-Uploading-and-Downloading-Trees" rel="noopener">Ancestry</a>, <a href="https://www.myheritage.com/help/en/articles/12851866-how-do-i-download-export-a-gedcom-file-of-my-family-tree-from-my-family-site" rel="noopener">MyHeritage</a>, <a href="https://assistance.filae.com/portal/fr/kb/articles/comment-exporter-un-arbre" rel="noopener">Filae</a> et le <a href="https://gramps-project.org/wiki/index.php/Gramps_5.2_Wiki_Manual_-_Manage_Family_Trees" rel="noopener">manuel de Gramps 5.2</a>, consultées le 15 novembre 2026.</p>
+
+      <section class="cta">
+        <h2>Donnez une suite à votre fichier</h2>
+        <p>Importez votre GEDCOM dans Parenthèse, ajoutez les visages et les voix, et ouvrez l'arbre à la famille par un lien.</p>
+        <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-gedcom">Créer mon arbre</a>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Parenthèse · <a href="/">parenthese.io</a> · <a href="/en/" hreflang="en" lang="en">English</a></span>
+      <nav aria-label="Guides">
+        <a href="/comment-faire-un-arbre-genealogique/">Comment faire un arbre généalogique</a>
+        <a href="/commencer-sa-genealogie/">Commencer sa généalogie gratuitement</a>
+        <a href="/arbre-genealogique-a-remplir/">Arbre généalogique à remplir</a>
+        <a href="/application-arbre-genealogique/">Quelle application choisir</a>
+        <a href="/arbre-genealogique-avec-photos/">Arbre généalogique avec photos</a>
+        <a href="/raconter-histoire-de-famille/">Raconter l'histoire de sa famille</a>
+        <a href="/liens-de-parente/">Les liens de parenté</a>
+        <a href="/cousinade/">Organiser une cousinade</a>
+        <a href="/donnees-et-vie-privee/">Données et vie privée</a>
+        <a href="/arbre-genealogique-cadeau-noel/">Arbre généalogique en cadeau de Noël</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
