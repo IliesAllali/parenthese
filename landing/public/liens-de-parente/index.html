@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#FBFAF7" />
+  <title>Liens de parenté : les noms, les degrés et un calculateur</title>
+  <meta name="description" content="Trouvez le nom d'un lien de parenté avec le calculateur : oncle, cousin germain, issu de germain, par alliance. Et comment se comptent les degrés en droit." />
+  <link rel="canonical" href="https://parenthese.io/liens-de-parente/" />
+  <link rel="alternate" hreflang="fr" href="https://parenthese.io/liens-de-parente/" />
+  <link rel="alternate" hreflang="x-default" href="https://parenthese.io/liens-de-parente/" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Parenthèse" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:url" content="https://parenthese.io/liens-de-parente/" />
+  <meta property="og:title" content="Liens de parenté : les noms, les degrés et un calculateur" />
+  <meta property="og:description" content="Le nom de chaque lien, de l'arrière-grand-oncle au cousin issu de germain, et un calculateur pour trouver le vôtre." />
+  <meta property="og:image" content="https://parenthese.io/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/fonts/fonts.css" />
+  <link rel="stylesheet" href="/guides.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "headline": "Liens de parenté : les noms, les degrés et un calculateur",
+        "inLanguage": "fr-FR",
+        "datePublished": "2026-11-16",
+        "dateModified": "2026-11-16",
+        "author": { "@type": "Person", "name": "Ilies Allali", "url": "https://iliesallali.design/" },
+        "publisher": { "@id": "https://parenthese.io/#organization" },
+        "mainEntityOfPage": "https://parenthese.io/liens-de-parente/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Comment calculer un degré de parenté ?", "acceptedAnswer": { "@type": "Answer", "text": "En droit civil, on compte les générations. En ligne directe, une génération vaut un degré : le parent est au premier degré, le grand-parent au deuxième. Entre collatéraux, on remonte de la première personne jusqu'à l'ancêtre commun, sans le compter, puis on redescend jusqu'à l'autre : deux frères sont au deuxième degré, l'oncle et le neveu au troisième, deux cousins germains au quatrième." } },
+          { "@type": "Question", "name": "Quel est mon lien de parenté avec le fils de mon cousin germain ?", "acceptedAnswer": { "@type": "Answer", "text": "On l'appelle le plus souvent petit-cousin, et parfois neveu à la mode de Bretagne. En droit civil, il est au cinquième degré." } },
+          { "@type": "Question", "name": "Jusqu'à quel degré de parenté peut-on hériter ?", "acceptedAnswer": { "@type": "Answer", "text": "En ligne collatérale, les parents ne succèdent pas au-delà du sixième degré, celui des cousins issus de germains (article 745 du Code civil). En ligne directe, il n'y a pas de limite." } },
+          { "@type": "Question", "name": "Le conjoint est-il un parent ?", "acceptedAnswer": { "@type": "Answer", "text": "Non, au sens du droit, le conjoint est un allié et pas un parent, et les liens qui passent par lui sont des liens d'alliance : beau-père, belle-sœur, oncle par alliance. Ils n'ont pas de degré de parenté." } }
+        ]
+      }
+    ]
+  }
+  </script>
+  <!-- Pages du site préparées en avance quand on survole un lien (appui sur téléphone) : elles s'ouvrent presque
+       tout de suite. Seulement les pages, pas les fichiers ; l'application (app.parenthese.io) n'est pas concernée.
+       Un navigateur qui ne connaît pas ces règles les ignore. -->
+  <script type="speculationrules">{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":"/*.*"}}]},"eagerness":"moderate"}]}</script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/" aria-label="Parenthèse, accueil">
+        <img src="/logo.svg" alt="" width="166" height="22" />
+      </a>
+      <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-parente">Créer mon arbre</a>
+    </div>
+  </header>
+
+  <main>
+    <article class="wrap">
+      <span class="eyebrow">Guide</span>
+      <h1>Liens de parenté : les noms, les degrés et un calculateur</h1>
+      <p class="lead">Le cousin de votre mère, l'enfant de votre cousine, le frère de votre arrière-grand-père. Chaque lien a un nom, et le calculateur ci-dessous le trouve pour vous.</p>
+
+      <h2 id="calculateur">Trouver un lien de parenté</h2>
+      <p>Partez de vous, et ajoutez les pas qui mènent à la personne. Pour un cousin germain, c'est parent, puis frère ou sœur, puis enfant.</p>
+      <div class="calc" id="calculateur-parente" data-depart="up,sibling,down">
+        <p class="calc-chaine" data-chaine aria-label="Le chemin"><span class="moi">Vous</span><span>Parent</span><span>Frère ou sœur</span><span>Enfant</span></p>
+        <p class="calc-resultat" data-resultat aria-live="polite">Cousin(e) germain(e)</p>
+        <div class="calc-ctrl">
+          <div class="calc-pas" role="group" aria-label="Ajouter un pas">
+            <button type="button" data-pas="up">Parent</button>
+            <button type="button" data-pas="sibling">Frère ou sœur</button>
+            <button type="button" data-pas="down">Enfant</button>
+            <button type="button" data-pas="spouse">Conjoint</button>
+          </div>
+          <div class="calc-sexe" role="group" aria-label="La personne au bout du chemin est">
+            <span>La personne est</span>
+            <button type="button" data-sexe="male" aria-pressed="false">un homme</button>
+            <button type="button" data-sexe="female" aria-pressed="false">une femme</button>
+            <button type="button" data-sexe="" aria-pressed="true">non précisé</button>
+          </div>
+          <div class="calc-actions">
+            <button type="button" class="lien" data-retirer>Retirer le dernier pas</button>
+            <button type="button" class="lien" data-recommencer>Recommencer</button>
+          </div>
+        </div>
+      </div>
+      <p>C'est le même calcul que dans l'arbre de Parenthèse. Sur ordinateur, sélectionnez une personne puis passez sur une autre, le chemin entre les deux s'allume et leur lien s'affiche.</p>
+
+      <h2>La ligne directe : ascendants et descendants</h2>
+      <p>Ce sont les personnes dont vous descendez, et celles qui descendent de vous. Chaque génération ajoute un « petit » ou un « arrière ».</p>
+      <table>
+        <thead><tr><th>Génération</th><th>Au-dessus de vous</th><th>Au-dessous de vous</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Père, mère</td><td>Fils, fille</td></tr>
+          <tr><td>2</td><td>Grand-père, grand-mère</td><td>Petit-fils, petite-fille</td></tr>
+          <tr><td>3</td><td>Arrière-grand-père, arrière-grand-mère</td><td>Arrière-petit-fils, arrière-petite-fille</td></tr>
+          <tr><td>4</td><td>Trisaïeul (arrière-arrière-grand-père)</td><td>Arrière-arrière-petit-enfant</td></tr>
+        </tbody>
+      </table>
+      <p>Au-delà, on parle d'aïeuls et de descendants en précisant la génération. En généalogie, on numérote aussi les ancêtres (la numérotation Sosa) plutôt que de compter les « arrière ».</p>
+
+      <h2>Les collatéraux : oncles, neveux et cousins</h2>
+      <p>Ce sont les personnes avec qui vous partagez un ancêtre sans descendre l'une de l'autre.</p>
+      <ul>
+        <li><strong>Oncle et tante.</strong> Le frère ou la sœur d'un parent. Celui d'un grand-parent est un grand-oncle, celui d'un arrière-grand-parent un arrière-grand-oncle.</li>
+        <li><strong>Neveu et nièce.</strong> L'enfant d'un frère ou d'une sœur. Leur enfant est un petit-neveu, puis un arrière-petit-neveu.</li>
+        <li><strong>Cousin germain.</strong> L'enfant d'un oncle ou d'une tante. Vous avez les mêmes grands-parents.</li>
+        <li><strong>Cousin issu de germain.</strong> L'enfant d'un cousin germain de vos parents. Vous avez les mêmes arrière-grands-parents.</li>
+        <li><strong>Petit-cousin.</strong> Le plus souvent l'enfant de votre cousin germain, ou le cousin germain d'un de vos parents.</li>
+      </ul>
+      <p>Les cousins ont leurs subtilités, et le mot « petit-cousin » n'a pas le même sens dans toutes les familles. Le guide <a href="/cousin-germain/">cousin germain, issu de germain et petit-cousin</a> les démêle un par un.</p>
+
+      <h2>Les liens par alliance</h2>
+      <p>Un lien qui passe par un mariage ou un couple est un lien d'alliance. Les mots sont les mêmes, avec « par alliance » ou le préfixe « beau » ou « belle ».</p>
+      <ul>
+        <li><strong>Beau-père et belle-mère.</strong> Les parents de votre conjoint, ou le nouveau conjoint de votre père ou de votre mère. Le français garde le même mot pour les deux.</li>
+        <li><strong>Beau-fils et belle-fille.</strong> L'enfant de votre conjoint, ou le conjoint de votre enfant (on dit aussi gendre et bru).</li>
+        <li><strong>Beau-frère et belle-sœur.</strong> Le frère ou la sœur de votre conjoint, le conjoint de votre frère ou de votre sœur, et parfois l'enfant du nouveau conjoint d'un parent, qu'on appelle aussi quasi-frère.</li>
+        <li><strong>Demi-frère et demi-sœur.</strong> Ce n'est pas un lien d'alliance. Vous avez un parent en commun, pas les deux.</li>
+        <li><strong>Oncle par alliance.</strong> Le mari d'une tante, ou la femme d'un oncle pour une tante par alliance.</li>
+      </ul>
+
+      <h2>Les degrés de parenté en droit</h2>
+      <p>Dans la famille, on dit « cousin au deuxième degré » pour parler d'un cousin issu de germain. Le droit compte autrement, et c'est ce compte-là qui sert pour une succession ou un empêchement à mariage.</p>
+      <p>On compte les générations. En ligne directe, chaque génération vaut un degré. Entre collatéraux, on remonte de vous jusqu'à l'ancêtre commun, sans le compter, puis on redescend jusqu'à l'autre personne (articles 741 à 743 du Code civil).</p>
+      <table>
+        <thead><tr><th>Lien</th><th>Degré en droit</th></tr></thead>
+        <tbody>
+          <tr><td>Parent, enfant</td><td>1<sup>er</sup></td></tr>
+          <tr><td>Grand-parent, petit-enfant, frère, sœur</td><td>2<sup>e</sup></td></tr>
+          <tr><td>Arrière-grand-parent, oncle, tante, neveu, nièce</td><td>3<sup>e</sup></td></tr>
+          <tr><td>Cousin germain, grand-oncle, petit-neveu</td><td>4<sup>e</sup></td></tr>
+          <tr><td>Enfant d'un cousin germain</td><td>5<sup>e</sup></td></tr>
+          <tr><td>Cousin issu de germain</td><td>6<sup>e</sup></td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <p><strong>À retenir.</strong> En ligne collatérale, on n'hérite pas au-delà du sixième degré, celui des cousins issus de germains (article 745 du Code civil). Pour une succession réelle, un notaire fait ce compte avec les actes.</p>
+      </div>
+
+      <h2>Questions fréquentes</h2>
+      <div class="faq">
+        <details>
+          <summary>Comment calculer un degré de parenté ?</summary>
+          <p>En droit civil, on compte les générations. En ligne directe, une génération vaut un degré. Entre collatéraux, on remonte jusqu'à l'ancêtre commun, sans le compter, puis on redescend : deux frères sont au deuxième degré, l'oncle et le neveu au troisième, deux cousins germains au quatrième.</p>
+        </details>
+        <details>
+          <summary>Quel lien avec le fils de mon cousin germain ?</summary>
+          <p>On l'appelle le plus souvent petit-cousin, et parfois neveu à la mode de Bretagne. En droit civil, il est au cinquième degré.</p>
+        </details>
+        <details>
+          <summary>Jusqu'à quel degré peut-on hériter ?</summary>
+          <p>En ligne collatérale, jusqu'au sixième degré, celui des cousins issus de germains. En ligne directe, il n'y a pas de limite.</p>
+        </details>
+        <details>
+          <summary>Le conjoint est-il un parent ?</summary>
+          <p>Non, au sens du droit, le conjoint est un allié. Les liens qui passent par lui sont des liens d'alliance, comme beau-père, belle-sœur ou oncle par alliance, et ils n'ont pas de degré de parenté.</p>
+        </details>
+      </div>
+
+      <section class="cta">
+        <h2>Voir les liens de toute votre famille</h2>
+        <p>Posez la famille dans un arbre, et chaque lien se nomme tout seul, de l'arrière-grand-oncle au cousin issu de germain.</p>
+        <a class="btn" href="https://app.parenthese.io/?account=register&amp;source=guide-parente">Créer mon arbre</a>
+      </section>
+    </article>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Parenthèse · <a href="/">parenthese.io</a> · <a href="/en/" hreflang="en" lang="en">English</a></span>
+      <nav aria-label="Guides">
+        <a href="/comment-faire-un-arbre-genealogique/">Comment faire un arbre généalogique</a>
+        <a href="/commencer-sa-genealogie/">Commencer sa généalogie gratuitement</a>
+        <a href="/arbre-genealogique-a-remplir/">Arbre généalogique à remplir</a>
+        <a href="/application-arbre-genealogique/">Quelle application choisir</a>
+        <a href="/arbre-genealogique-avec-photos/">Arbre généalogique avec photos</a>
+        <a href="/raconter-histoire-de-famille/">Raconter l'histoire de sa famille</a>
+        <a href="/cousin-germain/">Cousin germain, issu de germain</a>
+        <a href="/cousinade/">Organiser une cousinade</a>
+        <a href="/donnees-et-vie-privee/">Données et vie privée</a>
+        <a href="/arbre-genealogique-cadeau-noel/">Arbre généalogique en cadeau de Noël</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

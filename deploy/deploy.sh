@@ -161,7 +161,7 @@ fi
 
 # 6. Landing (autonome, plus aucune police lue dans le frontend ; frontend/src/assets reste dans le
 #    déclencheur par prudence, sans effet tant que rien n'y change)
-if changed landing frontend/src/assets; then
+if changed landing frontend/src/assets frontend/src/utils/kinship; then
   install_deps landing
   log "Build landing"
   (cd "$REPO_DIR/landing" && npm run build)

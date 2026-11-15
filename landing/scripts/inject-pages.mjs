@@ -1,6 +1,6 @@
 // Pose la mesure d'audience (src/pages.js, nom à empreinte lu dans le manifeste de Vite) dans chaque page
-// statique de dist/ : guides, aide, vidéo, vie privée. Ces pages viennent de public/ et ne passent pas par
-// Vite. La page d'accueil (fr et en, <div id="root">) a déjà sa propre mesure (App.jsx), elle est sautée.
+// statique de dist/ (guides, aide, vidéo, vie privée), et le calculateur de parenté (src/parente.js) dans celles
+// qui l'affichent. Ces pages viennent de public/ et ne passent pas par Vite. La page d'accueil (fr et en, <div id="root">) a déjà sa propre mesure (App.jsx), elle est sautée.
 // Lancé par `npm run build` après scripts/prerender.mjs.
 import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -12,6 +12,10 @@ const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
 const entry = manifest['src/pages.js']
 if (!entry?.file) throw new Error('src/pages.js absent du manifeste de Vite')
 const tag = `<script type="module" src="/${entry.file}"></script>`
+// Le calculateur de parenté ne va que dans les pages qui l'affichent
+const parente = manifest['src/parente.js']
+if (!parente?.file) throw new Error('src/parente.js absent du manifeste de Vite')
+const parenteTag = `<script type="module" src="/${parente.file}"></script>`
 
 async function* htmlFiles(dir) {
   for (const item of await readdir(dir, { withFileTypes: true })) {
@@ -27,7 +31,8 @@ for await (const path of htmlFiles(dist)) {
   if (html.includes('<div id="root">')) continue
   if (html.includes(tag)) continue
   if (!html.includes('</body>')) throw new Error(`</body> introuvable dans ${path}`)
-  await writeFile(path, html.replace('</body>', `  ${tag}\n</body>`))
+  const tags = html.includes('id="calculateur-parente"') ? `  ${tag}\n  ${parenteTag}\n` : `  ${tag}\n`
+  await writeFile(path, html.replace('</body>', `${tags}</body>`))
   injected++
 }
 if (injected === 0) throw new Error('Aucune page statique trouvée pour la mesure d\'audience')

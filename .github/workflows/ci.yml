@@ -79,7 +79,8 @@ jobs:
       - name: Tests
         run: npm test
 
-      # Le build ne lit que landing/ : aucune police n'est prise dans ../frontend.
+      # Le build lit landing/ et le nommage de la parenté de ../frontend/src/utils/kinship (calculateur de
+      # /liens-de-parente/) ; aucune police n'est prise dans ../frontend.
       - name: Build
         run: npm run build
 
