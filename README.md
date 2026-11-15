@@ -161,7 +161,7 @@ Database migrations apply on their own when the API starts, and a migration cann
 
 ## Development
 
-The repository holds three Node projects: `backend/` (Fastify, Prisma, PostgreSQL, TypeScript), `frontend/` (React, Vite) and `landing/` (the marketing site, not needed to run the app). The Docker images use Node 24.
+The repository holds two Node projects: `backend/` (Fastify, Prisma, PostgreSQL, TypeScript) and `frontend/` (React, Vite). The Docker images use Node 24.
 
 ### Backend
 

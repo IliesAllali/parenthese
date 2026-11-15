@@ -35,7 +35,7 @@ if [ ! -f "$REPO_DIR/backend/.env" ]; then
   exit 1
 fi
 
-# Variables de build du front et de la landing (clé PostHog), gardées sur le serveur, hors du dépôt
+# Variables de build du front (clé PostHog), gardées sur le serveur, hors du dépôt
 if [ -f "$BUILD_ENV_FILE" ]; then
   set -a
   # shellcheck disable=SC1090
@@ -159,20 +159,9 @@ else
   log "Frontend inchangé"
 fi
 
-# 6. Landing (autonome, plus aucune police lue dans le frontend ; frontend/src/assets reste dans le
-#    déclencheur par prudence, sans effet tant que rien n'y change)
-if changed landing frontend/src/assets; then
-  install_deps landing
-  log "Build landing"
-  (cd "$REPO_DIR/landing" && npm run build)
-  fix_perms landing/dist
-else
-  log "Landing inchangée"
-fi
-
 mkdir -p "$REPO_DIR/backend/storage/media" "$REPO_DIR/logs"
 
-# 7. nginx, seulement si sa configuration a changé
+# 6. nginx, seulement si sa configuration a changé
 if changed deploy/nginx.conf; then
   log "Mise à jour nginx"
   $SUDO install -m 644 "$REPO_DIR/deploy/nginx.conf" /etc/nginx/sites-available/parenthese
@@ -181,7 +170,7 @@ if changed deploy/nginx.conf; then
   $SUDO systemctl reload nginx
 fi
 
-# 8. API
+# 7. API
 if [ "$BACKEND_CHANGED" = "1" ]; then
   command -v pm2 >/dev/null 2>&1 || { echo "ERROR: pm2 is not installed on this server."; exit 1; }
   cd "$REPO_DIR"
@@ -193,7 +182,7 @@ if [ "$BACKEND_CHANGED" = "1" ]; then
   pm2 save
 fi
 
-# 9. Vérification
+# 8. Vérification
 code="000"
 for _ in $(seq 1 15); do
   code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4000/health || true)"

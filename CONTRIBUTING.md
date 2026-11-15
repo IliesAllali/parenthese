@@ -21,7 +21,6 @@ Before opening a pull request, run what the CI checks:
 
 ```bash
 npm --prefix frontend ci && npm --prefix frontend run lint && npm --prefix frontend test && npm --prefix frontend run build
-npm --prefix landing ci && npm --prefix landing test && npm --prefix landing run build
 npm --prefix backend ci && npm --prefix backend run prisma:generate && npm --prefix backend run build && npm --prefix backend test
 ```
 

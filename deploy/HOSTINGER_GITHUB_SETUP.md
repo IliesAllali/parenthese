@@ -17,7 +17,7 @@ Chaque push sur `main` lance d'abord la CI (`.github/workflows/ci.yml`). Si elle
 ## Ce qui vit sur le serveur, hors du dépôt
 
 - `backend/.env` : configuration de production de l'API (voir `backend/.env.production.example`)
-- `/etc/parenthese/build.env` : variables de build du front et de la landing (`VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`)
+- `/etc/parenthese/build.env` : variables de build du front (`VITE_POSTHOG_KEY`, `VITE_POSTHOG_HOST`)
 - `/etc/cron.d/parenthese-backup` : sauvegarde nocturne par `deploy/backup.sh`
 - `/etc/genealogy/backup.env` (facultatif) : rétention et envoi S3 des sauvegardes
 - `/usr/local/sbin/parenthese-ssh-deploy` : copie de `deploy/ssh-deploy.sh`, commande forcée de la clé de déploiement (voir plus bas)

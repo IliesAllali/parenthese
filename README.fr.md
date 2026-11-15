@@ -153,7 +153,7 @@ Les migrations de base de données s'appliquent toutes seules au démarrage de l
 
 ## Développer
 
-Le dépôt contient trois projets Node : `backend/` (Fastify, Prisma, PostgreSQL, TypeScript), `frontend/` (React, Vite) et `landing/` (le site vitrine, inutile pour faire tourner l'application). Les images Docker utilisent Node 24.
+Le dépôt contient deux projets Node : `backend/` (Fastify, Prisma, PostgreSQL, TypeScript) et `frontend/` (React, Vite). Les images Docker utilisent Node 24.
 
 ### Backend
 
