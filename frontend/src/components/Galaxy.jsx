@@ -8,7 +8,7 @@ import { computeBlockLayout, familyTabsOf, lineToFamily, subgraphOf, takeRootLay
 import { hasGhosts, withGhosts } from '../utils/ghosts'
 
 import { findPathBFS } from './galaxy/pathfinding'
-import { drawBackground, drawCoupleLinks, drawFiliations, drawAnnotations, drawPathHighlight, drawNodes, drawRenvoiPills, nodeRadius } from './galaxy/renderers'
+import { drawBackground, drawCoupleLinks, drawFiliations, drawAnnotations, drawPathHighlight, drawNodes, drawRenvoiPills, nodeRadius, birthdayAnimating } from './galaxy/renderers'
 import { buildSiblingGroups, moveInOrder, pickSlot, rubberBand, springStep, isSettled, buildOrderPayload, filiationsWithOrder } from './galaxy/siblingReorder'
 import { annotations as annotationData, updateAnnotation as updateAnnotationInStore } from '../data/mockData'
 import { anchorLegacy, layoutCenters, placeAnnotations, readAnchor } from './annotations/anchor'
@@ -918,7 +918,8 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     let rafId
 
     const animate = (timestamp) => {
-      let dirty = needsRedrawRef.current
+      // Chapeau qui charge ou confettis d'anniversaire en cours : on redessine à chaque image
+      let dirty = needsRedrawRef.current || birthdayAnimating()
       needsRedrawRef.current = false
 
       const entrance = entranceRef.current

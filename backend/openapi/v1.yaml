@@ -323,6 +323,10 @@ components:
         birthDate:
           type: string
           nullable: true
+        birthDatePrecision:
+          type: string
+          nullable: true
+          description: Précision d'une date importée (about, before, between…), null pour une date exacte
         deathDate:
           type: string
           nullable: true

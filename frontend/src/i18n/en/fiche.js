@@ -15,6 +15,7 @@ export default {
   '{name} (parent unique)': '{name} (single parent)',
   '{age} ans': '{age} years old',
   '{age} ans au décès': '{age} at death',
+  '{age} ans aujourd’hui': '{age} today',
   'Retirer {name}': 'Remove {name}',
   'Fiche de {name}': 'Profile of {name}',
   'Fermer la fiche': 'Close profile',

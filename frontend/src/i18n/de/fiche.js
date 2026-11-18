@@ -15,6 +15,7 @@ export default {
   "{name} (parent unique)": "{name} (alleinerziehend)",
   "{age} ans": "{age} Jahre",
   "{age} ans au décès": "mit {age} gestorben",
+  "{age} ans aujourd’hui": "heute {age} Jahre",
   "Retirer {name}": "{name} entfernen",
   "Fiche de {name}": "Profil von {name}",
   "Fermer la fiche": "Profil schließen",
