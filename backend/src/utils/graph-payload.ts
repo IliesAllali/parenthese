@@ -13,6 +13,8 @@ export type GraphPayload = {
     birthName: string | null
     nickname: string | null
     birthDate: string | null
+    // « vers », « avant », « entre »… ; null pour une date exacte. L'arbre en a besoin pour l'anniversaire du jour
+    birthDatePrecision: string | null
     deathDate: string | null
     isDeceased: boolean
     toVerify: boolean
@@ -106,6 +108,7 @@ export function buildGraphPayload(
         birthName: person.birthName,
         nickname: person.nickname,
         birthDate: formatDate(person.birthDate),
+        birthDatePrecision: person.birthDatePrecision ?? null,
         deathDate: formatDate(person.deathDate),
         isDeceased: Boolean(person.isDeceased) && !person.deathDate,
         toVerify: Boolean(person.toVerify),

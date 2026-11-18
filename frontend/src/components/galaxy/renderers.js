@@ -15,6 +15,7 @@ import { fitNickname } from '../../utils/nickname.js'
 import { firstNameLabel, isFirstNameUnknown, surnameLabel } from '../../utils/personName.js'
 import { initialsOf } from '../../utils/initial.js'
 import { blurhashCanvas } from '../../utils/blurhash.js'
+import { birthdayToday, localDayKey } from '../../utils/birthday.js'
 
 // Largeur maximale du surnom sur le nœud (px canevas) : au-delà, coupé avec …
 const NICKNAME_MAX_W = 150
@@ -647,7 +648,11 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   }
 
   drawPortrait(ctx, frameType, person, img, person.toVerify && withDetail)
+  // Anniversaire du jour : un chapeau sur le cadre (absent au dézoom, comme « À vérifier »)
+  const birthday = withDetail ? birthdayToday(person, frameNow) : null
+  if (birthday) drawBirthdayHat(ctx, frameTopOf(frameType, person, img))
   ctx.restore()
+  if (birthday && nodeProgress >= 1) queueConfetti(node.id, cx, cy, personScale)
 
   // --- Labels (estompés puis absents en dézoom) ---
   if (labelAlpha <= 0) return
@@ -720,7 +725,14 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const years = person.deathYear
       ? `${birthYearLabel}–${person.deathYear}`
       : person.isAlive === false ? `${birthYearLabel}–?` : `${birthYearLabel}`
-    ctx.fillText(years, 0, (hasNickname ? 31 : 15) + lineShift)
+    if (birthday) {
+      // Le jour J, l'âge remplace l'année, en terracotta
+      ctx.font = '500 11px "DM Sans", system-ui, sans-serif'
+      ctx.fillStyle = BIRTHDAY_TEXT
+      ctx.fillText(t('{age} ans aujourd’hui', { age: birthday.age }), 0, (hasNickname ? 31 : 15) + lineShift)
+    } else {
+      ctx.fillText(years, 0, (hasNickname ? 31 : 15) + lineShift)
+    }
   }
 
   ctx.restore()
@@ -997,6 +1009,115 @@ export function drawPortrait(ctx, frameType, person, img, withMark) {
   if (withMark) drawToVerifyMark(ctx)
 }
 
+// ============================================================
+// Anniversaire du jour : chapeau, âge et confettis
+// ============================================================
+const BIRTHDAY_TEXT = '#B4532F'
+// Date lue une fois par image dessinée (drawNodes), pas pour chaque personne
+let frameNow = new Date()
+
+// Chapeau en papier (illustration, public/anniversaire), chargé une fois
+const birthdayHat = typeof Image !== 'undefined' ? new Image() : null
+if (birthdayHat) birthdayHat.src = '/anniversaire/chapeau.webp'
+const BIRTHDAY_HAT_H = 40
+
+// Haut du cadre, bord blanc compris, selon sa forme (mêmes mesures que drawFrame) : le chapeau s'y pose
+function frameTopOf(frameType, person, img) {
+  if (frameType === 'polaroid') return PERSON_R + 8
+  if (frameType === 'square') return PERSON_R + 7
+  if (frameType === 'rect') {
+    const ratio = img?.naturalWidth && img?.naturalHeight ? img.naturalWidth / img.naturalHeight : 1
+    return (isLandscapeRect(ratio, cropShape(person.avatarCrop)) ? PERSON_R - 8 : PERSON_R + 6) + 3
+  }
+  return PERSON_R + 3
+}
+
+// Droit et centré sur le haut du cadre ; son bas mord un peu le bord : il coiffe la personne
+function drawBirthdayHat(ctx, top) {
+  if (!birthdayHat?.complete || !birthdayHat.naturalWidth) return
+  const h = BIRTHDAY_HAT_H
+  const w = h * birthdayHat.naturalWidth / birthdayHat.naturalHeight
+  ctx.shadowColor = 'transparent'
+  ctx.drawImage(birthdayHat, -w / 2, -top + 6 - h, w, h)
+}
+
+// Confettis : une salve de 1,6 s par personne fêtée, une fois par jour et par appareil, quand son portrait
+// a fini d'entrer. Les morceaux tombent et rétrécissent, jamais de fondu ; rien si l'appareil demande moins
+// d'animations. Dessinés après toutes les personnes, pour passer devant.
+const CONFETTI_MS = 1600
+const CONFETTI_COUNT = 22
+const CONFETTI_COLORS = ['#D2694A', '#93402A', '#3D6E54', '#E0A84F']
+const CONFETTI_STORE = 'pz-confettis'
+const confettiBursts = new Map() // id → { start, cx, cy, scale }
+const confettiQueue = []
+let confettiShown = null
+
+const reducedMotion = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+
+function shownToday(day) {
+  if (confettiShown?.day === day) return confettiShown
+  let saved
+  try { saved = JSON.parse(window.localStorage.getItem(CONFETTI_STORE) || 'null') } catch { saved = null }
+  confettiShown = saved?.day === day && Array.isArray(saved.ids) ? { day, ids: new Set(saved.ids) } : { day, ids: new Set() }
+  return confettiShown
+}
+
+function queueConfetti(id, cx, cy, scale) {
+  const burst = confettiBursts.get(id)
+  if (burst) { Object.assign(burst, { cx, cy, scale }); confettiQueue.push(id); return }
+  if (reducedMotion()) return
+  const shown = shownToday(localDayKey(frameNow))
+  if (shown.ids.has(String(id))) return
+  shown.ids.add(String(id))
+  // Stockage refusé (navigation privée) : la salve repartira à la prochaine ouverture, sans plus
+  try { window.localStorage.setItem(CONFETTI_STORE, JSON.stringify({ day: shown.day, ids: [...shown.ids] })) } catch { /* rien à faire */ }
+  confettiBursts.set(id, { start: performance.now(), cx, cy, scale })
+  confettiQueue.push(id)
+}
+
+// Vrai tant qu'une salve est en cours ou que le chapeau charge : l'arbre doit se redessiner
+export function birthdayAnimating() {
+  if (birthdayHat && !birthdayHat.complete) return true
+  const now = performance.now()
+  for (const burst of confettiBursts.values()) if (now - burst.start < CONFETTI_MS) return true
+  return false
+}
+
+function drawConfettiBursts(ctx) {
+  const now = performance.now()
+  for (const id of confettiQueue) {
+    const burst = confettiBursts.get(id)
+    const t = (now - burst.start) / 1000
+    if (t * 1000 >= CONFETTI_MS) continue
+    const { cx, cy, scale } = burst
+    let seed = String(id).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7)
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296 }
+    const end = CONFETTI_MS / 1000
+    const shrink = t > end - 0.35 ? Math.max(0, (end - t) / 0.35) : 1
+    ctx.save()
+    ctx.shadowColor = 'transparent'
+    for (let i = 0; i < CONFETTI_COUNT; i++) {
+      const angle = -Math.PI / 2 + (rnd() - 0.5) * 2.4
+      const speed = (150 + rnd() * 130) * scale
+      const spin = (rnd() - 0.5) * 14
+      const color = CONFETTI_COLORS[Math.floor(rnd() * CONFETTI_COLORS.length)]
+      const w = 3 + rnd() * 2
+      const h = 6 + rnd() * 3
+      const x = cx + Math.cos(angle) * speed * t
+      const y = cy - PERSON_R * 0.6 * scale + Math.sin(angle) * speed * t + 0.5 * 420 * scale * t * t
+      ctx.save()
+      ctx.translate(x, y)
+      ctx.rotate(spin * t)
+      ctx.scale(shrink, shrink * Math.abs(Math.cos(spin * t * 0.7)) + 0.15)
+      ctx.fillStyle = color
+      ctx.fillRect(-w / 2, -h / 2, w, h)
+      ctx.restore()
+    }
+    ctx.restore()
+  }
+  confettiQueue.length = 0
+}
+
 function drawToVerifyMark(ctx) {
   const r = 9
   // À cheval sur le coin, à moitié dehors : la marque ne cache plus le visage (Patch, 25/10)
@@ -1133,6 +1254,7 @@ function drawImageCover(ctx, img, x, y, w, h, crop = null) {
 // ============================================================
 export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, elapsed, renderState) {
   const view = renderState.view || null
+  frameNow = new Date()
   layoutData.children.forEach(node => {
     const pos = posMap.get(node.id)
     if (!pos) return
@@ -1189,6 +1311,7 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       ctx.restore()
     }
   })
+  drawConfettiBursts(ctx)
 }
 
 // Personne proposée : portrait délavé, cercle en pointillés, étiquette (« Proposé », « En attente », « Brouillon »)

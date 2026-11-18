@@ -115,6 +115,7 @@ describe('buildGraphPayload', () => {
 
     expect(graph.persons[0].id).toBe('p-2')
     expect(graph.persons[0].birthDate).toBe('1994-06-02')
+    expect(graph.persons[0].birthDatePrecision).toBeNull()
     expect(graph.persons[0].birthName).toBe('Durand')
     expect(graph.persons[0].nickname).toBe('Zozo')
     expect(graph.persons[0].avatarUrlPath).toBe('/trees/t-1/persons/p-2/avatar')

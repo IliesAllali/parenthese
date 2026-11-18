@@ -19,6 +19,7 @@ import { formatPlace } from '../utils/place.js'
 import { firstNameLabel, fullNameLabel, isFirstNameUnknown, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
 import { isYearOnly } from '../utils/dateInput.js'
 import { ageInYears } from '../utils/age.js'
+import { birthdayToday } from '../utils/birthday.js'
 import DateField from './DateField.jsx'
 import { runOnce } from '../utils/saveOnLeave.js'
 import { normalizeSex, SEX_CHOICES } from '../utils/personSex.js'
@@ -639,7 +640,11 @@ const PersonCard = ({
     // le gluon U+2060 l'en empêche
     return parts.length ? parts.reduce((line, part) => <>{line} –{'\u2060\u00a0'}{part}</>) : null
   })()
-  const ageLabel = age === null ? null : person.isAlive ? t('{age} ans', { age }) : t('{age} ans au décès', { age })
+  // Le jour de son anniversaire : « 98 ans aujourd'hui »
+  const birthday = birthdayToday(person)
+  const ageLabel = birthday
+    ? t('{age} ans aujourd’hui', { age: birthday.age })
+    : age === null ? null : person.isAlive ? t('{age} ans', { age }) : t('{age} ans au décès', { age })
   // Une seule ligne sous le nom : surnom, repères de vie, âge, séparés par un point médian
   const metaItems = [
     person.nickname && { key: 'nick', node: <em className="pc-nick"><bdi>{person.nickname}</bdi></em>, nowrap: true },
