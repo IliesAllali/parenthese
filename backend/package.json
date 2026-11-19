@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",
-    "@fastify/cors": "^11.4.1",
-    "@fastify/jwt": "^10.2.7",
+    "@fastify/cors": "^11.4.3",
+    "@fastify/jwt": "^10.2.8",
     "@fastify/rate-limit": "^11.2.2",
     "@node-rs/bcrypt": "^2.0.0",
     "@prisma/adapter-pg": "^7.10.1",
@@ -27,7 +27,7 @@
     "blurhash": "^2.0.5",
     "dotenv": "^18.0.10",
     "fastify": "^5.12.8",
-    "openid-client": "^6.8.9",
+    "openid-client": "^6.9.0",
     "pg": "^8.23.1",
     "sharp": "^0.35.5",
     "zod": "^4.6.7"
