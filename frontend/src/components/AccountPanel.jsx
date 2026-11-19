@@ -5,6 +5,7 @@ import './AccountScreens.css'
 import { t } from '../i18n/index.js'
 import { initialOf } from '../utils/initial.js'
 import PortraitThumb from './PortraitThumb.jsx'
+import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 
 const AccountPanel = ({
   visible,
@@ -89,7 +90,7 @@ const AccountPanel = ({
                     onClick={() => onSelectPerson?.(person.id)}
                   >
                     <span className="ap-item-avatar" aria-hidden="true">
-                      {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : initialOf(person.firstName)}
+                      {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <NoPhotoPortrait />}
                     </span>
                     <span className="ap-item-name">{person.firstName} <em>{surnameLabel(person.lastName)}</em></span>
                     {isSelected && <span className="pz-tag pz-tag--accent">{t("C'est moi")}</span>}

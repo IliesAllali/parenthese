@@ -1,0 +1,3 @@
+/* Personne sans photo (#244) : la silhouette occupe 60 % du cadre, un ton à peine plus foncé que lui (même réglage que l'arbre) */
+.pz-nophoto { display: grid; place-items: center; width: 100%; height: 100%; align-self: stretch; justify-self: stretch; background: var(--pz-line-soft); }
+.pz-nophoto-icon { width: 60%; height: 60%; color: #D6CEC3; }
