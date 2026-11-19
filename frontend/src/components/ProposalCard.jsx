@@ -4,7 +4,7 @@ import { t, dateLocale } from '../i18n/index.js'
 import { firstNameLabel, surnameLabel } from '../utils/personName.js'
 import PzBusy from './PzBusy'
 import './ProposalCard.css'
-import { initialsOf } from '../utils/initial.js'
+import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 
 // Proposition pas encore relue, ouverte depuis son fantôme sur l'arbre (1.5.1). Qui gère l'arbre l'accepte ou la
 // refuse sur place ; la famille y lit qu'elle attend. Une proposition se relit en entier : « Voir le détail »
@@ -74,7 +74,6 @@ export default function ProposalCard({ person, summary = '', review = null, onCl
   const ghost = person?.ghost
   const years = [person?.birthYear, person?.deathYear].filter(Boolean).join(' – ')
   const name = [firstNameLabel(person), surnameLabel(person?.lastName)].filter(Boolean).join(' ')
-  const initials = initialsOf(person)
   return (
     <div className="person-card proposal-card" role="dialog" aria-label={t('Proposition : {name}', { name })}>
       <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-close" onClick={onClose} aria-label={t('Fermer')}>
@@ -82,7 +81,7 @@ export default function ProposalCard({ person, summary = '', review = null, onCl
       </button>
       <header className="pc-head">
         <div className="pc-photo-wrap">
-          <div className="pc-photo proposal-photo"><span className="pc-photo-initials">{initials}</span></div>
+          <div className="pc-photo proposal-photo"><NoPhotoPortrait /></div>
         </div>
         <div className="pc-id">
           <p className="pz-eyebrow proposal-eyebrow">{ghost?.source === 'draft' ? t('Brouillon') : ghost?.source === 'sent' ? t('En attente') : t('Proposition')}</p>

@@ -3,17 +3,16 @@ import { getPersonById, getPersonMedias } from '../../data/mockData'
 import { cropShape, cropViewport, isLandscapeRect, resolveFrameKind } from '../../utils/portraitCrop.js'
 // Tracés Lucide dessinés sur le canvas : données publiques de @lucide/icons (Map renommé, il masquerait
 // le Map global utilisé plus bas)
-import { Map as mapIcon, MapPin as mapPinIcon, Route as routeIcon } from '@lucide/icons'
+import { Map as mapIcon, MapPin as mapPinIcon, Route as routeIcon, UserRound as userRoundIcon } from '@lucide/icons'
 import {
   PERSON_R, UNKNOWN_R, UNION_W, UNION_H, COMPACT_R, COMPACT_SCALE, LINE_SCALE, LINE_ALPHA,
   MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE,
-  COLORS,
+  COLORS, NO_PHOTO_ICON_SCALE,
   LOD_SHADOW_MIN_SCALE, LOD_DETAIL_MIN_SCALE, LOD_LABEL_FADE_IN, LOD_LABEL_FADE_OUT, CULL_MARGIN,
 } from './constants'
 import { getEntranceProgress, drawPartialBezier } from './utils'
 import { fitNickname } from '../../utils/nickname.js'
 import { firstNameLabel, isFirstNameUnknown, surnameLabel } from '../../utils/personName.js'
-import { initialsOf } from '../../utils/initial.js'
 import { blurhashCanvas } from '../../utils/blurhash.js'
 import { birthdayToday, localDayKey } from '../../utils/birthday.js'
 
@@ -757,7 +756,8 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
 const lucidePathCache = new Map()
 
 function getCachedPath2D(pathData) {
-  if (!pathData) return null
+  // Hors navigateur (tests du rendu, rendu serveur), Path2D n'existe pas : le tracé est simplement omis
+  if (!pathData || typeof Path2D === 'undefined') return null
   if (!lucidePathCache.has(pathData)) {
     lucidePathCache.set(pathData, new Path2D(pathData))
   }
@@ -1226,13 +1226,12 @@ function drawPersonImage(ctx, img, person, x, y, w, h) {
       ctx.fillRect(x, y, w, h)
     }
   } else {
+    // Sans photo : la silhouette Lucide « user-round », ton sur ton (#244). Ni initiales, ni visage :
+    // elle ne suppose rien de la personne, et l'arbre reste calme
     ctx.fillStyle = person.isAlive ? COLORS.nodeAlive : COLORS.nodeDead
     ctx.fillRect(x, y, w, h)
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillStyle = COLORS.text
-    ctx.font = '400 16px "Newsreader", Georgia, serif'
-    ctx.fillText(initialsOf(person, ''), 0, 0)
+    const iconSize = Math.min(w, h) * NO_PHOTO_ICON_SCALE
+    drawLucideIcon(ctx, userRoundIcon.node, x + w / 2, y + h / 2, iconSize, COLORS.noPhotoIcon, iconSize / 12)
   }
 }
 
