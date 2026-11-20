@@ -9,6 +9,7 @@ import {
   logoutUser,
   registerUser,
   startProvisionalAccount,
+  resumeProvisionalSession,
   updateLastOpenedTree,
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
@@ -143,6 +144,23 @@ export function useAuth() {
     return result.token
   }
 
+  // Au chargement : la session provisoire revient (du cookie si le stockage est vide) et ses 30 jours repartent.
+  // Renvoie la visite d'avant, ou null sans arbre provisoire. Un arbre effacé entre-temps vide la session gardée.
+  const resumeProvisional = async () => {
+    const stored = restoreUserToken()
+    if (stored && loadUserProfile()?.provisional !== true) return null
+    try {
+      const result = await resumeProvisionalSession(stored || '')
+      localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
+      saveUserProfile(result.user)
+      setUserAuth({ token: result.token, user: result.user })
+      return { lastVisitAt: result.lastVisitAt || null }
+    } catch (error) {
+      if (stored && error?.status === 401) clearStoredUserToken()
+      return null
+    }
+  }
+
   // « Gardez votre arbre » par email et mot de passe : une session de compte remplace la session provisoire
   const handleKeep = async (email, password) => {
     setAccountLoading(true)
@@ -236,6 +254,7 @@ export function useAuth() {
     handleRegister,
     handleStartProvisional,
     handleKeep,
+    resumeProvisional,
     handleOidcExchange,
     handleLogout,
     handleDeleteAccount,

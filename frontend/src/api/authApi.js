@@ -103,9 +103,12 @@ export async function exchangeOidcCode(code) {
 }
 
 // « Créer mon arbre » sans compte : un compte provisoire, effacé au bout de 30 jours s'il n'est pas gardé (#251)
+// credentials : le serveur double la session d'un cookie (voir resumeProvisionalSession), y compris quand l'API
+// n'est pas à l'adresse de l'app (développement, auto-hébergement sur deux domaines)
 export async function startProvisionalAccount(firstName) {
   return apiRequest('/auth/provisional', {
     method: 'POST',
+    credentials: 'include',
     body: JSON.stringify({ firstName: firstName || null }),
   })
 }
@@ -114,7 +117,18 @@ export async function startProvisionalAccount(firstName) {
 export async function keepProvisionalAccount(token, email, password) {
   return apiRequest('/auth/keep', {
     method: 'POST',
+    credentials: 'include',
     headers: bearer(token),
     body: JSON.stringify({ email, password }),
+  })
+}
+
+// Retour sur un arbre provisoire : la session revient du cookie posé par le serveur quand le navigateur a vidé son
+// stockage (Safari le fait après 7 jours sans visite), et les 30 jours repartent de cette visite
+export async function resumeProvisionalSession(token = '') {
+  return apiRequest('/auth/provisional/resume', {
+    method: 'POST',
+    credentials: 'include',
+    headers: token ? bearer(token) : {},
   })
 }

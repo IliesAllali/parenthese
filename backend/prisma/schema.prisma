@@ -96,6 +96,8 @@ model User {
   lastOpenedAccessMode          String?
   lastOpenedRole                String?
   lastOpenedAt                  DateTime?
+  // Dernière visite d'un compte provisoire : ses 30 jours partent de là, pas de la création (lib/provisional-account.ts)
+  lastSeenAt                    DateTime?
   createdAt                     DateTime              @default(now())
   ownedTrees                    Tree[]                @relation("TreeOwner")
   memberships                   TreeMembership[]
@@ -158,9 +160,22 @@ model Tree {
   invitations            TreeInvitation[]
   annotationPhotoUploads AnnotationPhotoUpload[]
   lastOpenedByUsers      User[]                  @relation("UserLastOpenedTree")
+  slugAliases            TreeSlugAlias[]
 
   @@index([ownerUserId])
   @@map("trees")
+}
+
+// Anciennes adresses d'un arbre renommé : les liens déjà envoyés (/arbre/<ancienne>) mènent encore à lui, et
+// aucun autre arbre ne peut les prendre (lib/tree-slug.ts)
+model TreeSlugAlias {
+  slug      String   @id
+  treeId    String
+  createdAt DateTime @default(now())
+  tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+
+  @@index([treeId])
+  @@map("tree_slug_aliases")
 }
 
 model TreeAccessPasswords {

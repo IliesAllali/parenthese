@@ -20,7 +20,9 @@ function personInitial(person) {
   return initialOf(person.firstName || person.email)
 }
 
-const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName = '', onOpenShare }) => {
+// onKeepRequired : arbre provisoire, que le serveur refuse d'ouvrir à un co-gérant (il s'efface sans visite) ;
+// « Inviter » ouvre alors « Gardez votre arbre »
+const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName = '', onOpenShare, onKeepRequired }) => {
   const [state, setState] = useState({ loading: true, error: '', data: null })
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState('')
@@ -51,6 +53,10 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
   const handleInvite = async (event) => {
     event.preventDefault()
     if (!email.trim() || busy) return
+    if (onKeepRequired) {
+      onKeepRequired()
+      return
+    }
     setBusy('invite')
     setMessage({ error: '', success: '' })
     try {

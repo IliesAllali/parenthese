@@ -27,12 +27,20 @@ const managerParamsSchema = z.object({ id: z.string().min(1), userId: z.string()
 const tokenParamSchema = z.object({ token: z.string().min(1).max(200) })
 const inviteSchema = z.object({ email: z.string().trim().email().max(254) })
 
-function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string } | null {
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string | null } | null {
   if (!request.actor || request.actor.kind !== 'user') {
     reply.code(401).send({ error: 'authentication_required' })
     return null
   }
-  return { userId: request.actor.userId }
+  return { userId: request.actor.userId, email: request.actor.email }
+}
+
+// Un arbre provisoire s'efface au bout de 30 jours sans visite : on n'y fait pas entrer un co-gérant, qui y
+// travaillerait pour rien. La personne garde d'abord son arbre (« Gardez votre arbre »).
+function refuseProvisional(user: { email: string | null }, reply: FastifyReply): boolean {
+  if (user.email !== null) return false
+  reply.code(403).send({ error: 'keep_required' })
+  return true
 }
 
 async function membershipOf(app: FastifyInstance, treeId: string, userId: string) {
@@ -87,6 +95,7 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
   app.post('/trees/:id/invitations', { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
+    if (refuseProvisional(user, reply)) return
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) return reply.code(400).send({ error: 'invalid_tree_id' })
     const payload = inviteSchema.safeParse(request.body)
@@ -131,6 +140,7 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
   app.post('/trees/:id/invitations/:invitationId/link', { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
+    if (refuseProvisional(user, reply)) return
     const params = invitationParamsSchema.safeParse(request.params)
     if (!params.success) return reply.code(400).send({ error: 'invalid_params' })
 

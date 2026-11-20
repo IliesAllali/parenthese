@@ -62,7 +62,7 @@ import {
 } from './api/treeApi'
 import { getImmichErrorMessage, unassignImmichPerson } from './api/immichApi.js'
 import { fetchAuthOptions, oidcLinkUrl, oidcStartUrl, requestOidcLinkTicket } from './api/authApi'
-import { providerBlockedHere } from './utils/inAppBrowser'
+import { isInAppBrowser, providerBlockedHere } from './utils/inAppBrowser'
 import { useAuth } from './hooks/useAuth'
 import { useTreeAccess, getTreeTokenStorageKey, getSlugFromPathname, readTreeAccessRole, TREE_ID_FROM_ENV } from './hooks/useTreeAccess'
 import { useMediaManager } from './hooks/useMediaManager'
@@ -523,7 +523,11 @@ const INVITATION_TOKEN = readInvitationToken()
 let oidcSignIn = null
 
 // « Gardez votre arbre » à la cinquième personne, une fois par compte provisoire (#251)
-const KEEP_PROMPT_AT = 5
+// Dans le navigateur d'une appli (Facebook, Instagram, Messenger…), l'arbre vit dans le stockage de l'appli et ne
+// suivra pas dans le navigateur du téléphone : on propose de le garder dès la première personne
+const KEEP_PROMPT_AT = isInAppBrowser() ? 1 : 5
+// Retour après plus de 23 jours : sans cette visite, l'arbre s'effaçait dans moins de 7 jours
+const KEEP_RETURN_AFTER_MS = 23 * 24 * 60 * 60 * 1000
 const KEEP_ASKED_KEY = 'parenthese_keep_asked'
 function hasAskedToKeep(userId) {
   try { return localStorage.getItem(KEEP_ASKED_KEY) === userId } catch { return false }
@@ -2697,6 +2701,14 @@ function App() {
         }
       }
 
+      // Arbre provisoire : la session revient (du cookie si Safari a vidé le stockage) et ses 30 jours repartent
+      if (!OIDC_RETURN) {
+        const resumed = await auth.resumeProvisional()
+        if (!active) return
+        const lastVisit = resumed?.lastVisitAt ? new Date(resumed.lastVisitAt).getTime() : NaN
+        if (Date.now() - lastVisit > KEEP_RETURN_AFTER_MS) pendingKeepRef.current = { reason: 'return', lastVisitAt: resumed.lastVisitAt }
+      }
+
       const slug = getSlugFromPathname()
       let resolvedTreeId = TREE_ID_FROM_ENV
       let resolvedTreeName = ''
@@ -2746,6 +2758,10 @@ function App() {
       if (slug) {
         try {
           const treeInfo = await resolveTreeBySlug(slug)
+          // Ancienne adresse d'un arbre renommé : la barre d'adresse prend la nouvelle, la clé du lien reste
+          if (treeInfo.slug && treeInfo.slug !== slug) {
+            window.history.replaceState(window.history.state, '', `/arbre/${encodeURIComponent(treeInfo.slug)}${window.location.search}${window.location.hash}`)
+          }
           resolvedTreeId = treeInfo.id
           resolvedTreeName = treeInfo.name || ''
           resolvedTreeDescription = treeInfo.description || ''
@@ -4100,6 +4116,7 @@ function App() {
         onTreeDeleted={handleTreeDeleted}
         onLeftTree={handleTreeDeleted}
         onOpenShare={() => { setAdminPanelVisible(false); handleShareClick() }}
+        onKeepRequired={auth.provisional ? () => { setAdminPanelVisible(false); setKeepSheet({ reason: 'manager' }) } : undefined}
         onTreeUpdated={() => { if (auth.userAuth.token) auth.loadAccountTrees(auth.userAuth.token).catch(() => {}) }}
         onGedcomImported={handleGedcomImported}
         onOpenPhotoStart={() => { setAdminPanelVisible(false); openPhotoStart() }}
@@ -4161,7 +4178,8 @@ function App() {
       {keepSheet && auth.provisional && (
         <KeepTreeSheet
           reason={keepSheet.reason}
-          provisionalUntil={accountUser?.provisionalUntil || null}
+          lastVisitAt={keepSheet.lastVisitAt || null}
+          inApp={isInAppBrowser()}
           loading={auth.accountLoading}
           errorMessage={keepSheet.error || auth.accountError}
           passwordLogin={authOptions.passwordLogin !== false}

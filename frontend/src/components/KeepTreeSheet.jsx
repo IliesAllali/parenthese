@@ -8,7 +8,9 @@ import { PRIVACY_URL } from '../utils/siteLinks.js'
 
 // « Gardez votre arbre » (#251) : l'arbre fait avant le compte reçoit un compte. Ne demande que ce qui manque,
 // l'email et le mot de passe, ou le fournisseur de connexion : le prénom et le nom sont déjà dans l'arbre.
-// reason : 'fifth' (cinquième personne, une seule fois), 'share' (envoyer l'arbre demande un compte), 'menu'.
+// reason : 'fifth' (cinquième personne, une seule fois ; la première dans le navigateur d'une appli), 'share'
+// (envoyer l'arbre demande un compte), 'manager' (inviter un co-gérant aussi), 'return' (retour après plus de 23 jours,
+// l'arbre allait s'effacer), 'menu'.
 function formatDay(value) {
   const date = value ? new Date(value) : null
   if (!date || Number.isNaN(date.getTime())) return ''
@@ -17,7 +19,8 @@ function formatDay(value) {
 
 function KeepTreeSheet({
   reason = 'menu',
-  provisionalUntil = null,
+  lastVisitAt = null,
+  inApp = false,
   loading = false,
   errorMessage = '',
   passwordLogin = true,
@@ -37,7 +40,21 @@ function KeepTreeSheet({
   }, [loading, onClose])
 
   const forShare = reason === 'share'
-  const until = formatDay(provisionalUntil)
+  // Envoyer ou inviter : la personne attend autre chose que le compte, « Annuler » la ramène où elle était
+  const blocking = forShare || reason === 'manager'
+  const lastVisit = formatDay(lastVisitAt)
+  const title = forShare
+    ? t("Pour l'envoyer, <em>gardez votre arbre</em>")
+    : reason === 'manager' ? t('Pour inviter, <em>gardez votre arbre</em>') : t('Gardez <em>votre arbre</em>')
+  const sub = forShare
+    ? t('Il faut un compte pour relire ce que la famille ajoute.')
+    : reason === 'manager'
+      ? t("Il faut un compte pour gérer l'arbre à plusieurs.")
+      : reason === 'return' && lastVisit
+        ? t("Votre dernière visite date du {date}. Sans compte, l'arbre s'efface après 30 jours sans visite.", { date: lastVisit })
+        : inApp
+          ? t("Ouvert dans une application, l'arbre ne suivra pas dans votre navigateur. Sans compte, il s'efface après 30 jours sans visite.")
+          : t('Sans compte, il reste sur cet appareil 30 jours après votre dernière visite.')
   const canSubmit = !loading && email.trim().length > 0 && password.length >= 8
 
   const handleSubmit = (event) => {
@@ -50,16 +67,8 @@ function KeepTreeSheet({
     <div className="pz-overlay" role="dialog" aria-modal="true" aria-labelledby="keepTreeTitle" onClick={(event) => { if (event.target === event.currentTarget && !loading) onClose?.() }}>
       <form className="pz-modal keep-tree" onSubmit={handleSubmit}>
         <div className="pz-modal-head">
-          <h2 id="keepTreeTitle" className="pz-title">
-            {withEmphasis(forShare ? t("Pour l'envoyer, <em>gardez votre arbre</em>") : t('Gardez <em>votre arbre</em>'))}
-          </h2>
-          <p className="pz-sub">
-            {forShare
-              ? t('Il faut un compte pour relire ce que la famille ajoute.')
-              : until
-                ? t("Sans compte, il reste sur cet appareil jusqu'au {date}.", { date: until })
-                : t('Sans compte, il reste sur cet appareil pendant 30 jours.')}
-          </p>
+          <h2 id="keepTreeTitle" className="pz-title">{withEmphasis(title)}</h2>
+          <p className="pz-sub">{sub}</p>
         </div>
 
         {onOidc && <ProviderButton name={oidcName} onClick={onOidc} disabled={loading} alone={!passwordLogin} />}
@@ -109,7 +118,7 @@ function KeepTreeSheet({
 
         <div className="pz-modal-actions keep-tree-actions">
           <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
-            {forShare ? t('Annuler') : t('Plus tard')}
+            {blocking ? t('Annuler') : t('Plus tard')}
           </button>
           {passwordLogin && (
             <button type="submit" className="pz-btn pz-btn--primary" disabled={!canSubmit}>
