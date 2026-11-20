@@ -22,7 +22,7 @@ import TreeVisitsSection from './TreeVisitsSection.jsx'
 import TreeManagersSection from './TreeManagersSection.jsx'
 import { removeManager } from '../api/managersApi.js'
 import { t } from '../i18n/index.js'
-import { readGedcomFile } from '../utils/gedcomText.js'
+import { gedcomSizeError, readGedcomFile } from '../utils/gedcomText.js'
 import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
 
@@ -289,6 +289,11 @@ const AdminPanel = ({
       const fileContent = await readFileAsText(bundle.gedcomFile)
       if (!fileContent.trim()) {
         setErrorMessage(t('Le fichier GEDCOM est vide.'))
+        return
+      }
+      const sizeError = gedcomSizeError(fileContent)
+      if (sizeError) {
+        setErrorMessage(sizeError)
         return
       }
 

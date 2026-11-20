@@ -101,36 +101,6 @@
   margin-left: 2px;
 }
 
-.tree-created-prompt {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  z-index: 1200;
-  max-width: 340px;
-  padding: 18px 20px 20px;
-  display: grid;
-  gap: 10px;
-  border-radius: var(--pz-r-l);
-  border: 1px solid var(--pz-line);
-  background: var(--pz-surface);
-  box-shadow: var(--pz-shadow);
-  color: var(--pz-ink-2);
-  font: 400 14px/1.5 var(--pz-sans);
-}
-
-.tree-created-prompt strong {
-  color: var(--pz-ink);
-  font: 400 21px/1.15 var(--pz-serif);
-  letter-spacing: -.01em;
-}
-
-.tree-created-prompt .pz-btn {
-  justify-self: start;
-  min-height: 38px;
-  padding: 0 18px;
-  font-size: 14px;
-}
-
 .account-overlay--open {
   visibility: visible;
   pointer-events: auto;

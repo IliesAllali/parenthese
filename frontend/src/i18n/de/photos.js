@@ -64,8 +64,6 @@ export default {
   "Choisir le fichier .ged": ".ged-Datei wählen",
   "Cliquez pour en choisir un autre": "Klicke, um eine andere zu wählen",
   "Importer mon arbre": "Meinen Stammbaum importieren",
-  "Votre arbre est créé, mais l'import n'a pas abouti.": "Dein Stammbaum ist angelegt, aber der Import hat nicht geklappt.",
-  "Vous pouvez réessayer depuis les paramètres de l'arbre.": "Du kannst es in den Einstellungen des Stammbaums noch einmal versuchen.",
   // Import d’un zip (GEDCOM et ses photos)
   "Ajoute les personnes et les liens du fichier à cet arbre. Un fichier .ged, ou un zip qui contient le .ged et ses photos.": "Fügt die Personen und Verbindungen aus der Datei zu diesem Stammbaum hinzu. Eine .ged-Datei oder ein Zip mit der .ged-Datei und ihren Fotos.",
   "Aucun fichier du zip ne correspond à ceux que votre logiciel citait. Choisissez le dossier où il les range.": "Keine Datei im Zip passt zu denen, die dein Programm nennt. Wähle den Ordner, in dem sie liegen.",

@@ -39,6 +39,7 @@ import {
   deleteParentChildLink,
   deletePerson,
   deleteUnion,
+  deleteTree,
   createPerson,
   createTree,
   createUnion,
@@ -75,7 +76,7 @@ import AnnotationToolbar from './components/annotations/AnnotationToolbar'
 import TextInputOverlay from './components/annotations/TextInputOverlay'
 import { joinFirstNames, splitFirstNames } from './utils/firstNames.js'
 import { filiations, getChildren, getParents, getPersonUnions, medias, persons, replaceGraph, unions } from './data/mockData'
-import { readGedcomFile } from './utils/gedcomText'
+import { gedcomSizeError, readGedcomFile } from './utils/gedcomText'
 import { readGedcomBundle, zipErrorMessage } from './utils/gedcomBundle.js'
 import { materializeFile } from './utils/zipReader.js'
 import { loadMediaRefs, loadPhotoRefs, pickFirstFaces, prepareImageForUpload, saveMediaRefs, savePhotoRefs, sizeBucket } from './utils/photoImport'
@@ -672,7 +673,6 @@ function App() {
   // « Gardez votre arbre » : { reason: 'fifth' | 'share' | 'menu', error? }
   const [keepSheet, setKeepSheet] = useState(null)
   const [treeWizardLoading, setTreeWizardLoading] = useState(false)
-  const [treeImportError, setTreeImportError] = useState('')
   const [contribInviteState, setContribInviteState] = useState({
     shareUrl: '',
     knownPasswords: {
@@ -3168,6 +3168,24 @@ function App() {
     auth.setAccountError('')
 
     try {
+      // Arbre déjà tenu dans un logiciel : le fichier est lu et vérifié avant de créer quoi que ce soit (compte
+      // provisoire, arbre), pour ne jamais laisser un arbre vide derrière un fichier refusé
+      let gedcom = null
+      if (payload.gedcomFile) {
+        // Un zip apporte le .ged et ses photos : le .ged s'importe, les photos attendent l'étape des visages
+        let bundle
+        try {
+          bundle = await readGedcomBundle(payload.gedcomFile)
+        } catch (error) {
+          return error?.code === 'no_gedcom' ? error.message : zipErrorMessage(error)
+        }
+        const content = (await readGedcomFile(bundle.gedcomFile)).text
+        if (!content.trim()) return t('Le fichier GEDCOM est vide.')
+        const sizeError = gedcomSizeError(content)
+        if (sizeError) return sizeError
+        gedcom = { content, bundledFiles: bundle.bundledFiles }
+      }
+
       // Pas encore de compte : un compte provisoire, lié à ce navigateur, porte l'arbre (#251)
       const token = auth.userAuth.token || await auth.handleStartProvisional(payload.selfFirstName || '')
       startedFromWelcomeRef.current = false
@@ -3190,29 +3208,19 @@ function App() {
       )
       trackAppEvent('tree_created', { tree_id: toOpaqueTreeId(createdTree.id) })
 
-      // Arbre déjà tenu dans un logiciel : on importe son fichier au lieu de commencer par « vous »,
-      // sinon la personne saisie ici existerait deux fois après l'import
-      if (payload.gedcomFile) {
-        let imported = null
-        let importError = ''
-        let bundledFiles = []
+      // On importe le fichier au lieu de commencer par « vous », sinon la personne saisie ici existerait deux
+      // fois après l'import
+      if (gedcom) {
+        let imported
         try {
-          // Un zip apporte le .ged et ses photos : le .ged s'importe, les photos attendent l'étape des visages
-          let bundle
-          try {
-            bundle = await readGedcomBundle(payload.gedcomFile)
-          } catch (error) {
-            throw new Error(error?.code === 'no_gedcom' ? error.message : zipErrorMessage(error), { cause: error })
-          }
-          bundledFiles = bundle.bundledFiles
-          const content = (await readGedcomFile(bundle.gedcomFile)).text
-          imported = content.trim()
-            ? await importGedcom(createdTree.id, content, token)
-            : null
-          if (!imported) importError = t('Le fichier GEDCOM est vide.')
+          imported = await importGedcom(createdTree.id, gedcom.content, token)
         } catch (error) {
-          importError = (error?.cause && error.message) || getAccountErrorMessage(error) || t("Impossible d'importer ce fichier GEDCOM.")
+          // L'import n'a pas abouti : l'arbre tout juste créé repart, l'assistant reste ouvert pour réessayer
+          await deleteTree(createdTree.id, token).catch(() => {})
+          await auth.loadAccountTrees(token).catch(() => {})
+          return getAccountErrorMessage(error) || t("Impossible d'importer ce fichier GEDCOM.")
         }
+        const bundledFiles = gedcom.bundledFiles
 
         await auth.loadAccountTrees(token)
         await tree.openTreeGraph(createdTree.id, token, {
@@ -3226,22 +3234,17 @@ function App() {
         await auth.persistLastOpenedTree({ treeId: createdTree.id, accessMode: 'member' })
         setTreeWizardVisible(false)
 
-        if (imported) {
-          const refs = Array.isArray(imported.photoRefs) ? imported.photoRefs : []
-          const mediaRefs = Array.isArray(imported.mediaRefs) ? imported.mediaRefs : []
-          savePhotoRefs(createdTree.id, refs)
-          saveMediaRefs(createdTree.id, mediaRefs)
-          trackAppEvent('gedcom_imported', {
-            persons: sizeBucket(imported.personsCreated || 0),
-            photo_refs: sizeBucket(refs.length),
-            media_refs: sizeBucket(mediaRefs.length),
-            via: 'wizard',
-          })
-          openPhotoStart({ personsImported: (imported.personsCreated || 0) + (imported.personsReused || 0), refs, mediaRefs, bundledFiles })
-        } else {
-          // L'arbre existe déjà : on l'ouvre vide et on dit où réessayer, plutôt que d'en créer un second
-          setTreeImportError(importError)
-        }
+        const refs = Array.isArray(imported.photoRefs) ? imported.photoRefs : []
+        const mediaRefs = Array.isArray(imported.mediaRefs) ? imported.mediaRefs : []
+        savePhotoRefs(createdTree.id, refs)
+        saveMediaRefs(createdTree.id, mediaRefs)
+        trackAppEvent('gedcom_imported', {
+          persons: sizeBucket(imported.personsCreated || 0),
+          photo_refs: sizeBucket(refs.length),
+          media_refs: sizeBucket(mediaRefs.length),
+          via: 'wizard',
+        })
+        openPhotoStart({ personsImported: (imported.personsCreated || 0) + (imported.personsReused || 0), refs, mediaRefs, bundledFiles })
         return null
       }
 
@@ -3717,16 +3720,6 @@ function App() {
   return (
     <div className="app">
       {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
-      {treeImportError && (
-        <div className="tree-created-prompt tree-created-prompt--error" role="alert">
-          <strong>{t("Votre arbre est créé, mais l'import n'a pas abouti.")}</strong>
-          {` ${treeImportError} `}
-          {t("Vous pouvez réessayer depuis les paramètres de l'arbre.")}
-          <button type="button" className="pz-btn pz-btn--secondary" onClick={() => setTreeImportError('')} aria-label={t('Fermer')}>
-            {t('Fermer')}
-          </button>
-        </div>
-      )}
       {/* Bouton premier ajout (arbre vide) */}
       {isEmptyTree && (
         <button

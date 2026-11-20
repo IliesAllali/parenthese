@@ -115,4 +115,6 @@ export default {
   'Le serveur ne répond pas. Vérifiez la connexion et réessayez.': 'The server is not responding. Check your connection and try again.',
   // App.jsx : enregistrement automatique en quittant une fiche
   'Modifications de {name} enregistrées': 'Changes to {name} saved',
+  "Ce fichier est trop gros pour être importé d’un coup : au-delà de 20 000 personnes ou de 10 Mo. Exportez une partie de l’arbre depuis votre logiciel, une branche par exemple, puis importez-la.": "This file is too large to import in one go: over 20,000 people or 10 MB. Export part of the tree from your software, a branch for example, then import it.",
+  "Un autre import est en cours sur Parenthèse. Réessayez dans une minute.": "Another import is running on Parenthèse. Try again in a minute.",
 }

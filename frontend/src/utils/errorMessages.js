@@ -1,4 +1,5 @@
 import { t } from '../i18n/index.js'
+import { gedcomTooLargeMessage } from './gedcomText.js'
 
 export function getShareErrorMessage(error) {
   if (error?.status === 401) {
@@ -100,6 +101,15 @@ export function getAccountErrorMessage(error, providerName = '') {
 
   if (errorCode === 'invalid_annotation_photo_mime_type') {
     return t('Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).')
+  }
+
+  // Import GEDCOM : fichier au-delà des limites du serveur, ou un autre import en cours sur l'instance
+  if (errorCode === 'gedcom_too_large') {
+    return gedcomTooLargeMessage()
+  }
+
+  if (errorCode === 'gedcom_import_busy') {
+    return t('Un autre import est en cours sur Parenthèse. Réessayez dans une minute.')
   }
 
   if (errorCode === 'storage_quota_exceeded') {

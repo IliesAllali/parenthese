@@ -107,4 +107,6 @@ export default {
   "Le serveur ne répond pas. Vérifiez la connexion et réessayez.": "Der Server antwortet nicht. Prüfe deine Verbindung und versuch es noch einmal.",
   // App.jsx : enregistrement automatique en quittant une fiche
   "Modifications de {name} enregistrées": "Änderungen an {name} gespeichert",
+  "Ce fichier est trop gros pour être importé d’un coup : au-delà de 20 000 personnes ou de 10 Mo. Exportez une partie de l’arbre depuis votre logiciel, une branche par exemple, puis importez-la.": "Diese Datei ist zu groß für einen einzigen Import: über 20 000 Personen oder 10 MB. Exportiere einen Teil des Stammbaums aus deinem Programm, zum Beispiel einen Zweig, und importiere ihn dann.",
+  "Un autre import est en cours sur Parenthèse. Réessayez dans une minute.": "Gerade läuft ein anderer Import auf Parenthèse. Versuche es in einer Minute noch einmal.",
 }

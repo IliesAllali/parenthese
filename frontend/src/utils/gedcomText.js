@@ -5,6 +5,8 @@
 // Ordre : marque d'octets (BOM) ; UTF-8 si le fichier en est un valide (certains logiciels déclarent ANSI
 // alors qu'ils écrivent de l'UTF-8) ; sinon l'encodage déclaré par la ligne « 1 CHAR » ; sinon Windows-1252.
 
+import { t } from '../i18n/index.js'
+
 const ANSEL_SPECIALS = {
   0xa1: 'Ł', 0xa2: 'Ø', 0xa3: 'Đ', 0xa4: 'Þ', 0xa5: 'Æ', 0xa6: 'Œ', 0xa7: 'ʹ', 0xa8: '·', 0xa9: '♭',
   0xaa: '®', 0xab: '±', 0xac: 'Ơ', 0xad: 'Ư', 0xae: 'ʼ', 0xb0: 'ʻ', 0xb1: 'ł', 0xb2: 'ø', 0xb3: 'đ',
@@ -71,4 +73,28 @@ export function decodeGedcomBytes(input) {
 
 export async function readGedcomFile(file) {
   return decodeGedcomBytes(new Uint8Array(await file.arrayBuffer()))
+}
+
+// Limites de l'import, les mêmes que le serveur (backend/src/routes/gedcom.ts) : vérifiées dans le navigateur,
+// avant d'envoyer le fichier et avant de créer l'arbre. 10 Mo de texte, un corps de 12 Mo une fois en JSON,
+// 20 000 personnes, 300 000 lignes.
+const MAX_GEDCOM_CHARS = 10 * 1024 * 1024
+const MAX_GEDCOM_BYTES = 11.5 * 1024 * 1024
+const MAX_GEDCOM_PERSONS = 20000
+const MAX_GEDCOM_LINES = 300000
+
+export const gedcomTooLargeMessage = () => t('Ce fichier est trop gros pour être importé d’un coup : au-delà de 20 000 personnes ou de 10 Mo. Exportez une partie de l’arbre depuis votre logiciel, une branche par exemple, puis importez-la.')
+
+// '' si le fichier passe, sinon le message à montrer
+export function gedcomSizeError(text) {
+  const value = String(text ?? '')
+  if (value.length > MAX_GEDCOM_CHARS) return gedcomTooLargeMessage()
+  if (new TextEncoder().encode(value).length > MAX_GEDCOM_BYTES) return gedcomTooLargeMessage()
+  const lines = value.split('\n')
+  if (lines.length > MAX_GEDCOM_LINES) return gedcomTooLargeMessage()
+  let persons = 0
+  for (const line of lines) {
+    if (/^\s*0\s+@[^@]+@\s+INDI\b/.test(line) && ++persons > MAX_GEDCOM_PERSONS) return gedcomTooLargeMessage()
+  }
+  return ''
 }
