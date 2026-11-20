@@ -39,13 +39,25 @@ function getOidcConfiguration(): Promise<client.Configuration> {
   return configuration
 }
 
-function discover(): Promise<client.Configuration> {
+async function discover(): Promise<client.Configuration> {
   const issuer = new URL(env.OIDC_ISSUER)
-  // Sans secret : client public, PKCE seul. Avec : client_secret_basic, la méthode par défaut d'OIDC.
-  const authentication = env.OIDC_CLIENT_SECRET ? client.ClientSecretBasic(env.OIDC_CLIENT_SECRET) : client.None()
   // Un fournisseur en http (réseau local) doit être autorisé explicitement par openid-client
-  const options = issuer.protocol === 'http:' ? { execute: [client.allowInsecureRequests] } : undefined
-  return client.discovery(issuer, env.OIDC_CLIENT_ID, undefined, authentication, options)
+  const insecure = issuer.protocol === 'http:'
+  const discovered = await client.discovery(issuer, env.OIDC_CLIENT_ID, undefined, client.None(), insecure ? { execute: [client.allowInsecureRequests] } : undefined)
+  const metadata = discovered.serverMetadata()
+  const configuration = new client.Configuration(metadata, env.OIDC_CLIENT_ID, undefined, clientAuthentication(metadata))
+  if (insecure) client.allowInsecureRequests(configuration)
+  return configuration
+}
+
+// Sans secret : client public, PKCE seul. Avec : client_secret_post quand le fournisseur l'annonce, sinon
+// client_secret_basic. Google refuse l'en-tête Basic tel qu'openid-client l'encode (« The OAuth client was not found »)
+// et accepte le même secret dans le corps de la requête.
+export function clientAuthentication(metadata: Pick<client.ServerMetadata, 'token_endpoint_auth_methods_supported'>): client.ClientAuth {
+  if (!env.OIDC_CLIENT_SECRET) return client.None()
+  return metadata.token_endpoint_auth_methods_supported?.includes('client_secret_post')
+    ? client.ClientSecretPost(env.OIDC_CLIENT_SECRET)
+    : client.ClientSecretBasic(env.OIDC_CLIENT_SECRET)
 }
 
 // Adresse de l'app où revenir : OIDC_APP_URL, sinon l'origine de l'adresse de retour (front et API sur la même adresse)
