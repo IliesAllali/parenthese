@@ -3227,6 +3227,34 @@ function App() {
     }
   }
 
+  // Un lien à clé collé dans l'onglet déjà ouvert : seul le « # » change, le navigateur ne recharge pas la page. On
+  // relit la clé comme à l'ouverture (readShareKey la retire aussi de l'adresse) ; si la porte l'attend, elle ouvre l'arbre.
+  useEffect(() => {
+    const onHashChange = async () => {
+      const key = readShareKey()
+      if (!key || tree.bootState !== 'need-access' || !tree.treeContext.treeId) return
+      const treeId = tree.treeContext.treeId
+      const userToken = auth.userAuth.token || ''
+      const access = await tree.handleUnlock(treeId, key, {
+        userToken,
+        treeName: tree.treeContext.treeName,
+        treeDescription: tree.treeContext.treeDescription,
+      })
+      if (!access) {
+        tree.setGateError(KEY_FAILED_MESSAGE())
+        return
+      }
+      setTreeNotFound(false)
+      setArrivedByKey(true)
+      if (userToken) {
+        await auth.loadAccountTrees(userToken)
+        auth.persistLastOpenedTree({ treeId, accessMode: 'share' })
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [tree.bootState, tree.treeContext.treeId, tree.treeContext.treeName, tree.treeContext.treeDescription, auth.userAuth.token]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleTreeDeleted = async (deletedTreeId) => {
     if (!auth.userAuth.token) {
       handleUseAccount('login')
