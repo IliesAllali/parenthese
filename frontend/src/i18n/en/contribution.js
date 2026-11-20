@@ -184,7 +184,6 @@ export default {
   'Vous proposez des changements': 'You are suggesting changes',
   'Vous proposez': 'You are suggesting',
   'Proposer des changements': 'Suggest changes',
-  "Mettre à jour l'arbre": 'Update the tree',
   "Aucune modification à envoyer pour l'instant": 'Nothing to send yet',
   'Quitter le mode édition': 'Exit edit mode',
 

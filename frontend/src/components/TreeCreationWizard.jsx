@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FileUp, ImagePlus } from 'lucide-react'
+import { FileUp } from 'lucide-react'
 import './TreeCreationWizard.css'
 import PzBusy from './PzBusy.jsx'
 import { t } from '../i18n/index.js'
@@ -10,7 +10,6 @@ const INITIAL_STATE = {
   selfFirstName: '',
   selfLastName: '',
   selfBirthYear: '',
-  photoFile: null,
   // « J'ai déjà un arbre » : fichier GEDCOM exporté d'un logiciel, importé à la création
   start: 'self',
   gedcomFile: null,
@@ -77,7 +76,6 @@ function TreeCreationWizard({
       selfFirstName: form.selfFirstName.trim(),
       selfLastName: form.selfLastName.trim(),
       selfBirthYear: form.selfBirthYear.trim(),
-      photoFile: form.photoFile || null,
     })
 
     if (submitError) {
@@ -88,17 +86,16 @@ function TreeCreationWizard({
   return (
     <div className="pz-overlay tree-wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="treeWizardTitle">
       <div className="pz-modal tree-wizard-card">
-        <div className="tw-steps" aria-label={t('Étape {step} sur 2', { step })}>
+        {/* Où l'on en est, sans texte : deux barres pleine largeur (R19) */}
+        <div className="tw-steps" role="img" aria-label={t('Étape {step} sur 2', { step })}>
           <span className={`tw-step ${step >= 1 ? 'is-on' : ''}`} />
           <span className={`tw-step ${step >= 2 ? 'is-on' : ''}`} />
-          <span className="pz-small">{t('Étape {step} sur 2', { step })}</span>
         </div>
 
         {step === 1 ? (
-          <>
+          <div className="tw-form">
             <div className="pz-modal-head">
               <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t("Comment s'appelle <em>votre famille</em> ?"))}</h2>
-              <p className="pz-sub">{t("Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.")}</p>
             </div>
 
             <div className="pz-field">
@@ -116,7 +113,7 @@ function TreeCreationWizard({
               />
             </div>
 
-            <div className="pz-modal-actions">
+            <div className="pz-modal-actions tw-actions">
               <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
                 {t('Fermer')}
               </button>
@@ -124,7 +121,7 @@ function TreeCreationWizard({
                 {t('Continuer')}
               </button>
             </div>
-          </>
+          </div>
         ) : (
           <form onSubmit={handleCreate} className="tw-form">
             <div className="pz-tabs tw-start" role="tablist" aria-label={t('Point de départ')}>
@@ -163,7 +160,6 @@ function TreeCreationWizard({
               <>
             <div className="pz-modal-head">
               <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Commencez <em>par vous</em>'))}</h2>
-              <p className="pz-sub">{t("L'arbre « {name} » démarre avec votre fiche. Vous ajouterez les autres ensuite.", { name: form.treeName.trim() })}</p>
             </div>
 
             <div className="pz-row2">
@@ -207,29 +203,12 @@ function TreeCreationWizard({
               />
             </div>
 
-            <div className="pz-field">
-              <span className="pz-label">{t('Votre photo')} <span className="tw-optional">{t('facultatif')}</span></span>
-              <label htmlFor="wizardSelfPhoto" className="tw-photo">
-                <span className="tw-photo-icon" aria-hidden="true"><ImagePlus size={20} strokeWidth={1.8} /></span>
-                <span className="tw-photo-text">
-                  <strong>{form.photoFile ? form.photoFile.name : t('Choisir une photo')}</strong>
-                  <span>{form.photoFile ? t('Cliquez pour en choisir une autre') : t("Un portrait où l'on voit bien votre visage")}</span>
-                </span>
-              </label>
-              <input
-                id="wizardSelfPhoto"
-                className="tw-photo-input"
-                type="file"
-                accept="image/*"
-                onChange={(event) => updateField('photoFile', event.target.files?.[0] || null)}
-              />
-            </div>
               </>
             )}
 
             {error && <div className="pz-error tree-wizard-error" role="alert">{error}</div>}
 
-            <div className="pz-modal-actions">
+            <div className="pz-modal-actions tw-actions">
               <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setStep(1)} disabled={loading}>
                 {t('Retour')}
               </button>
