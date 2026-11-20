@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react'
 import { getPersonMedias } from '../../data/mockData'
-import { MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE } from './constants'
+import { MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE, PERSON_R } from './constants'
 import { nodeRadius, renvoiHitAreas, familyHitAreas } from './renderers'
 
 const hitRenvoi = (x, y) => renvoiHitAreas.find(a => x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1)
@@ -271,7 +271,9 @@ export function useGalaxyInteractions({
         if (ns && getEntranceProgress(now - ent.startTime, ns.startMs, ns.duration) < 0.5) continue
       }
       const pos = getAnimatedPos(node, now)
-      if (Math.sqrt((pos.cx - clickX) ** 2 + (pos.cy - clickY) ** 2) < nodeRadius(node)) {
+      // Une case « ? » se dessine petite, mais se touche comme un portrait
+      const hitR = node._data?.slot ? PERSON_R : nodeRadius(node)
+      if (Math.sqrt((pos.cx - clickX) ** 2 + (pos.cy - clickY) ** 2) < hitR) {
         onPersonSelect(node._data)
         return
       }

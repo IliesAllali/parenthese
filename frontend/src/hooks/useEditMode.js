@@ -151,7 +151,7 @@ export function useEditMode({ treeId, canEdit }) {
       ...draftDataRef.current,
       ...data,
     }
-    // Considérer qu'il y a désormais un draft actif (permet le bouton "Mettre à jour l'arbre")
+    // Considérer qu'il y a désormais un draft actif (le bouton « Envoyer » de la famille)
     setHasDraft(true)
     setDraftRevision((r) => r + 1)
   }, [])

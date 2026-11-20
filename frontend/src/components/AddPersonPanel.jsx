@@ -10,6 +10,16 @@ import { initialOf } from '../utils/initial.js'
 import { findLikelyDuplicates } from '../utils/duplicates.js'
 import PortraitThumb from './PortraitThumb.jsx'
 import { withEmphasis } from '../utils/richText.jsx'
+import { kinNamePrefill, kinSexChoices, kinTitle } from '../utils/kinForm.js'
+
+// « Plus de détails » reste ouvert pour qui l'a ouvert une fois (préférence de ce navigateur)
+const DETAILS_KEY = 'pz-ajout-details'
+function readDetailsOpen() {
+  try { return localStorage.getItem(DETAILS_KEY) === '1' } catch { return false }
+}
+function writeDetailsOpen(open) {
+  try { localStorage.setItem(DETAILS_KEY, open ? '1' : '0') } catch { /* stockage indisponible : la valeur reste en mémoire */ }
+}
 
 /**
  * Panneau slide-in gauche pour ajouter une personne
@@ -32,6 +42,7 @@ import { withEmphasis } from '../utils/richText.jsx'
  */
 /**
  * @param {Object} props.prefill - ouverture depuis une fiche (1.5.1) : { nonce, firstName, lastName, relation: { type, personId, personName } }
+ *   kin (#245) : le lien est connu, le formulaire est court. { type, person, sex (imposé ou null), coParentId }
  * @param {Function} props.onOpenPerson - « Ouvrir sa fiche » sous l'alerte de doublon
  */
 function AddPersonPanel({ visible, persons = [], loading = false, error = '', onSubmit, onClose, prefill = null, onOpenPerson = null }) {
@@ -56,8 +67,13 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   const [selectedRelationType, setSelectedRelationType] = useState('parent')
   const [touched, setTouched] = useState({})
   // Prénom inconnu sans nom de famille : la personne n'aurait aucun nom
-  const [lastNameMissing, setLastNameMissing] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
+  // Formulaire court (#245) : ouvert depuis une case « ? », le « + » ou une fiche, le lien est déjà connu
+  const [kin, setKin] = useState(null)
+  const [detailsOpen, setDetailsOpen] = useState(readDetailsOpen)
+  const [sexMissing, setSexMissing] = useState(false)
+  // Le nom proposé d'office : remplacé quand le lien change, gardé dès qu'on l'a tapé soi-même
+  const [autoLastName, setAutoLastName] = useState('')
 
   const firstNameRef = useRef(null)
   const panelRef = useRef(null)
@@ -65,16 +81,31 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   // Ouvert depuis une fiche : le lien avec la personne est déjà là, et le nom de famille proposé pour un enfant
   // ou un frère ou une sœur (modifiable). Avant, il fallait rechercher à nouveau la personne qu'on venait de quitter.
   useEffect(() => {
-    if (!prefill?.nonce) return
+    if (!prefill) { setKin(null); return }
+    if (!prefill.nonce) return
+    const nextKin = prefill.kin || null
+    setKin(nextKin)
     setFirstName(prefill.firstName || '')
     setUnknownFirstName(false)
-    setLastName(prefill.lastName || '')
+    const autoName = nextKin ? kinNamePrefill(nextKin, nextKin.sex || null) : ''
+    setAutoLastName(autoName)
+    setLastName(prefill.lastName || autoName)
+    if (nextKin) {
+      setSex(nextKin.sex || null)
+      setBirthName('')
+      setNickname('')
+      setBirthDate('')
+      setDeathDate('')
+      setIsDeceased(false)
+      setDateFieldsKey((k) => k + 1)
+      setSexMissing(false)
+    }
     setTouched({})
     if (prefill.relation?.personId != null) {
       setSelectedRelationType(prefill.relation.type)
       setRelations([{ personId: prefill.relation.personId, personName: prefill.relation.personName || '', type: prefill.relation.type }])
     }
-  }, [prefill?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [prefill?.nonce, prefill === null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Doublon probable : même prénom et même nom qu'une personne de l'arbre
   const duplicates = unknownFirstName ? [] : findLikelyDuplicates(persons, firstName, lastName)
@@ -129,7 +160,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       setDateFieldsKey((k) => k + 1)
       setRelations([])
       setTouched({})
-      setLastNameMissing(false)
+      setSexMissing(false)
       setJustAdded(false)
       firstNameRef.current?.focus()
     }
@@ -166,12 +197,38 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       return
     }
 
-    if (unknownFirstName && !lastName.trim()) {
-      setLastNameMissing(true)
+    const choices = kin ? kinSexChoices(kin) : null
+    if (choices?.required && !sex) {
+      setSexMissing(true)
       return
     }
 
     setJustAdded(true)
+
+    if (kin) {
+      // La mère : le champ court porte son nom de naissance, le détail son nom d'usage
+      const isMother = kin.type === 'parent' && sex === 'female'
+      const shortName = lastName.trim()
+      const otherName = birthName.trim()
+      const names = isMother && otherName
+        ? { lastName: otherName, birthName: shortName || null }
+        : isMother ? { lastName: shortName, birthName: null } : { lastName: shortName, birthName: otherName || null }
+      const kinRelations = relations.map((rel) => ({ ...rel, adopted: false }))
+      // Le second parent forme un couple avec le premier : l'arbre les dessine ensemble, sans « Inconnu »
+      if (kin.type === 'parent' && kin.coParentId != null) kinRelations.push({ personId: kin.coParentId, personName: '', type: 'spouse' })
+      onSubmit({
+        firstName: unknownFirstName ? '' : firstName.trim(),
+        ...names,
+        nickname: nickname.trim() || null,
+        sex,
+        birthDate: birthDate || null,
+        deathDate: deathDate || null,
+        isDeceased: !deathDate && isDeceased,
+        relations: kinRelations,
+        kin: true,
+      })
+      return
+    }
 
     onSubmit({
       firstName: unknownFirstName ? '' : firstName.trim(),
@@ -200,6 +257,157 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     sibling: t('Frère·Sœur'),
   }
 
+  const typedName = !unknownFirstName && firstName.trim() ? firstName.trim().split(/[\s,]+/)[0] : ''
+  const submitLabel = typedName ? t('Ajouter {name}', { name: typedName }) : t('Ajouter')
+  const sexChoices = kin ? kinSexChoices(kin) : null
+  const isMotherForm = kin?.type === 'parent' && sex === 'female'
+
+  const chooseKinSex = (value) => {
+    const next = sexChoices?.required ? value : (sex === value ? null : value)
+    setSex(next)
+    setSexMissing(false)
+    // Le nom proposé suit le lien tant qu'on ne l'a pas changé : celui de l'enfant pour un père, rien pour une mère
+    if (lastName === autoLastName) {
+      const autoName = kinNamePrefill(kin, next)
+      setAutoLastName(autoName)
+      setLastName(autoName)
+    }
+  }
+
+  const toggleDetails = () => {
+    const next = !detailsOpen
+    writeDetailsOpen(next)
+    setDetailsOpen(next)
+  }
+
+  const duplicateBox = duplicates.length > 0 && (
+    <div className="apn-duplicate" role="status">
+      {duplicates.map((p) => (
+        <p key={p.id} className="apn-duplicate-line">
+          <span>{p.birthYear
+            ? t('{name} ({year}) est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim(), year: p.birthYear })
+            : t('{name} est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim() })}</span>
+          {onOpenPerson && (
+            <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onOpenPerson(p)}>{t('Ouvrir sa fiche')}</button>
+          )}
+        </p>
+      ))}
+      <p className="apn-duplicate-hint">{t('Si c’est une autre personne, ajoutez-la quand même.')}</p>
+    </div>
+  )
+
+  const renderKinForm = () => (
+    <>
+      {sexChoices && (
+        <div className="pz-field">
+          <div className="pz-tabs apn-types apn-kin-sex" role="radiogroup" aria-label={t('Lien')} aria-invalid={sexMissing || undefined}>
+            {sexChoices.options.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={sex === value}
+                className={`pz-tab ${sex === value ? 'is-active' : ''}`}
+                onClick={() => chooseKinSex(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {sexMissing && <p className="apn-error-text">{t('Son père ou sa mère ?')}</p>}
+
+      <div className="pz-field">
+        <label htmlFor="ap-firstName">{t('Prénom')}</label>
+        <input
+          ref={firstNameRef}
+          id="ap-firstName"
+          type="text"
+          className={touched.firstName && !unknownFirstName && !firstName.trim() ? 'apn-input--error' : ''}
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="words"
+          enterKeyHint="done"
+          disabled={unknownFirstName}
+          aria-invalid={touched.firstName && !unknownFirstName && !firstName.trim()}
+        />
+      </div>
+      {touched.firstName && !unknownFirstName && !firstName.trim() && (
+        <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
+      )}
+
+      <div className="pz-field">
+        <label htmlFor="ap-lastName">{isMotherForm ? t('Nom de naissance') : t('Nom')}</label>
+        <input
+          id="ap-lastName"
+          type="text"
+          className={isSurnameUppercase() ? 'pz-caps' : undefined}
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="words"
+        />
+      </div>
+
+      {duplicateBox}
+
+      <div className="pz-field">
+        <label htmlFor="ap-birthDate">{t('Année de naissance')} <span className="apn-optional">{t('facultatif')}</span></label>
+        <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} onChange={setBirthDate} placeholder="1960" />
+      </div>
+
+      {detailsOpen && (
+        <>
+          <div className="pz-field">
+            <label htmlFor="ap-birthName">
+              {isMotherForm ? t("Nom d'usage") : t('Nom de naissance')} <span className="apn-optional">{t('si différent')}</span>
+            </label>
+            <input
+              id="ap-birthName"
+              type="text"
+              className={isSurnameUppercase() ? 'pz-caps' : undefined}
+              value={birthName}
+              onChange={(e) => setBirthName(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <div className="pz-field">
+            <label htmlFor="ap-nickname">{t('Surnom')} <span className="apn-optional">{t('facultatif')}</span></label>
+            <input id="ap-nickname" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="off" maxLength={120} />
+          </div>
+          <div className="pz-field">
+            <label htmlFor="ap-deathDate">{t('Décès')} <span className="apn-optional">{t('année ou date')}</span></label>
+            <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} onChange={setDeathDate} placeholder=" " />
+            {!deathDate && (
+              <label className="apn-deceased">
+                <input type="checkbox" checked={isDeceased} onChange={(e) => setIsDeceased(e.target.checked)} />
+                {sex === 'male' ? t('Décédé, date inconnue') : sex === 'female' ? t('Décédée, date inconnue') : t('Décédé(e), date inconnue')}
+              </label>
+            )}
+          </div>
+          <label className="apn-deceased">
+            <input
+              type="checkbox"
+              checked={unknownFirstName}
+              onChange={(e) => {
+                setUnknownFirstName(e.target.checked)
+                setTouched({})
+              }}
+            />
+            {t('Je ne connais pas son prénom')}
+          </label>
+        </>
+      )}
+      <button type="button" className="pz-link apn-more" onClick={toggleDetails} aria-expanded={detailsOpen}>
+        {detailsOpen ? t('Moins de détails') : t('Plus de détails')}
+      </button>
+
+      {error && <div className="pz-error" role="alert">{error}</div>}
+    </>
+  )
+
   return (
     <div
       className={`add-person-panel ${visible ? 'add-person-panel--open' : ''}`}
@@ -210,7 +418,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     >
       <div className="apn-head">
         <div className="pz-modal-head">
-          <h2 id="addPersonTitle" className="pz-title">{withEmphasis(t("Ajouter <em>quelqu'un</em>"))}</h2>
+          <h2 id="addPersonTitle" className="pz-title">{withEmphasis(kin ? kinTitle(kin, sex) : t("Ajouter <em>quelqu'un</em>"))}</h2>
         </div>
         <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon apn-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} strokeWidth={2} />
@@ -219,6 +427,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
 
       <form className="apn-form" onSubmit={handleSubmit}>
         <div className="apn-scroll">
+          {kin ? renderKinForm() : (<>
           <div className="pz-row2 apn-row">
             <div className="pz-field">
               <label htmlFor="ap-firstName">{t('Prénom')}</label>
@@ -257,10 +466,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                 type="text"
                 className={isSurnameUppercase() ? 'pz-caps' : undefined}
                 value={lastName}
-                onChange={(e) => {
-                  setLastName(e.target.value)
-                  setLastNameMissing(false)
-                }}
+                onChange={(e) => setLastName(e.target.value)}
                 placeholder={t('Dupont')}
                 autoComplete="off"
               />
@@ -269,22 +475,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           {touched.firstName && !unknownFirstName && !firstName.trim() && (
             <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
           )}
-          {lastNameMissing && <p className="apn-error-text">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
-          {duplicates.length > 0 && (
-            <div className="apn-duplicate" role="status">
-              {duplicates.map((p) => (
-                <p key={p.id} className="apn-duplicate-line">
-                  <span>{p.birthYear
-                    ? t('{name} ({year}) est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim(), year: p.birthYear })
-                    : t('{name} est déjà dans l’arbre.', { name: `${firstNameLabel(p)} ${surnameLabel(p.lastName)}`.trim() })}</span>
-                  {onOpenPerson && (
-                    <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={() => onOpenPerson(p)}>{t('Ouvrir sa fiche')}</button>
-                  )}
-                </p>
-              ))}
-              <p className="apn-duplicate-hint">{t('Si c’est une autre personne, ajoutez-la quand même.')}</p>
-            </div>
-          )}
+          {duplicateBox}
 
           <div className="pz-field">
             <label htmlFor="ap-birthName">{t('Nom de naissance')} <span className="apn-optional">{t('si différent')}</span></label>
@@ -431,6 +622,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           </section>
 
           {error && <div className="pz-error" role="alert">{error}</div>}
+          </>)}
         </div>
 
         <div className="apn-actions">
@@ -441,7 +633,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               affichait une erreur avant même d'avoir rempli la fiche) */}
           <button type="submit" className="pz-btn pz-btn--primary" disabled={loading}>
             <UserPlus size={16} strokeWidth={2} />
-            <PzBusy busy={loading} busyLabel={t('Ajout en cours')}>{t('Ajouter cette personne')}</PzBusy>
+            <PzBusy busy={loading} busyLabel={t('Ajout en cours')}>{submitLabel}</PzBusy>
           </button>
         </div>
       </form>

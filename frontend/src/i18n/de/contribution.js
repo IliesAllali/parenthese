@@ -152,7 +152,6 @@ export default {
   "Vous proposez des changements": "Du schlägst Änderungen vor",
   "Vous proposez": "Du schlägst vor",
   "Proposer des changements": "Änderungen vorschlagen",
-  "Mettre à jour l'arbre": "Stammbaum aktualisieren",
   "Aucune modification à envoyer pour l'instant": "Noch nichts zu senden",
   "Quitter le mode édition": "Bearbeitungsmodus beenden",
   // ─── Brouillon ───

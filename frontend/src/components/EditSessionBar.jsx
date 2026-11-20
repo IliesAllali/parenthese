@@ -12,10 +12,11 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
 
   // Libellés courts : ils doivent tenir sur un téléphone à côté du bouton
   // Invité : « Vous proposez » sur téléphone (une seule ligne), la phrase complète sur ordinateur
+  // Qui gère l'arbre n'a pas de bouton d'envoi : tout s'enregistre au fil de l'eau, le reste en sortant (#246)
   const toastLabel = isAdmin ? t("Vous modifiez l'arbre") : null
-  const submitLabel = isAdmin ? t("Mettre à jour l'arbre") : t('Envoyer')
+  const submitLabel = t('Envoyer')
   // La famille ne voit le bouton d'envoi que lorsqu'il y a quelque chose à envoyer
-  const showSubmit = Boolean(onSubmit) && (isAdmin || hasDraft)
+  const showSubmit = Boolean(onSubmit) && hasDraft
 
   if (!active) return null
 
@@ -50,7 +51,7 @@ function EditSessionBar({ active, hasDraft, role = 'contributor', onDeactivate, 
           type="button"
           className="pz-btn pz-btn--ghost pz-btn--icon edit-mode-toast-close"
           onClick={onDeactivate}
-          aria-label={t('Quitter le mode édition')}
+          aria-label={isAdmin ? t('Terminer la modification') : t('Quitter le mode édition')}
         >
           <X size={17} strokeWidth={2} />
         </button>

@@ -27,7 +27,7 @@ const NICKNAME_MAX_W = 150
 // ============================================================
 // Rayon d'un nœud : inconnu, conjoint isolé (petit) ou personne
 export function nodeRadius(node) {
-  if (node?._type === 'unknown') return UNKNOWN_R
+  if (node?._type === 'unknown' || node?._data?.slot) return UNKNOWN_R
   if (node?._compact) return COMPACT_R
   return PERSON_R
 }
@@ -192,7 +192,7 @@ function strokeCouple(ctx, meta, points, p1Pos, p2Pos, p1R, p2R, progress) {
 // ============================================================
 export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomData, entrance, entranceActive, elapsed, view = null) {
   coupleBarMeta.forEach((meta) => {
-    const { elkId, p1Key, p2Key, virtual, ghost } = meta
+    const { elkId, p1Key, p2Key, virtual, ghost, slot } = meta
     const p1Pos = posMap.get(p1Key)
     const p2Pos = posMap.get(p2Key)
     const unionPos = posMap.get(elkId)
@@ -221,9 +221,9 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
       p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData, nodeMap.get(elkId)?._compact
     )
 
-    ctx.strokeStyle = ghost ? GHOST.color : virtual ? COLORS.linkUnknown : FIL.color
+    ctx.strokeStyle = ghost && !slot ? GHOST.color : virtual || slot ? COLORS.linkUnknown : FIL.color
     ctx.lineWidth = FIL.width
-    ctx.setLineDash(ghost ? GHOST.dash : virtual ? [4, 4] : [])
+    ctx.setLineDash(ghost && !slot ? GHOST.dash : virtual || slot ? [4, 4] : [])
     ctx.lineCap = 'round'
     ctx.globalAlpha = coupleProgress
 
@@ -349,17 +349,22 @@ export function drawFiliations(ctx, edges, posMap, nodeMap, nodeRandomData, entr
     }
     // Les enfants d'une même union (même type de filiation) forment une seule fratrie, tracée d'un coup
     // Un enfant proposé a sa propre ligne, en pointillés, par-dessus celle de ses frères et sœurs
-    const ghost = Boolean(edge._ghost || targetNode?._data?.ghost)
-    const key = `${sourceId}|${pType}|${ghost ? 'g' : ''}`
-    if (!sibships.has(key)) sibships.set(key, { sourceId, sourcePos, pType, ghost, items: [], progress: 0 })
+    const slot = Boolean(edge._slot)
+    const ghost = !slot && Boolean(edge._ghost || targetNode?._data?.ghost)
+    const key = `${sourceId}|${pType}|${slot ? 's' : ghost ? 'g' : ''}`
+    if (!sibships.has(key)) sibships.set(key, { sourceId, sourcePos, pType, ghost, slot, items: [], progress: 0 })
     const sib = sibships.get(key)
     sib.items.push({ cx: targetPos.cx, cy: targetPos.cy - childR })
     sib.progress += edgeProgress
   })
 
-  for (const { sourceId, sourcePos, pType, ghost, items, progress } of sibships.values()) {
+  for (const { sourceId, sourcePos, pType, ghost, slot, items, progress } of sibships.values()) {
     // Adoption : trait plein comme une filiation de naissance (le mode d'adoption se dit dans la fiche)
-    if (ghost) {
+    // Case à remplir : le trait en pointillés de l'« Inconnu »
+    if (slot) {
+      ctx.setLineDash([3, 3])
+      ctx.strokeStyle = COLORS.linkUnknown
+    } else if (ghost) {
       ctx.setLineDash(GHOST.dash)
       ctx.strokeStyle = GHOST.color
     } else if (pType === 'inconnu') {
@@ -1309,7 +1314,9 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       }
     }
 
-    if (node._type === 'person') {
+    if (node._type === 'person' && node._data?.slot) {
+      drawSlotNode(ctx, node, pos, nodeProgress)
+    } else if (node._type === 'person') {
       drawPersonNode(ctx, node, pos, nodeProgress, renderState)
       if (node._data?.ghost) drawGhostMark(ctx, node, pos, nodeProgress, view)
       else if (renderState.ghostPatches?.has(String(node._data?.id))) drawPatchMark(ctx, node, pos, nodeProgress, renderState.ghostPatches.get(String(node._data.id)))
@@ -1321,36 +1328,50 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       ctx.fill()
       ctx.globalAlpha = 1
     } else if (node._type === 'unknown') {
-      const unknownScale = 0.92 + nodeProgress * 0.08
-      ctx.save()
-      ctx.globalAlpha = nodeProgress
-      ctx.translate(cx, cy)
-      ctx.scale(unknownScale, unknownScale)
-
-      ctx.fillStyle = COLORS.placeholderFill
-      ctx.beginPath()
-      ctx.arc(0, 0, UNKNOWN_R, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.strokeStyle = COLORS.placeholderBorder
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([4, 3])
-      ctx.stroke()
-      ctx.setLineDash([])
-
-      ctx.fillStyle = COLORS.placeholder
-      ctx.font = '400 16px "DM Sans", system-ui, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      ctx.fillText('?', 0, 0)
-
-      ctx.font = '400 italic 10px "Newsreader", Georgia, serif'
-      ctx.textBaseline = 'top'
-      ctx.fillText(t('Inconnu'), 0, UNKNOWN_R + 4)
-      ctx.restore()
+      drawUnknownMark(ctx, cx, cy, nodeProgress, t('Inconnu'))
     }
   })
   drawConfettiBursts(ctx)
+}
+
+// Case à remplir : le dessin de l'« Inconnu » (cercle en pointillés, « ? »), avec le lien dessous (« Père », « Grand-mère »)
+const SLOT_LABELS = {
+  1: { father: () => t('Père'), mother: () => t('Mère'), parent: () => t('Parent') },
+  2: { father: () => t('Grand-père'), mother: () => t('Grand-mère'), parent: () => t('Grand-parent') },
+}
+function drawUnknownMark(ctx, cx, cy, progress, label) {
+  const unknownScale = 0.92 + progress * 0.08
+  ctx.save()
+  ctx.globalAlpha = progress
+  ctx.translate(cx, cy)
+  ctx.scale(unknownScale, unknownScale)
+
+  ctx.fillStyle = COLORS.placeholderFill
+  ctx.beginPath()
+  ctx.arc(0, 0, UNKNOWN_R, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.strokeStyle = COLORS.placeholderBorder
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([4, 3])
+  ctx.stroke()
+  ctx.setLineDash([])
+
+  ctx.fillStyle = COLORS.placeholder
+  ctx.font = '400 16px "DM Sans", system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('?', 0, 0)
+
+  ctx.font = '400 italic 10px "Newsreader", Georgia, serif'
+  ctx.textBaseline = 'top'
+  ctx.fillText(label, 0, UNKNOWN_R + 4)
+  ctx.restore()
+}
+function drawSlotNode(ctx, node, pos, progress) {
+  const { generation = 1, role = 'parent' } = node._data.slot
+  const label = (SLOT_LABELS[generation] || SLOT_LABELS[1])[role] || SLOT_LABELS[1].parent
+  drawUnknownMark(ctx, pos.cx, pos.cy, progress, label())
 }
 
 // Personne proposée : portrait délavé, cercle en pointillés, étiquette (« Proposé », « En attente », « Brouillon »)

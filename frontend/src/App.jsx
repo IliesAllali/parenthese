@@ -94,6 +94,9 @@ import './App.css'
 import './styles/pz.css'
 import { setBooting } from './bootSignal.js'
 import { ghostsFromChanges, hasGhosts, mergeGhosts } from './utils/ghosts'
+import { kinSlots } from './utils/kinSlots'
+import { kinAvailability, remainingParentSex } from './utils/kinForm'
+import { kinPeople } from './utils/kinPeople'
 import ProposalCard from './components/ProposalCard'
 import { summarizeChanges } from './utils/proposalSummary'
 
@@ -633,7 +636,6 @@ function App() {
   )
   const [treeWizardVisible, setTreeWizardVisible] = useState(false)
   const [treeWizardLoading, setTreeWizardLoading] = useState(false)
-  const [treeWelcomeVisible, setTreeWelcomeVisible] = useState(false)
   const [treeImportError, setTreeImportError] = useState('')
   const [contribInviteState, setContribInviteState] = useState({
     shareUrl: '',
@@ -826,6 +828,10 @@ function App() {
         list.push(ghostsFromChanges(draftChanges, { source: 'draft', key: 'brouillon', summary: summarizeChanges(draftChanges) }, graph))
       }
     }
+    // Cases à remplir : les parents et grands-parents qui manquent autour de soi, pour qui gère l'arbre
+    if (tree.canEditCurrentTree) {
+      list.push(kinSlots({ selfId: linkedSelfPersonId || tree.treeContext.rootPersonId, persons, unions, filiations }))
+    }
     const merged = mergeGhosts(list)
     // Photo posée sur l'arbre : l'adresse se refait depuis son chemin, seulement pour une photo de cet arbre
     const photoPrefix = `/trees/${ghostTreeId}/annotation-photos/`
@@ -842,7 +848,7 @@ function App() {
       }
     }).filter(Boolean)
     return hasGhosts(merged) ? merged : null
-  }, [ghostTreeId, isDemoMode, userRole.isAdmin, tree.canSubmitContribution, contrib.contribState.sessions, contrib.sentProposals, editMode.hasDraft, editMode.draftRevision, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ghostTreeId, isDemoMode, userRole.isAdmin, tree.canSubmitContribution, tree.canEditCurrentTree, linkedSelfPersonId, tree.treeContext.rootPersonId, contrib.contribState.sessions, contrib.sentProposals, editMode.hasDraft, editMode.draftRevision, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedGhost, setSelectedGhost] = useState(null)
   // Une proposition relue (ou un brouillon envoyé) emporte son fantôme : la carte ouverte se ferme
   useEffect(() => {
@@ -1037,16 +1043,31 @@ function App() {
     return true
   }, [leaveSelectedPerson, tree.setSelectedPerson])
 
+  // Qui gère l'arbre : ses fiches s'enregistrent au fil de l'eau, et ce qui reste (dessins, mots posés sur l'arbre)
+  // s'enregistre en sortant. Le bouton « Mettre à jour l'arbre » n'avait plus que ce rôle (#246).
+  const savesOnLeave = userRole.isAdmin && !isDemoMode
+  const editSubmitRef = useRef(null)
   const deactivateEditMode = useCallback(async () => {
+    if (savesOnLeave) {
+      await editSubmitRef.current?.()
+      return
+    }
     if (!(await leaveSelectedPerson())) return
     editMode.deactivate()
-  }, [leaveSelectedPerson, editMode.deactivate])
+  }, [leaveSelectedPerson, editMode.deactivate, savesOnLeave])
 
   const handlePersonSelect = useCallback(async (personLike) => {
     const personId = personLike && typeof personLike === 'object' ? personLike.id : personLike
     if (personId === null || personId === undefined) {
       setSelectedGhost(null)
       await chooseSelectedPerson(null)
+      return
+    }
+    // Case « ? » : son formulaire s'ouvre, le lien est déjà connu
+    if (personLike && typeof personLike === 'object' && personLike.slot) {
+      const child = persons.find((candidate) => String(candidate.id) === String(personLike.slot.childId))
+      const role = personLike.slot.role
+      openKinFormRef.current({ type: 'parent', person: child, sex: role === 'father' ? 'male' : role === 'mother' ? 'female' : null })
       return
     }
     // Personne proposée : sa carte de proposition, pas une fiche (elle n'existe pas encore dans l'arbre)
@@ -1066,6 +1087,7 @@ function App() {
     setAddPersonPanelVisible(false)
 
     tree.setSelectedPerson(freshPerson)
+    if (freshPerson?.id != null) setKinTargetId(String(freshPerson.id))
     // Sur téléphone, la fiche couvre le bas : la personne touchée remonte dans le tiers du haut (#188)
     if (freshPerson && window.matchMedia?.('(max-width: 768px)').matches) galaxyZoomApiRef.current?.focusPerson?.(freshPerson.id)
     trackTreeInteraction('text')
@@ -1144,7 +1166,7 @@ function App() {
 
   // Toggle édition avec confirmation si draft en cours
   const handleEditToggle = useCallback(() => {
-    if (editMode.isActive && editMode.hasDraft) {
+    if (editMode.isActive && editMode.hasDraft && !savesOnLeave) {
       setShowConfirmModal(true)
     } else if (editMode.isActive) {
       deactivateEditMode()
@@ -1152,7 +1174,7 @@ function App() {
       trackDemoInteraction('edit')
       editMode.toggle()
     }
-  }, [editMode.isActive, editMode.hasDraft, editMode.toggle, deactivateEditMode, trackDemoInteraction]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editMode.isActive, editMode.hasDraft, editMode.toggle, deactivateEditMode, trackDemoInteraction, savesOnLeave]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Actions de la modal de confirmation
   const handleConfirmContinue = useCallback(() => {
@@ -1209,31 +1231,74 @@ function App() {
   const [addPersonLoading, setAddPersonLoading] = useState(false)
   const [addPersonError, setAddPersonError] = useState('')
 
-  // Ajouter un proche depuis une fiche (1.5.1) : le panneau s'ouvre avec le lien déjà posé, le nom tapé dans la
-  // recherche, et le nom de famille proposé pour un enfant ou un frère ou une sœur
+  // Ajouter un proche (#245) : depuis une case « ? », le « + » ou une fiche, le lien est connu et le formulaire est
+  // court (prénom, nom, année). Le nom tapé dans la recherche d'une fiche passe en prénom et nom.
   const [addPersonPrefill, setAddPersonPrefill] = useState(null)
-  const handleCreateRelative = useCallback(async (type, query = '') => {
-    const person = tree.selectedPerson
-    if (!person) return
-    const [first = '', ...rest] = String(query).trim().split(/\s+/)
-    const inheritsName = type === 'child' || type === 'sibling'
-    const lastName = rest.join(' ') || (inheritsName ? person.lastName || '' : '')
-    const personName = [person.firstName, surnameLabel(person.lastName)].filter(Boolean).join(' ')
-    if (!(await leaveSelectedPerson())) return
-    await chooseSelectedPerson(null)
-    setAddPersonPrefill({ nonce: Date.now(), firstName: first, lastName, relation: { type, personId: person.id, personName } })
-    handleOpenAddPerson(query ? 'fiche_recherche' : 'fiche')
-  }, [tree.selectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
+  // À qui le « + » ajoute un proche : la dernière personne touchée dans l'arbre, soi par défaut
+  const [kinTargetId, setKinTargetId] = useState(null)
+  useEffect(() => { setKinTargetId(null) }, [tree.treeContext.treeId])
+  const kinTarget = useMemo(() => {
+    const byId = (id) => (id == null ? null : persons.find((candidate) => String(candidate.id) === String(id)) || null)
+    return byId(kinTargetId) || byId(linkedSelfPersonId) || byId(tree.treeContext.rootPersonId) || persons[0] || null
+  }, [kinTargetId, linkedSelfPersonId, tree.treeContext.rootPersonId, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
+  const kinChoicesFor = useCallback((person) => (person ? kinAvailability(getParents(person.id)) : null), [tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
+  // « Pour qui ? » : calculé à l'ouverture de la liste seulement
+  const getKinPeople = useCallback(() => kinPeople({
+    persons,
+    getParents,
+    getChildren,
+    getPartners: (id) => getPersonUnions(id)
+      .map((union) => (String(union.partner1Id) === String(id) ? union.partner2Id : union.partner1Id))
+      .map((partnerId) => persons.find((person) => String(person.id) === String(partnerId)))
+      .filter(Boolean),
+  }, linkedSelfPersonId || tree.treeContext.rootPersonId), [linkedSelfPersonId, tree.treeContext.rootPersonId, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Par où l'on ajoute une personne, pour les compteurs d'édition (aucun contenu de l'arbre ne part)
   const addPersonViaRef = useRef('menu')
-  const handleOpenAddPerson = useCallback((via) => {
+  const openAddPanel = useCallback((via) => {
     addPersonViaRef.current = typeof via === 'string' ? via : 'menu'
     setAddPersonError('')
-    // Le panneau d'ajout vit dans le mode édition : la famille y entre sans passer par le crayon
-    if (!editMode.isActive) editMode.activate()
+    // La famille ajoute dans son brouillon, donc dans le mode édition : elle y entre sans passer par le crayon.
+    // Qui gère l'arbre ajoute directement, sans mode édition à quitter ensuite (#245).
+    if (!editMode.isActive && !savesOnLeave) editMode.activate()
     setAddPersonPanelVisible(true)
-  }, [editMode.isActive, editMode.activate]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editMode.isActive, editMode.activate, savesOnLeave]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Sans lien connu : le formulaire complet, avec « Place dans la famille »
+  const handleOpenAddPerson = useCallback((via) => {
+    setAddPersonPrefill(null)
+    openAddPanel(via)
+  }, [openAddPanel])
+
+  const openKinForm = useCallback(async ({ type, person, sex = null, query = '', via = 'menu' }) => {
+    if (!person) return
+    const [first = '', ...rest] = String(query).trim().split(/\s+/)
+    const personName = [person.firstName, surnameLabel(person.lastName)].filter(Boolean).join(' ')
+    const parents = type === 'parent' ? getParents(person.id) : []
+    // Le second parent : son sexe se déduit du premier, et les deux forment un couple
+    const coParent = parents.length === 1 ? parents[0] : null
+    if (!(await leaveSelectedPerson())) return
+    await chooseSelectedPerson(null)
+    setAddPersonPrefill({
+      nonce: Date.now(),
+      firstName: first,
+      lastName: rest.join(' '),
+      relation: { type, personId: person.id, personName },
+      kin: {
+        type,
+        person: { id: person.id, firstName: person.firstName, lastName: person.lastName, sex: person.sex || null },
+        sex: sex || remainingParentSex(parents),
+        coParentId: coParent ? coParent.id : null,
+      },
+    })
+    openAddPanel(via)
+  }, [leaveSelectedPerson, chooseSelectedPerson, openAddPanel]) // eslint-disable-line react-hooks/exhaustive-deps
+  const openKinFormRef = useRef(openKinForm)
+  useEffect(() => { openKinFormRef.current = openKinForm }, [openKinForm])
+
+  const handleCreateRelative = useCallback((type, query = '') => {
+    openKinForm({ type, person: tree.selectedPerson, query, via: query ? 'fiche_recherche' : 'fiche' })
+  }, [tree.selectedPerson, openKinForm])
+
 
   // « Ajouter un souvenir » : choisir la personne, puis ouvrir ses souvenirs
   const handleOpenSouvenirPicker = useCallback(() => {
@@ -1491,7 +1556,13 @@ function App() {
         return newPerson
       }
 
-      if (firstNames.length < 2) return await addOne(formData)
+      // Formulaire court : le lien est posé, le panneau se ferme et l'arbre montre la personne à sa place
+      const closeIfKin = (result) => { if (result && formData.kin) setAddPersonPanelVisible(false) }
+      if (firstNames.length < 2) {
+        const result = await addOne(formData)
+        closeIfKin(result)
+        return result
+      }
 
       const added = []
       for (const firstName of firstNames) {
@@ -1500,6 +1571,7 @@ function App() {
         added.push(result)
       }
       if (!added.length) return null
+      closeIfKin(added[0])
       const addedIds = added.map((result) => result.demoPerson?.id ?? result.id).filter((id) => id != null)
       if (added[0].proposed) {
         const names = joinFirstNames(firstNames.slice(0, added.length), t('et'))
@@ -1673,8 +1745,13 @@ function App() {
         }
       }
 
-      await tree.refreshCurrentTreeGraph({ relayout: false })
-      trackAppEvent('tree_edits_saved', { persons: Object.keys(draft.modifiedPersons || {}).length, annotations: (draft.addedAnnotations || []).length, tree_id: opaqueTreeId })
+      // Sortir sans rien à enregistrer (des ajouts de personnes, déjà enregistrés) ne compte pas comme un enregistrement
+      const hadChanges = Object.keys(draft.modifiedPersons || {}).length > 0
+        || ['addedAnnotations', 'modifiedAnnotations', 'deletedAnnotations'].some((key) => (draft[key] || []).length > 0)
+      if (hadChanges) {
+        await tree.refreshCurrentTreeGraph({ relayout: false })
+        trackAppEvent('tree_edits_saved', { persons: Object.keys(draft.modifiedPersons || {}).length, annotations: (draft.addedAnnotations || []).length, tree_id: opaqueTreeId })
+      }
       editMode.clearDraft()
       editMode.deactivate()
     } else {
@@ -1684,6 +1761,7 @@ function App() {
       setShowContribModal(true)
     }
   }, [userRole.isAdmin, auth.userAuth.token, tree.treeContext.treeId, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { editSubmitRef.current = handleEditSubmit }, [handleEditSubmit])
 
   const handleContribSessionSubmit = useCallback(async ({ comment, name }) => {
     setContribSubmitLoading(true)
@@ -2743,7 +2821,6 @@ function App() {
     tree.handleUseDemo()
     auth.setAccountError('')
     setAccountPanelVisible(false)
-    setTreeWelcomeVisible(false)
     setTreeWizardVisible(false)
     media.resetMediaManager()
     setAdminPanelVisible(false)
@@ -2940,7 +3017,6 @@ function App() {
   const handleOpenTreeWizard = () => {
     trackDemoInteraction('create_tree')
     auth.setAccountError('')
-    setTreeWelcomeVisible(false)
     setTreeWizardVisible(true)
   }
 
@@ -3045,28 +3121,6 @@ function App() {
           { rootPersonId: createdSelf.id },
           token,
         )
-
-        if (payload.photoFile) {
-          const validationError = validateMediaFile(payload.photoFile, 'photo')
-          if (!validationError) {
-            try {
-              const dataBase64 = await fileToBase64(payload.photoFile)
-              await uploadPersonAvatar(
-                createdTree.id,
-                createdSelf.id,
-                {
-                  fileName: payload.photoFile.name || 'avatar.jpg',
-                  mimeType: getUploadMimeType(payload.photoFile, 'photo'),
-                  sizeBytes: payload.photoFile.size,
-                  dataBase64,
-                },
-                token,
-              )
-            } catch {
-              // La photo est optionnelle: ignorer l'echec sans bloquer la creation.
-            }
-          }
-        }
       }
 
       await auth.loadAccountTrees(token)
@@ -3084,7 +3138,6 @@ function App() {
       })
 
       setTreeWizardVisible(false)
-      setTreeWelcomeVisible(true)
       return null
     } catch (error) {
       const message = getAccountErrorMessage(error)
@@ -3134,7 +3187,6 @@ function App() {
     tree.setWizardState({ visible: false, loading: false, error: '' })
     setAccountPanelVisible(false)
     setTreeWizardVisible(false)
-    setTreeWelcomeVisible(false)
     setAccountEntryMode('login')
     media.resetMediaManager()
     setAdminPanelVisible(false)
@@ -3443,15 +3495,6 @@ function App() {
   return (
     <div className="app">
       {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
-      {treeWelcomeVisible && (
-        <div className="tree-created-prompt" role="status">
-          <strong>{t('Votre arbre est créé.')}</strong>
-          {t("Ajoutez un proche pour commencer, comme votre mère, votre père ou un frère. Il suffit d'un prénom.")}
-          <button type="button" className="pz-btn pz-btn--secondary" onClick={() => setTreeWelcomeVisible(false)} aria-label={t('Fermer')}>
-            {t('Fermer')}
-          </button>
-        </div>
-      )}
       {treeImportError && (
         <div className="tree-created-prompt tree-created-prompt--error" role="alert">
           <strong>{t("Votre arbre est créé, mais l'import n'a pas abouti.")}</strong>
@@ -3512,7 +3555,7 @@ function App() {
         draftTimestamp={editMode.draftTimestamp}
         role={userRole.isAdmin ? 'admin' : 'contributor'}
         onDeactivate={deactivateEditMode}
-        onSubmit={handleEditSubmit}
+        onSubmit={savesOnLeave ? null : handleEditSubmit}
       />
       {/* Confirmation Modal (quitter mode édition avec draft) */}
       <EditConfirmModal
@@ -3524,7 +3567,7 @@ function App() {
       />
       {/* Slide-in Ajouter Personne */}
       <AddPersonPanel
-        visible={addPersonPanelVisible && editMode.isActive}
+        visible={addPersonPanelVisible && (editMode.isActive || savesOnLeave)}
         persons={persons}
         loading={addPersonLoading}
         error={addPersonError}
@@ -3627,6 +3670,12 @@ function App() {
           isOverTrash: annot.isOverTrash,
           onPhotoFileSelected: handleAnnotationPhotoFile,
         } : null}
+        kinTarget={kinTarget}
+        kinChoices={kinChoicesFor(kinTarget)}
+        getKinPeople={getKinPeople}
+        onKinAdd={(type, person) => openKinForm({ type, person })}
+        onKinTargetChange={(person) => setKinTargetId(String(person.id))}
+        addHint={userRole.isOwner && !isDemoMode}
       />
       <Galaxy
         onPersonSelect={handlePersonSelect}

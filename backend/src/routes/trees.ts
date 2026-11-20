@@ -16,7 +16,6 @@ import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
-import { hasAnyName } from '../lib/person-names.js'
 import { sexSchema } from '../lib/person-sex.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 
@@ -98,7 +97,7 @@ const createPersonSchema = z.object({
   nationality: z.string().max(120).optional().nullable(),
   sex: sexSchema,
   notes: z.string().max(2000).optional().nullable(),
-}).refine((value) => hasAnyName(value.firstName, value.lastName), { message: 'name_required', path: ['lastName'] })
+})
 
 const patchPersonSchema = z
   .object({
@@ -1292,17 +1291,6 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const membership = await getAdminMembership(app, user.userId, params.data.id)
     if (!hasActiveAdminMembership(membership)) {
       return reply.code(403).send({ error: 'forbidden' })
-    }
-
-    // Au moins un nom : on regarde le résultat de la modification, pas seulement ce qu'elle envoie
-    if (payload.data.firstName !== undefined || payload.data.lastName !== undefined) {
-      const before = await app.prisma.person.findFirst({
-        where: { id: params.data.personId, treeId: params.data.id, deletedAt: null },
-        select: { firstName: true, lastName: true },
-      })
-      if (before && !hasAnyName(payload.data.firstName ?? before.firstName, payload.data.lastName ?? before.lastName)) {
-        return reply.code(400).send({ error: 'invalid_payload', details: 'name_required' })
-      }
     }
 
     const data: {
