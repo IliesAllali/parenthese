@@ -45,7 +45,8 @@ export function getAccountDeletionErrorMessage(error, confirmation = {}) {
   return t('Impossible de supprimer le compte pour le moment. Réessayez plus tard.')
 }
 
-export function getAccountErrorMessage(error) {
+// providerName : le nom du fournisseur OIDC de l'instance, pour les refus qui renvoient vers lui
+export function getAccountErrorMessage(error, providerName = '') {
   const errorCode = error?.payload?.error || error?.message || ''
 
   if (errorCode === 'image_too_large') {
@@ -106,7 +107,7 @@ export function getAccountErrorMessage(error) {
   }
 
   if (errorCode === 'oidc_email_taken') {
-    return t("Un compte avec mot de passe existe déjà pour cette adresse. Connectez-vous avec votre email et votre mot de passe.")
+    return t("Cette adresse a déjà un compte avec mot de passe. Connectez-vous avec votre email et votre mot de passe, puis choisissez « Se connecter aussi avec {name} » dans votre compte.", { name: providerName || t('votre fournisseur') })
   }
 
   if (errorCode === 'oidc_email_missing') {

@@ -62,6 +62,7 @@ import {
 } from './api/treeApi'
 import { getImmichErrorMessage, unassignImmichPerson } from './api/immichApi.js'
 import { fetchAuthOptions, oidcLinkUrl, oidcStartUrl, requestOidcLinkTicket } from './api/authApi'
+import { providerBlockedHere } from './utils/inAppBrowser'
 import { useAuth } from './hooks/useAuth'
 import { useTreeAccess, getTreeTokenStorageKey, getSlugFromPathname, readTreeAccessRole, TREE_ID_FROM_ENV } from './hooks/useTreeAccess'
 import { useMediaManager } from './hooks/useMediaManager'
@@ -663,6 +664,9 @@ function App() {
   // L'arbre avant le compte (#251) : « Créer mon arbre » ouvre « Commencez par vous » sans écran de compte ; le
   // compte provisoire naît à la création de l'arbre. startedFromWelcome : « Retour » ramène à l'accueil.
   const canStartWithoutAccount = authOptions.provisional === true
+  // Le bouton du fournisseur, sauf là où il échouerait : Google refuse les navigateurs intégrés aux applis. Si le mot
+  // de passe est coupé sur l'instance, le bouton reste, c'est la seule porte.
+  const providerAvailable = Boolean(authOptions.oidc) && !(authOptions.passwordLogin !== false && providerBlockedHere(authOptions.oidc?.name))
   const startedFromWelcomeRef = useRef(false)
   // « Gardez votre arbre » : { reason: 'fifth' | 'share' | 'menu', error? }
   const [keepSheet, setKeepSheet] = useState(null)
@@ -2630,10 +2634,12 @@ function App() {
       // Lue en parallèle, attendue avant le premier écran sans session pour ne pas montrer un bouton qui disparaît
       let registrationAllowed = true
       let provisionalAllowed = false
+      let providerName = ''
       const authOptionsReady = fetchAuthOptions()
         .then((options) => {
           registrationAllowed = options?.registration !== false && options?.passwordLogin !== false
           provisionalAllowed = options?.provisional === true
+          providerName = options?.oidc?.name || ''
           if (active && options) setAuthOptions(options)
         })
         .catch(() => {})
@@ -2644,15 +2650,16 @@ function App() {
         oidcSignIn ??= OIDC_RETURN.code ? auth.handleOidcExchange(OIDC_RETURN.code) : Promise.resolve(false)
         const signedIn = await oidcSignIn
         if (!active) return
+        // Le message d'un refus nomme le fournisseur : on attend les options de l'instance
+        if (!signedIn) await authOptionsReady
+        if (!active) return
         if (!signedIn && auth.restoreUserProfile?.()?.provisional === true && auth.restoreUserToken()) {
           pendingKeepRef.current = {
             reason: readPendingKeepReason() || 'menu',
-            error: getAccountErrorMessage({ payload: { error: OIDC_RETURN.error || 'oidc_failed' } }),
+            error: getAccountErrorMessage({ payload: { error: OIDC_RETURN.error || 'oidc_failed' } }, providerName),
           }
         } else if (!signedIn) {
-          if (OIDC_RETURN.error) auth.setAccountError(getAccountErrorMessage({ payload: { error: OIDC_RETURN.error } }))
-          await authOptionsReady
-          if (!active) return
+          if (OIDC_RETURN.error) auth.setAccountError(getAccountErrorMessage({ payload: { error: OIDC_RETURN.error } }, providerName))
           setAccountEntryMode('login')
           tree.setBootState('account')
           return
@@ -3276,12 +3283,16 @@ function App() {
     handleOpenContributionPanel()
   }, [tree.treeContext.accessToken, auth.provisional]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Par le fournisseur : le ticket de rattachement désigne le compte provisoire, qui devient le compte au retour
+  // Par le fournisseur depuis un arbre provisoire : le ticket de rattachement désigne le compte provisoire, qui devient
+  // le compte au retour, ou rejoint avec ses arbres le compte déjà relié à cette identité
+  const startProviderKeepingTree = async (reason) => {
+    const ticket = await requestOidcLinkTicket(auth.userAuth.token)
+    rememberPendingKeepReason(reason)
+    window.location.assign(oidcLinkUrl(ticket))
+  }
   const handleKeepWithProvider = async () => {
     try {
-      const ticket = await requestOidcLinkTicket(auth.userAuth.token)
-      rememberPendingKeepReason(keepSheet?.reason || 'menu')
-      window.location.assign(oidcLinkUrl(ticket))
+      await startProviderKeepingTree(keepSheet?.reason || 'menu')
     } catch (error) {
       setKeepSheet((current) => (current ? { ...current, error: getAccountErrorMessage(error) } : current))
     }
@@ -3564,7 +3575,7 @@ function App() {
           errorMessage={auth.accountError}
           onLogin={auth.handleLogin}
           onRegister={auth.handleRegister}
-          onOidcLogin={authOptions.oidc ? () => window.location.assign(oidcStartUrl(`/invitation/${INVITATION_TOKEN}`)) : undefined}
+          onOidcLogin={providerAvailable ? () => window.location.assign(oidcStartUrl(`/invitation/${INVITATION_TOKEN}`)) : undefined}
           onLogout={handleLogout}
           onOpenApp={() => window.location.assign('/')}
         />
@@ -3627,10 +3638,21 @@ function App() {
           canRegister={registrationOpen}
           passwordLogin={authOptions.passwordLogin !== false}
           oidcName={authOptions.oidc?.name || ''}
-          onOidcLogin={authOptions.oidc ? () => window.location.assign(oidcStartUrl(getSlugFromPathname() ? window.location.pathname : '/')) : undefined}
+          onOidcLogin={providerAvailable ? async () => {
+            // « Se connecter » depuis un arbre provisoire : l'arbre suit, comme avec le mot de passe
+            if (auth.provisional && auth.userAuth.token) {
+              try {
+                await startProviderKeepingTree('menu')
+              } catch (error) {
+                auth.setAccountError(getAccountErrorMessage(error))
+              }
+              return
+            }
+            window.location.assign(oidcStartUrl(getSlugFromPathname() ? window.location.pathname : '/'))
+          } : undefined}
           hasPassword={auth.userAuth.user?.hasPassword !== false}
           oidcLinked={auth.userAuth.user?.oidcLinked === true}
-          onLinkOidc={authOptions.oidc && auth.userAuth.user?.oidcLinked === false ? async () => {
+          onLinkOidc={providerAvailable && auth.userAuth.user?.oidcLinked === false ? async () => {
             // Relier le fournisseur au compte : le serveur donne un ticket court, le départ OIDC le porte
             try {
               window.location.assign(oidcLinkUrl(await requestOidcLinkTicket(auth.userAuth.token)))
@@ -4112,7 +4134,7 @@ function App() {
           errorMessage={keepSheet.error || auth.accountError}
           passwordLogin={authOptions.passwordLogin !== false}
           oidcName={authOptions.oidc?.name || ''}
-          onOidc={authOptions.oidc ? handleKeepWithProvider : undefined}
+          onOidc={providerAvailable ? handleKeepWithProvider : undefined}
           onSubmit={handleKeepTree}
           onLogin={() => { setKeepSheet(null); handleUseAccount('login', 'garder') }}
           onClose={() => { auth.setAccountError(''); setKeepSheet(null) }}
