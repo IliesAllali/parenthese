@@ -45,6 +45,13 @@ describe('écran de connexion avec un fournisseur OIDC', () => {
     expect(getAccountDeletionErrorMessage({ status: 403 }, { password: 'x' })).toBe('Mot de passe incorrect.')
   })
 
+  it('un compte à mot de passe : le message dit comment relier le fournisseur', () => {
+    const message = getAccountErrorMessage({ payload: { error: 'oidc_email_taken' } }, 'Google')
+    expect(message).toContain('mot de passe')
+    // La typographie française met des espaces insécables dans les guillemets
+    expect(message.replace(/\s/g, ' ')).toContain('« Se connecter aussi avec Google »')
+  })
+
   it('chaque refus au retour du fournisseur a sa phrase', () => {
     for (const code of ['oidc_failed', 'oidc_unavailable', 'oidc_email_unverified', 'oidc_email_taken', 'oidc_email_missing', 'password_login_disabled', 'invalid_handoff']) {
       const message = getAccountErrorMessage({ payload: { error: code } })
