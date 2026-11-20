@@ -59,6 +59,7 @@ function ContextualNavbar({
   canRegister = true,
   signupPrompts = false,
   onAccountClick,
+  provisional = false,
   onSettingsClick,
   onLogout,
   annotationTools = null,
@@ -451,6 +452,7 @@ function ContextualNavbar({
                   phone={isPhone}
                   triggerRef={avatarBtnRef}
                   guest={!authenticated}
+                  provisional={provisional}
                   onClose={closeMenus}
                   userDisplayName={userDisplayName}
                   userEmail={userEmail}

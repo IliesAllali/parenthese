@@ -35,6 +35,8 @@ const AccountDashboard = ({
   onDeleteAccount,
   onBackToAccess,
   onBackToTree,
+  // L'arbre avant le compte (#251) : « Créer mon arbre » ouvre « Commencez par vous » au lieu de l'inscription
+  onStartTree,
   onUseDemo,
 }) => {
   const [mode, setMode] = useState(defaultMode === 'register' ? 'register' : 'login')
@@ -221,7 +223,14 @@ const AccountDashboard = ({
             </button>
           </div>
 
-          {canRegister && (
+          {onStartTree && !isRegister ? (
+            <p className="pz-auth-switch pz-small">
+              {t("Pas encore d'arbre ?")}{' '}
+              <button type="button" className="pz-link account-signup-toggle" onClick={onStartTree} disabled={loading}>
+                {t('Créer mon arbre')}
+              </button>
+            </p>
+          ) : canRegister && (
             <p className="pz-auth-switch pz-small">
               {isRegister ? t('Déjà inscrit ?') : t('Pas encore de compte ?')}{' '}
               <button

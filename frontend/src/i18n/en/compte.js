@@ -251,4 +251,6 @@ export default {
   "Garder mon arbre": "Keep my tree",
   "Déjà un compte ?": "Already have an account?",
   "Cette adresse a déjà un compte. Connectez-vous avec elle.": "This address already has an account. Sign in with it.",
+  "Pas encore d'arbre ?": "No tree yet?",
+  "Gardez votre arbre": "Keep your tree",
 }

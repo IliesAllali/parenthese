@@ -3258,13 +3258,23 @@ function App() {
     handleOpenContributionPanel()
   }
 
+  // La session de compte remplace la session provisoire, que le serveur ferme : l'arbre ouvert prend le nouveau
+  // jeton, puis l'envoi reprend au rendu suivant, avec lui
+  const shareAfterKeepRef = useRef(false)
   const handleKeepTree = async (email, password) => {
     const reason = keepSheet?.reason
     const kept = await auth.handleKeep(email, password)
     if (!kept) return
+    const token = auth.restoreUserToken()
+    tree.setTreeContext((current) => ({ ...current, accessToken: token }))
+    shareAfterKeepRef.current = reason === 'share'
     setKeepSheet(null)
-    if (reason === 'share') handleOpenContributionPanel()
   }
+  useEffect(() => {
+    if (!shareAfterKeepRef.current || auth.provisional) return
+    shareAfterKeepRef.current = false
+    handleOpenContributionPanel()
+  }, [tree.treeContext.accessToken, auth.provisional]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Par le fournisseur : le ticket de rattachement désigne le compte provisoire, qui devient le compte au retour
   const handleKeepWithProvider = async () => {
@@ -3608,6 +3618,7 @@ function App() {
           onLogout={handleLogout}
           onDeleteAccount={handleDeleteAccount}
           onBackToAccess={handleBackToAccess}
+          onStartTree={canStartWithoutAccount && !auth.provisional && !pendingSharedTreeName ? handleStartWithoutAccount : undefined}
           onBackToTree={accountFromTree ? handleBackToTree : undefined}
           onUseDemo={handleUseDemo}
         />
@@ -3777,6 +3788,7 @@ function App() {
         canRegister={registrationOpen}
         signupPrompts={signupPrompts}
         onAccountClick={() => (auth.provisional ? setKeepSheet({ reason: 'menu' }) : setAccountPanelVisible(true))}
+        provisional={auth.provisional}
         onSettingsClick={() => setAdminPanelVisible(true)}
         onLogout={handleLogout}
         userDisplayName={accountDisplayName}

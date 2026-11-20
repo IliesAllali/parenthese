@@ -250,4 +250,6 @@ export default {
   "Garder mon arbre": "Stammbaum behalten",
   "Déjà un compte ?": "Schon ein Konto?",
   "Cette adresse a déjà un compte. Connectez-vous avec elle.": "Diese Adresse hat schon ein Konto. Melde dich damit an.",
+  "Pas encore d'arbre ?": "Noch kein Stammbaum?",
+  "Gardez votre arbre": "Behalte deinen Stammbaum",
 }

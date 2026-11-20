@@ -3,7 +3,8 @@ import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
 import ProviderButton from './ProviderButton.jsx'
 import { dateLocale, t } from '../i18n/index.js'
-import { withEmphasis } from '../utils/richText.jsx'
+import { richText, withEmphasis } from '../utils/richText.jsx'
+import { PRIVACY_URL } from '../utils/siteLinks.js'
 
 // « Gardez votre arbre » (#251) : l'arbre fait avant le compte reçoit un compte. Ne demande que ce qui manque,
 // l'email et le mot de passe, ou le fournisseur de connexion : le prénom et le nom sont déjà dans l'arbre.
@@ -95,6 +96,16 @@ function KeepTreeSheet({
         )}
 
         {errorMessage && <div className="pz-error" role="alert">{errorMessage}</div>}
+
+        {/* Même consentement que l'inscription : garder l'arbre, c'est créer le compte */}
+        <p className="pz-small pz-auth-legal">
+          {richText(
+            t('En créant un compte, vous acceptez {slot}.'),
+            <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+              {t('la façon dont Parenthèse traite vos données')}
+            </a>,
+          )}
+        </p>
 
         <div className="pz-modal-actions keep-tree-actions">
           <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>

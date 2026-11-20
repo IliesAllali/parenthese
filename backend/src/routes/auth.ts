@@ -140,7 +140,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   // « Créer mon arbre » sans compte : un compte provisoire, sans email ni mot de passe, effacé au bout de 30 jours
   app.post(
     '/provisional',
-    { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } },
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const parsed = provisionalSchema.safeParse(request.body ?? {})
       if (!parsed.success) {

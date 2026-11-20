@@ -38,7 +38,8 @@ function TreeCreationWizard({
 
     setError('')
     setForm({ ...INITIAL_STATE, selfFirstName: defaultFirstName || '' })
-  }, [defaultFirstName, visible])
+    // À l'ouverture seulement : le compte provisoire, né pendant la création, ne doit pas vider le formulaire
+  }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canCreate = useMemo(() => {
     if (loading) return false
