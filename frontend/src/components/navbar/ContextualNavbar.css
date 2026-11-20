@@ -329,32 +329,8 @@
   }
 }
 
-/* Le crayon (#245) : corriger, à côté du « + » qui ajoute. En clair, pour que le « + » reste le geste premier */
-.nav-edit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 46px;
-  height: 46px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pz-line-soft);
-  color: var(--pz-ink);
-  font: 500 14px/1 var(--pz-sans);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 160ms ease, box-shadow 160ms ease, transform 140ms var(--pz-ease);
-  -webkit-tap-highlight-color: transparent;
-}
-.nav-edit--label { padding: 0 16px 0 14px; }
-.nav-edit:active { transform: scale(0.96); }
-.nav-edit:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) { .nav-edit:hover { background: #e9e3da; } }
-.nav-edit.is-editing { background: var(--pz-a100); color: var(--pz-a700); box-shadow: 0 0 0 4px var(--pz-a50); }
-
-/* Flèche d'accueil, une seule fois : une bulle au-dessus du « + », sa pointe sur lui */
+/* Flèche d'accueil, une seule fois (#245) : la notification de l'app (.contrib-success-toast), posée au-dessus du « + »,
+   sa pointe sur lui */
 .nav-add-wrap { position: relative; display: inline-flex; }
 .nav-add-hint {
   position: absolute;
@@ -362,14 +338,15 @@
   right: calc(50% - 29px);
   bottom: calc(100% + 16px);
   width: max-content;
-  max-width: min(190px, calc(100vw - 40px));
-  padding: 12px 14px;
+  max-width: min(240px, calc(100vw - 32px));
+  padding: 11px 20px;
   border: 0;
   border-radius: var(--pz-r-m);
   background: var(--pz-ink);
-  color: #fff;
-  font: 400 14.5px/1.35 var(--pz-sans);
+  color: var(--pz-bg);
+  font: 500 14px/1.4 var(--pz-sans);
   text-align: left;
+  box-shadow: var(--pz-shadow-lg);
   cursor: pointer;
 }
 .nav-add-hint::after {

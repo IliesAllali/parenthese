@@ -401,7 +401,7 @@ function ContextualNavbar({
             {canAdd && (
               <button
                 type="button"
-                className={`nav-edit${isPhone ? '' : ' nav-edit--label'}${editModeActive ? ' is-editing' : ''}`}
+                className={`nav-add nav-add--soft${isPhone ? '' : ' nav-add--label'}${editModeActive ? ' is-editing' : ''}`}
                 onClick={() => { closeMenus(); onEditClick?.() }}
                 aria-pressed={editModeActive}
                 aria-label={editLabel}

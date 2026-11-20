@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, Heart, Search, UserPlus, X } from 'lucide-react'
+import { ArrowDown, ArrowLeftRight, ArrowUp, ChevronLeft, ChevronRight, Heart, Search, UserPlus } from 'lucide-react'
 import { NavMenu, NavMenuGroup, NavMenuItem } from './NavMenu'
 import PortraitThumb from '../PortraitThumb.jsx'
 import { t } from '../../i18n/index.js'
@@ -7,7 +7,6 @@ import { withEmphasis } from '../../utils/richText.jsx'
 import { ofName } from '../../utils/kinForm.js'
 import { firstNameLabel, surnameLabel } from '../../utils/personName.js'
 import { initialOf } from '../../utils/initial.js'
-import './KinAddMenu.css'
 
 const ICON = { size: 18, strokeWidth: 2, 'aria-hidden': true }
 // Au-delà, la liste « Pour qui ? » prend un champ de recherche
@@ -17,8 +16,9 @@ const normalize = (text) => String(text || '').normalize('NFD').replace(/[̀-ͯ]
 
 /**
  * Le menu du « + » (#245) : « Un proche de Lucie », au nom de la dernière personne touchée (soi par défaut).
+ * L'en-tête reprend celui du menu du compte ; le toucher ouvre « Pour qui ? » pour changer de personne.
  * Quatre lignes, une par lien : chacune dit où la personne se place (au-dessus, à côté, cœur, en dessous).
- * Un lien déjà rempli disparaît. « Pour quelqu'un d'autre » change la personne. Puis « Autre chose ».
+ * Un lien déjà rempli disparaît. Puis « Autre chose ».
  */
 export default function KinAddMenu({
   phone = false, triggerRef, onClose, target = null, choices = null, getPeople = null,
@@ -37,26 +37,15 @@ export default function KinAddMenu({
   }, [people, query])
 
   const run = (action) => () => { onClose?.(); action?.() }
-
-  const closeButton = phone && (
-    <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon kinm-close" onClick={onClose} aria-label={t('Fermer')}>
-      <X size={18} strokeWidth={2} aria-hidden="true" />
-    </button>
-  )
+  const back = () => { setView('menu'); setQuery('') }
 
   if (view === 'who') {
     return (
       <NavMenu phone={phone} label={t('Pour qui ?')} onClose={onClose} triggerRef={triggerRef}>
-        <div className="kinm-head">
-          <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon kinm-back" onClick={() => { setView('menu'); setQuery('') }} aria-label={t('Retour')}>
-            <ChevronLeft size={20} strokeWidth={2} aria-hidden="true" />
-          </button>
-          <p className="kinm-title">{withEmphasis(t('Pour <em>qui</em> ?'))}</p>
-          {closeButton}
-        </div>
+        <NavMenuItem icon={<ChevronLeft {...ICON} />} label={t('Retour')} onSelect={back} />
         {people.length > SEARCH_FROM && (
-          <label className="kinm-search">
-            <Search size={16} strokeWidth={2} aria-hidden="true" />
+          <label className="fo-search">
+            <Search size={20} strokeWidth={2} aria-hidden="true" />
             <input
               type="search"
               value={query}
@@ -68,22 +57,21 @@ export default function KinAddMenu({
             />
           </label>
         )}
-        <div role="group" aria-label={t('Pour qui ?')}>
+        <NavMenuGroup label={t('Pour qui ?')}>
           {shown.map(({ person, label, self }) => (
             <NavMenuItem
               key={person.id}
-              className="kinm-person"
               icon={(
-                <span className="kinm-thumb">
+                <span className="apn-avatar">
                   {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : initialOf(person.firstName)}
                 </span>
               )}
-              label={<span className="kinm-name">{firstNameLabel(person)} {surnameLabel(person.lastName)}</span>}
+              label={`${firstNameLabel(person)} ${surnameLabel(person.lastName)}`.trim()}
               sub={self ? t('vous') : label || null}
-              onSelect={() => { onTarget?.(person); setView('menu'); setQuery('') }}
+              onSelect={() => { onTarget?.(person); back() }}
             />
           ))}
-        </div>
+        </NavMenuGroup>
       </NavMenu>
     )
   }
@@ -92,12 +80,17 @@ export default function KinAddMenu({
     <NavMenu phone={phone} label={t('Ajouter')} onClose={onClose} triggerRef={triggerRef}>
       {target ? (
         <>
-          <div className="kinm-head">
-            <p className="kinm-title">{withEmphasis(t('Un proche <em>{ofName}</em>', { ofName: ofName(target) }))}</p>
-            {closeButton}
-          </div>
-          {getPeople && (
-            <button type="button" className="kinm-other" onClick={() => setView('who')}>{t("Pour quelqu'un d'autre")}</button>
+          {getPeople ? (
+            <button type="button" role="menuitem" className="navm-item navm-head" onClick={() => setView('who')}>
+              <span className="navm-head-mono" aria-hidden="true">{initialOf(target.firstName)}</span>
+              <span className="navm-text">
+                <strong>{withEmphasis(t('Un proche <em>{ofName}</em>', { ofName: ofName(target) }))}</strong>
+                <small>{t("Pour quelqu'un d'autre")}</small>
+              </span>
+              <ChevronRight size={16} aria-hidden="true" className="navm-chevron" />
+            </button>
+          ) : (
+            <p className="navm-group">{withEmphasis(t('Un proche <em>{ofName}</em>', { ofName: ofName(target) }))}</p>
           )}
           <div role="group" aria-label={t('Un proche')}>
             {choices?.parent !== false && <NavMenuItem icon={<ArrowUp {...ICON} />} label={t('Un parent')} onSelect={run(() => onKin('parent'))} />}

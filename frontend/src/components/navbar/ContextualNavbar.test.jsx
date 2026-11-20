@@ -10,7 +10,7 @@ describe('barre : « + » et crayon séparés', () => {
   it('qui gère l’arbre a les deux boutons', () => {
     const html = renderToStaticMarkup(<ContextualNavbar userRole={role('admin')} onEditClick={noop} onAddPersonClick={noop} kinTarget={{ id: 'l', firstName: 'Lucie' }} />)
     expect(html).toContain('nav-add')
-    expect(html).toContain('nav-edit')
+    expect(html).toContain('nav-add--soft')
   })
 
   it('la famille aussi, son crayon propose', () => {
@@ -22,6 +22,6 @@ describe('barre : « + » et crayon séparés', () => {
   it('un visiteur n’a ni l’un ni l’autre', () => {
     const html = renderToStaticMarkup(<ContextualNavbar userRole={role('visitor', { authenticated: false })} onEditClick={noop} />)
     expect(html).not.toContain('nav-add')
-    expect(html).not.toContain('nav-edit')
+    expect(html).not.toContain('nav-add--soft')
   })
 })

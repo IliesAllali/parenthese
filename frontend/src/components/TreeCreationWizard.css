@@ -14,8 +14,8 @@
   position: sticky;
   bottom: 0;
   margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid var(--pz-line-soft);
+  padding-top: 14px;
+  border-top: 1px solid var(--pz-line);
   background: var(--pz-surface);
 }
 .tw-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }

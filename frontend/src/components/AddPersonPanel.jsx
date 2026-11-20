@@ -322,9 +322,9 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               </button>
             ))}
           </div>
-          {sexMissing && <p className="apn-error-text apn-error-text--field">{t('Son père ou sa mère ?')}</p>}
         </div>
       )}
+      {sexMissing && <p className="apn-error-text">{t('Son père ou sa mère ?')}</p>}
 
       <div className="pz-field">
         <label htmlFor="ap-firstName">{t('Prénom')}</label>
@@ -341,10 +341,10 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           disabled={unknownFirstName}
           aria-invalid={touched.firstName && !unknownFirstName && !firstName.trim()}
         />
-        {touched.firstName && !unknownFirstName && !firstName.trim() && (
-          <p className="apn-error-text apn-error-text--field">{t('Il faut au moins un prénom.')}</p>
-        )}
       </div>
+      {touched.firstName && !unknownFirstName && !firstName.trim() && (
+        <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
+      )}
 
       <div className="pz-field">
         <label htmlFor="ap-lastName">{isMotherForm ? t('Nom de naissance') : t('Nom')}</label>
@@ -360,8 +360,8 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           autoComplete="off"
           autoCapitalize="words"
         />
-        {lastNameMissing && <p className="apn-error-text apn-error-text--field">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
       </div>
+      {lastNameMissing && <p className="apn-error-text">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
 
       {duplicateBox}
 
@@ -412,7 +412,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           </label>
         </>
       )}
-      <button type="button" className="apn-more" onClick={toggleDetails} aria-expanded={detailsOpen}>
+      <button type="button" className="pz-link apn-more" onClick={toggleDetails} aria-expanded={detailsOpen}>
         {detailsOpen ? t('Moins de détails') : t('Plus de détails')}
       </button>
 
