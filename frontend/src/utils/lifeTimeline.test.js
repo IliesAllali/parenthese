@@ -154,3 +154,11 @@ describe('date au mois (cas limites du 20/11)', () => {
     expect(describeDate('1920-01-01', null, 'about')).toBe('vers 1920')
   })
 })
+
+describe('décès saisi avant la naissance (cas limites du 20/11)', () => {
+  it('la frise garde la famille au lieu de se vider', () => {
+    const person = { id: 1, firstName: 'Louis', birthDate: '1950-01-01', deathDate: '1905-01-01' }
+    const entries = buildLifeTimeline(person, { children: [{ id: 2, firstName: 'Paul', birthDate: '1930-01-01' }] }, null)
+    expect(entries.map((entry) => entry.key)).toContain('child-2')
+  })
+})

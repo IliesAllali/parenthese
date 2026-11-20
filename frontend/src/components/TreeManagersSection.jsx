@@ -123,6 +123,10 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
               <div className="ts-row-text">
                 <strong>{isYou ? t('Vous') : (manager.firstName || manager.email)}</strong>
                 <span className="tm-mail">{manager.email}</span>
+                {/* Retirer un co-gestionnaire lui retire aussi la lecture : son accès par le mot de passe de partage part avec */}
+                {confirmRemove === manager.userId && (
+                  <span className="pz-small" role="status">{t('{name} ne pourra plus ni modifier ni ouvrir l’arbre. Pour le revoir, il lui faudra le lien de la famille.', { name: manager.firstName || manager.email })}</span>
+                )}
               </div>
             </div>
             <div className="ts-row-actions">

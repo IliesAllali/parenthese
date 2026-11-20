@@ -134,8 +134,12 @@ export function buildLifeTimeline(person, family = {}, life = null) {
   const birthYear = yearOf(person.birthDate) ?? person.birthYear ?? null
   const birthDate = person.birthDate || birthYear
   const deathYear = yearOf(person.deathDate) ?? person.deathYear ?? null
-  const lastYear = deathYear ?? new Date().getFullYear()
-  const within = (year) => year && (!birthYear || year >= birthYear) && year <= lastYear
+  // Décès saisi avant la naissance (une erreur de saisie, signalée sous le champ) : la frise garde la période
+  // entre les deux dates au lieu de se vider de toute la famille
+  const [firstYear, lastYear] = birthYear && deathYear && deathYear < birthYear
+    ? [deathYear, birthYear]
+    : [birthYear, deathYear ?? new Date().getFullYear()]
+  const within = (year) => year && (!firstYear || year >= firstYear) && year <= lastYear
   const sourcesOf = (type, unionId = null) => events.find((e) => e.type === type && (unionId ? String(e.unionId) === String(unionId) : !e.unionId))
   const out = []
 

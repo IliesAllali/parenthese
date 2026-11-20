@@ -17,7 +17,7 @@ import { imagePlacement } from '../utils/portraitCrop.js'
 import { t, dateLocale } from '../i18n/index.js'
 import { formatPlace } from '../utils/place.js'
 import { firstNameLabel, fullNameLabel, isFirstNameUnknown, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
-import { dateEntryToText, isYearOnly } from '../utils/dateInput.js'
+import { dateEntryToText, dateWarnings, isYearOnly } from '../utils/dateInput.js'
 import { ageInYears } from '../utils/age.js'
 import { birthdayToday } from '../utils/birthday.js'
 import DateField from './DateField.jsx'
@@ -309,6 +309,19 @@ const PersonCard = ({
   const getEditValue = (field, fallback) => {
     return field in edits ? edits[field] : (fallback ?? '')
   }
+
+  // Avertissements doux des dates en cours de modification : décès avant la naissance, date dans le futur
+  const editedIsoDate = (field, fallback) => {
+    const value = getEditValue(field, fallback)
+    if (value === null || value === undefined || value === '') return null
+    return /^\d{4}$/.test(String(value)) ? `${value}-01-01` : String(value)
+  }
+  const dateWarningsNow = () => dateWarnings({
+    birthDate: editedIsoDate('birthYear', person.birthDate || person.birthYear),
+    deathDate: editedIsoDate('deathYear', person.deathDate || person.deathYear),
+    birthDatePrecision: getEditValue('birthDatePrecision', person.birthDatePrecision ?? null) || null,
+    deathDatePrecision: getEditValue('deathDatePrecision', person.deathDatePrecision ?? null) || null,
+  })
 
   const handleFieldChange = (field, value) => {
     const personId = person.id
@@ -605,6 +618,7 @@ const PersonCard = ({
           className="pc-input value--editable"
           value={getEditValue(field, value)}
           precision={getEditValue(precisionField, person[precisionField] ?? null) || null}
+          warning={dateWarningsNow()[field === 'deathYear' ? 'death' : 'birth']}
           onChange={(next, precision) => { handleFieldChange(field, next); handleFieldChange(precisionField, precision) }}
         />
       )

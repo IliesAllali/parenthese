@@ -487,4 +487,7 @@ export default {
   'Ajouter un frère ou une sœur': 'Add a sibling',
   "Ajoutez d'abord un parent pour lui rattacher un frère ou une sœur.": 'Add a parent first to link a sibling.',
   'Créer « {name} »': 'Create “{name}”',
+  "La photo est supprimée. Elle était aussi sur la fiche de {names}.": "The photo is deleted. It was also on {names}’s page.",
+  "Cette date est dans le futur": "This date is in the future",
+  "Le décès est avant la naissance": "The death is before the birth",
 }

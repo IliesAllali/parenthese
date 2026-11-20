@@ -479,4 +479,7 @@ export default {
   "Ajouter un frère ou une sœur": "Bruder oder Schwester hinzufügen",
   "Ajoutez d'abord un parent pour lui rattacher un frère ou une sœur.": "Füge zuerst einen Elternteil hinzu, um Geschwister zu verbinden.",
   "Créer « {name} »": "„{name}“ anlegen",
+  "La photo est supprimée. Elle était aussi sur la fiche de {names}.": "Das Foto ist gelöscht. Es war auch auf der Seite von {names}.",
+  "Cette date est dans le futur": "Dieses Datum liegt in der Zukunft",
+  "Le décès est avant la naissance": "Der Tod liegt vor der Geburt",
 }

@@ -2304,10 +2304,19 @@ function App() {
       replaceGraph({ medias: medias.filter((candidate) => String(candidate.id) !== String(mediaId)) })
       return true
     }
+    // Une photo où d'autres sont identifiés disparaît aussi de leur fiche : le message le dit
+    const removed = medias.find((candidate) => String(candidate.id) === String(mediaId))
+    const alsoOn = (removed?.people || [])
+      .filter((tag) => String(tag.personId) !== String(removed.personId))
+      .map((tag) => persons.find((candidate) => String(candidate.id) === String(tag.personId)))
+      .filter(Boolean)
+      .map((person) => firstNameLabel(person))
     if (!removeMedia()) return
     tree.bumpGraphRevision()
     undoable.start({
-      message: t('Le souvenir est supprimé.'),
+      message: alsoOn.length
+        ? t('La photo est supprimée. Elle était aussi sur la fiche de {names}.', { names: joinFirstNames(alsoOn, t('et')) })
+        : t('Le souvenir est supprimé.'),
       reapply: removeMedia,
       commit: async ({ keepalive = false } = {}) => {
         try {

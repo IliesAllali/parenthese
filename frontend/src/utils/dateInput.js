@@ -144,3 +144,25 @@ export function datePrecisionsOf(person = {}) {
     deathDatePrecision: person.deathDate ? person.deathDatePrecision || null : null,
   }
 }
+
+// Avertissements doux sous les champs de date (rien n'est bloqué : une date ancienne peut être incertaine).
+// Une date à l'année, au mois ou « vers » se compare à l'année près.
+const isoToday = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+const yearOf = (value) => Number(String(value).slice(0, 4))
+const isRough = (value, precision) => isYearOnly(value) || precision === 'about' || precision === 'month'
+
+export function dateWarnings({ birthDate, deathDate, birthDatePrecision = null, deathDatePrecision = null } = {}, today = isoToday()) {
+  const out = { birth: '', death: '' }
+  const inFuture = (value, precision) => Boolean(value) && (isRough(value, precision) ? yearOf(value) > yearOf(today) : String(value).slice(0, 10) > today)
+  if (inFuture(birthDate, birthDatePrecision)) out.birth = t('Cette date est dans le futur')
+  if (inFuture(deathDate, deathDatePrecision)) out.death = t('Cette date est dans le futur')
+  else if (birthDate && deathDate) {
+    const rough = isRough(birthDate, birthDatePrecision) || isRough(deathDate, deathDatePrecision)
+    const before = rough ? yearOf(deathDate) < yearOf(birthDate) : String(deathDate).slice(0, 10) < String(birthDate).slice(0, 10)
+    if (before) out.death = t('Le décès est avant la naissance')
+  }
+  return out
+}

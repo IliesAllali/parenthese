@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dateEntryToText, dateToInputText, formatDigitsAsDate, isYearOnly, parseDateEntry, parseDateInput } from './dateInput.js'
+import { dateEntryToText, dateWarnings, dateToInputText, formatDigitsAsDate, isYearOnly, parseDateEntry, parseDateInput } from './dateInput.js'
 
 describe('saisie d’une date (issue #77)', () => {
   it('une année seule ou une date complète', () => {
@@ -130,5 +130,22 @@ describe('date approchée (cas limites du 20/11)', () => {
     expect(dateEntryToText('1950-03-01', 'month', fr)).toMatch(/^mars 1950$/i)
     expect(dateEntryToText('1950-03-12', null, fr)).toBe('12/03/1950')
     expect(parseDateEntry(dateEntryToText('1950-03-01', 'month', fr), fr)).toEqual({ date: '1950-03-01', precision: 'month' })
+  })
+})
+
+describe('avertissements doux des dates (cas limites du 20/11)', () => {
+  const today = '2026-11-20'
+  it('signale un décès avant la naissance', () => {
+    expect(dateWarnings({ birthDate: '1950-03-12', deathDate: '1949-12-31' }, today).death).toBe('Le décès est avant la naissance')
+    expect(dateWarnings({ birthDate: '1950-03-12', deathDate: '2001-01-01' }, today)).toEqual({ birth: '', death: '' })
+  })
+  it('compare à l’année près une date à l’année, au mois ou « vers »', () => {
+    expect(dateWarnings({ birthDate: '1950-06-12', deathDate: '1950-01-01' }, today).death).toBe('')
+    expect(dateWarnings({ birthDate: '1920-01-01', birthDatePrecision: 'about', deathDate: '1919-05-01', deathDatePrecision: 'month' }, today).death).toBe('Le décès est avant la naissance')
+  })
+  it('signale une date dans le futur', () => {
+    expect(dateWarnings({ birthDate: '2026-12-01' }, today).birth).toBe('Cette date est dans le futur')
+    expect(dateWarnings({ birthDate: '2026-01-01' }, today).birth).toBe('')
+    expect(dateWarnings({ birthDate: '1950-01-01', deathDate: '2027-01-01' }, today).death).toBe('Cette date est dans le futur')
   })
 })

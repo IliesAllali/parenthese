@@ -7,7 +7,8 @@ import { dateEntryToText, dateToInputText, formatDigitsAsDate, parseDateEntry } 
 // remonte qu'une fois comprise, onChange(date, precision), sinon le champ le signale sans rien enregistrer.
 // Le clavier numérique du téléphone n'a pas de barre oblique : au-delà de 4 chiffres, les barres se posent
 // toutes seules (12031950 → 12/03/1950). Le message n'apparaît qu'en quittant le champ.
-export default function DateField({ id, value, precision = null, onChange, placeholder, className = '' }) {
+// warning : un avertissement doux sous le champ (« Le décès est avant la naissance »), qui ne bloque rien
+export default function DateField({ id, value, precision = null, warning = '', onChange, placeholder, className = '' }) {
   const [text, setText] = useState(() => dateEntryToText(value, precision))
   const [touched, setTouched] = useState(false)
   const invalid = parseDateEntry(text) === undefined
@@ -38,6 +39,7 @@ export default function DateField({ id, value, precision = null, onChange, place
         }}
       />
       {touched && invalid && <span className="pz-date-hint" role="status">{t('Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »', { exemple: dateToInputText('1950-03-12') })}</span>}
+      {!(touched && invalid) && warning && <span className="pz-date-hint" role="status">{warning}</span>}
     </span>
   )
 }

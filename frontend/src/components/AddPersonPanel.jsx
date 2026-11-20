@@ -11,7 +11,7 @@ import { findLikelyDuplicates } from '../utils/duplicates.js'
 import PortraitThumb from './PortraitThumb.jsx'
 import { withEmphasis } from '../utils/richText.jsx'
 import { kinNamePrefill, kinSexChoices, kinTitle } from '../utils/kinForm.js'
-import { datePrecisionsOf } from '../utils/dateInput.js'
+import { dateWarnings, datePrecisionsOf } from '../utils/dateInput.js'
 
 // « Plus de détails » reste ouvert pour qui l'a ouvert une fois (préférence de ce navigateur)
 const DETAILS_KEY = 'pz-ajout-details'
@@ -59,6 +59,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   // « vers 1920 », « mars 1950 » : la précision tapée avec la date
   const [birthDatePrecision, setBirthDatePrecision] = useState(null)
   const [deathDatePrecision, setDeathDatePrecision] = useState(null)
+  const warnings = dateWarnings({ birthDate, deathDate, birthDatePrecision, deathDatePrecision })
   // Décédé(e) sans date connue (issue #77)
   const [isDeceased, setIsDeceased] = useState(false)
   // Lien d'enfant ou de parent : la personne qui est l'enfant du lien a été adoptée
@@ -365,7 +366,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
 
       <div className="pz-field">
         <label htmlFor="ap-birthDate">{t('Année de naissance')} <span className="apn-optional">{t('facultatif')}</span></label>
-        <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} placeholder="1960" />
+        <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} placeholder="1960" />
       </div>
 
       {detailsOpen && (
@@ -389,7 +390,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           </div>
           <div className="pz-field">
             <label htmlFor="ap-deathDate">{t('Décès')} <span className="apn-optional">{t('année ou date')}</span></label>
-            <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} placeholder=" " />
+            <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} placeholder=" " />
             {!deathDate && (
               <label className="apn-deceased">
                 <input type="checkbox" checked={isDeceased} onChange={(e) => setIsDeceased(e.target.checked)} />
@@ -533,11 +534,11 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           <div className="pz-row2 apn-row">
             <div className="pz-field">
               <label htmlFor="ap-birthDate">{t('Naissance')}</label>
-              <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} />
+              <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} />
             </div>
             <div className="pz-field">
               <label htmlFor="ap-deathDate">{t('Décès')}</label>
-              <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} />
+              <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} />
             </div>
             {/* Hors de la colonne Décès pour tenir sur une ligne, comme la case du prénom */}
             {!deathDate && (
