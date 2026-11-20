@@ -193,7 +193,6 @@ export default {
   "{n} autre changement": "{n} weitere Änderung",
   "{n} autres changements": "{n} weitere Änderungen",
   "La photo n'a pas pu être envoyée. Réessayez.": "Das Foto konnte nicht gesendet werden. Versuch es noch einmal.",
-  "Une partie n'a pas été enregistrée ({error}). Elle reste dans vos modifications : réessayez.": "Ein Teil wurde nicht gespeichert ({error}). Er bleibt in deinen Änderungen: Versuch es noch einmal.",
   "Cette photo est trop lourde. Essayez une photo plus petite.": "Dieses Foto ist zu groß. Versuch ein kleineres.",
   "Beaucoup de photos attendent déjà la relecture sur cet arbre. Réessayez quand la personne qui le gère les aura vues.": "In diesem Stammbaum warten schon viele Fotos auf die Prüfung. Versuch es noch einmal, wenn die verwaltende Person sie gesehen hat.",
   "Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).": "Diese Datei ist kein Foto, das Parenthèse anzeigen kann (JPEG, PNG, WebP oder GIF).",

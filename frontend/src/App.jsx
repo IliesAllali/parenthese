@@ -96,7 +96,7 @@ import './App.css'
 import './styles/pz.css'
 import { setBooting } from './bootSignal.js'
 import { ghostsFromChanges, hasGhosts, mergeGhosts } from './utils/ghosts'
-import { kinSlots } from './utils/kinSlots'
+import { kinSlots, singleParentGroup } from './utils/kinSlots'
 import { kinAvailability, remainingParentSex } from './utils/kinForm'
 import { kinPeople } from './utils/kinPeople'
 import ProposalCard from './components/ProposalCard'
@@ -1350,6 +1350,8 @@ function App() {
     const parents = type === 'parent' ? getParents(person.id) : []
     // Le second parent : son sexe se déduit du premier, et les deux forment un couple
     const coParent = parents.length === 1 ? parents[0] : null
+    // Ses frères et sœurs qui n'ont que ce parent reçoivent aussi le second (#253)
+    const group = coParent ? singleParentGroup({ childId: person.id, persons, unions, filiations }) : null
     if (!(await leaveSelectedPerson())) return
     await chooseSelectedPerson(null)
     setAddPersonPrefill({
@@ -1362,10 +1364,11 @@ function App() {
         person: { id: person.id, firstName: person.firstName, lastName: person.lastName, sex: person.sex || null },
         sex: sex || remainingParentSex(parents),
         coParentId: coParent ? coParent.id : null,
+        siblingIds: group?.siblingIds || [],
       },
     })
     openAddPanel(via)
-  }, [leaveSelectedPerson, chooseSelectedPerson, openAddPanel]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [leaveSelectedPerson, chooseSelectedPerson, openAddPanel, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
   const openKinFormRef = useRef(openKinForm)
   useEffect(() => { openKinFormRef.current = openKinForm }, [openKinForm])
 
@@ -1813,8 +1816,13 @@ function App() {
             ...(annotationsFailed ? {} : { addedAnnotations: [], modifiedAnnotations: [], deletedAnnotations: [] }),
           })
           editMode.saveDraft()
-          await tree.refreshCurrentTreeGraph({ relayout: false })
-          setDraftNotice(t("Une partie n'a pas été enregistrée ({error}). Elle reste dans vos modifications : réessayez.", { error: failures[0] }))
+          // Sans réseau, relire l'arbre échoue aussi : la sortie ne doit pas en dépendre
+          await tree.refreshCurrentTreeGraph({ relayout: false }).catch(() => {})
+          // On sort quand même (#253) : rester bloqué dans la modification sans réseau ne sert à rien. Ce qui n'est pas
+          // enregistré reste sur cet appareil, et le bandeau « Des modifications non enregistrées vous attendent » le
+          // rend avec « Restaurer » pour réessayer
+          editMode.deactivate()
+          setShowDraftBanner(true)
           return
         }
       }

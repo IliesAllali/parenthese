@@ -42,7 +42,8 @@ function writeDetailsOpen(open) {
  */
 /**
  * @param {Object} props.prefill - ouverture depuis une fiche (1.5.1) : { nonce, firstName, lastName, relation: { type, personId, personName } }
- *   kin (#245) : le lien est connu, le formulaire est court. { type, person, sex (imposé ou null), coParentId }
+ *   kin (#245) : le lien est connu, le formulaire est court. { type, person, sex (imposé ou null), coParentId,
+ *   siblingIds (frères et sœurs qui reçoivent le même second parent) }
  * @param {Function} props.onOpenPerson - « Ouvrir sa fiche » sous l'alerte de doublon
  */
 function AddPersonPanel({ visible, persons = [], loading = false, error = '', onSubmit, onClose, prefill = null, onOpenPerson = null }) {
@@ -216,6 +217,10 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       const kinRelations = relations.map((rel) => ({ ...rel, adopted: false }))
       // Le second parent forme un couple avec le premier : l'arbre les dessine ensemble, sans « Inconnu »
       if (kin.type === 'parent' && kin.coParentId != null) kinRelations.push({ personId: kin.coParentId, personName: '', type: 'spouse' })
+      // Les frères et sœurs qui n'avaient que ce premier parent reçoivent aussi le second
+      if (kin.type === 'parent') {
+        for (const siblingId of kin.siblingIds || []) kinRelations.push({ personId: siblingId, personName: '', type: 'parent', adopted: false })
+      }
       onSubmit({
         firstName: unknownFirstName ? '' : firstName.trim(),
         ...names,
@@ -337,6 +342,20 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       {touched.firstName && !unknownFirstName && !firstName.trim() && (
         <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
       )}
+      {/* Comme dans le formulaire complet : visible tant que le prénom est vide, et tant qu'elle est cochée */}
+      {(!firstName.trim() || unknownFirstName) && (
+        <label className="apn-deceased">
+          <input
+            type="checkbox"
+            checked={unknownFirstName}
+            onChange={(e) => {
+              setUnknownFirstName(e.target.checked)
+              setTouched({})
+            }}
+          />
+          {t('Je ne connais pas son prénom')}
+        </label>
+      )}
 
       <div className="pz-field">
         <label htmlFor="ap-lastName">{isMotherForm ? t('Nom de naissance') : t('Nom')}</label>
@@ -387,17 +406,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               </label>
             )}
           </div>
-          <label className="apn-deceased">
-            <input
-              type="checkbox"
-              checked={unknownFirstName}
-              onChange={(e) => {
-                setUnknownFirstName(e.target.checked)
-                setTouched({})
-              }}
-            />
-            {t('Je ne connais pas son prénom')}
-          </label>
         </>
       )}
       <button type="button" className="pz-link apn-more" onClick={toggleDetails} aria-expanded={detailsOpen}>

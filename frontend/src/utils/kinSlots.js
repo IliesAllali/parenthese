@@ -6,8 +6,7 @@
 
 const SLOT_GHOST = { source: 'slot', key: 'slot' }
 
-function parentIdsOf(childId, unions, filiations) {
-  const unionById = new Map(unions.map((u) => [String(u.id), u]))
+function parentIdsOf(childId, unionById, filiations) {
   const ids = []
   const add = (id) => { if (id != null && !ids.includes(String(id))) ids.push(String(id)) }
   for (const f of filiations) {
@@ -20,6 +19,30 @@ function parentIdsOf(childId, unions, filiations) {
     }
   }
   return ids
+}
+
+/**
+ * Le parent seul d'une personne, et ses enfants qui n'ont pas d'autre parent connu : la fratrie que le placement
+ * dessinait avec un même « Inconnu ». Les enfants d'une union d'un seul partenaire (import GEDCOM) en font partie :
+ * le chargement de l'arbre les relie directement à ce parent (data/mockData.js).
+ * Les cases et l'ajout du second parent partent de ce même calcul.
+ * @returns {{ parentId, siblingIds, children }} | null si la personne n'a pas exactement un parent
+ */
+export function singleParentGroup({ childId, persons = [], unions = [], filiations = [] } = {}) {
+  const known = new Set(persons.map((p) => String(p.id)))
+  const unionById = new Map(unions.map((u) => [String(u.id), u]))
+  const parentsOf = (id) => parentIdsOf(id, unionById, filiations).filter((pid) => known.has(pid))
+  const parents = parentsOf(childId)
+  if (parents.length !== 1) return null
+  const parentId = parents[0]
+  const children = []
+  for (const f of filiations) {
+    const id = String(f.childId)
+    if (children.includes(id) || !known.has(id)) continue
+    const own = parentsOf(id)
+    if (own.length === 1 && own[0] === parentId) children.push(id)
+  }
+  return { parentId, siblingIds: children.filter((id) => id !== String(childId)), children }
 }
 
 // Le rôle qui manque à côté d'un parent connu : son sexe le dit, sinon on ne sait pas lequel des deux
@@ -52,24 +75,29 @@ export function kinSlots({ selfId, persons = [], unions = [], filiations = [] } 
     ghost: SLOT_GHOST,
   })
 
+  const unionById = new Map(unions.map((u) => [String(u.id), u]))
   const addSlotsFor = (childId, generation) => {
-    const parents = parentIdsOf(childId, unions, filiations).filter((id) => personById.has(id))
+    const parents = parentIdsOf(childId, unionById, filiations).filter((id) => personById.has(id))
     if (parents.length >= 2) return parents
+    const unionId = `ghost:slot:${childId}:u`
     if (parents.length === 0) {
       const father = slotPerson(childId, 'father', generation)
       const mother = slotPerson(childId, 'mother', generation)
-      const unionId = `ghost:slot:${childId}:u`
       out.persons.push(father, mother)
       out.unions.push({ id: unionId, partner1Id: father.id, partner2Id: mother.id, unionType: 'mariage', displayOrder: 9999, ghost: SLOT_GHOST })
       out.filiations.push({ id: `ghost:slot:${childId}:f`, childId: String(childId), parentId: null, unionId, parentageType: 'biologique', displayOrder: 9999, ghost: SLOT_GHOST })
       return parents
     }
-    // Un seul parent connu : la case prend la place du « Inconnu » que le placement dessinait à côté de lui
+    // Un seul parent connu : la case prend la place du « Inconnu » que le placement dessinait à côté de lui, pour
+    // toute la fratrie qui le partageait
+    const group = singleParentGroup({ childId, persons, unions, filiations })
     const known = personById.get(parents[0])
     const slot = slotPerson(childId, missingRole(known), generation)
     out.persons.push(slot)
-    out.unions.push({ id: `ghost:slot:${childId}:u`, partner1Id: known.id, partner2Id: slot.id, unionType: 'mariage', displayOrder: 9999, ghost: SLOT_GHOST })
-    out.filiations.push({ id: `ghost:slot:${childId}:f`, childId: String(childId), parentId: slot.id, unionId: null, parentageType: 'biologique', displayOrder: 9999, ghost: SLOT_GHOST })
+    out.unions.push({ id: unionId, partner1Id: known.id, partner2Id: slot.id, unionType: 'mariage', displayOrder: 9999, ghost: SLOT_GHOST })
+    for (const id of group?.children || [String(childId)]) {
+      out.filiations.push({ id: `ghost:slot:${childId}:f:${id}`, childId: id, parentId: null, unionId, parentageType: 'biologique', displayOrder: 9999, ghost: SLOT_GHOST })
+    }
     return parents
   }
 
