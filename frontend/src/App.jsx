@@ -552,16 +552,18 @@ function removePersonFromGraph(personId) {
   const id = String(personId)
   if (!persons.some((candidate) => String(candidate.id) === id)) return null
   const snapshot = { persons, unions, filiations, medias }
-  const removedUnionIds = new Set(unions
+  // Union retirée → l'autre partenaire, qui garde les enfants du couple (comme sur le serveur)
+  const otherPartnerOf = new Map(unions
     .filter((union) => String(union.partner1Id) === id || String(union.partner2Id) === id)
-    .map((union) => union.id))
+    .map((union) => [union.id, String(union.partner1Id) === id ? union.partner2Id : union.partner1Id]))
   replaceGraph({
     persons: persons.filter((candidate) => String(candidate.id) !== id),
-    unions: unions.filter((union) => !removedUnionIds.has(union.id)),
-    // Les liens de l'autre parent restent, détachés de l'union retirée (comme sur le serveur)
+    unions: unions.filter((union) => !otherPartnerOf.has(union.id)),
+    // En mémoire, un enfant du couple est relié à l'union : il passe directement à l'autre parent
     filiations: filiations
       .filter((filiation) => String(filiation.childId) !== id && String(filiation.parentId) !== id)
-      .map((filiation) => (filiation.unionId && removedUnionIds.has(filiation.unionId) ? { ...filiation, unionId: null } : filiation)),
+      .map((filiation) => (otherPartnerOf.has(filiation.unionId) ? { ...filiation, unionId: null, parentId: otherPartnerOf.get(filiation.unionId) } : filiation))
+      .filter((filiation) => filiation.unionId || filiation.parentId != null),
     medias: medias.filter((media) => String(media.personId) !== id),
   })
   return snapshot
