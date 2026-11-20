@@ -24,6 +24,7 @@ import {
 import { avatarCropInputSchema, readAvatarCrop, toStoredAvatarCrop } from '../lib/avatar-crop.js'
 import { computeBlurhash } from '../lib/blurhash.js'
 import { syncPersonMediaOrder } from '../lib/media-order.js'
+import { mediaPeopleSchema, normalizeMediaPeople, replaceMediaPeople } from '../lib/media-people.js'
 import { resolveTreeMediaDirectory } from '../lib/tree-purge.js'
 import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
 import type { MembershipRole } from '../types/auth.js'
@@ -64,6 +65,8 @@ const uploadBinaryMediaSchema = z.object({
   dataBase64: z.string().min(1),
   caption: z.string().max(280).optional().nullable(),
   source: mediaSourceSchema,
+  // Qui est sur la photo, dit à l'envoi : la famille le dit sur ce qu'elle envoie, encore en attente de relecture
+  people: mediaPeopleSchema.optional(),
 })
 
 const uploadCitationMediaSchema = z.object({
@@ -307,6 +310,18 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: 'person_not_found' })
     }
 
+    // Personnes sur la photo : seulement pour une photo, et des personnes de cet arbre
+    const people = 'people' in payload.data && payload.data.people ? normalizeMediaPeople(payload.data.people) : []
+    if (people.length) {
+      if (payload.data.type !== 'photo') {
+        return reply.code(400).send({ error: 'people_require_photo' })
+      }
+      const known = await app.prisma.person.count({ where: { treeId: params.data.id, id: { in: people.map((entry) => entry.personId) }, deletedAt: null } })
+      if (known !== people.length) {
+        return reply.code(400).send({ error: 'invalid_person_reference' })
+      }
+    }
+
     // Rattachement à un moment : un moment de cette personne (ou de son union). La famille ne rattache qu'à
     // un moment qu'elle vient de proposer, encore en attente ; l'administrateur, à un moment visible.
     const lifeEventId = payload.data.lifeEventId ?? null
@@ -511,6 +526,27 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     }
 
     await recordContributionChange(mediaId, { type: payload.data.type, mimeType: prepared.mimeType, caption: uploadCaption })
+
+    // Personnes sur la photo. Famille : un changement de la même relecture, appliqué après le souvenir
+    // (ENTITY_ORDER) ; administrateur, ou arbre qui applique tout de suite : enregistrées maintenant.
+    if (people.length) {
+      if (!isPending) {
+        await replaceMediaPeople(app.prisma, params.data.id, mediaId, people, contribution ? contribution.submittedByUserId : uploaderUserId)
+      }
+      if (contributionSession && contribution) {
+        await app.prisma.contributionChange.create({
+          data: {
+            sessionId: contributionSession.id,
+            entityType: 'media_people',
+            entityId: mediaId,
+            action: 'update',
+            beforeJson: { mediaId, ownerPersonId: params.data.personId, people: [] },
+            afterJson: { mediaId, ownerPersonId: params.data.personId, people },
+            decision: contribution.autoStatus === 'approved' ? 'approved' : undefined,
+          },
+        })
+      }
+    }
 
     await app.prisma.auditLog.create({
       data: {

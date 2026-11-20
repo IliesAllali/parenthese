@@ -121,7 +121,6 @@ export default {
   "Un fichier": "Eine Datei",
   "Un lien YouTube": "Ein YouTube-Link",
   "Choisir un fichier": "Datei wählen",
-  "Pour en prendre un autre, touchez ici": "Tippe hier, um eine andere zu wählen",
   "5 Mo au maximum": "Höchstens 5 MB",
   "20 Mo au maximum": "Höchstens 20 MB",
   "Lien de la vidéo": "Link zum Video",

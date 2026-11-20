@@ -50,6 +50,7 @@ export async function fetchTreeGraph(treeId, token) {
     graph: data?.graph || { persons: [], unions: [], filiations: [], medias: [] },
     mediaToken: data?.mediaToken || '',
     surnameUppercase: Boolean(data?.display?.surnameUppercase),
+    ownerFirstName: data?.ownerFirstName || '',
   }
 }
 

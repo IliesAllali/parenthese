@@ -2,17 +2,29 @@
 
 .fo-welcome { width: min(100%, 480px); gap: 14px; padding: 32px; }
 .fo-title { font-size: clamp(28px, 7vw, 34px); line-height: 1.12; }
-.fo-lead { margin: 0; font: 400 17px/1.5 var(--pz-sans); color: var(--pz-ink-2); }
-.fo-actions { display: grid; gap: 10px; margin-top: 10px; }
 .fo-big { min-height: 54px; font-size: 17px; justify-content: center; }
-.fo-help {
-  justify-self: center;
-  margin-top: 4px;
-  font: 500 15px/1.4 var(--pz-sans);
-  color: var(--pz-a700);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.fo-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
+/* « Voir l'arbre » reste au pouce : collé en bas de la feuille, même quand le clavier est ouvert */
+.fo-foot { position: sticky; bottom: 0; padding-top: 8px; background: inherit; }
+
+.fo-self {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 900;
+  transform: translateX(-50%);
+  width: min(calc(100% - 32px), 420px);
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+  background: var(--pz-surface);
+  border: 1px solid var(--pz-line);
+  border-radius: var(--pz-r-l);
 }
+/* Ordinateur : sous le prénom de la personne trouvée, au lieu du bas de l'écran */
+.fo-self--anchored { bottom: auto; width: min(calc(100% - 32px), 360px); }
+.fo-self-title { margin: 0; font: 400 22px/1.2 var(--pz-serif); color: var(--pz-ink); }
+.fo-self-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .fo-picker { width: min(100%, 520px); gap: 16px; }
 .fo-search {

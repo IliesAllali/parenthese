@@ -2,6 +2,17 @@
 .media-manager-modal-overlay { z-index: 2200; }
 
 .mm-form { display: grid; gap: 16px; }
+/* L'envoi reste au pouce : le bouton est collé en bas de la feuille pendant qu'on remplit */
+.mm-form > .pz-modal-actions { position: sticky; bottom: 0; z-index: 2; padding: 12px 0; background: var(--pz-surface); }
+
+/* Aperçu de la photo choisie, avec qui est dessus, dit sur la photo (MediaPeople, comme la visionneuse) */
+.mm-photo { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.mm-photo-box { justify-self: start; line-height: 0; border-radius: var(--pz-r-s); overflow: visible; }
+.mm-photo-box img { display: block; max-width: 100%; max-height: 220px; border-radius: var(--pz-r-s); }
+@media (max-width: 560px) {
+  .mm-photo { grid-template-columns: minmax(0, 1fr); }
+  .mm-photo-box img { max-height: 200px; }
+}
 .mm-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
 
 .mm-types { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }

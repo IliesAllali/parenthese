@@ -84,38 +84,37 @@
 .contrib-invite { display: grid; gap: 12px; padding: 16px; border-radius: var(--pz-r-m); background: var(--pz-a50); border: 1px solid var(--pz-a100); }
 .contrib-invite-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .contrib-invite-title { font: 500 14.5px var(--pz-sans); color: var(--pz-ink); }
+.contrib-block { display: grid; gap: 12px; padding: 16px; background: var(--pz-surface); border: 1px solid var(--pz-line); border-radius: var(--pz-r-l); }
+.contrib-block-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.contrib-block-title { margin: 0; font: 400 22px/1.2 var(--pz-serif); color: var(--pz-ink); }
+.contrib-block .contrib-list-header { padding-top: 0; border-top: 0; align-items: center; }
+.contrib-block .contrib-empty { padding: 0; border: 0; background: none; text-align: left; font: 400 15px/1.55 var(--pz-sans); color: var(--pz-ink-2); }
+/* Deux niveaux d'encadrement au plus (Patch, 20/11) : la feuille, puis le bloc. Dans un bloc, les propositions et
+   leurs changements sont des lignes séparées par un filet, sans cadre ni fond ; l'étiquette devient du texte. */
+.contrib-block .contrib-list { gap: 0; }
+.contrib-block .contrib-item { border: 0; border-top: 1px solid var(--pz-line); border-radius: 0; background: none; overflow: visible; }
+.contrib-block .contrib-item-main { padding: 16px 0 8px; }
+.contrib-block .contrib-change-list { padding: 0 0 8px; }
+.contrib-block .contrib-change-card,
+.contrib-block .contrib-change-card--approved,
+.contrib-block .contrib-change-card--rejected { margin-top: 0; padding: 12px 0; border: 0; border-top: 1px solid var(--pz-line-soft); border-radius: 0; background: none; }
+.contrib-block .contrib-action-badge { position: static; justify-self: start; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.contrib-block .contrib-session-footer { padding: 4px 0 16px; border-top: 0; background: none; }
+@media (hover: hover) and (pointer: fine) { .contrib-block .contrib-item-main--clickable:hover { background: none; } }
+.contrib-send { display: grid; gap: 8px; justify-items: center; margin-top: 4px; }
+/* Lien et mot de passe : une ligne chacun, séparées comme les lignes de l'app, texte à la taille courante (pz-sub) */
+.contrib-share-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--pz-line-soft); }
+.contrib-share-value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contrib-share-text { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.contrib-share-secret { justify-self: start; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contrib-share-secret.is-hidden { filter: blur(5px); }
+.contrib-share-secret:disabled { cursor: default; color: var(--pz-faint); }
+.contrib-share-edit { padding: 12px 0; }
+.contrib-share-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .contrib-copy-feedback { font: 500 12.5px var(--pz-sans); color: var(--pz-success); }
 .contrib-invite-link { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 5px 5px 14px; background: var(--pz-surface); border: 1px solid var(--pz-line); border-radius: 999px; }
 .contrib-link-url { flex: 1; min-width: 0; font: 400 13px var(--pz-sans); color: var(--pz-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: none; padding: 0; }
-.contrib-invite-passwords { display: grid; gap: 6px; }
 .contrib-pass-hint { margin: 2px 4px 0; font: 400 12.5px/1.45 var(--pz-sans); color: var(--pz-muted); }
-.contrib-invite-message { display: grid; gap: 8px; }
-.contrib-invite-message-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
-.contrib-invite-message-label { font: 500 12.5px var(--pz-sans); color: var(--pz-muted); }
-.contrib-link-btn { border: 0; padding: 4px 2px; background: none; cursor: pointer; font: 500 12.5px var(--pz-sans); color: var(--pz-a700); text-decoration: underline; text-underline-offset: 2px; }
-.contrib-link-btn:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; border-radius: 4px; }
-.contrib-invite-textarea { width: 100%; box-sizing: border-box; padding: 12px 14px; background: var(--pz-surface); border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); font: 400 13.5px/1.5 var(--pz-sans); color: var(--pz-ink-2); resize: vertical; outline: none; field-sizing: content; min-height: 9.5lh; }
-.contrib-invite-textarea:focus { border-color: var(--pz-a500); box-shadow: 0 0 0 3px var(--pz-a100); }
-.contrib-role-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 8px 8px 12px; background: var(--pz-surface); border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); }
-.contrib-role-badge { display: grid; gap: 1px; min-width: 130px; flex: 1; }
-.contrib-role-badge strong { font: 500 14px var(--pz-sans); color: var(--pz-ink); }
-.contrib-role-badge small { font: 400 12px var(--pz-sans); color: var(--pz-muted); }
-.contrib-pass-reveal {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px dashed var(--pz-a300);
-  border-radius: 999px;
-  background: transparent;
-  font: 500 13.5px var(--pz-sans);
-  letter-spacing: .02em;
-  color: var(--pz-ink);
-  cursor: pointer;
-  transition: filter 200ms ease;
-}
-.contrib-pass-reveal--blurred { filter: blur(4px); }
-.contrib-pass-reveal:disabled { cursor: default; color: var(--pz-faint); filter: none; }
-.contrib-pass-edit-inline { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: flex-end; }
-.contrib-pass-edit-input { min-height: 34px; min-width: 180px; padding: 0 12px; border: 1px solid var(--pz-a500); border-radius: 999px; box-shadow: 0 0 0 3px var(--pz-a100); font: 400 13.5px var(--pz-sans); outline: none; }
 
 /* Petits boutons en pilule de cette fenêtre */
 .contrib-pill-btn,
@@ -297,8 +296,6 @@
 @media (max-width: 768px) { .contrib-success-toast { bottom: 78px; padding: 11px 16px; border-radius: 16px; font-size: 13px; } }
 
 @media (max-width: 560px) {
-  .contrib-invite-link { flex-wrap: wrap; border-radius: var(--pz-r-m); padding: 10px; }
-  .contrib-link-url { flex-basis: 100%; }
   .contrib-session-footer { flex-direction: column; align-items: stretch; }
   .contrib-session-quick { justify-content: flex-end; }
   .contrib-field-label { width: 88px; }

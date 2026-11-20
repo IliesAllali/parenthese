@@ -1,16 +1,19 @@
 import { surnameLabel } from '../utils/personName.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ImagePlus, Search, UserPlus, X } from 'lucide-react'
+import { Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
 import { t } from '../i18n/index.js'
-import { HELP_URL } from '../utils/siteLinks.js'
+import { readContributorName } from '../utils/contributorName.js'
 import PortraitThumb from './PortraitThumb.jsx'
 
-// Carte d'accueil de la famille qui arrive par le lien : ce qu'on peut faire, en deux phrases
-export function FamilyWelcome({ visible, treeName, onAddSouvenir, onLook }) {
+// Accueil de la famille arrivée par le lien qui porte la clé (flow invité, validé le 20/11) : le nom de l'arbre,
+// le prénom, facultatif, et « Voir l'arbre ». Le prénom signe les visites et les envois, et sert à « C'est vous ? ».
+export function FamilyWelcome({ visible, treeName, askName = true, onLook }) {
+  const [name, setName] = useState(() => readContributorName())
+
   useEffect(() => {
     if (!visible) return undefined
-    const onKey = (e) => { if (e.key === 'Escape') onLook?.() }
+    const onKey = (e) => { if (e.key === 'Escape') onLook?.('') }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [visible, onLook])
@@ -21,23 +24,63 @@ export function FamilyWelcome({ visible, treeName, onAddSouvenir, onLook }) {
 
   return (
     <div className="pz-overlay fo-overlay">
-      <div className="pz-modal fo-welcome" role="dialog" aria-modal="true" aria-labelledby="foWelcomeTitle">
-        <p className="pz-eyebrow">{t('Arbre partagé')}</p>
+      <form
+        className="pz-modal fo-welcome"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="foWelcomeTitle"
+        onSubmit={(e) => { e.preventDefault(); onLook?.(askName ? name.trim() : '') }}
+      >
         <h1 id="foWelcomeTitle" className="pz-title fo-title">
           {welcomeBefore}<em>{treeName || t("l'arbre de la famille")}</em>{welcomeAfter}
         </h1>
-        <p className="fo-lead">{t('Touchez un portrait pour voir ses photos et ses souvenirs.')}</p>
-        <p className="fo-lead">{t('Vous en avez à partager ? Ajoutez-les ici, toute la famille pourra les voir.')}</p>
-        <div className="fo-actions">
-          <button type="button" className="pz-btn pz-btn--primary fo-big" onClick={onAddSouvenir}>
-            <ImagePlus size={20} strokeWidth={2} aria-hidden="true" />
-            {t('Ajouter un souvenir')}
-          </button>
-          <button type="button" className="pz-btn pz-btn--ghost fo-big" onClick={onLook}>
-            {t("Regarder l'arbre")}
-          </button>
+        {askName && (
+          <div className="pz-field">
+            <label htmlFor="foVisitorName">{t('Votre prénom')} <span className="fo-optional">{t('facultatif')}</span></label>
+            <input
+              id="foVisitorName"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="given-name"
+              maxLength={60}
+            />
+          </div>
+        )}
+        <div className="fo-foot">
+          <button type="submit" className="pz-btn pz-btn--primary pz-btn--block fo-big">{t("Voir l'arbre")}</button>
         </div>
-        <a className="fo-help" href={HELP_URL} target="_blank" rel="noopener">{t("Besoin d'aide ? Le mode d'emploi pas à pas")}</a>
+      </form>
+    </div>
+  )
+}
+
+// « C'est vous, Claire ? » : posée sur l'arbre, la personne trouvée au centre et sélectionnée. Plusieurs personnes portent ce
+// prénom : chacune a son bouton, avec son année.
+// anchor : sur ordinateur, le bas du prénom de la personne trouvée ; la question se pose juste dessous
+export function SelfAsk({ candidates = [], anchor = null, onConfirm, onDecline }) {
+  if (!candidates.length) return null
+  const single = candidates.length === 1 ? candidates[0] : null
+  const anchored = single && anchor
+  return (
+    <div
+      className={`fo-self${anchored ? ' fo-self--anchored' : ''}`}
+      style={anchored ? { left: `${anchor.x}px`, top: `${anchor.y}px` } : undefined}
+      role="dialog"
+      aria-labelledby="foSelfTitle"
+    >
+      <h2 id="foSelfTitle" className="fo-self-title">
+        {single ? t("C'est vous, {name} ?", { name: single.firstName }) : t("C'est vous ?")}
+      </h2>
+      <div className="fo-self-actions">
+        {single ? (
+          <button type="button" className="pz-btn pz-btn--primary" onClick={() => onConfirm?.(single)}>{t("C'est moi")}</button>
+        ) : candidates.map((person) => (
+          <button key={person.id} type="button" className="pz-btn pz-btn--secondary" onClick={() => onConfirm?.(person)}>
+            {person.firstName}{person.birthYear ? ` · ${person.birthYear}` : ''}
+          </button>
+        ))}
+        <button type="button" className="pz-btn pz-btn--secondary" onClick={onDecline}>{t('Non')}</button>
       </div>
     </div>
   )

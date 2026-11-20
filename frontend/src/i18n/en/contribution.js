@@ -46,10 +46,6 @@ export default {
   "Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter.":
     "I'm putting our family's history together in an online tree, and I'd love your help filling it in.",
   "L'arbre est ici {url}": 'The tree is here {url}',
-  "Le mot de passe pour l'ouvrir est {password}": 'The password to open it is {password}',
-  "En bas de l'écran, vous pouvez ajouter une photo, un souvenir ou une personne qui manque.":
-    'At the bottom of the screen, you can add a photo, a memory or a missing person.',
-  "Le mode d'emploi, si besoin {url}": 'The how-to guide, if you need it {url}',
 
   // ─── Panneau de relecture ───
   'Copie indisponible': 'Copy unavailable',
@@ -57,13 +53,10 @@ export default {
   'La famille {em}': 'The family {em}',
   'participe': 'joins in',
   'Fermer': 'Close',
-  'Le lien à envoyer à la famille': 'The link to send to your family',
-  'Le lien à envoyer à la famille {name}': 'The link to send to the {name} family',
   'Lien indisponible': 'Link unavailable',
   'Lien copié': 'Link copied',
   'Copier': 'Copy',
   'Mot de passe': 'Password',
-  'pour regarder et ajouter': 'to view and add',
   'Celui déjà donné à la famille': 'The one you already gave your family',
   '8 caractères minimum': 'At least 8 characters',
   'Mot de passe actuel': 'Current password',
@@ -80,15 +73,8 @@ export default {
   'Changer': 'Change',
   "Déjà donné à la famille ? Saisissez-le ici. Il est vérifié puis gardé, rien ne change pour ceux qui ont déjà ouvert l'arbre.":
     "Already gave it to your family? Enter it here. It's checked and kept, so nothing changes for anyone who has already opened the tree.",
-  "Changer le mot de passe oblige les personnes qui ont déjà ouvert l'arbre à saisir le nouveau.":
-    'Changing the password means everyone who has already opened the tree will need to enter the new one.',
-  'Le message à envoyer': 'The message to send',
   'Message copié': 'Message copied',
-  "Copier le message d'invitation": 'Copy invitation message',
-  'Voir ou modifier le message': 'View or edit the message',
-  'Masquer le message': 'Hide the message',
   'Propositions à relire': 'Suggestions to review',
-  'Acceptez ou refusez chaque modification, puis appliquez vos choix.': 'Accept or decline each change, then apply your choices.',
   'Actualiser': 'Refresh',
   'Chargement…': 'Loading…',
   "Rien à relire pour l'instant. Les propositions de la famille apparaîtront ici.":
@@ -152,15 +138,9 @@ export default {
   'Soumission non autorisée.': 'Submission not allowed.',
 
   // ─── Accueil de la famille ───
-  'Arbre partagé': 'Shared tree',
   'Bienvenue dans {name}': 'Welcome to {name}',
   "l'arbre de la famille": 'the family tree',
-  'Touchez un portrait pour voir ses photos et ses souvenirs.': "Tap a portrait to see that person's photos and memories.",
-  'Vous en avez à partager ? Ajoutez-les ici, toute la famille pourra les voir.':
-    'Have some to share? Add them here and the whole family can see them.',
   'Ajouter un souvenir': 'Add a memory',
-  "Regarder l'arbre": 'View the tree',
-  "Besoin d'aide ? Le mode d'emploi pas à pas": 'Need help? The step-by-step guide',
   'Pour {who} ?': '{who} is it for?',
   'qui': 'Who',
   'Tapez un prénom': 'Type a first name',
@@ -233,4 +213,15 @@ export default {
   'Beaucoup de photos attendent déjà la relecture sur cet arbre. Réessayez quand la personne qui le gère les aura vues.': "Many photos are already waiting for review on this tree. Try again once the person who manages it has seen them.",
   'Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).': "This file isn't a photo Parenthèse can show (JPEG, PNG, WebP or GIF).",
   'Cette proposition a déjà été relue, peut-être par une autre personne qui gère l’arbre.': 'This suggestion has already been reviewed, maybe by another person who manages the tree.',
+  "Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.": "This link no longer opens the tree. Type the password you were given, or ask for the new link.",
+  "Envoyé. {name} le verra et l'ajoutera à l'arbre.": "Sent. {name} will see it and add it to the tree.",
+  "Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.": "Sent. The person who manages the tree will see it and add it.",
+  "Le lien de la famille {name}": "The {name} family link",
+  "Le lien de l'arbre": "The tree link",
+  "Le lien ouvre l'arbre sans le taper. Changer le mot de passe change aussi le lien.": "The link opens the tree without typing it. Changing the password also changes the link.",
+  "Envoyer le lien": "Send the link",
+  "Le message d'invitation est aussi copié.": "The invitation message is copied too.",
+  "C'est vous, {name} ?": "Is this you, {name}?",
+  "C'est vous ?": "Is this you?",
+  "Il manque votre prénom": "Your first name is missing",
 }
