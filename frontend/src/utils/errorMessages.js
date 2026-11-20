@@ -10,15 +10,24 @@ export function getShareErrorMessage(error) {
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
   return interruptedMessage(error)
 }
 
+// Trop d'essais : la durée vient de l'en-tête Retry-After quand le serveur l'envoie (api/client.js)
+export function tooManyAttemptsMessage(error) {
+  const seconds = Number(error?.retryAfterSeconds)
+  if (!Number.isFinite(seconds) || seconds <= 90) return t('Trop de tentatives. Réessayez dans une minute.')
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 55) return t('Trop de tentatives. Réessayez dans {count} minutes.', { count: minutes })
+  return t('Trop de tentatives. Réessayez dans une heure.')
+}
+
 // Ces messages s'affichent à toute la famille : ni « backend » ni « API ». Réseau coupé ou serveur muet, puis le reste.
 function interruptedMessage(error) {
-  if (error?.payload?.error === 'request_timeout' || error instanceof TypeError) {
+  if (['network_error', 'request_timeout'].includes(error?.payload?.error) || error instanceof TypeError) {
     return t('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
   }
   return t("Ça n'a pas marché. Réessayez dans un moment.")
@@ -47,7 +56,7 @@ export function getAccountDeletionErrorMessage(error, confirmation = {}) {
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
   return t('Impossible de supprimer le compte pour le moment. Réessayez plus tard.')
@@ -156,11 +165,11 @@ export function getAccountErrorMessage(error, providerName = '') {
   }
 
   if (errorCode === 'database_error' || (error?.status === 500 && error?.payload?.error === 'database_error')) {
-    return t("Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API.")
+    return interruptedMessage(error)
   }
 
   if (error?.status === 503 && error?.message === 'database_unavailable') {
-    return t('Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.')
+    return interruptedMessage(error)
   }
 
   if (error?.status === 400) {
@@ -169,7 +178,7 @@ export function getAccountErrorMessage(error, providerName = '') {
       const formErrors = error?.payload?.details?.formErrors || []
 
       if (fieldErrors.slug?.length) {
-        return t('Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
+        return t("Adresse de l'arbre invalide : 3 à 64 caractères, lettres minuscules, chiffres et tirets.")
       }
 
       if (fieldErrors.name?.length) {
@@ -180,12 +189,13 @@ export function getAccountErrorMessage(error, providerName = '') {
         return t('Mots de passe invalides : entre 8 et 128 caractères.')
       }
 
+      // Le détail de validation (nom du champ, message en anglais) ne parle qu'au développeur
       const firstField = Object.keys(fieldErrors)[0]
-      if (firstField && Array.isArray(fieldErrors[firstField]) && fieldErrors[firstField].length > 0) {
+      if (import.meta.env?.DEV && firstField && Array.isArray(fieldErrors[firstField]) && fieldErrors[firstField].length > 0) {
         return `${firstField}: ${fieldErrors[firstField][0]}`
       }
 
-      if (Array.isArray(formErrors) && formErrors.length > 0) {
+      if (import.meta.env?.DEV && Array.isArray(formErrors) && formErrors.length > 0) {
         return t('Erreur formulaire : {error}', { error: formErrors[0] })
       }
     }
@@ -205,12 +215,16 @@ export function getAccountErrorMessage(error, providerName = '') {
     return t('Ressource introuvable.')
   }
 
+  if (errorCode === 'slug_already_exists') {
+    return t("Cette adresse d'arbre est déjà prise. Choisissez-en une autre.")
+  }
+
   if (error?.status === 409) {
-    return t('Conflit détecté (email ou slug déjà utilisé).')
+    return t("C'est déjà enregistré.")
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
   return interruptedMessage(error)

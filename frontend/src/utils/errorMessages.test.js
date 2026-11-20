@@ -46,12 +46,12 @@ describe('getShareErrorMessage', () => {
 describe('getAccountErrorMessage', () => {
   it('returns db unavailable message for 503 database_unavailable', () => {
     expect(getAccountErrorMessage({ status: 503, message: 'database_unavailable' }))
-      .toBe('Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.')
+      .toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('returns migration hint for 500 database_error', () => {
     expect(getAccountErrorMessage({ status: 500, message: 'database_error', payload: { error: 'database_error' } }))
-      .toBe("Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API.")
+      .toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('returns media size message for image_too_large', () => {
@@ -89,7 +89,7 @@ describe('getAccountErrorMessage', () => {
       status: 400,
       message: 'invalid_payload',
       payload: { error: 'invalid_payload', details: { fieldErrors: { slug: ['too short'] }, formErrors: [] } },
-    })).toBe('Slug invalide\u00A0: 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
+    })).toBe("Adresse de l'arbre invalide : 3 à 64 caractères, lettres minuscules, chiffres et tirets.")
   })
 
   it('returns name validation message for invalid_payload with name error', () => {
@@ -145,8 +145,27 @@ describe('getAccountErrorMessage', () => {
   })
 
   it('returns conflict message for 409', () => {
-    expect(getAccountErrorMessage({ status: 409 }))
-      .toBe('Conflit détecté (email ou slug déjà utilisé).')
+    expect(getAccountErrorMessage({ status: 409 })).toBe("C'est déjà enregistré.")
+    expect(getAccountErrorMessage({ status: 409, payload: { error: 'slug_already_exists' } }))
+      .toBe("Cette adresse d'arbre est déjà prise. Choisissez-en une autre.")
+  })
+
+  it('dit la vraie durée d’attente d’une limite', () => {
+    expect(getAccountErrorMessage({ status: 429, retryAfterSeconds: 60 })).toBe('Trop de tentatives. Réessayez dans une minute.')
+    expect(getAccountErrorMessage({ status: 429, retryAfterSeconds: 600 })).toBe('Trop de tentatives. Réessayez dans 10 minutes.')
+    expect(getAccountErrorMessage({ status: 429, retryAfterSeconds: 3600 })).toBe('Trop de tentatives. Réessayez dans une heure.')
+  })
+
+  it('un réseau coupé garde le message du client', () => {
+    const error = { status: 0, message: 'La connexion a été coupée. Vérifiez le réseau, puis réessayez.', payload: { error: 'network_error' } }
+    expect(getAccountErrorMessage(error)).toBe(error.message)
+    expect(getShareErrorMessage(error)).toBe(error.message)
+  })
+
+  it('aucune consigne technique pour la famille', () => {
+    expect(getAccountErrorMessage({ status: 500 })).toBe("Ça n'a pas marché. Réessayez dans un moment.")
+    expect(getAccountErrorMessage({ status: 500, payload: { error: 'database_error' } })).toBe("Ça n'a pas marché. Réessayez dans un moment.")
+    expect(getShareErrorMessage({ status: 502 })).toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('returns rate limit message for 429', () => {

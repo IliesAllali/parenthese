@@ -27,11 +27,27 @@ describe('apiRequest', () => {
     expect(fetch.mock.calls[1][1]).not.toHaveProperty('timeoutMs')
   })
 
-  it('une autre panne réseau remonte telle quelle', async () => {
+  it('un réseau coupé devient un message lisible (status 0)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
     const error = await apiRequest('/trees').catch((e) => e)
-    expect(error).toBeInstanceOf(TypeError)
-    expect(error).not.toBeInstanceOf(ApiError)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(0)
+    expect(error.payload).toEqual({ error: 'network_error' })
+    expect(error.message).toBe('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
+  })
+
+  it('un envoi annulé par l’appelant reste une annulation', async () => {
+    const abort = new DOMException('Aborted', 'AbortError')
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abort))
+    const error = await apiRequest('/trees').catch((e) => e)
+    expect(error).toBe(abort)
+  })
+
+  it('garde le délai d’attente donné par le serveur', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"error":"rate_limited"}', { status: 429, headers: { 'retry-after': '3600' } })))
+    const error = await apiRequest('/trees').catch((e) => e)
+    expect(error.status).toBe(429)
+    expect(error.retryAfterSeconds).toBe(3600)
   })
 })
 
