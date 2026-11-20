@@ -5,6 +5,7 @@ import PersonCard from './components/PersonCard.jsx'
 import { FamilyWelcome, SelfAsk, SouvenirPicker } from './components/FamilyOnboarding.jsx'
 import { findSelfCandidates, hasAnsweredSelf, markSelfAnswered } from './utils/selfMatch.js'
 import { readContributorName, saveContributorName } from './utils/contributorName.js'
+import { datePrecisionsOf } from './utils/dateInput.js'
 import { HELP_URL } from './utils/siteLinks.js'
 import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
 import { useUndoable } from './hooks/useUndoable.js'
@@ -268,6 +269,7 @@ function buildContributionChangesFromDraft(draft = {}) {
         sex: person.sex || null,
         birthDate: person.birthDate || null,
         deathDate: person.deathDate || null,
+        ...datePrecisionsOf(person),
         isDeceased: !person.deathDate && Boolean(person.isDeceased),
         // Personne venue d'une source publique (panneau « Chercher quelqu'un ») : lieux, « à vérifier » et source
         ...(person.birthPlace ? { birthPlace: person.birthPlace } : {}),
@@ -329,6 +331,8 @@ function buildContributionChangesFromDraft(draft = {}) {
     if (Object.prototype.hasOwnProperty.call(source, 'sex')) after.sex = source.sex || null
     if (Object.prototype.hasOwnProperty.call(source, 'birthYear')) after.birthDate = yearToIsoDate(source.birthYear)
     if (Object.prototype.hasOwnProperty.call(source, 'deathYear')) after.deathDate = yearToIsoDate(source.deathYear)
+    if (Object.prototype.hasOwnProperty.call(source, 'birthDatePrecision')) after.birthDatePrecision = source.birthDatePrecision || null
+    if (Object.prototype.hasOwnProperty.call(source, 'deathDatePrecision')) after.deathDatePrecision = source.deathDatePrecision || null
     if (Object.prototype.hasOwnProperty.call(source, 'birthPlace')) after.birthPlace = (source.birthPlace || '').trim() || null
     if (Object.prototype.hasOwnProperty.call(source, 'deathPlace')) after.deathPlace = (source.deathPlace || '').trim() || null
     if (Object.prototype.hasOwnProperty.call(source, 'profession')) after.profession = (source.profession || '').trim() || null
@@ -1456,6 +1460,7 @@ function App() {
               sex: formData.sex || null,
               birthDate: formData.birthDate || null,
               deathDate: formData.deathDate || null,
+              ...datePrecisionsOf(formData),
               birthYear,
               deathYear,
               isAlive: !deathYear,
@@ -1538,6 +1543,7 @@ function App() {
               sex: formData.sex || null,
               birthDate: formData.birthDate || null,
               deathDate: formData.deathDate || null,
+              ...datePrecisionsOf(formData),
               isDeceased: Boolean(formData.isDeceased),
               birthPlace: formData.birthPlace || null,
               deathPlace: formData.deathPlace || null,
@@ -1569,6 +1575,7 @@ function App() {
             sex: formData.sex || null,
             birthDate: formData.birthDate,
             deathDate: formData.deathDate,
+            ...datePrecisionsOf(formData),
             isDeceased: Boolean(formData.isDeceased),
             // Personne venue d'une source publique (panneau « Chercher quelqu'un ») : lieux, « à vérifier » et source
             ...(formData.birthPlace ? { birthPlace: formData.birthPlace } : {}),
@@ -1743,6 +1750,8 @@ function App() {
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'sex')) payload.sex = rawChanges.sex || null
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthYear')) payload.birthDate = yearToIsoDate(rawChanges.birthYear)
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'deathYear')) payload.deathDate = yearToIsoDate(rawChanges.deathYear)
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthDatePrecision')) payload.birthDatePrecision = rawChanges.birthDatePrecision || null
+          if (Object.prototype.hasOwnProperty.call(rawChanges, 'deathDatePrecision')) payload.deathDatePrecision = rawChanges.deathDatePrecision || null
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'birthPlace')) payload.birthPlace = (rawChanges.birthPlace || '').trim() || null
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'deathPlace')) payload.deathPlace = (rawChanges.deathPlace || '').trim() || null
           if (Object.prototype.hasOwnProperty.call(rawChanges, 'profession')) payload.profession = (rawChanges.profession || '').trim() || null
@@ -2063,6 +2072,8 @@ function App() {
           localPerson.deathDate = iso
           localPerson.deathYear = iso ? Number(iso.slice(0, 4)) : null
         }
+        if (Object.prototype.hasOwnProperty.call(changes, 'birthDatePrecision')) localPerson.birthDatePrecision = changes.birthDatePrecision || null
+        if (Object.prototype.hasOwnProperty.call(changes, 'deathDatePrecision')) localPerson.deathDatePrecision = changes.deathDatePrecision || null
         if (Object.prototype.hasOwnProperty.call(changes, 'birthPlace')) localPerson.birthPlace = changes.birthPlace || null
         if (Object.prototype.hasOwnProperty.call(changes, 'deathPlace')) localPerson.deathPlace = changes.deathPlace || null
         if (Object.prototype.hasOwnProperty.call(changes, 'profession')) localPerson.profession = changes.profession || null
@@ -2095,6 +2106,8 @@ function App() {
     if (Object.prototype.hasOwnProperty.call(changes, 'sex')) payload.sex = changes.sex || null
     if (Object.prototype.hasOwnProperty.call(changes, 'birthYear')) payload.birthDate = yearToIsoDate(changes.birthYear)
     if (Object.prototype.hasOwnProperty.call(changes, 'deathYear')) payload.deathDate = yearToIsoDate(changes.deathYear)
+    if (Object.prototype.hasOwnProperty.call(changes, 'birthDatePrecision')) payload.birthDatePrecision = changes.birthDatePrecision || null
+    if (Object.prototype.hasOwnProperty.call(changes, 'deathDatePrecision')) payload.deathDatePrecision = changes.deathDatePrecision || null
     if (Object.prototype.hasOwnProperty.call(changes, 'birthPlace')) payload.birthPlace = (changes.birthPlace || '').trim() || null
     if (Object.prototype.hasOwnProperty.call(changes, 'deathPlace')) payload.deathPlace = (changes.deathPlace || '').trim() || null
     if (Object.prototype.hasOwnProperty.call(changes, 'profession')) payload.profession = (changes.profession || '').trim() || null

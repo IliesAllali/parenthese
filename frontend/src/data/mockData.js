@@ -110,6 +110,7 @@ function mapRemotePersonToLocal(person, current = null) {
     birthDate: person?.birthDate || current?.birthDate || null,
     birthDatePrecision: person ? (person.birthDatePrecision ?? null) : (current?.birthDatePrecision ?? null),
     deathDate: person?.deathDate || current?.deathDate || null,
+    deathDatePrecision: person ? (person.deathDatePrecision ?? null) : (current?.deathDatePrecision ?? null),
     deathYear,
     // Décédé(e) sans date connue (issue #77)
     isDeceased: Boolean(person?.isDeceased) && !deathYear,

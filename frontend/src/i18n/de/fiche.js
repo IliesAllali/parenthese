@@ -438,7 +438,7 @@ export default {
   "Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.": "Danke, ist abgeschickt. Das Ereignis erscheint in ihrem Leben, sobald die Person, die den Stammbaum verwaltet, es angenommen hat.",
   // Dates : année seule, décès sans date (issue #77)
   "Année ou date": "Jahr oder Datum",
-  "Une année (1950) ou une date ({exemple})": "Ein Jahr (1950) oder ein Datum ({exemple})",
+  "Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »": "Ein Jahr (1950), ein Datum ({exemple}), ein Monat (März 1950) oder „um 1920“",
   "Date inconnue": "Datum unbekannt",
   "date inconnue": "Datum unbekannt",
   "Décédé(e), date inconnue": "Verstorben, Datum unbekannt",

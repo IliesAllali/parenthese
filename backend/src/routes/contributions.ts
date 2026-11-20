@@ -15,7 +15,7 @@ import { mediaPeopleSchema, normalizeMediaPeople, replaceMediaPeople } from '../
 import type { Actor, MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
-import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
+import { personPrecisionResets, typedDatePrecisionSchema, unionPrecisionResets } from '../lib/date-precision.js'
 import { sexOrNull, sexSchema } from '../lib/person-sex.js'
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -83,6 +83,8 @@ const personCreateSchema = z.object({
   nickname: z.string().max(120).optional().nullable(),
   birthDate: z.string().regex(isoDateRegex).optional().nullable(),
   deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+  birthDatePrecision: typedDatePrecisionSchema,
+  deathDatePrecision: typedDatePrecisionSchema,
   isDeceased: z.boolean().optional(),
   toVerify: z.boolean().optional(),
   birthPlace: z.string().max(200).optional().nullable(),
@@ -102,6 +104,8 @@ const personUpdateSchema = z
     nickname: z.string().max(120).optional().nullable(),
     birthDate: z.string().regex(isoDateRegex).optional().nullable(),
     deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+    birthDatePrecision: typedDatePrecisionSchema,
+    deathDatePrecision: typedDatePrecisionSchema,
     isDeceased: z.boolean().optional(),
     toVerify: z.boolean().optional(),
     birthPlace: z.string().max(200).optional().nullable(),
@@ -422,6 +426,8 @@ async function applyContributionChange(
           nickname: toTrimmedStringOrNull(parsed.data.nickname),
           birthDate: toDateOrNull(parsed.data.birthDate),
           deathDate: toDateOrNull(parsed.data.deathDate),
+          birthDatePrecision: parsed.data.birthDate ? parsed.data.birthDatePrecision ?? null : null,
+          deathDatePrecision: parsed.data.deathDate ? parsed.data.deathDatePrecision ?? null : null,
           isDeceased: !parsed.data.deathDate && Boolean(parsed.data.isDeceased),
           toVerify: Boolean(parsed.data.toVerify),
           birthPlace: toTrimmedStringOrNull(parsed.data.birthPlace),
@@ -475,7 +481,7 @@ async function applyContributionChange(
           deletedAt: null,
         },
         data: {
-          ...personPrecisionResets(currentDates, nextDates),
+          ...personPrecisionResets(currentDates, nextDates, parsed.data),
           firstName: parsed.data.firstName !== undefined ? parsed.data.firstName.trim() : undefined,
           lastName: parsed.data.lastName !== undefined ? parsed.data.lastName.trim() : undefined,
           birthName: parsed.data.birthName !== undefined ? toTrimmedStringOrNull(parsed.data.birthName) : undefined,

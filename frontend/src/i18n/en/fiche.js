@@ -445,7 +445,7 @@ export default {
   'Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.': 'Thanks, it has been sent. The moment will show in their life once the person who manages the tree has accepted it.',
   // Dates : année seule, décès sans date (issue #77)
   'Année ou date': 'Year or date',
-  'Une année (1950) ou une date ({exemple})': 'A year (1950) or a date ({exemple})',
+  'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': 'A year (1950), a date ({exemple}), a month (March 1950) or “about 1920”',
   'Date inconnue': 'Date unknown',
   'date inconnue': 'date unknown',
   'Décédé(e), date inconnue': 'Deceased, date unknown',
