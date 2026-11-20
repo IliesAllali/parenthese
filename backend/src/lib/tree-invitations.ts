@@ -104,7 +104,7 @@ export async function claimInvitationsForVerifiedEmail(prisma: PrismaClient, use
   const invitations = await prisma.treeInvitation.findMany({ where: { email, ...pendingInvitationWhere() }, select: { id: true } })
   if (!invitations.length) return []
   const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
-  if (!account || normalizeEmail(account.email) !== email) return []
+  if (!account?.email || normalizeEmail(account.email) !== email) return []
   const joined: string[] = []
   for (const invitation of invitations) {
     const result = await acceptInvitation(prisma, invitation.id, userId, email)

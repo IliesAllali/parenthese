@@ -1044,7 +1044,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
       autoStatus,
       mode: 'user' as const,
       submittedByUserId: actor.userId,
-      submittedByLabel: actor.email,
+      submittedByLabel: actor.email ?? 'Contributeur',
       actorId: actor.userId,
       actorType: 'user' as const,
     }
@@ -1081,7 +1081,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
     autoStatus: policy === 'direct' ? ('approved' as const) : ('pending' as const),
     mode: 'tree_access' as const,
     submittedByUserId: actor.userId,
-    submittedByLabel: actor.email,
+    submittedByLabel: actor.email ?? 'Contributeur',
     actorId: actor.userId,
     actorType: 'user' as const,
   }

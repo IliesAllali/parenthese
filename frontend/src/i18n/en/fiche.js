@@ -204,11 +204,9 @@ export default {
 
   // Création d'un arbre (TreeCreationWizard)
   'Vous': 'You',
-  'Étape {step} sur 2': 'Step {step} of 2',
-  "Comment s'appelle <em>votre famille</em> ?": "What's <em>your family</em> called?",
+  'Famille {name}': 'The {name} family',
+  'Mon arbre': 'My tree',
   "Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.": 'This name will appear at the top of the tree and in the link you share.',
-  'Nom de la famille': 'Family name',
-  'Famille Martin': 'The Johnson family',
   'Continuer': 'Continue',
   'Commencez <em>par vous</em>': 'Start <em>with yourself</em>',
   "L'arbre « {name} » démarre avec votre fiche. Vous ajouterez les autres ensuite.": 'The "{name}" tree starts with your profile. You can add everyone else next.',

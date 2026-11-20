@@ -46,7 +46,7 @@ const batchAnnotationSchema = z.object({
   delete: z.array(z.string().min(1)).max(MAX_BATCH_ITEMS).optional().default([]),
 })
 
-function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string } | null {
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string | null } | null {
   if (!request.actor || request.actor.kind !== 'user') {
     reply.code(401).send({ error: 'authentication_required' })
     return null

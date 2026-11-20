@@ -11,6 +11,7 @@ import { prisma } from './lib/prisma.js'
 import { isUserTokenRevoked, loadRevokedTokens } from './lib/token-revocation.js'
 import { registerIdempotency } from './lib/idempotency.js'
 import { startBlurhashFiller } from './lib/blurhash.js'
+import { startProvisionalPurge } from './lib/provisional-account.js'
 import { authRoutes } from './routes/auth.js'
 import { contributionRoutes } from './routes/contributions.js'
 import { graphRoutes } from './routes/graph.js'
@@ -68,6 +69,12 @@ export function createApp() {
   })
   // Aperçus flous des photos et portraits qui n'en ont pas encore (lib/blurhash.ts) ; pas pendant les tests
   if (env.NODE_ENV !== 'test') app.addHook('onReady', async () => startBlurhashFiller(app, getStorageRoot()))
+  // Arbres provisoires de plus de 30 jours, jamais gardés : effacés avec leur compte (#251)
+  if (env.NODE_ENV !== 'test') {
+    let stopPurge: (() => void) | null = null
+    app.addHook('onReady', async () => { stopPurge = startProvisionalPurge(prisma, app.log) })
+    app.addHook('onClose', async () => { stopPurge?.() })
+  }
   app.decorateRequest('actor', null)
 
   app.register(cors, {

@@ -86,7 +86,9 @@ enum SharedAccessRole {
 
 model User {
   id                            String                @id @default(cuid())
-  email                         String                @unique
+  // Vide pour un compte provisoire : l'arbre fait avant le compte (#251), lié au navigateur par sa session, effacé
+  // au bout de 30 jours (lib/provisional-account.ts). Il reçoit un email quand la personne garde son arbre.
+  email                         String?               @unique
   firstName                     String?
   // Vide pour un compte né d'une connexion OIDC : il n'a pas de mot de passe Parenthèse
   passwordHash                  String?

@@ -9,8 +9,13 @@ import { createAccountIfAllowed, isRegistrationOpen } from '../lib/registration.
 import { acceptInvitation, findPendingInvitationByToken } from '../lib/tree-invitations.js'
 import { signUserSession } from '../lib/user-session.js'
 import { revokeUserToken } from '../lib/token-revocation.js'
-import { deletedAccountVisitorKey } from '../lib/tree-visits.js'
-import { deleteTreeRecords, removeTreeMediaDirectories } from '../lib/tree-purge.js'
+import { removeTreeMediaDirectories } from '../lib/tree-purge.js'
+import {
+  adoptProvisionalAccount,
+  deleteAccountRecords,
+  isProvisional,
+  provisionalExpiry,
+} from '../lib/provisional-account.js'
 import type { AnyJwtPayload } from '../types/auth.js'
 
 // Hash de comparaison pour une adresse inconnue, calculé une fois au premier besoin
@@ -31,6 +36,15 @@ const registerSchema = credentialsSchema.extend({
   // Lien d'invitation à co-gérer un arbre : ouvre un compte même inscription fermée, à l'adresse invitée seulement
   invitationToken: z.string().min(1).max(200).optional(),
 })
+
+// Compte provisoire : seulement le prénom tapé dans « Commencez par vous »
+const provisionalSchema = z.object({
+  firstName: z.string().max(60).optional().nullable(),
+})
+
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002'
+}
 
 function trimmedFirstName(value: string | null | undefined): string | null {
   const trimmed = (value ?? '').trim()
@@ -115,9 +129,86 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         registration,
         passwordLogin: env.PASSWORD_LOGIN,
         oidc: isOidcEnabled() ? { name: env.OIDC_PROVIDER_NAME } : null,
+        // L'arbre avant le compte (#251) : seulement là où n'importe qui peut ouvrir un compte
+        provisional: env.ALLOW_REGISTRATION,
         // Rien à proposer quand l'instance ne crée plus de compte
         signupPrompts: env.SIGNUP_PROMPTS && registration && env.PASSWORD_LOGIN,
       })
+    },
+  )
+
+  // « Créer mon arbre » sans compte : un compte provisoire, sans email ni mot de passe, effacé au bout de 30 jours
+  app.post(
+    '/provisional',
+    { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } },
+    async (request, reply) => {
+      const parsed = provisionalSchema.safeParse(request.body ?? {})
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
+      }
+      if (!env.ALLOW_REGISTRATION) {
+        return reply.code(403).send({ error: 'registration_closed' })
+      }
+
+      const user = await app.prisma.user.create({
+        data: { email: null, firstName: trimmedFirstName(parsed.data.firstName), passwordHash: null },
+        select: { id: true, email: true, firstName: true, createdAt: true },
+      })
+      return reply.code(201).send({
+        token: signUserSession(app, user),
+        user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, provisional: true, provisionalUntil: provisionalExpiry(user.createdAt) },
+      })
+    },
+  )
+
+  // « Gardez votre arbre » : le compte provisoire reçoit un email et un mot de passe. Même compte, mêmes arbres.
+  app.post(
+    '/keep',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      if (!request.actor || request.actor.kind !== 'user') {
+        return reply.code(401).send({ error: 'authentication_required' })
+      }
+      if (!env.PASSWORD_LOGIN) {
+        return reply.code(403).send({ error: 'password_login_disabled' })
+      }
+      const parsed = credentialsSchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'invalid_payload', details: parsed.error.flatten() })
+      }
+
+      const userId = request.actor.userId
+      const current = await app.prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      if (!current) {
+        return reply.code(401).send({ error: 'authentication_required' })
+      }
+      if (!isProvisional(current)) {
+        return reply.code(409).send({ error: 'account_already_kept' })
+      }
+
+      const email = parsed.data.email.trim().toLowerCase()
+      if (await app.prisma.user.findUnique({ where: { email }, select: { id: true } })) {
+        return reply.code(409).send({ error: 'email_already_exists' })
+      }
+
+      const passwordHash = await hashPassword(parsed.data.password)
+      try {
+        // email: null dans le filtre : deux envois simultanés ne gardent le compte qu'une fois
+        const updated = await app.prisma.user.updateMany({ where: { id: userId, email: null }, data: { email, passwordHash } })
+        if (updated.count === 0) return reply.code(409).send({ error: 'account_already_kept' })
+      } catch (error: unknown) {
+        if (isUniqueViolation(error)) return reply.code(409).send({ error: 'email_already_exists' })
+        throw error
+      }
+      const kept = await app.prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, email: true, firstName: true } })
+
+      // La session provisoire (30 jours, sans email) laisse place à une session de compte
+      const payload = await request.jwtVerify<AnyJwtPayload & { exp?: number }>()
+      if (payload.kind === 'user' && typeof payload.exp === 'number') {
+        await revokeUserToken(app.prisma, payload.jti, payload.exp)
+      }
+
+      return reply.send({ token: signUserSession(app, kept), user: { ...kept, hasPassword: true, provisional: false } })
     },
   )
 
@@ -182,7 +273,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // Compte ouvert par une invitation : co-gestionnaire de l'arbre tout de suite
       let joinedTreeId: string | null = null
       if (invitation) {
-        const accepted = await acceptInvitation(app.prisma, invitation.id, user.id, user.email)
+        const accepted = await acceptInvitation(app.prisma, invitation.id, user.id, email)
         if (accepted.ok) {
           joinedTreeId = accepted.treeId
         } else if (!(await isRegistrationOpen(app.prisma))) {
@@ -239,6 +330,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(401).send({ error: 'invalid_credentials' })
       }
 
+      // Connexion depuis un arbre provisoire (« Déjà un compte ? » dans « Gardez votre arbre ») : l'arbre rejoint le
+      // compte retrouvé au lieu d'être perdu
+      if (request.actor?.kind === 'user' && request.actor.email === null) {
+        await adoptProvisionalAccount(app.prisma, request.actor.userId, user.id)
+      }
+
       return reply.send({
         token: signUserSession(app, user),
         user: {
@@ -259,15 +356,20 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await app.prisma.user.findUnique({
       where: { id: request.actor.userId },
-      select: { id: true, email: true, firstName: true, passwordHash: true, identities: { select: { id: true }, take: 1 } },
+      select: { id: true, email: true, firstName: true, passwordHash: true, createdAt: true, identities: { select: { id: true }, take: 1 } },
     })
     if (!user) {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
+    // Compte provisoire : l'app propose de garder l'arbre, et dit jusqu'à quand il reste
+    if (isProvisional(user)) {
+      return reply.send({ user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, oidcLinked: false, provisional: true, provisionalUntil: provisionalExpiry(user.createdAt) } })
+    }
+
     // hasPassword : l'écran de suppression demande le mot de passe, ou l'email pour un compte sans mot de passe.
     // oidcLinked : le compte se connecte déjà par le fournisseur ; sinon le compte propose « Relier à … »
-    return reply.send({ user: { id: user.id, email: user.email, firstName: user.firstName, hasPassword: confirmsWithPassword(user.passwordHash), oidcLinked: (user.identities?.length ?? 0) > 0 } })
+    return reply.send({ user: { id: user.id, email: user.email, firstName: user.firstName, hasPassword: confirmsWithPassword(user.passwordHash), oidcLinked: (user.identities?.length ?? 0) > 0, provisional: false } })
   })
 
   app.get('/me/last-tree', async (request, reply) => {
@@ -430,30 +532,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       // Arbres possédés (y compris ceux marqués supprimés) puis compte, dans une seule transaction :
       // la relation propriétaire est en Restrict, les arbres doivent partir avant l'utilisateur.
-      const ownedTreeIds = await app.prisma.$transaction(async (tx) => {
-        const ownedTrees = await tx.tree.findMany({
-          where: { ownerUserId: userId },
-          select: { id: true },
-        })
-        const treeIds = ownedTrees.map((tree) => tree.id)
-
-        await deleteTreeRecords(tx, treeIds)
-
-        // Les contributions envoyées à d'autres familles restent, sans l'adresse email de l'auteur.
-        await tx.contributionSession.updateMany({
-          where: { submittedByUserId: userId },
-          data: { submittedByLabel: 'Contributeur' },
-        })
-
-        // Ses visites des autres arbres restent comptées, sans son identifiant
-        await tx.treeVisit.updateMany({
-          where: { visitorKey: `user:${userId}` },
-          data: { visitorKey: deletedAccountVisitorKey(userId) },
-        })
-
-        await tx.user.delete({ where: { id: userId } })
-        return treeIds
-      })
+      const ownedTreeIds = await app.prisma.$transaction((tx) => deleteAccountRecords(tx, userId))
 
       if (payload.kind === 'user' && typeof payload.exp === 'number') {
         await revokeUserToken(app.prisma, payload.jti, payload.exp)

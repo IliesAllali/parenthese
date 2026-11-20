@@ -37,7 +37,7 @@ export default {
   "ou": "oder",
   "Pas encore de compte ?": "Noch kein Konto?",
   "Cette instance n'accepte plus de nouveaux comptes. Demandez à la personne qui l'héberge.": "Diese Instanz nimmt keine neuen Konten mehr an. Frag die Person, die sie betreibt.",
-  "Se connecter avec {name}": "Mit {name} anmelden",
+  "Continuer avec {name}": "Weiter mit {name}",
   "Pour supprimer le compte, reconnectez-vous avec votre fournisseur de connexion, puis recommencez dans le quart d’heure.": "Um das Konto zu löschen, melde dich erneut bei deinem Anmeldedienst an und versuch es dann innerhalb einer Viertelstunde noch einmal.",
   "Cette adresse n'est pas celle du compte.": "Das ist nicht die Adresse des Kontos.",
   "Votre adresse email, pour confirmer": "Deine E-Mail-Adresse, zur Bestätigung",
@@ -238,4 +238,16 @@ export default {
   "Connexion avec {name} reliée à ce compte.": "Die Anmeldung mit {name} ist mit diesem Konto verbunden.",
   "Ce compte du fournisseur est déjà relié à un autre compte Parenthèse.": "Dieses Konto beim Anbieter ist schon mit einem anderen Parenthèse-Konto verbunden.",
   "Le lien pour relier le compte a expiré. Recommencez depuis votre compte.": "Der Link zum Verbinden des Kontos ist abgelaufen. Fang in deinem Konto noch einmal an.",
+
+  // Arbre avant le compte, « Gardez votre arbre » (#251)
+  "Pour l'envoyer, <em>gardez votre arbre</em>": "Zum Senden <em>behalte deinen Stammbaum</em>",
+  "Gardez <em>votre arbre</em>": "Behalte <em>deinen Stammbaum</em>",
+  "Il faut un compte pour relire ce que la famille ajoute.": "Du brauchst ein Konto, um zu prüfen, was die Familie hinzufügt.",
+  "Sans compte, il reste sur cet appareil jusqu'au {date}.": "Ohne Konto bleibt er bis zum {date} auf diesem Gerät.",
+  "Sans compte, il reste sur cet appareil pendant 30 jours.": "Ohne Konto bleibt er 30 Tage auf diesem Gerät.",
+  "Plus tard": "Später",
+  "Garder et envoyer": "Behalten und senden",
+  "Garder mon arbre": "Stammbaum behalten",
+  "Déjà un compte ?": "Schon ein Konto?",
+  "Cette adresse a déjà un compte. Connectez-vous avec elle.": "Diese Adresse hat schon ein Konto. Melde dich damit an.",
 }

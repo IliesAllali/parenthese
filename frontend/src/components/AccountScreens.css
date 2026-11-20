@@ -73,3 +73,7 @@
 
 /* Connexion par le fournisseur reliée au compte (OIDC) */
 .account-oidc-linked { margin: 8px 0 0; font: 400 13px var(--pz-sans); color: var(--pz-muted); }
+
+/* « Continuer avec Google » (ProviderButton) et « Gardez votre arbre » (KeepTreeSheet, #251) */
+.pz-provider-mark { width: 18px; height: 18px; flex: none; }
+.keep-tree-login { text-align: center; }

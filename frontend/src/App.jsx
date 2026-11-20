@@ -19,6 +19,7 @@ import AccountDashboard from './components/AccountDashboard'
 import InvitationScreen from './components/InvitationScreen.jsx'
 import AccountPanel from './components/AccountPanel'
 import TreeCreationWizard from './components/TreeCreationWizard'
+import KeepTreeSheet from './components/KeepTreeSheet'
 import PhotoStartPanel from './components/PhotoStartPanel.jsx'
 import ContributionPanel from './components/ContributionPanel'
 import EditModeOverlay from './components/EditSessionBar.jsx'
@@ -520,6 +521,30 @@ function readInvitationToken() {
 const INVITATION_TOKEN = readInvitationToken()
 let oidcSignIn = null
 
+// « Gardez votre arbre » à la cinquième personne, une fois par compte provisoire (#251)
+const KEEP_PROMPT_AT = 5
+const KEEP_ASKED_KEY = 'parenthese_keep_asked'
+function hasAskedToKeep(userId) {
+  try { return localStorage.getItem(KEEP_ASKED_KEY) === userId } catch { return false }
+}
+function markAskedToKeep(userId) {
+  try { localStorage.setItem(KEEP_ASKED_KEY, userId) } catch { /* stockage refusé : la feuille reviendra */ }
+}
+// Raison de la feuille gardée le temps de l'aller-retour chez le fournisseur, lue une seule fois
+const KEEP_REASON_KEY = 'parenthese_keep_reason'
+function rememberPendingKeepReason(reason) {
+  try { sessionStorage.setItem(KEEP_REASON_KEY, reason) } catch { /* sans stockage, l'envoi ne reprend pas tout seul */ }
+}
+function readPendingKeepReason() {
+  try {
+    const reason = sessionStorage.getItem(KEEP_REASON_KEY) || ''
+    sessionStorage.removeItem(KEEP_REASON_KEY)
+    return reason
+  } catch {
+    return ''
+  }
+}
+
 // Retire une personne du graphe en mémoire, avec ses unions, ses liens et ses médias. Renvoie les tableaux tels
 // qu'ils étaient avant le retrait, ou null si la personne n'y était plus
 function removePersonFromGraph(personId) {
@@ -618,7 +643,7 @@ function App() {
   const [accountEntryMode, setAccountEntryMode] = useState('login')
   // Options de l'instance. Inscription fermée (ALLOW_REGISTRATION=false, #113) ou mot de passe désactivé
   // (PASSWORD_LOGIN=false, #115) : plus de « Créer un compte » nulle part. oidc : le bouton du fournisseur.
-  const [authOptions, setAuthOptions] = useState({ registration: true, passwordLogin: true, oidc: null, signupPrompts: false })
+  const [authOptions, setAuthOptions] = useState({ registration: true, passwordLogin: true, oidc: null, provisional: false, signupPrompts: false })
   const registrationOpen = authOptions.registration !== false && authOptions.passwordLogin !== false
   // Invitations à créer son arbre (SIGNUP_PROMPTS, allumé sur l'instance hébergée) : « Faire le mien » pour la
   // famille, l'inscription au bout des messages de la démo, le message d'invitation de Noël
@@ -635,6 +660,12 @@ function App() {
     </span>
   )
   const [treeWizardVisible, setTreeWizardVisible] = useState(false)
+  // L'arbre avant le compte (#251) : « Créer mon arbre » ouvre « Commencez par vous » sans écran de compte ; le
+  // compte provisoire naît à la création de l'arbre. startedFromWelcome : « Retour » ramène à l'accueil.
+  const canStartWithoutAccount = authOptions.provisional === true
+  const startedFromWelcomeRef = useRef(false)
+  // « Gardez votre arbre » : { reason: 'fifth' | 'share' | 'menu', error? }
+  const [keepSheet, setKeepSheet] = useState(null)
   const [treeWizardLoading, setTreeWizardLoading] = useState(false)
   const [treeImportError, setTreeImportError] = useState('')
   const [contribInviteState, setContribInviteState] = useState({
@@ -2598,9 +2629,11 @@ function App() {
 
       // Lue en parallèle, attendue avant le premier écran sans session pour ne pas montrer un bouton qui disparaît
       let registrationAllowed = true
+      let provisionalAllowed = false
       const authOptionsReady = fetchAuthOptions()
         .then((options) => {
           registrationAllowed = options?.registration !== false && options?.passwordLogin !== false
+          provisionalAllowed = options?.provisional === true
           if (active && options) setAuthOptions(options)
         })
         .catch(() => {})
@@ -2611,7 +2644,12 @@ function App() {
         oidcSignIn ??= OIDC_RETURN.code ? auth.handleOidcExchange(OIDC_RETURN.code) : Promise.resolve(false)
         const signedIn = await oidcSignIn
         if (!active) return
-        if (!signedIn) {
+        if (!signedIn && auth.restoreUserProfile?.()?.provisional === true && auth.restoreUserToken()) {
+          pendingKeepRef.current = {
+            reason: readPendingKeepReason() || 'menu',
+            error: getAccountErrorMessage({ payload: { error: OIDC_RETURN.error || 'oidc_failed' } }),
+          }
+        } else if (!signedIn) {
           if (OIDC_RETURN.error) auth.setAccountError(getAccountErrorMessage({ payload: { error: OIDC_RETURN.error } }))
           await authOptionsReady
           if (!active) return
@@ -2809,7 +2847,14 @@ function App() {
         return
       }
 
-      // ?account=register (CTA de la landing) : écran compte directement en création
+      // ?account=register (CTA de la landing) : « Commencez par vous », sans écran de compte (#251)
+      if (query.get('account') === 'register' && provisionalAllowed) {
+        startedFromWelcomeRef.current = true
+        handleUseDemo()
+        setTreeWizardVisible(true)
+        return
+      }
+      // Instance sans arbre provisoire : écran compte directement en création
       if (query.get('account') === 'register' && registrationAllowed) {
         setAccountEntryMode('register')
         trackAppEvent('account_screen_viewed', { mode: 'register', from_shared_tree: false, via: 'lien', source: getSource() })
@@ -2854,10 +2899,55 @@ function App() {
     }
   }, [tree.bootState, auth.authenticated, auth.accountLoading, auth.accountTrees.length, accountFromTree]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // « Créer mon arbre » sans compte : l'arbre de démo derrière, « Commencez par vous » devant
+  const handleStartWithoutAccount = () => {
+    startedFromWelcomeRef.current = tree.bootState === 'welcome' || tree.bootState === 'account'
+    handleUseDemo()
+    setTreeWizardVisible(true)
+  }
+
+  const handleCloseTreeWizard = () => {
+    setTreeWizardVisible(false)
+    if (!auth.authenticated && startedFromWelcomeRef.current) {
+      startedFromWelcomeRef.current = false
+      tree.setBootState('welcome')
+    }
+  }
+
+  // À la cinquième personne, une seule fois par compte provisoire : « Gardez votre arbre », avec « Plus tard »
+  useEffect(() => {
+    if (!auth.provisional || tree.bootState !== 'ready' || tree.treeContext.accessMode !== 'member') return
+    if (keepSheet || treeWizardVisible || persons.length < KEEP_PROMPT_AT) return
+    const userId = accountUser?.id
+    if (!userId || hasAskedToKeep(userId)) return
+    markAskedToKeep(userId)
+    setKeepSheet({ reason: 'fifth' })
+  }, [auth.provisional, tree.bootState, tree.treeContext.accessMode, tree.graphRevision, keepSheet, treeWizardVisible, accountUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Retour du fournisseur : arbre gardé (on reprend l'envoi s'il l'avait demandé), ou refus montré dans la feuille
+  const pendingKeepRef = useRef(null)
+  useEffect(() => {
+    if (tree.bootState !== 'ready') return
+    if (pendingKeepRef.current && auth.provisional) {
+      setKeepSheet(pendingKeepRef.current)
+      pendingKeepRef.current = null
+      return
+    }
+    const reason = !auth.provisional && auth.authenticated && OIDC_RETURN?.code ? readPendingKeepReason() : ''
+    if (reason === 'share' && userRole.isAdmin) handleOpenContributionPanel()
+  }, [tree.bootState, auth.provisional, auth.authenticated]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const ownTreeAfterSignupRef = useRef(false)
   // via : la porte qui a mené à l'écran de compte (ajouter, compte, demo), pour les mesures
   const handleUseAccount = (mode = 'login', via = 'autre') => {
     const ctx = tree.treeContext
+    // Sans compte et hors d'un arbre reçu : l'arbre d'abord, le compte quand il sert (#251). Depuis l'arbre d'une
+    // famille, le compte reste demandé d'abord : il rattache cet arbre.
+    const fromFamilyTree = Boolean(ctx.treeId) && ctx.accessMode !== 'member' && ctx.accessMode !== 'demo'
+    if (mode === 'register' && !auth.authenticated && canStartWithoutAccount && !fromFamilyTree) {
+      handleStartWithoutAccount()
+      return
+    }
     // « Faire le mien » : après l'inscription, l'assistant de création s'ouvre au-dessus de l'arbre de la famille
     ownTreeAfterSignupRef.current = mode === 'register' && via === 'ajouter'
     // Inscription depuis un arbre reçu ou depuis la démo, sans source dans l'adresse : on le note
@@ -3029,8 +3119,7 @@ function App() {
   }
 
   const handleCreateTreeFromWizard = async (payload) => {
-    const token = auth.userAuth.token
-    if (!token) {
+    if (!auth.userAuth.token && !canStartWithoutAccount) {
       return t('Session invalide ou expirée. Reconnectez-vous.')
     }
 
@@ -3039,6 +3128,9 @@ function App() {
     auth.setAccountError('')
 
     try {
+      // Pas encore de compte : un compte provisoire, lié à ce navigateur, porte l'arbre (#251)
+      const token = auth.userAuth.token || await auth.handleStartProvisional(payload.selfFirstName || '')
+      startedFromWelcomeRef.current = false
       const normalizedSlug = normalizeSlug(payload.treeName)
       const safeSlug = normalizedSlug.length >= 3
         ? normalizedSlug
@@ -3154,6 +3246,34 @@ function App() {
     } finally {
       auth.setAccountLoading(false)
       setTreeWizardLoading(false)
+    }
+  }
+
+  // Envoyer l'arbre demande un compte : quelqu'un doit relire ce que la famille propose
+  const handleShareClick = () => {
+    if (auth.provisional) {
+      setKeepSheet({ reason: 'share' })
+      return
+    }
+    handleOpenContributionPanel()
+  }
+
+  const handleKeepTree = async (email, password) => {
+    const reason = keepSheet?.reason
+    const kept = await auth.handleKeep(email, password)
+    if (!kept) return
+    setKeepSheet(null)
+    if (reason === 'share') handleOpenContributionPanel()
+  }
+
+  // Par le fournisseur : le ticket de rattachement désigne le compte provisoire, qui devient le compte au retour
+  const handleKeepWithProvider = async () => {
+    try {
+      const ticket = await requestOidcLinkTicket(auth.userAuth.token)
+      rememberPendingKeepReason(keepSheet?.reason || 'menu')
+      window.location.assign(oidcLinkUrl(ticket))
+    } catch (error) {
+      setKeepSheet((current) => (current ? { ...current, error: getAccountErrorMessage(error) } : current))
     }
   }
 
@@ -3426,7 +3546,7 @@ function App() {
         <EntryChoice
           onFamilyLink={handleFamilyLinkChoice}
           onLogin={() => handleUseAccount('login')}
-          onRegister={registrationOpen ? () => handleUseAccount('register') : undefined}
+          onRegister={registrationOpen || canStartWithoutAccount ? () => handleUseAccount('register') : undefined}
         />
       </div>
     )
@@ -3460,7 +3580,7 @@ function App() {
     return (
       <div className="app">
         <AccountDashboard
-          authenticated={auth.authenticated}
+          authenticated={auth.authenticated && !auth.provisional}
           loading={auth.accountLoading}
           errorMessage={auth.accountError}
           trees={auth.accountTrees}
@@ -3650,13 +3770,13 @@ function App() {
         onAddSouvenirClick={isFamilyVisitor || userRole.isAdmin ? handleOpenSouvenirPicker : undefined}
         onSearchClick={isFamilyVisitor || userRole.isAdmin ? () => setSearchPanelVisible(true) : undefined}
         helpUrl={HELP_URL}
-        onShareClick={userRole.isAdmin ? handleOpenContributionPanel : undefined}
+        onShareClick={userRole.isAdmin ? handleShareClick : undefined}
         onTreeSelect={handleOpenTreeFromAccount}
         onCreateTree={handleOpenTreeWizard}
         onProfileClick={handleUseAccount}
         canRegister={registrationOpen}
         signupPrompts={signupPrompts}
-        onAccountClick={() => setAccountPanelVisible(true)}
+        onAccountClick={() => (auth.provisional ? setKeepSheet({ reason: 'menu' }) : setAccountPanelVisible(true))}
         onSettingsClick={() => setAdminPanelVisible(true)}
         onLogout={handleLogout}
         userDisplayName={accountDisplayName}
@@ -3885,7 +4005,7 @@ function App() {
         oidcName={authOptions.oidc?.name || ''}
         onTreeDeleted={handleTreeDeleted}
         onLeftTree={handleTreeDeleted}
-        onOpenShare={() => { setAdminPanelVisible(false); handleOpenContributionPanel() }}
+        onOpenShare={() => { setAdminPanelVisible(false); handleShareClick() }}
         onTreeUpdated={() => { if (auth.userAuth.token) auth.loadAccountTrees(auth.userAuth.token).catch(() => {}) }}
         onGedcomImported={handleGedcomImported}
         onOpenPhotoStart={() => { setAdminPanelVisible(false); openPhotoStart() }}
@@ -3940,10 +4060,24 @@ function App() {
       <TreeCreationWizard
         visible={treeWizardVisible}
         loading={treeWizardLoading}
-        defaultFirstName={accountDisplayName}
-        onClose={() => setTreeWizardVisible(false)}
+        defaultFirstName={accountUser?.firstName || ''}
+        onClose={handleCloseTreeWizard}
         onSubmit={handleCreateTreeFromWizard}
       />
+      {keepSheet && auth.provisional && (
+        <KeepTreeSheet
+          reason={keepSheet.reason}
+          provisionalUntil={accountUser?.provisionalUntil || null}
+          loading={auth.accountLoading}
+          errorMessage={keepSheet.error || auth.accountError}
+          passwordLogin={authOptions.passwordLogin !== false}
+          oidcName={authOptions.oidc?.name || ''}
+          onOidc={authOptions.oidc ? handleKeepWithProvider : undefined}
+          onSubmit={handleKeepTree}
+          onLogin={() => { setKeepSheet(null); handleUseAccount('login', 'garder') }}
+          onClose={() => { auth.setAccountError(''); setKeepSheet(null) }}
+        />
+      )}
     </div>
   )
 }

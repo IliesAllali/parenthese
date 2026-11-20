@@ -3,6 +3,7 @@ import { ChevronRight, KeyRound, LogIn, LogOut, Plus, Sparkles, X } from 'lucide
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import ProviderButton from './ProviderButton.jsx'
 import LanguageSwitch from './navbar/LanguageSwitch'
 import { t } from '../i18n/index.js'
 import { PRIVACY_URL } from '../utils/siteLinks.js'
@@ -136,12 +137,7 @@ const AccountDashboard = ({
             )}
 
             {/* Fournisseur d'identité de l'instance (OIDC, #115) : il connecte, et crée le compte si l'instance en accepte */}
-            {onOidcLogin && (
-              <button type="button" className="pz-btn pz-btn--primary pz-btn--block account-oidc" onClick={onOidcLogin} disabled={loading}>
-                <LogIn size={16} aria-hidden="true" />
-                {t('Se connecter avec {name}', { name: oidcName })}
-              </button>
-            )}
+            {onOidcLogin && <ProviderButton name={oidcName} onClick={onOidcLogin} disabled={loading} alone={!passwordLogin} />}
 
             {/* Sans formulaire à mot de passe, le refus du fournisseur s'affiche ici */}
             {!passwordLogin && errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { LogIn } from 'lucide-react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import ProviderButton from './ProviderButton.jsx'
 import { acceptInvitation, fetchInvitation } from '../api/managersApi.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
 import { t } from '../i18n/index.js'
@@ -112,10 +112,7 @@ const InvitationScreen = ({
           {head}
           <div className="invite-doors">
             {invitation.oidc && onOidcLogin && (
-              <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={onOidcLogin}>
-                <LogIn size={16} aria-hidden="true" />
-                {t('Se connecter avec {name}', { name: invitation.oidc.name })}
-              </button>
+              <ProviderButton name={invitation.oidc.name} onClick={onOidcLogin} alone={!invitation.passwordLogin} />
             )}
             {invitation.oidc && invitation.passwordLogin && <div className="pz-divider">{t('ou')}</div>}
             {invitation.passwordLogin && (
