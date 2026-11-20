@@ -32,6 +32,7 @@ import { ContributionRouteError, resolveSubmissionContext } from './contribution
 import { forgetPendingPhoto, reservePendingPhoto, sweepStalePendingPhotos } from '../lib/annotation-changes.js'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const HEIC_REFUSED = 'photo_heic_unsupported'
 const MAX_FILE_BYTES = 20 * 1024 * 1024
 
 const treeIdParamSchema = z.object({
@@ -146,6 +147,11 @@ export async function prepareUploadedFile(
   fileName: string,
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   const mimeType = sniffMimeType(buffer, type, fileName)
+  // Photo HEIC que le navigateur n'a pas su convertir (Chrome sur Android) : refusée avec son propre code, pour que
+  // la famille lise quoi faire plutôt que « le format ne correspond pas »
+  if (type === 'photo' && mimeType === 'image/heic') {
+    throw new InvalidMediaError(HEIC_REFUSED)
+  }
   if (!mimeType || !isMimeAllowedForType(type, mimeType)) {
     throw new InvalidMediaError('invalid_media_mime_type')
   }
@@ -378,7 +384,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
           prepared = await prepareUploadedFile(decoded, payload.data.type, payload.data.fileName)
         } catch (error) {
           if (error instanceof InvalidMediaError) {
-            return reply.code(400).send({ error: 'invalid_media_mime_type' })
+            return reply.code(400).send({ error: error.message === HEIC_REFUSED ? HEIC_REFUSED : 'invalid_media_mime_type' })
           }
           throw error
         }
@@ -623,7 +629,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       prepared = await prepareUploadedFile(fileBuffer, 'photo', payload.data.fileName)
     } catch (error) {
       if (error instanceof InvalidMediaError) {
-        return reply.code(400).send({ error: 'invalid_avatar_mime_type' })
+        return reply.code(400).send({ error: error.message === HEIC_REFUSED ? HEIC_REFUSED : 'invalid_avatar_mime_type' })
       }
       throw error
     }
@@ -1235,7 +1241,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       prepared = await prepareUploadedFile(fileBuffer, 'photo', payload.data.fileName)
     } catch (error) {
       if (error instanceof InvalidMediaError) {
-        return reply.code(400).send({ error: 'invalid_annotation_photo_mime_type' })
+        return reply.code(400).send({ error: error.message === HEIC_REFUSED ? HEIC_REFUSED : 'invalid_annotation_photo_mime_type' })
       }
       throw error
     }

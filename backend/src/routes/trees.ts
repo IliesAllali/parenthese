@@ -13,6 +13,7 @@ import { decryptSharePassword, encryptSharePassword } from '../lib/share-passwor
 import { purgeTrees } from '../lib/tree-purge.js'
 import { findFreeSlug, isUniqueViolation, isValidSlug, normalizeSlug } from '../lib/tree-slug.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
+import { createHmac } from 'node:crypto'
 import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
@@ -828,7 +829,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: 'tree_not_found' })
       }
 
-      const releaseAttempt = reserveTreeUnlockAttempt(params.data.id)
+      // Condensé gardé en mémoire 15 minutes : le même mot de passe faux ne compte qu'une fois (unlock-guard.ts)
+      const fingerprint = createHmac('sha256', env.JWT_SECRET).update(`${params.data.id}:${payload.data.password}`).digest('base64url')
+      const releaseAttempt = reserveTreeUnlockAttempt(params.data.id, Date.now(), fingerprint)
       if (!releaseAttempt) {
         return reply.code(429).send({ error: 'too_many_attempts' })
       }

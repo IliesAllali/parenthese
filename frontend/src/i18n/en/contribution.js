@@ -48,7 +48,6 @@ export default {
   "L'arbre est ici {url}": 'The tree is here {url}',
 
   // ─── Panneau de relecture ───
-  'Copie indisponible': 'Copy unavailable',
   'Minimum 8 caractères.': 'At least 8 characters.',
   'La famille {em}': 'The family {em}',
   'participe': 'joins in',
@@ -213,7 +212,7 @@ export default {
   'Beaucoup de photos attendent déjà la relecture sur cet arbre. Réessayez quand la personne qui le gère les aura vues.': "Many photos are already waiting for review on this tree. Try again once the person who manages it has seen them.",
   'Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).': "This file isn't a photo Parenthèse can show (JPEG, PNG, WebP or GIF).",
   'Cette proposition a déjà été relue, peut-être par une autre personne qui gère l’arbre.': 'This suggestion has already been reviewed, maybe by another person who manages the tree.',
-  "Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.": "This link no longer opens the tree. Type the password you were given, or ask for the new link.",
+  "Ce lien n'ouvre plus l'arbre : son mot de passe a changé. Demandez le nouveau lien à la personne qui vous l'a envoyé.": "This link no longer opens the tree: its password has changed. Ask the person who sent it for the new link.",
   "Envoyé. {name} le verra et l'ajoutera à l'arbre.": "Sent. {name} will see it and add it to the tree.",
   "Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.": "Sent. The person who manages the tree will see it and add it.",
   "Le lien de la famille {name}": "The {name} family link",
@@ -224,4 +223,8 @@ export default {
   "C'est vous, {name} ?": "Is this you, {name}?",
   "C'est vous ?": "Is this you?",
   "Il manque votre prénom": "Your first name is missing",
+  "Copiez-le à la main": "Copy it by hand",
+  "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "The connection was cut. Check your network, then try again.",
+  "Ça n'a pas marché. Réessayez dans un moment.": "That didn't work. Try again in a moment.",
+  "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "This photo is in HEIC format, which Parenthèse can't read yet. Send it as a JPEG, or take a screenshot of it.",
 }

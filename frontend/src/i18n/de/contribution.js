@@ -44,7 +44,6 @@ export default {
   "Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter.": "Ich trage die Geschichte unserer Familie in einem Online-Stammbaum zusammen und würde mich freuen, wenn ihr mir helft, ihn zu vervollständigen.",
   "L'arbre est ici {url}": "Der Stammbaum ist hier: {url}",
   // ─── Panneau de relecture ───
-  "Copie indisponible": "Kopieren nicht möglich",
   "Minimum 8 caractères.": "Mindestens 8 Zeichen.",
   "La famille {em}": "Die Familie {em}",
   "participe": "macht mit",
@@ -199,7 +198,7 @@ export default {
   "Beaucoup de photos attendent déjà la relecture sur cet arbre. Réessayez quand la personne qui le gère les aura vues.": "In diesem Stammbaum warten schon viele Fotos auf die Prüfung. Versuch es noch einmal, wenn die verwaltende Person sie gesehen hat.",
   "Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).": "Diese Datei ist kein Foto, das Parenthèse anzeigen kann (JPEG, PNG, WebP oder GIF).",
   "Cette proposition a déjà été relue, peut-être par une autre personne qui gère l’arbre.": "Dieser Vorschlag wurde schon geprüft, vielleicht von einer anderen Person, die den Stammbaum verwaltet.",
-  "Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.": "Dieser Link öffnet den Stammbaum nicht mehr. Gib das erhaltene Passwort ein oder bitte um den neuen Link.",
+  "Ce lien n'ouvre plus l'arbre : son mot de passe a changé. Demandez le nouveau lien à la personne qui vous l'a envoyé.": "Dieser Link öffnet den Stammbaum nicht mehr: Sein Passwort wurde geändert. Bitte die Person, die ihn dir geschickt hat, um den neuen Link.",
   "Envoyé. {name} le verra et l'ajoutera à l'arbre.": "Gesendet. {name} sieht es sich an und fügt es dem Stammbaum hinzu.",
   "Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.": "Gesendet. Die Person, die den Stammbaum verwaltet, sieht es sich an und fügt es hinzu.",
   "Le lien de la famille {name}": "Der Link der Familie {name}",
@@ -210,4 +209,8 @@ export default {
   "C'est vous, {name} ?": "Bist du das, {name}?",
   "C'est vous ?": "Bist du das?",
   "Il manque votre prénom": "Ihr Vorname fehlt",
+  "Copiez-le à la main": "Kopiere ihn von Hand",
+  "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "Die Verbindung wurde unterbrochen. Prüfe dein Netz und versuche es noch einmal.",
+  "Ça n'a pas marché. Réessayez dans un moment.": "Das hat nicht geklappt. Versuche es gleich noch einmal.",
+  "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "Dieses Foto ist im HEIC-Format, das Parenthèse noch nicht lesen kann. Schick es als JPEG oder mach einen Screenshot davon.",
 }

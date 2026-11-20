@@ -13,7 +13,15 @@ export function getShareErrorMessage(error) {
     return t('Trop de tentatives. Réessayez dans une minute.')
   }
 
-  return t('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
+  return interruptedMessage(error)
+}
+
+// Ces messages s'affichent à toute la famille : ni « backend » ni « API ». Réseau coupé ou serveur muet, puis le reste.
+function interruptedMessage(error) {
+  if (error?.payload?.error === 'request_timeout' || error instanceof TypeError) {
+    return t('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
+  }
+  return t("Ça n'a pas marché. Réessayez dans un moment.")
 }
 
 export function getAccountDeletionErrorMessage(error, confirmation = {}) {
@@ -51,6 +59,10 @@ export function getAccountErrorMessage(error, providerName = '') {
 
   if (errorCode === 'image_too_large') {
     return t('Image trop volumineuse (maximum 5 Mo).')
+  }
+
+  if (errorCode === 'photo_heic_unsupported') {
+    return t("Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.")
   }
 
   if (errorCode === 'invalid_avatar_mime_type') {
@@ -201,7 +213,7 @@ export function getAccountErrorMessage(error, providerName = '') {
     return t('Trop de tentatives. Réessayez dans une minute.')
   }
 
-  return t("Erreur backend. Vérifiez que l'API et la base sont lancées.")
+  return interruptedMessage(error)
 }
 
 export function fileToBase64(file) {

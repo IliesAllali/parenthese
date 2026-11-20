@@ -35,6 +35,9 @@ const MAX_CHANGE_JSON_CHARS = 64_000
 const MAX_PENDING_SESSIONS_PER_TREE = 200
 // Annotations proposées avant la 1.5.1 : écartées à la relecture si elles ne se posent pas
 const SKIPPABLE_ANNOTATION_ERRORS = new Set(['invalid_annotation_change', 'invalid_annotation_photo_path', 'unsupported_change_action_for_annotation'])
+// Souvenir ou moment envoyé par la famille, effacé avant la relecture avec la personne qu'il concernait : écarté,
+// le reste de la proposition passe (avant, toute la relecture échouait en 400)
+const ENTITY_GONE = 'entity_gone'
 const boundedJson = z.unknown().optional().refine(
   (value) => value === undefined || JSON.stringify(value).length <= MAX_CHANGE_JSON_CHARS,
   { message: 'change_too_large' },
@@ -349,7 +352,7 @@ async function applyContributionChange(
       data: { status: 'approved' },
     })
     if (updated.count === 0) {
-      throw new ContributionRouteError(400, 'invalid_entity_reference')
+      throw new ContributionRouteError(400, ENTITY_GONE)
     }
     return { entityId: change.entityId }
   }
@@ -386,7 +389,7 @@ async function applyContributionChange(
     })
 
     if (!media) {
-      throw new ContributionRouteError(400, 'invalid_entity_reference')
+      throw new ContributionRouteError(400, ENTITY_GONE)
     }
 
     await tx.mediaItem.update({
@@ -1498,7 +1501,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
             } catch (error) {
               // Lien vers une personne ajoutée mais refusée, ou annotation d'avant la 1.5.1 que le serveur ne
               // peut pas poser (contenu incomplet) : la proposition est écartée, pas la relecture
-              if (error instanceof ContributionRouteError && (error.code === 'unresolved_reference' || SKIPPABLE_ANNOTATION_ERRORS.has(error.code))) {
+              if (error instanceof ContributionRouteError && (error.code === 'unresolved_reference' || error.code === ENTITY_GONE || SKIPPABLE_ANNOTATION_ERRORS.has(error.code))) {
                 decision = 'rejected'
                 rejectedCount += 1
                 if (change.entityType === 'annotation') rejectedAnnotationAfters.push(change.afterJson)

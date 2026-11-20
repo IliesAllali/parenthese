@@ -34,12 +34,12 @@ describe('getShareErrorMessage', () => {
   })
 
   it('returns default message for unknown errors', () => {
-    expect(getShareErrorMessage({ status: 500 })).toBe('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
+    expect(getShareErrorMessage({ status: 500 })).toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('handles null/undefined error', () => {
-    expect(getShareErrorMessage(null)).toBe('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
-    expect(getShareErrorMessage(undefined)).toBe('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
+    expect(getShareErrorMessage(null)).toBe("Ça n'a pas marché. Réessayez dans un moment.")
+    expect(getShareErrorMessage(undefined)).toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 })
 
@@ -81,7 +81,7 @@ describe('getAccountErrorMessage', () => {
 
   it('returns generic 503 fallback when message is different', () => {
     expect(getAccountErrorMessage({ status: 503, message: 'other' }))
-      .toBe("Erreur backend. Vérifiez que l'API et la base sont lancées.")
+      .toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('returns slug validation message for invalid_payload with slug error', () => {
@@ -156,11 +156,22 @@ describe('getAccountErrorMessage', () => {
 
   it('returns default message for unknown errors', () => {
     expect(getAccountErrorMessage({ status: 500 }))
-      .toBe("Erreur backend. Vérifiez que l'API et la base sont lancées.")
+      .toBe("Ça n'a pas marché. Réessayez dans un moment.")
   })
 
   it('handles null/undefined error', () => {
     expect(getAccountErrorMessage(null))
-      .toBe("Erreur backend. Vérifiez que l'API et la base sont lancées.")
+      .toBe("Ça n'a pas marché. Réessayez dans un moment.")
+  })
+})
+
+describe('messages lus par la famille', () => {
+  it('un envoi coupé dit que la connexion a été coupée, sans parler de backend', () => {
+    expect(getAccountErrorMessage(new TypeError('Failed to fetch'))).toBe('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
+    expect(getShareErrorMessage({ status: 0, payload: { error: 'request_timeout' } })).toBe('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
+  })
+
+  it('une photo HEIC refusée dit quoi faire', () => {
+    expect(getAccountErrorMessage({ status: 400, message: 'photo_heic_unsupported' })).toContain('HEIC')
   })
 })

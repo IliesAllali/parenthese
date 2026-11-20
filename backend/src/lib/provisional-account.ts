@@ -59,6 +59,13 @@ export async function adoptProvisionalAccount(prisma: PrismaClient, provisionalU
 
     await tx.tree.updateMany({ where: { ownerUserId: provisionalUserId }, data: { ownerUserId: targetUserId } })
     await tx.treeMembership.updateMany({ where: { userId: provisionalUserId }, data: { userId: targetUserId } })
+    // Arbres de la famille ouverts par leur lien depuis l'arbre provisoire : ils suivent aussi. Ceux que le compte
+    // retrouvé a déjà gardent sa ligne, la copie provisoire part avec le compte (cascade).
+    const alreadyShared = await tx.userTreeAccess.findMany({ where: { userId: targetUserId }, select: { treeId: true } })
+    await tx.userTreeAccess.updateMany({
+      where: { userId: provisionalUserId, treeId: { notIn: alreadyShared.map((access) => access.treeId) } },
+      data: { userId: targetUserId },
+    })
     await tx.contributionSession.updateMany({ where: { reviewedBy: provisionalUserId }, data: { reviewedBy: targetUserId } })
     await tx.treeVisit.updateMany({ where: { visitorKey: `user:${provisionalUserId}` }, data: { visitorKey: `user:${targetUserId}`, userId: targetUserId } })
 

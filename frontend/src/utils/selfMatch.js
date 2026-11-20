@@ -35,3 +35,17 @@ export function markSelfAnswered(treeId) {
     // Stockage indisponible : la question reviendra à la prochaine visite
   }
 }
+
+// Le texte de chaque bouton quand plusieurs personnes portent le prénom : nom et année, puis, si deux boutons se
+// ressemblent encore (deux Claire Martin sans date), les prénoms de leurs parents. parentsOf(person) → personnes.
+export function candidateLabels(candidates, parentsOf = () => []) {
+  const base = (candidates || []).map((person) => [
+    [person.firstName, person.lastName].filter(Boolean).join(' '),
+    person.birthYear ? String(person.birthYear) : '',
+  ].filter(Boolean).join(' · '))
+  return base.map((label, index) => {
+    if (base.indexOf(label) === base.lastIndexOf(label)) return label
+    const parents = (parentsOf(candidates[index]) || []).map((parent) => parent?.firstName).filter(Boolean)
+    return parents.length ? `${label} · ${parents.join(' & ')}` : label
+  })
+}

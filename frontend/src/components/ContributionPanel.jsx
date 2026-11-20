@@ -9,6 +9,7 @@ import PzBusy from './PzBusy.jsx'
 import { t, dateLocale } from '../i18n/index.js'
 import { buildInviteText } from '../utils/inviteText.js'
 import { buildShareLink } from '../utils/shareKey.js'
+import { copyText } from '../utils/copyText.js'
 import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
 import { sexLabel } from '../utils/personSex.js'
 import Skeleton from './Skeleton.jsx'
@@ -253,6 +254,8 @@ const ContributionPanel = ({
   const [newPassword, setNewPassword] = useState('')
   const [inviteLocalError, setInviteLocalError] = useState('')
   const [copyFeedback, setCopyFeedback] = useState('')
+  // Texte à copier à la main quand ni le presse-papiers ni la copie de secours ne marchent
+  const [manualCopy, setManualCopy] = useState('')
   // Le message d'invitation reste replié : une ligne, le texte ne s'ouvre que sur demande
 
   // Load persisted decisions from localStorage
@@ -340,6 +343,7 @@ const ContributionPanel = ({
     setPasswordMode('')
     setNewPassword('')
     setInviteLocalError('')
+    setManualCopy('')
   }, [inviteKnownPasswords?.share, visible])
 
   const knownShare = inviteKnownPasswords?.share || ''
@@ -351,26 +355,33 @@ const ContributionPanel = ({
   // Menu de partage du téléphone avec le message, copié aussi ; sans menu de partage, copié seulement
   const handleSend = async () => {
     if (!inviteText) return
-    const copied = navigator.clipboard?.writeText(inviteText).then(() => true, () => false) ?? Promise.resolve(false)
+    const copied = copyText(inviteText)
     if (typeof navigator.share === 'function') {
       try { await navigator.share({ text: inviteText }) } catch { /* partage refermé : le message reste copié */ }
     }
-    setCopyFeedback(await copied ? t('Message copié') : t('Copie indisponible'))
+    if (await copied) {
+      setManualCopy('')
+      setCopyFeedback(t('Message copié'))
+    } else {
+      // Ni presse-papiers ni copie possible : le message s'affiche, à copier à la main
+      setManualCopy(inviteText)
+    }
   }
 
   // what : link ou password. Ce qui a été copié, jamais le texte lui-même
   const handleCopy = async (value, label, what) => {
     const text = String(value || '').trim()
     if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
+    if (await copyText(text)) {
+      setManualCopy('')
       setCopyFeedback(label)
       trackAppEvent('share_copied', {
         what,
         tree_id: toOpaqueTreeId(treeId),
       })
+    } else {
+      setManualCopy(text)
     }
-    catch { setCopyFeedback(t('Copie indisponible')) }
   }
 
   const handleSavePassword = async (e) => {
@@ -452,6 +463,12 @@ const ContributionPanel = ({
                 <div className="contrib-send">
                   <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={handleSend}><Send size={17} strokeWidth={2} aria-hidden="true" />{t('Envoyer le lien')}</button>
                   <p className="pz-small">{t("Le message d'invitation est aussi copié.")}</p>
+                </div>
+              )}
+              {manualCopy && (
+                <div className="pz-field contrib-manual-copy">
+                  <label htmlFor="contrib-manual-copy">{t('Copiez-le à la main')}</label>
+                  <textarea id="contrib-manual-copy" readOnly rows={manualCopy.includes('\n') ? 6 : 2} value={manualCopy} onFocus={(e) => e.target.select()} autoFocus />
                 </div>
               )}
             </section>

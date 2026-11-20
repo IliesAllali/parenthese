@@ -82,7 +82,6 @@ export default {
   // utils/errorMessages.js
   "Mot de passe invalide ou accès expiré.": "Ungültiges Passwort oder Zugang abgelaufen.",
   "Trop de tentatives. Réessayez dans une minute.": "Zu viele Versuche. Versuch es in einer Minute noch einmal.",
-  "Connexion backend impossible. Vérifiez API/DB puis réessayez.": "Der Server ist nicht erreichbar. Prüfe API und Datenbank und versuch es dann noch einmal.",
   "Mot de passe incorrect.": "Falsches Passwort.",
   "Session expirée. Reconnectez-vous puis réessayez.": "Deine Sitzung ist abgelaufen. Melde dich neu an und versuch es dann noch einmal.",
   "Saisissez votre mot de passe actuel.": "Gib dein aktuelles Passwort ein.",
@@ -104,7 +103,6 @@ export default {
   "Accès refusé pour cet arbre.": "Kein Zugriff auf diesen Stammbaum.",
   "Ressource introuvable.": "Nicht gefunden.",
   "Conflit détecté (email ou slug déjà utilisé).": "Konflikt (E-Mail oder Slug schon vergeben).",
-  "Erreur backend. Vérifiez que l'API et la base sont lancées.": "Serverfehler. Prüfe, ob API und Datenbank laufen.",
   "Le serveur ne répond pas. Vérifiez la connexion et réessayez.": "Der Server antwortet nicht. Prüfe deine Verbindung und versuch es noch einmal.",
   // App.jsx : enregistrement automatique en quittant une fiche
   "Modifications de {name} enregistrées": "Änderungen an {name} gespeichert",

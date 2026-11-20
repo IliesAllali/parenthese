@@ -5,6 +5,7 @@ import { dateLocale, t } from '../i18n/index.js'
 import { initialOf } from '../utils/initial.js'
 import Skeleton from './Skeleton.jsx'
 import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
+import { copyText } from '../utils/copyText.js'
 
 // Onglet Gestion des paramètres de l'arbre (issue #145). Le propriétaire invite des co-gestionnaires par leur
 // adresse : Parenthèse n'envoie pas de mail, il donne un lien à transmettre. Les co-gestionnaires voient la liste.
@@ -41,8 +42,7 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
 
   const offerLink = async (token, forEmail) => {
     const url = invitationUrl(token)
-    let copied
-    try { await navigator.clipboard.writeText(url); copied = true } catch { copied = false }
+    const copied = await copyText(url)
     // Le lien créé compte comme un partage même si le presse-papiers est refusé (il est alors montré en clair)
     trackAppEvent('share_copied', { what: 'manager_invite', copied, tree_id: toOpaqueTreeId(treeId) })
     setLink({ url, email: forEmail, copied })

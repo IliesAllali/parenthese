@@ -511,7 +511,7 @@ function readOidcReturn() {
 const OIDC_RETURN = readOidcReturn()
 // Lien de partage porteur du mot de passe (#cle=…, #247) : lu une fois, retiré de l'adresse
 const SHARE_KEY = readShareKey()
-const KEY_FAILED_MESSAGE = () => t("Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.")
+const KEY_FAILED_MESSAGE = () => t("Ce lien n'ouvre plus l'arbre : son mot de passe a changé. Demandez le nouveau lien à la personne qui vous l'a envoyé.")
 
 // Lien d'invitation à co-gérer un arbre (/invitation/<jeton>, issue #145) : lu une fois au chargement, la page
 // d'invitation passe avant tout le reste jusqu'à ce que l'arbre s'ouvre
@@ -735,6 +735,20 @@ function App() {
     setPendingMediaPersonId(null)
     media.handleOpenMediaManager()
   }, [pendingMediaPersonId, tree.selectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clé du lien essayée : true = ouvert, false = refusée (401, mot de passe changé), 'error' = panne ou trop de tentatives
+  const unlockWithKey = async (treeId, key, options) => {
+    try {
+      return Boolean(await tree.handleUnlock(treeId, key, { ...options, rethrow: true }))
+    } catch (error) {
+      return error?.status === 401 ? false : 'error'
+    }
+  }
+  // La porte après une clé : refusée, elle le dit ; panne ou tentatives, elle garde le message de handleUnlock
+  const showKeyResult = (result) => {
+    if (result === false) tree.setGateError(KEY_FAILED_MESSAGE())
+    else if (result !== 'error') tree.setGateError('')
+  }
 
   const closeFamilyWelcome = useCallback((name = '') => {
     markFamilyWelcomeSeen(tree.treeContext.treeId)
@@ -1158,6 +1172,23 @@ function App() {
     })
     return () => cancelAnimationFrame(frame)
   }, [selfFocusId])
+  // L'arbre bouge (glisser, molette, fenêtre redimensionnée) : la question quitte le prénom pour le bas de l'écran,
+  // plutôt que de rester accrochée à un endroit où la personne n'est plus
+  useEffect(() => {
+    if (!selfAnchor) return undefined
+    const release = (event) => {
+      if (event?.target?.closest?.('.fo-self')) return
+      setSelfAnchor(null)
+    }
+    window.addEventListener('pointerdown', release, true)
+    window.addEventListener('wheel', release, { capture: true, passive: true })
+    window.addEventListener('resize', release)
+    return () => {
+      window.removeEventListener('pointerdown', release, true)
+      window.removeEventListener('wheel', release, { capture: true })
+      window.removeEventListener('resize', release)
+    }
+  }, [selfAnchor])
 
   // Called by AnnotationToolbar when user picks a photo file for canvas annotation
   const handleAnnotationPhotoFile = useCallback(async (file) => {
@@ -2673,15 +2704,16 @@ function App() {
       const resolvedTreeOwnerName = ''
       const resolvedTreeOwnerEmail = ''
 
-      // Lien porteur de la clé : ouvre l'arbre sans passer par la porte. null = pas de clé, false = clé refusée
+      // Lien porteur de la clé : ouvre l'arbre sans passer par la porte. null = pas de clé, true = ouvert,
+      // false = clé refusée (mot de passe changé), 'error' = panne ou trop de tentatives (la porte garde ce message)
       const openWithShareKey = async (treeId, userToken) => {
         if (!SHARE_KEY) return null
-        const access = await tree.handleUnlock(treeId, SHARE_KEY, {
+        const access = await unlockWithKey(treeId, SHARE_KEY, {
           userToken,
           treeName: resolvedTreeName,
           treeDescription: resolvedTreeDescription,
         })
-        if (!access) return false
+        if (access !== true) return access
         setArrivedByKey(true)
         if (userToken) {
           await auth.loadAccountTrees(userToken)
@@ -2763,7 +2795,7 @@ function App() {
             }
 
             const keyOpened = await openWithShareKey(resolvedTreeId, userToken)
-            if (!active || keyOpened) return
+            if (!active || keyOpened === true) return
 
             tree.setTreeContext(buildEmptyTreeContext({
               treeId: resolvedTreeId,
@@ -2772,7 +2804,7 @@ function App() {
               treeOwnerName: resolvedTreeOwnerName,
               treeOwnerEmail: resolvedTreeOwnerEmail,
             }))
-            tree.setGateError(keyOpened === false ? KEY_FAILED_MESSAGE() : '')
+            showKeyResult(keyOpened)
             tree.setBootState('need-access')
             return
           }
@@ -2835,7 +2867,7 @@ function App() {
       }
 
       const keyOpened = resolvedTreeId ? await openWithShareKey(resolvedTreeId, '') : null
-      if (!active || keyOpened) return
+      if (!active || keyOpened === true) return
 
       await authOptionsReady
       if (!active) return
@@ -2849,7 +2881,7 @@ function App() {
           treeOwnerEmail: resolvedTreeOwnerEmail,
         }))
         // Clé refusée (mot de passe changé depuis l'envoi du lien) : la porte le dit, le mot de passe ouvre encore
-        tree.setGateError(keyOpened === false ? KEY_FAILED_MESSAGE() : '')
+        showKeyResult(keyOpened)
         tree.setBootState('need-access')
         return
       }
@@ -3376,13 +3408,13 @@ function App() {
       if (!key || tree.bootState !== 'need-access' || !tree.treeContext.treeId) return
       const treeId = tree.treeContext.treeId
       const userToken = auth.userAuth.token || ''
-      const access = await tree.handleUnlock(treeId, key, {
+      const access = await unlockWithKey(treeId, key, {
         userToken,
         treeName: tree.treeContext.treeName,
         treeDescription: tree.treeContext.treeDescription,
       })
-      if (!access) {
-        tree.setGateError(KEY_FAILED_MESSAGE())
+      if (access !== true) {
+        showKeyResult(access)
         return
       }
       setTreeNotFound(false)
@@ -3795,7 +3827,7 @@ function App() {
         onLook={closeFamilyWelcome}
       />
       {!tree.selectedPerson && !tree.selectedMedia && !media.mediaManagerState.visible && !souvenirPickerVisible && (
-        <SelfAsk candidates={selfCandidates} anchor={selfAnchor} onConfirm={answerSelfAsk} onDecline={() => answerSelfAsk(null)} />
+        <SelfAsk candidates={selfCandidates} anchor={selfAnchor} parentsOf={(person) => getParents(person.id)} onConfirm={answerSelfAsk} onDecline={() => answerSelfAsk(null)} />
       )}
       <SouvenirPicker
         visible={souvenirPickerVisible}
