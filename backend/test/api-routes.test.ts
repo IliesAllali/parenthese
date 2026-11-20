@@ -1304,3 +1304,21 @@ describe('Lieu de décès et filiation adoptive (écriture)', () => {
     await app.close()
   })
 })
+
+describe('taille des envois de souvenirs (cas limites du 20/11)', () => {
+  const body = (bytes: number) => ({ type: 'video', fileName: 'v.mp4', mimeType: 'video/mp4', sizeBytes: bytes, dataBase64: 'A'.repeat(Math.ceil(bytes / 3) * 4) })
+
+  it('une vidéo de 15 Mo arrive jusqu’à la route, au lieu d’être coupée par la taille du corps', async () => {
+    const app = createApp()
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/persons/p-1/media', payload: body(15 * 1024 * 1024) })
+    expect(response.statusCode).not.toBe(413)
+    await app.close()
+  })
+
+  it('au-delà de la limite annoncée (20 Mo), le corps est refusé', async () => {
+    const app = createApp()
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/persons/p-1/media', payload: body(22 * 1024 * 1024) })
+    expect(response.statusCode).toBe(413)
+    await app.close()
+  })
+})
