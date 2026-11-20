@@ -11,6 +11,7 @@ import { removeStoredFile } from '../lib/media-files.js'
 import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
+import { findFreeSlug, isUniqueViolation, isValidSlug, normalizeSlug } from '../lib/tree-slug.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
@@ -319,20 +320,6 @@ function toTrimmedStringOrNull(value?: string | null): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function normalizeSlug(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function isValidSlug(value: string): boolean {
-  return /^[a-z0-9-]{3,64}$/.test(value)
-}
-
 async function getAdminMembership(app: FastifyInstance, userId: string, treeId: string) {
   const membership = await app.prisma.treeMembership.findUnique({
     where: {
@@ -551,57 +538,59 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const visitorHash = await hashPassword(parsed.data.visitorPassword)
     const contributorHash = await hashPassword(parsed.data.contributorPassword)
 
-    try {
-      const tree = await app.prisma.tree.create({
-        data: {
-          ownerUserId: user.userId,
-          name: parsed.data.name,
-          slug: normalizedSlug,
-          description: parsed.data.description ?? null,
-          accessPasswords: {
-            create: {
-              visitorHash,
-              contributorHash,
+    // Adresse déjà prise : suffixe automatique (famille-martin-2). Deux créations simultanées
+    // peuvent viser le même suffixe, la contrainte unique tranche et on recalcule.
+    for (let attempt = 0; ; attempt += 1) {
+      const slug = await findFreeSlug(app.prisma, normalizedSlug)
+      try {
+        const tree = await app.prisma.tree.create({
+          data: {
+            ownerUserId: user.userId,
+            name: parsed.data.name,
+            slug,
+            description: parsed.data.description ?? null,
+            accessPasswords: {
+              create: {
+                visitorHash,
+                contributorHash,
+              },
+            },
+            ...(parsed.data.visitorPassword === parsed.data.contributorPassword
+              ? { sharePassword: { create: { passwordEnc: encryptSharePassword(parsed.data.visitorPassword) } } }
+              : {}),
+            memberships: {
+              create: {
+                userId: user.userId,
+                role: 'owner',
+              },
+            },
+            settings: {
+              create: {
+                memberContributionPolicy: 'pending',
+                visitorPolicy: 'read_only',
+                contributorPolicy: 'pending',
+              },
             },
           },
-          ...(parsed.data.visitorPassword === parsed.data.contributorPassword
-            ? { sharePassword: { create: { passwordEnc: encryptSharePassword(parsed.data.visitorPassword) } } }
-            : {}),
-          memberships: {
-            create: {
-              userId: user.userId,
-              role: 'owner',
-            },
-          },
-          settings: {
-            create: {
-              memberContributionPolicy: 'pending',
-              visitorPolicy: 'read_only',
-              contributorPolicy: 'pending',
-            },
-          },
-        },
-      })
+        })
 
-      await app.prisma.user.update({
-        where: {
-          id: user.userId,
-        },
-        data: {
-          lastOpenedTreeId: tree.id,
-          lastOpenedAccessMode: 'member',
-          lastOpenedRole: 'owner',
-          lastOpenedAt: new Date(),
-        },
-      })
+        await app.prisma.user.update({
+          where: {
+            id: user.userId,
+          },
+          data: {
+            lastOpenedTreeId: tree.id,
+            lastOpenedAccessMode: 'member',
+            lastOpenedRole: 'owner',
+            lastOpenedAt: new Date(),
+          },
+        })
 
-      return reply.code(201).send({ tree })
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
-        return reply.code(409).send({ error: 'slug_already_exists' })
+        return reply.code(201).send({ tree })
+      } catch (error: unknown) {
+        if (isUniqueViolation(error) && attempt < 4) continue
+        throw error
       }
-
-      throw error
     }
   })
 
@@ -689,7 +678,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
           })
         }
 
-        updateData.slug = normalizedSlug
+        updateData.slug = await findFreeSlug(app.prisma, normalizedSlug, params.data.id)
       }
 
       if (payload.data.description !== undefined) {
@@ -756,7 +745,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
 
       return reply.send({ tree: updated })
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
+      if (isUniqueViolation(error)) {
         return reply.code(409).send({ error: 'slug_already_exists' })
       }
 
