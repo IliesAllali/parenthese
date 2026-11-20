@@ -346,6 +346,7 @@
   color: var(--pz-bg);
   font: 500 14px/1.4 var(--pz-sans);
   text-align: left;
+  text-wrap: balance;
   box-shadow: var(--pz-shadow-lg);
   cursor: pointer;
 }
