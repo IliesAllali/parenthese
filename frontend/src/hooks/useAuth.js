@@ -4,9 +4,11 @@ import {
   exchangeOidcCode,
   fetchAccountProfile,
   fetchLastOpenedTree,
+  keepProvisionalAccount,
   loginUser,
   logoutUser,
   registerUser,
+  startProvisionalAccount,
   updateLastOpenedTree,
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
@@ -50,6 +52,8 @@ export function useAuth() {
   const [accountError, setAccountError] = useState('')
 
   const authenticated = Boolean(userAuth.token)
+  // Arbre fait avant le compte (#251) : session sans email, à garder avant 30 jours
+  const provisional = authenticated && userAuth.user?.provisional === true
 
   // Prénom du compte : lu sur le serveur, gardé dans le profil local pour le bandeau de la porte
   const refreshAccountProfile = async (token) => {
@@ -86,7 +90,8 @@ export function useAuth() {
     ])
   }
 
-  const handleLogin = (email, password) => signIn(() => loginUser(email, password))
+  // Depuis un arbre provisoire, la session part avec la connexion : l'arbre rejoint le compte retrouvé
+  const handleLogin = (email, password) => signIn(() => loginUser(email, password, provisional ? userAuth.token : ''))
 
   // Retour d'une connexion OIDC : le jeton de passage devient une session, comme une connexion par mot de passe
   const handleOidcExchange = (code) => signIn(() => exchangeOidcCode(code))
@@ -123,6 +128,31 @@ export function useAuth() {
         firstName: firstName || result.user?.firstName || '',
       }
       await openSession(result.token, mergedUser)
+      return true
+    } catch (error) {
+      setAccountError(getAccountErrorMessage(error))
+      return false
+    } finally {
+      setAccountLoading(false)
+    }
+  }
+
+  // « Créer mon arbre » sans compte : la session du compte provisoire, ouverte comme une autre
+  const handleStartProvisional = async (firstName) => {
+    const result = await startProvisionalAccount(firstName)
+    localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
+    saveUserProfile(result.user)
+    setUserAuth({ token: result.token, user: result.user })
+    return result.token
+  }
+
+  // « Gardez votre arbre » par email et mot de passe : une session de compte remplace la session provisoire
+  const handleKeep = async (email, password) => {
+    setAccountLoading(true)
+    setAccountError('')
+    try {
+      const result = await keepProvisionalAccount(userAuth.token, email, password)
+      await openSession(result.token, { ...(userAuth.user || {}), ...result.user })
       return true
     } catch (error) {
       setAccountError(getAccountErrorMessage(error))
@@ -203,9 +233,12 @@ export function useAuth() {
     accountLoading, setAccountLoading,
     accountError, setAccountError,
     authenticated,
+    provisional,
     loadAccountTrees,
     handleLogin,
     handleRegister,
+    handleStartProvisional,
+    handleKeep,
     handleOidcExchange,
     handleLogout,
     handleDeleteAccount,

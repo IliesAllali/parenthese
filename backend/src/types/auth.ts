@@ -6,7 +6,8 @@ export type UserJwtPayload = {
   sub: string
   jti: string
   userId: string
-  email: string
+  // null pour un compte provisoire (lib/provisional-account.ts)
+  email: string | null
   // Posé par la signature (secondes) : sert au refus des sessions antérieures à SESSIONS_NOT_BEFORE
   iat?: number
 }
@@ -48,7 +49,7 @@ export type AnyJwtPayload = UserJwtPayload | TreeAccessJwtPayload | MediaJwtPayl
 export type UserActor = {
   kind: 'user'
   userId: string
-  email: string
+  email: string | null
 }
 
 export type TreeAccessActor = {

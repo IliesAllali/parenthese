@@ -103,7 +103,7 @@ describe('inscription fermée', () => {
     const res = await app.inject({ method: 'GET', url: '/auth/options' })
 
     expect(res.statusCode).toBe(200)
-    expect(res.json()).toEqual({ registration: false, passwordLogin: true, oidc: null, signupPrompts: false })
+    expect(res.json()).toEqual({ registration: false, passwordLogin: true, oidc: null, provisional: false, signupPrompts: false })
   })
 
   it('instance neuve : le premier compte se crée, sous verrou', async () => {

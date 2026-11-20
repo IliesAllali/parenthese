@@ -1,8 +1,10 @@
 import { API_BASE_URL, apiRequest, bearer } from './client'
 
-export async function loginUser(email, password) {
+// provisionalToken : session d'un arbre provisoire (#251) ; l'arbre rejoint le compte retrouvé
+export async function loginUser(email, password, provisionalToken = '') {
   const data = await apiRequest('/auth/login', {
     method: 'POST',
+    ...(provisionalToken ? { headers: bearer(provisionalToken) } : {}),
     body: JSON.stringify({ email, password }),
   })
 
@@ -97,5 +99,22 @@ export async function exchangeOidcCode(code) {
   return apiRequest('/auth/oidc/exchange', {
     method: 'POST',
     body: JSON.stringify({ code }),
+  })
+}
+
+// « Créer mon arbre » sans compte : un compte provisoire, effacé au bout de 30 jours s'il n'est pas gardé (#251)
+export async function startProvisionalAccount(firstName) {
+  return apiRequest('/auth/provisional', {
+    method: 'POST',
+    body: JSON.stringify({ firstName: firstName || null }),
+  })
+}
+
+// « Gardez votre arbre » : le compte provisoire reçoit un email et un mot de passe, même compte, même arbre
+export async function keepProvisionalAccount(token, email, password) {
+  return apiRequest('/auth/keep', {
+    method: 'POST',
+    headers: bearer(token),
+    body: JSON.stringify({ email, password }),
   })
 }

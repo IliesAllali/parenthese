@@ -230,6 +230,8 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     if (!invitation) return reply.code(404).send({ error: 'invitation_invalid' })
     const account = await app.prisma.user.findUnique({ where: { id: user.userId }, select: { email: true } })
     if (!account) return reply.code(401).send({ error: 'authentication_required' })
+    // Compte provisoire : il garde d'abord son arbre (un email), l'invitation se vérifie sur l'adresse
+    if (!account.email) return reply.code(403).send({ error: 'invitation_email_mismatch' })
 
     const result = await acceptInvitation(app.prisma, invitation.id, user.userId, account.email)
     if (!result.ok) {

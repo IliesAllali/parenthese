@@ -200,11 +200,9 @@ export default {
   "Créer": "Anlegen",
   // Création d'un arbre (TreeCreationWizard)
   "Vous": "Du",
-  "Étape {step} sur 2": "Schritt {step} von 2",
-  "Comment s'appelle <em>votre famille</em> ?": "Wie heißt <em>deine Familie</em>?",
+  "Famille {name}": "Familie {name}",
+  "Mon arbre": "Mein Stammbaum",
   "Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.": "Dieser Name erscheint oben im Stammbaum und in dem Link, den du teilst.",
-  "Nom de la famille": "Familienname",
-  "Famille Martin": "Familie Schmidt",
   "Continuer": "Weiter",
   "Commencez <em>par vous</em>": "Fang <em>bei dir</em> an",
   "L'arbre « {name} » démarre avec votre fiche. Vous ajouterez les autres ensuite.": "Der Stammbaum „{name}“ beginnt mit deinem Profil. Die anderen fügst du danach hinzu.",

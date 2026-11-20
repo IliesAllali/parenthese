@@ -37,7 +37,7 @@ export default {
   "ou": "or",
   "Pas encore de compte ?": "Don't have an account yet?",
   "Cette instance n'accepte plus de nouveaux comptes. Demandez à la personne qui l'héberge.": "This instance no longer accepts new accounts. Ask the person who hosts it.",
-  "Se connecter avec {name}": "Sign in with {name}",
+  "Continuer avec {name}": "Continue with {name}",
   "Pour supprimer le compte, reconnectez-vous avec votre fournisseur de connexion, puis recommencez dans le quart d’heure.": "To delete the account, sign in again with your sign-in provider, then try again within fifteen minutes.",
   "Cette adresse n'est pas celle du compte.": "This isn't the account's email address.",
   "Votre adresse email, pour confirmer": "Your email address, to confirm",
@@ -239,4 +239,18 @@ export default {
   'Connexion avec {name} reliée à ce compte.': 'Sign-in with {name} is linked to this account.',
   'Ce compte du fournisseur est déjà relié à un autre compte Parenthèse.': 'This provider account is already linked to another Parenthèse account.',
   'Le lien pour relier le compte a expiré. Recommencez depuis votre compte.': 'The link to connect your account has expired. Start again from your account.',
+
+  // Arbre avant le compte, « Gardez votre arbre » (#251)
+  "Pour l'envoyer, <em>gardez votre arbre</em>": "To send it, <em>keep your tree</em>",
+  "Gardez <em>votre arbre</em>": "Keep <em>your tree</em>",
+  "Il faut un compte pour relire ce que la famille ajoute.": "You need an account to review what your family adds.",
+  "Sans compte, il reste sur cet appareil jusqu'au {date}.": "Without an account, it stays on this device until {date}.",
+  "Sans compte, il reste sur cet appareil pendant 30 jours.": "Without an account, it stays on this device for 30 days.",
+  "Plus tard": "Later",
+  "Garder et envoyer": "Keep and send",
+  "Garder mon arbre": "Keep my tree",
+  "Déjà un compte ?": "Already have an account?",
+  "Cette adresse a déjà un compte. Connectez-vous avec elle.": "This address already has an account. Sign in with it.",
+  "Pas encore d'arbre ?": "No tree yet?",
+  "Gardez votre arbre": "Keep your tree",
 }

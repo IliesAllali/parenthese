@@ -244,7 +244,7 @@ const childrenOrderSchema = z.object({
     .max(200),
 })
 
-function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string } | null {
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string | null } | null {
   if (!request.actor || request.actor.kind !== 'user') {
     reply.code(401).send({ error: 'authentication_required' })
     return null
@@ -458,7 +458,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         ...(membership.role === 'owner' ? {
           coManagers: coManagerRows
             .filter((row: { treeId: string }) => row.treeId === membership.tree.id)
-            .map((row: { user: { firstName: string | null; email: string } }) => row.user.firstName || row.user.email),
+            .map((row: { user: { firstName: string | null; email: string | null } }) => row.user.firstName || row.user.email || ''),
         } : {}),
       })
     }
@@ -518,7 +518,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const ownedTrees = await app.prisma.treeMembership.count({
       where: { userId: user.userId, role: 'owner', tree: { deletedAt: null } },
     })
-    if (ownedTrees >= MAX_TREES_PER_ACCOUNT) {
+    // Un compte provisoire fait un seul arbre : celui qu'il garde ensuite
+    if (ownedTrees >= (user.email === null ? 1 : MAX_TREES_PER_ACCOUNT)) {
       return reply.code(403).send({ error: 'tree_limit_reached' })
     }
 

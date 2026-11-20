@@ -84,6 +84,11 @@ export function getAccountErrorMessage(error) {
     return t("L'arbre n'a plus de place pour de nouveaux souvenirs. Son propriétaire peut en supprimer.")
   }
 
+  // Inscription, ou « Gardez votre arbre », avec l'adresse d'un compte qui existe déjà
+  if (errorCode === 'email_already_exists') {
+    return t('Cette adresse a déjà un compte. Connectez-vous avec elle.')
+  }
+
   if (errorCode === 'password_login_disabled') {
     return t('Sur cette instance, la connexion passe par le bouton du fournisseur.')
   }

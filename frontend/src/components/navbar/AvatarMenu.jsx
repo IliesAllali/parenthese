@@ -15,6 +15,9 @@ function AvatarMenu({
   phone = false,
   triggerRef,
   guest = false,
+  // Arbre fait avant le compte (#251) : l'en-tête mène à « Gardez votre arbre » ; ni déconnexion (l'arbre serait
+  // perdu) ni second arbre
+  provisional = false,
   onClose,
   userDisplayName,
   userEmail,
@@ -82,7 +85,7 @@ function AvatarMenu({
         <span className="navm-head-mono" aria-hidden="true">{initialOf(displayName)}</span>
         <span className="navm-text">
           <strong>{displayName}</strong>
-          <small>{userEmail || t('Mon compte')}</small>
+          <small>{provisional ? t('Gardez votre arbre') : userEmail || t('Mon compte')}</small>
         </span>
         <ChevronRight size={16} aria-hidden="true" className="navm-chevron" />
       </button>
@@ -121,7 +124,7 @@ function AvatarMenu({
             right={<Check size={16} aria-hidden="true" className="navm-check" />}
           />
         )}
-        <NavMenuItem icon={<Plus {...ICON} />} label={t('Créer un nouvel arbre')} onSelect={() => { onClose(); onCreateTree?.() }} />
+        {!provisional && <NavMenuItem icon={<Plus {...ICON} />} label={t('Créer un nouvel arbre')} onSelect={() => { onClose(); onCreateTree?.() }} />}
       </NavMenuGroup>
 
       {isOwner && onShareClick && (
@@ -134,8 +137,12 @@ function AvatarMenu({
 
       <NavMenuSep />
       {helpRow}
-      <NavMenuSep />
-      <NavMenuItem danger icon={<LogOut {...ICON} />} label={t('Se déconnecter')} onSelect={() => { onClose(); onLogout?.() }} />
+      {!provisional && (
+        <>
+          <NavMenuSep />
+          <NavMenuItem danger icon={<LogOut {...ICON} />} label={t('Se déconnecter')} onSelect={() => { onClose(); onLogout?.() }} />
+        </>
+      )}
     </>
   )
 

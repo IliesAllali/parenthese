@@ -6,13 +6,19 @@ import { t } from '../i18n/index.js'
 import { withEmphasis } from '../utils/richText.jsx'
 
 const INITIAL_STATE = {
-  treeName: '',
   selfFirstName: '',
   selfLastName: '',
   selfBirthYear: '',
   // « J'ai déjà un arbre » : fichier GEDCOM exporté d'un logiciel, importé à la création
   start: 'self',
   gedcomFile: null,
+}
+
+// Un seul écran avant l'arbre (#251) : « Commencez par vous ». L'arbre s'appelle « Famille » suivi du nom tapé, il se
+// renomme dans ses réglages ; un arbre importé s'appelle « Mon arbre ».
+function treeNameFor(form) {
+  if (form.start === 'import') return t('Mon arbre')
+  return t('Famille {name}', { name: form.selfLastName.trim() })
 }
 
 function TreeCreationWizard({
@@ -22,7 +28,6 @@ function TreeCreationWizard({
   onClose,
   onSubmit,
 }) {
-  const [step, setStep] = useState(1)
   const [form, setForm] = useState(INITIAL_STATE)
   const [error, setError] = useState('')
 
@@ -31,16 +36,11 @@ function TreeCreationWizard({
       return
     }
 
-    setStep(1)
     setError('')
-    setForm((current) => ({
-      ...INITIAL_STATE,
-      treeName: current.treeName || '',
-      selfFirstName: defaultFirstName || '',
-    }))
-  }, [defaultFirstName, visible])
+    setForm({ ...INITIAL_STATE, selfFirstName: defaultFirstName || '' })
+    // À l'ouverture seulement : le compte provisoire, né pendant la création, ne doit pas vider le formulaire
+  }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const canContinue = useMemo(() => form.treeName.trim().length >= 2 && !loading, [form.treeName, loading])
   const canCreate = useMemo(() => {
     if (loading) return false
     if (form.start === 'import') return Boolean(form.gedcomFile)
@@ -55,24 +55,18 @@ function TreeCreationWizard({
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  const handleContinue = () => {
-    if (!canContinue) return
-    setError('')
-    setStep(2)
-  }
-
   const handleCreate = async (event) => {
     event.preventDefault()
     if (!canCreate) return
 
     setError('')
     if (form.start === 'import') {
-      const submitError = await onSubmit({ treeName: form.treeName.trim(), gedcomFile: form.gedcomFile })
+      const submitError = await onSubmit({ treeName: treeNameFor(form), gedcomFile: form.gedcomFile })
       if (submitError) setError(submitError)
       return
     }
     const submitError = await onSubmit({
-      treeName: form.treeName.trim(),
+      treeName: treeNameFor(form),
       selfFirstName: form.selfFirstName.trim(),
       selfLastName: form.selfLastName.trim(),
       selfBirthYear: form.selfBirthYear.trim(),
@@ -86,140 +80,102 @@ function TreeCreationWizard({
   return (
     <div className="pz-overlay tree-wizard-overlay" role="dialog" aria-modal="true" aria-labelledby="treeWizardTitle">
       <div className="pz-modal tree-wizard-card">
-        {/* Où l'on en est, sans texte : deux barres pleine largeur (R19) */}
-        <div className="tw-steps" role="img" aria-label={t('Étape {step} sur 2', { step })}>
-          <span className={`tw-step ${step >= 1 ? 'is-on' : ''}`} />
-          <span className={`tw-step ${step >= 2 ? 'is-on' : ''}`} />
-        </div>
+        <form onSubmit={handleCreate} className="tw-form">
+          <div className="pz-tabs tw-start" role="tablist" aria-label={t('Point de départ')}>
+            <button type="button" role="tab" aria-selected={form.start === 'self'} className={`pz-tab ${form.start === 'self' ? 'is-active' : ''}`} onClick={() => updateField('start', 'self')}>
+              {t('Je pars de moi')}
+            </button>
+            <button type="button" role="tab" aria-selected={form.start === 'import'} className={`pz-tab ${form.start === 'import' ? 'is-active' : ''}`} onClick={() => updateField('start', 'import')}>
+              {t("J'ai déjà un arbre")}
+            </button>
+          </div>
 
-        {step === 1 ? (
-          <div className="tw-form">
-            <div className="pz-modal-head">
-              <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t("Comment s'appelle <em>votre famille</em> ?"))}</h2>
-            </div>
+          {form.start === 'import' ? (
+            <>
+              <div className="pz-modal-head">
+                <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Importez <em>votre arbre</em>'))}</h2>
+                <p className="pz-sub">{t('Heredis, Geneanet, Gramps, MyHeritage ou Ancestry savent exporter un fichier .ged. Parenthèse reprend les personnes, les liens et les dates, puis vous aide à retrouver les photos.')}</p>
+              </div>
+              <div className="pz-field">
+                <label htmlFor="wizardGedcom" className="tw-photo">
+                  <span className="tw-photo-icon" aria-hidden="true"><FileUp size={20} strokeWidth={1.8} /></span>
+                  <span className="tw-photo-text">
+                    <strong>{form.gedcomFile ? form.gedcomFile.name : t('Choisir le fichier .ged ou le zip')}</strong>
+                    <span>{form.gedcomFile ? t('Cliquez pour en choisir un autre') : t('Exporté depuis votre logiciel. Un zip avec le .ged et ses photos fait tout en une fois.')}</span>
+                  </span>
+                </label>
+                <input
+                  id="wizardGedcom"
+                  className="tw-photo-input"
+                  type="file"
+                  accept=".ged,.zip,.gdz,text/x-gedcom,text/plain,application/zip"
+                  onChange={(event) => updateField('gedcomFile', event.target.files?.[0] || null)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+          <div className="pz-modal-head">
+            <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Commencez <em>par vous</em>'))}</h2>
+          </div>
 
+          <div className="pz-row2">
             <div className="pz-field">
-              <label htmlFor="wizardTreeName">{t('Nom de la famille')}</label>
+              <label htmlFor="wizardSelfFirstName">{t('Votre prénom')}</label>
               <input
-                id="wizardTreeName"
+                id="wizardSelfFirstName"
                 type="text"
-                autoFocus
                 maxLength={120}
-                value={form.treeName}
-                onChange={(event) => updateField('treeName', event.target.value)}
-                onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); handleContinue() } }}
-                placeholder={t('Famille Martin')}
+                autoComplete="given-name"
+                value={form.selfFirstName}
+                onChange={(event) => updateField('selfFirstName', event.target.value)}
                 required
               />
             </div>
-
-            <div className="pz-modal-actions tw-actions">
-              <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
-                {t('Fermer')}
-              </button>
-              <button type="button" className="pz-btn pz-btn--primary" onClick={handleContinue} disabled={!canContinue}>
-                {t('Continuer')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleCreate} className="tw-form">
-            <div className="pz-tabs tw-start" role="tablist" aria-label={t('Point de départ')}>
-              <button type="button" role="tab" aria-selected={form.start === 'self'} className={`pz-tab ${form.start === 'self' ? 'is-active' : ''}`} onClick={() => updateField('start', 'self')}>
-                {t('Je pars de moi')}
-              </button>
-              <button type="button" role="tab" aria-selected={form.start === 'import'} className={`pz-tab ${form.start === 'import' ? 'is-active' : ''}`} onClick={() => updateField('start', 'import')}>
-                {t("J'ai déjà un arbre")}
-              </button>
-            </div>
-
-            {form.start === 'import' ? (
-              <>
-                <div className="pz-modal-head">
-                  <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Importez <em>votre arbre</em>'))}</h2>
-                  <p className="pz-sub">{t('Heredis, Geneanet, Gramps, MyHeritage ou Ancestry savent exporter un fichier .ged. Parenthèse reprend les personnes, les liens et les dates, puis vous aide à retrouver les photos.')}</p>
-                </div>
-                <div className="pz-field">
-                  <label htmlFor="wizardGedcom" className="tw-photo">
-                    <span className="tw-photo-icon" aria-hidden="true"><FileUp size={20} strokeWidth={1.8} /></span>
-                    <span className="tw-photo-text">
-                      <strong>{form.gedcomFile ? form.gedcomFile.name : t('Choisir le fichier .ged ou le zip')}</strong>
-                      <span>{form.gedcomFile ? t('Cliquez pour en choisir un autre') : t('Exporté depuis votre logiciel. Un zip avec le .ged et ses photos fait tout en une fois.')}</span>
-                    </span>
-                  </label>
-                  <input
-                    id="wizardGedcom"
-                    className="tw-photo-input"
-                    type="file"
-                    accept=".ged,.zip,.gdz,text/x-gedcom,text/plain,application/zip"
-                    onChange={(event) => updateField('gedcomFile', event.target.files?.[0] || null)}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-            <div className="pz-modal-head">
-              <h2 id="treeWizardTitle" className="pz-title">{withEmphasis(t('Commencez <em>par vous</em>'))}</h2>
-            </div>
-
-            <div className="pz-row2">
-              <div className="pz-field">
-                <label htmlFor="wizardSelfFirstName">{t('Votre prénom')}</label>
-                <input
-                  id="wizardSelfFirstName"
-                  type="text"
-                  maxLength={120}
-                  autoComplete="given-name"
-                  value={form.selfFirstName}
-                  onChange={(event) => updateField('selfFirstName', event.target.value)}
-                  required
-                />
-              </div>
-              <div className="pz-field">
-                <label htmlFor="wizardSelfLastName">{t('Votre nom')}</label>
-                <input
-                  id="wizardSelfLastName"
-                  type="text"
-                  maxLength={120}
-                  autoComplete="family-name"
-                  value={form.selfLastName}
-                  onChange={(event) => updateField('selfLastName', event.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
             <div className="pz-field">
-              <label htmlFor="wizardSelfBirthYear">{t('Année de naissance')} <span className="tw-optional">{t('facultatif')}</span></label>
+              <label htmlFor="wizardSelfLastName">{t('Votre nom')}</label>
               <input
-                id="wizardSelfBirthYear"
-                type="number"
-                inputMode="numeric"
-                min="1000"
-                max="2999"
-                value={form.selfBirthYear}
-                onChange={(event) => updateField('selfBirthYear', event.target.value)}
-                placeholder="1990"
+                id="wizardSelfLastName"
+                type="text"
+                maxLength={120}
+                autoComplete="family-name"
+                value={form.selfLastName}
+                onChange={(event) => updateField('selfLastName', event.target.value)}
+                required
               />
             </div>
+          </div>
 
-              </>
-            )}
+          <div className="pz-field">
+            <label htmlFor="wizardSelfBirthYear">{t('Année de naissance')} <span className="tw-optional">{t('facultatif')}</span></label>
+            <input
+              id="wizardSelfBirthYear"
+              type="number"
+              inputMode="numeric"
+              min="1000"
+              max="2999"
+              value={form.selfBirthYear}
+              onChange={(event) => updateField('selfBirthYear', event.target.value)}
+              placeholder="1990"
+            />
+          </div>
 
-            {error && <div className="pz-error tree-wizard-error" role="alert">{error}</div>}
+            </>
+          )}
 
-            <div className="pz-modal-actions tw-actions">
-              <button type="button" className="pz-btn pz-btn--ghost" onClick={() => setStep(1)} disabled={loading}>
-                {t('Retour')}
-              </button>
-              <button type="submit" className="pz-btn pz-btn--primary" disabled={!canCreate}>
-                <PzBusy busy={loading} busyLabel={form.start === 'import' ? t('Import en cours') : t("Création de l'arbre")}>
-                  {form.start === 'import' ? t('Importer mon arbre') : t('Créer mon arbre')}
-                </PzBusy>
-              </button>
-            </div>
-          </form>
-        )}
+          {error && <div className="pz-error tree-wizard-error" role="alert">{error}</div>}
+
+          <div className="pz-modal-actions tw-actions">
+            <button type="button" className="pz-btn pz-btn--ghost" onClick={onClose} disabled={loading}>
+              {t('Retour')}
+            </button>
+            <button type="submit" className="pz-btn pz-btn--primary" disabled={!canCreate}>
+              <PzBusy busy={loading} busyLabel={form.start === 'import' ? t('Import en cours') : t("Création de l'arbre")}>
+                {form.start === 'import' ? t('Importer mon arbre') : t('Créer mon arbre')}
+              </PzBusy>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
