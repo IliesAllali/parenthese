@@ -194,3 +194,10 @@ describe('messages lus par la famille', () => {
     expect(getAccountErrorMessage({ status: 400, message: 'photo_heic_unsupported' })).toContain('HEIC')
   })
 })
+
+describe('messages de l’import GEDCOM (cas limites du 20/11)', () => {
+  it('dit pourquoi un fichier est refusé, et quand un autre import occupe le serveur', () => {
+    expect(getAccountErrorMessage({ status: 413, payload: { error: 'gedcom_too_large' } })).toMatch(/trop gros/)
+    expect(getAccountErrorMessage({ status: 429, payload: { error: 'gedcom_import_busy' } })).toMatch(/Un autre import/)
+  })
+})
