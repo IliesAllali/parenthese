@@ -27,6 +27,8 @@ const { prismaMock } = vi.hoisted(() => ({
       update: vi.fn(),
     },
     tree: {
+      // Adresses déjà prises : aucune par défaut
+      findMany: vi.fn(async () => []),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
