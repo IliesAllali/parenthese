@@ -63,7 +63,7 @@ const AccessGate = ({
               {treeNotFound
                 ? t("Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé.")
                 : treeName
-                  ? t('Tapez le mot de passe reçu avec le lien. Pas besoin de compte pour regarder.')
+                  ? t("Touchez à nouveau le lien reçu dans votre message, il ouvre l'arbre. Ou tapez le mot de passe de l'arbre.")
                   : t('Entrez le code et le mot de passe reçus avec votre lien de partage.')}
             </p>
           </div>
@@ -92,7 +92,7 @@ const AccessGate = ({
                     t('Vous êtes sur votre compte.')
                   )}
                   <span className="access-gate-session-step">
-                    {t("Tapez une fois le mot de passe reçu avec le lien. Ensuite, l'arbre s'ouvrira directement.")}
+                    {t("Touchez le lien reçu, ou tapez une fois le mot de passe de l'arbre. Ensuite, l'arbre s'ouvrira directement.")}
                   </span>
                 </div>
               )}
@@ -114,7 +114,7 @@ const AccessGate = ({
               )}
 
               <div className="pz-field">
-                <label htmlFor="sharePassword">{t('Mot de passe reçu avec le lien')}</label>
+                <label htmlFor="sharePassword">{t("Mot de passe de l'arbre")}</label>
                 <input
                   id="sharePassword"
                   type="password"

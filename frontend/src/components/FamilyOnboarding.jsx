@@ -4,6 +4,7 @@ import { Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
 import { t } from '../i18n/index.js'
 import { readContributorName } from '../utils/contributorName.js'
+import { candidateLabels } from '../utils/selfMatch.js'
 import PortraitThumb from './PortraitThumb.jsx'
 
 // Accueil de la famille arrivée par le lien qui porte la clé (flow invité, validé le 20/11) : le nom de l'arbre,
@@ -56,10 +57,11 @@ export function FamilyWelcome({ visible, treeName, askName = true, onLook }) {
 }
 
 // « C'est vous, Claire ? » : posée sur l'arbre, la personne trouvée au centre et sélectionnée. Plusieurs personnes portent ce
-// prénom : chacune a son bouton, avec son année.
+// prénom : chacune a son bouton, avec son nom et son année (candidateLabels).
 // anchor : sur ordinateur, le bas du prénom de la personne trouvée ; la question se pose juste dessous
-export function SelfAsk({ candidates = [], anchor = null, onConfirm, onDecline }) {
+export function SelfAsk({ candidates = [], anchor = null, parentsOf, onConfirm, onDecline }) {
   if (!candidates.length) return null
+  const labels = candidateLabels(candidates, parentsOf)
   const single = candidates.length === 1 ? candidates[0] : null
   const anchored = single && anchor
   return (
@@ -75,9 +77,9 @@ export function SelfAsk({ candidates = [], anchor = null, onConfirm, onDecline }
       <div className="fo-self-actions">
         {single ? (
           <button type="button" className="pz-btn pz-btn--primary" onClick={() => onConfirm?.(single)}>{t("C'est moi")}</button>
-        ) : candidates.map((person) => (
+        ) : candidates.map((person, index) => (
           <button key={person.id} type="button" className="pz-btn pz-btn--secondary" onClick={() => onConfirm?.(person)}>
-            {person.firstName}{person.birthYear ? ` · ${person.birthYear}` : ''}
+            {labels[index]}
           </button>
         ))}
         <button type="button" className="pz-btn pz-btn--secondary" onClick={onDecline}>{t('Non')}</button>

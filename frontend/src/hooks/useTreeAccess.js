@@ -161,6 +161,8 @@ export function useTreeAccess() {
       return access
     } catch (error) {
       setGateError(getShareErrorMessage(error))
+      // Le lien à clé distingue un mot de passe refusé (401) d'une panne ou d'un « trop de tentatives »
+      if (options.rethrow) throw error
       return null
     } finally {
       setGateLoading(false)

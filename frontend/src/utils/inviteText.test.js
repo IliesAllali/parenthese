@@ -38,6 +38,14 @@ describe('lien porteur de la clé', () => {
     expect(buildShareLink('https://app.test/arbre/famille', '')).toBe('https://app.test/arbre/famille')
   })
 
+  it('encode aussi la ponctuation que les messageries sortent du lien en fin d’adresse', () => {
+    const link = buildShareLink('https://app.test/arbre/famille', "soleil(2024)!.~*'")
+    expect(link).toBe('https://app.test/arbre/famille#cle=soleil%282024%29%21%2E%7E%2A%27')
+    globalThis.window = { history: { state: null, replaceState: () => {} } }
+    expect(readShareKey({ pathname: '/arbre/famille', search: '', hash: link.slice(link.indexOf('#')) })).toBe("soleil(2024)!.~*'")
+    delete globalThis.window
+  })
+
   it("lit la clé une fois et la retire de la barre d'adresse", () => {
     const calls = []
     globalThis.window = { history: { state: null, replaceState: (...args) => calls.push(args[2]) } }

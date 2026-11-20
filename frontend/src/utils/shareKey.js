@@ -6,7 +6,13 @@ const KEY_PARAM = 'cle'
 
 export function buildShareLink(url, password) {
   if (!url) return ''
-  return password ? `${url}#${KEY_PARAM}=${encodeURIComponent(password)}` : url
+  return password ? `${url}#${KEY_PARAM}=${encodeKey(password)}` : url
+}
+
+// encodeURIComponent laisse ! ' ( ) * . ~ tels quels ; en fin de lien, les messageries les sortent du lien
+// (« soleil2024! » devient « soleil2024 »). Encodés aussi, le lien finit toujours par un caractère sûr.
+function encodeKey(password) {
+  return encodeURIComponent(password).replace(/[!'()*.~]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 }
 
 // Lue une fois au chargement, puis retirée de la barre d'adresse : elle ne reste ni dans l'historique ni dans

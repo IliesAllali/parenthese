@@ -131,6 +131,18 @@ describe.skipIf(!TEST_DB)('compte provisoire, vraie base', () => {
     expect((await call('GET', '/auth/me/last-tree', session)).body.lastTree.treeId).toBe(treeId)
   })
 
+  it('se connecter depuis l’arbre provisoire : les arbres de la famille ouverts par leur lien suivent', async () => {
+    const family = await provisionalTree('odile')
+    const registered = await call('POST', '/auth/register', undefined, { email: mail('cousin'), password: 'mot-de-passe-solide', firstName: 'Cousin' })
+    const { token } = await provisionalTree('paul')
+    expect((await call('POST', `/trees/${family.treeId}/access/unlock`, token, { password: 'partage-demo-1' })).status).toBe(200)
+
+    const login = await call('POST', '/auth/login', token, { email: mail('cousin'), password: 'mot-de-passe-solide' })
+    expect(login.status).toBe(200)
+    const shared = await prisma.userTreeAccess.findMany({ where: { userId: registered.body.user.id }, select: { treeId: true } })
+    expect(shared.map((access) => access.treeId)).toContain(family.treeId)
+  })
+
   describe('par le fournisseur (Google)', () => {
     let address = 0
     async function keepWithProvider(token: string, identity: { subject: string; email: string; emailVerified: boolean; firstName?: string | null }) {

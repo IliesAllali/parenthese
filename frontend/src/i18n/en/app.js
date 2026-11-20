@@ -90,7 +90,6 @@ export default {
   // utils/errorMessages.js
   'Mot de passe invalide ou accès expiré.': 'Invalid password or expired access.',
   'Trop de tentatives. Réessayez dans une minute.': 'Too many attempts. Try again in a minute.',
-  'Connexion backend impossible. Vérifiez API/DB puis réessayez.': 'Could not reach the server. Check the API and database, then try again.',
   'Mot de passe incorrect.': 'Incorrect password.',
   'Session expirée. Reconnectez-vous puis réessayez.': 'Your session has expired. Sign in again, then try again.',
   'Saisissez votre mot de passe actuel.': 'Enter your current password.',
@@ -112,7 +111,6 @@ export default {
   'Accès refusé pour cet arbre.': 'Access denied for this tree.',
   'Ressource introuvable.': 'Not found.',
   'Conflit détecté (email ou slug déjà utilisé).': 'Conflict detected (email or slug already in use).',
-  "Erreur backend. Vérifiez que l'API et la base sont lancées.": 'Server error. Check that the API and database are running.',
   'Le serveur ne répond pas. Vérifiez la connexion et réessayez.': 'The server is not responding. Check your connection and try again.',
   // App.jsx : enregistrement automatique en quittant une fiche
   'Modifications de {name} enregistrées': 'Changes to {name} saved',

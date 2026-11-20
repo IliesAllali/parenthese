@@ -3,6 +3,7 @@ import { uploadPersonMedia, reorderPersonMedia, deletePersonMedia, updatePersonM
 import { getPersonMedias } from '../data/mockData'
 import { fileToBase64, getAccountErrorMessage } from '../utils/errorMessages'
 import { getUploadMimeType, resolveUploadMediaType, validateMediaFile } from '../utils/mediaUpload'
+import { prepareImageForUpload } from '../utils/photoImport.js'
 import { readContributorName, saveContributorName } from '../utils/contributorName'
 import { t } from '../i18n/index.js'
 
@@ -100,6 +101,8 @@ export function useMediaManager({
 
     const resolvedType = resolveUploadMediaType(file, mediaType)
     const resolvedCitationText = String(citationText || caption || '').trim()
+    // Photo de téléphone trop lourde (souvent plus de 5 Mo) : réduite avant l'envoi, comme les portraits
+    if (resolvedType === 'photo') file = await prepareImageForUpload(file)
     const validationError = validateMediaFile(file, resolvedType, { citationText: resolvedCitationText })
     if (validationError) {
       setMediaManagerState((current) => ({
@@ -178,6 +181,7 @@ export function useMediaManager({
   const uploadMomentFile = async (personId, file, { lifeEventId, caption = null, submittedByLabel = null } = {}) => {
     if (!canUploadMedia || !treeContext.treeId || !treeContext.accessToken) throw new Error(t('Action non autorisée.'))
     const type = resolveUploadMediaType(file, 'auto')
+    if (type === 'photo') file = await prepareImageForUpload(file)
     const validationError = validateMediaFile(file, type, {})
     if (validationError) throw new Error(validationError)
     try {

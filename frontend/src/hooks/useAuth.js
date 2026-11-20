@@ -13,13 +13,11 @@ import {
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
 import * as errorMessages from '../utils/errorMessages'
-import { t } from '../i18n/index.js'
 import { clearAccountLocalData } from '../utils/localHygiene.js'
 
 const USER_TOKEN_STORAGE_KEY = 'user_auth_token'
 const USER_PROFILE_STORAGE_KEY = 'user_auth_profile'
 const getAccountErrorMessage = errorMessages.getAccountErrorMessage
-  || (() => t("Erreur backend. Vérifiez que l'API et la base sont lancées."))
 
 function saveUserProfile(user) {
   if (!user) {

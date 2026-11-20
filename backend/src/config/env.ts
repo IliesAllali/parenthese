@@ -51,7 +51,9 @@ const envSchema = z.object({
   // une fois. Avancer cette date (ISO 8601) déconnecte tout le monde, sans changer JWT_SECRET (qui chiffre aussi
   // les mots de passe de partage lisibles).
   SESSIONS_NOT_BEFORE: z.coerce.date().default(new Date('2026-10-01T00:00:00Z')),
-  JWT_TREE_ACCESS_EXPIRES_IN: z.string().default('24h'),
+  // Accès d'un proche par le mot de passe ou le lien à clé. 24 h obligeait à rouvrir le lien chaque lendemain, alors que
+  // l'adresse gardée par le navigateur n'a plus la clé. Changer le mot de passe fait tomber tous ces accès (accessVersion).
+  JWT_TREE_ACCESS_EXPIRES_IN: z.string().default('30d'),
   CORS_ORIGIN: z
     .string()
     .default('http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176')
