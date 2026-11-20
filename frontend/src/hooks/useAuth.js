@@ -12,12 +12,11 @@ import {
   updateLastOpenedTree,
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
-import * as errorMessages from '../utils/errorMessages'
+import { getAccountDeletionErrorMessage, getAccountErrorMessage } from '../utils/errorMessages'
 import { clearAccountLocalData } from '../utils/localHygiene.js'
 
 const USER_TOKEN_STORAGE_KEY = 'user_auth_token'
 const USER_PROFILE_STORAGE_KEY = 'user_auth_profile'
-const getAccountErrorMessage = errorMessages.getAccountErrorMessage
 
 function saveUserProfile(user) {
   if (!user) {
@@ -196,13 +195,13 @@ export function useAuth() {
   const handleDeleteAccount = async (confirmation) => {
     const token = userAuth.token
     if (!token) {
-      return errorMessages.getAccountDeletionErrorMessage({ status: 401 })
+      return getAccountDeletionErrorMessage({ status: 401 })
     }
 
     try {
       await deleteAccount(token, confirmation)
     } catch (error) {
-      return errorMessages.getAccountDeletionErrorMessage(error, confirmation)
+      return getAccountDeletionErrorMessage(error, confirmation)
     }
 
     clearStoredUserToken()

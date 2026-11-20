@@ -1,4 +1,4 @@
-import { surnameLabel } from '../utils/personName.js'
+import { firstNameLabel, fullNameLabel } from '../utils/personName.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
@@ -72,7 +72,7 @@ export function SelfAsk({ candidates = [], anchor = null, parentsOf, onConfirm, 
       aria-labelledby="foSelfTitle"
     >
       <h2 id="foSelfTitle" className="fo-self-title">
-        {single ? t("C'est vous, {name} ?", { name: single.firstName }) : t("C'est vous ?")}
+        {single ? t("C'est vous, {name} ?", { name: firstNameLabel(single) }) : t("C'est vous ?")}
       </h2>
       <div className="fo-self-actions">
         {single ? (
@@ -167,7 +167,7 @@ export function SouvenirPicker({ visible, persons = [], rootPersonId = null, onP
                   {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <span>{person.firstName?.[0] || '?'}</span>}
                 </span>
                 <span className="fo-name">
-                  <strong>{person.firstName} {surnameLabel(person.lastName)}</strong>
+                  <strong>{fullNameLabel(person)}</strong>
                   {lifeYears(person) && <small>{lifeYears(person)}</small>}
                 </span>
               </button>

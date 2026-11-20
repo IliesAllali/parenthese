@@ -118,3 +118,21 @@ describe('frise de vie', () => {
     expect(describeDate('1920-01-01', null, null)).toBe('')
   })
 })
+
+describe('frise de vie, proches sans prénom ni nom (#255)', () => {
+  it('nomme « Prénom inconnu » au lieu de laisser un blanc, et garde le lien vers la fiche', () => {
+    const anon = { id: 20, firstName: '', lastName: '', birthYear: 1950, deathYear: 1960 }
+    const entries = buildLifeTimeline(
+      { id: 1, firstName: 'Rose', birthYear: 1925, deathYear: 2000 },
+      { children: [anon], unions: [{ id: 'u1', partner: { id: 21, firstName: '', lastName: '' }, startYear: 1948, endYear: 1970 }] },
+      null,
+    )
+    const titles = entries.map((e) => e.title)
+    expect(titles).toContain('Naissance de Prénom inconnu')
+    expect(titles).toContain('Décès de Prénom inconnu')
+    expect(titles).toContain('Mariage avec Prénom inconnu')
+    expect(titles).toContain('Fin de l’union avec Prénom inconnu')
+    expect(titles.some((title) => /de $|avec $/.test(title))).toBe(false)
+    expect(entries.find((e) => e.title === 'Naissance de Prénom inconnu').link).toEqual({ personId: 20, name: 'Prénom inconnu' })
+  })
+})
