@@ -328,3 +328,58 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* Le crayon (#245) : corriger, à côté du « + » qui ajoute. En clair, pour que le « + » reste le geste premier */
+.nav-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pz-line-soft);
+  color: var(--pz-ink);
+  font: 500 14px/1 var(--pz-sans);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 140ms var(--pz-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-edit--label { padding: 0 16px 0 14px; }
+.nav-edit:active { transform: scale(0.96); }
+.nav-edit:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 3px; }
+@media (hover: hover) and (pointer: fine) { .nav-edit:hover { background: #e9e3da; } }
+.nav-edit.is-editing { background: var(--pz-a100); color: var(--pz-a700); box-shadow: 0 0 0 4px var(--pz-a50); }
+
+/* Flèche d'accueil, une seule fois : une bulle au-dessus du « + », sa pointe sur lui */
+.nav-add-wrap { position: relative; display: inline-flex; }
+.nav-add-hint {
+  position: absolute;
+  /* La pointe (29 px du bord droit) tombe au milieu du « + », quelle que soit sa largeur */
+  right: calc(50% - 29px);
+  bottom: calc(100% + 16px);
+  width: max-content;
+  max-width: min(190px, calc(100vw - 40px));
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--pz-r-m);
+  background: var(--pz-ink);
+  color: #fff;
+  font: 400 14.5px/1.35 var(--pz-sans);
+  text-align: left;
+  cursor: pointer;
+}
+.nav-add-hint::after {
+  content: '';
+  position: absolute;
+  right: 23px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}

@@ -1,10 +1,23 @@
 /* Création d'un arbre en deux étapes (DA terracotta) : la fenêtre vient de pz.css */
-.tw-steps { display: flex; align-items: center; gap: 6px; }
-.tw-step { width: 26px; height: 4px; border-radius: 4px; background: var(--pz-line); transition: background-color 240ms ease; }
-.tw-step.is-on { background: var(--pz-a500); }
-.tw-steps .pz-small { margin-left: 6px; }
+/* Les deux étapes ont la même hauteur : « Retour » et « Créer mon arbre » restent collés en bas, au même endroit,
+   près du pouce, quoi qu'il y ait au-dessus (R20) */
+.pz-modal.tree-wizard-card { display: flex; flex-direction: column; min-height: min(560px, calc(100dvh - 32px)); }
+@media (max-width: 560px) { .pz-modal.tree-wizard-card { min-height: min(640px, 82dvh); } }
 
-.tw-form { display: grid; gap: 18px; }
+/* Où l'on en est : deux barres pleine largeur, sans texte (R19) */
+.tw-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tw-step { height: 4px; border-radius: 4px; background: var(--pz-line); }
+.tw-step.is-on { background: var(--pz-a500); }
+
+.tw-form { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+.tw-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--pz-line-soft);
+  background: var(--pz-surface);
+}
 .tw-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
 
 .tw-photo-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

@@ -125,3 +125,20 @@
 .apn-duplicate { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--pz-a200); border-radius: 10px; background: var(--pz-a50); }
 .apn-duplicate-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; font: 500 13.5px var(--pz-sans); color: var(--pz-ink); }
 .apn-duplicate-hint { margin: 0; font: 400 12.5px var(--pz-sans); color: var(--pz-muted); }
+
+/* Formulaire court (#245) : « Plus de détails » est un lien, il déplie les autres champs sur place */
+.apn-more {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pz-a700);
+  font: 500 14px/1.2 var(--pz-sans);
+  cursor: pointer;
+}
+.apn-more:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; border-radius: 4px; }
+@media (hover: hover) and (pointer: fine) { .apn-more:hover { text-decoration: underline; text-underline-offset: 3px; } }
+.apn-error-text--field { margin: 6px 0 0; }
+/* Le titre du formulaire court tient sur une ligne au téléphone (« Ajouter la mère de Lucie ») */
+@media (max-width: 768px) { .apn-head .pz-title { font-size: 26px; text-wrap: pretty; } }

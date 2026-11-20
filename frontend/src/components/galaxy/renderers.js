@@ -105,6 +105,8 @@ function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData, s
 const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
 // Proposé, pas encore relu (utils/ghosts.js) : pointillés terracotta, portrait délavé, étiquette au-dessus
 const GHOST = { color: '#D2694A', dash: [5, 4], wash: 'rgba(251, 250, 247, 0.55)', annotationAlpha: 0.45 }
+// Case à remplir (utils/kinSlots.js) : un parent ou un grand-parent qui manque, en pointillés gris avec un « ? »
+const SLOT = { color: COLORS.placeholderBorder, dash: [4, 4], text: '#9A958F' }
 const GHOST_LABELS = { draft: () => t('Brouillon'), sent: () => t('En attente'), pending: () => t('Proposé') }
 // Ligne de la fratrie : sous les prénoms et années des parents, au-dessus des enfants
 const BUS_DY = 100
@@ -192,7 +194,7 @@ function strokeCouple(ctx, meta, points, p1Pos, p2Pos, p1R, p2R, progress) {
 // ============================================================
 export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomData, entrance, entranceActive, elapsed, view = null) {
   coupleBarMeta.forEach((meta) => {
-    const { elkId, p1Key, p2Key, virtual, ghost } = meta
+    const { elkId, p1Key, p2Key, virtual, ghost, slot } = meta
     const p1Pos = posMap.get(p1Key)
     const p2Pos = posMap.get(p2Key)
     const unionPos = posMap.get(elkId)
@@ -221,9 +223,9 @@ export function drawCoupleLinks(ctx, coupleBarMeta, posMap, nodeMap, nodeRandomD
       p1PosKeyed, p2PosKeyed, unionPos, p1R, p2R, nodeRandomData, nodeMap.get(elkId)?._compact
     )
 
-    ctx.strokeStyle = ghost ? GHOST.color : virtual ? COLORS.linkUnknown : FIL.color
+    ctx.strokeStyle = slot ? SLOT.color : ghost ? GHOST.color : virtual ? COLORS.linkUnknown : FIL.color
     ctx.lineWidth = FIL.width
-    ctx.setLineDash(ghost ? GHOST.dash : virtual ? [4, 4] : [])
+    ctx.setLineDash(slot ? SLOT.dash : ghost ? GHOST.dash : virtual ? [4, 4] : [])
     ctx.lineCap = 'round'
     ctx.globalAlpha = coupleProgress
 
@@ -349,17 +351,21 @@ export function drawFiliations(ctx, edges, posMap, nodeMap, nodeRandomData, entr
     }
     // Les enfants d'une même union (même type de filiation) forment une seule fratrie, tracée d'un coup
     // Un enfant proposé a sa propre ligne, en pointillés, par-dessus celle de ses frères et sœurs
-    const ghost = Boolean(edge._ghost || targetNode?._data?.ghost)
-    const key = `${sourceId}|${pType}|${ghost ? 'g' : ''}`
-    if (!sibships.has(key)) sibships.set(key, { sourceId, sourcePos, pType, ghost, items: [], progress: 0 })
+    const slot = Boolean(edge._slot)
+    const ghost = !slot && Boolean(edge._ghost || targetNode?._data?.ghost)
+    const key = `${sourceId}|${pType}|${slot ? 's' : ghost ? 'g' : ''}`
+    if (!sibships.has(key)) sibships.set(key, { sourceId, sourcePos, pType, ghost, slot, items: [], progress: 0 })
     const sib = sibships.get(key)
     sib.items.push({ cx: targetPos.cx, cy: targetPos.cy - childR })
     sib.progress += edgeProgress
   })
 
-  for (const { sourceId, sourcePos, pType, ghost, items, progress } of sibships.values()) {
+  for (const { sourceId, sourcePos, pType, ghost, slot, items, progress } of sibships.values()) {
     // Adoption : trait plein comme une filiation de naissance (le mode d'adoption se dit dans la fiche)
-    if (ghost) {
+    if (slot) {
+      ctx.setLineDash(SLOT.dash)
+      ctx.strokeStyle = SLOT.color
+    } else if (ghost) {
       ctx.setLineDash(GHOST.dash)
       ctx.strokeStyle = GHOST.color
     } else if (pType === 'inconnu') {
@@ -1270,13 +1276,15 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
       }
     }
 
-    if (node._type === 'person') {
+    if (node._type === 'person' && node._data?.slot) {
+      drawSlotNode(ctx, node, pos, nodeProgress, view)
+    } else if (node._type === 'person') {
       drawPersonNode(ctx, node, pos, nodeProgress, renderState)
       if (node._data?.ghost) drawGhostMark(ctx, node, pos, nodeProgress, view)
       else if (renderState.ghostPatches?.has(String(node._data?.id))) drawPatchMark(ctx, node, pos, nodeProgress, renderState.ghostPatches.get(String(node._data.id)))
     } else if (node._type === 'union') {
       ctx.globalAlpha = nodeProgress
-      ctx.fillStyle = FIL.dot
+      ctx.fillStyle = node._data?.slot ? SLOT.color : FIL.dot
       ctx.beginPath()
       ctx.arc(cx, cy, FIL.dotR * nodeProgress, 0, Math.PI * 2)
       ctx.fill()
@@ -1312,6 +1320,38 @@ export function drawNodes(ctx, layoutData, posMap, entrance, entranceActive, ela
     }
   })
   drawConfettiBursts(ctx)
+}
+
+// Case à remplir : un cadre en pointillés gris, un « ? » au milieu, le lien dessous (« Père », « Grand-mère »)
+const SLOT_LABELS = {
+  1: { father: () => t('Père'), mother: () => t('Mère'), parent: () => t('Parent') },
+  2: { father: () => t('Grand-père'), mother: () => t('Grand-mère'), parent: () => t('Grand-parent') },
+}
+function drawSlotNode(ctx, node, pos, progress, view) {
+  const half = PERSON_R + 4
+  ctx.save()
+  ctx.globalAlpha = progress
+  ctx.translate(pos.cx, pos.cy)
+  ctx.strokeStyle = SLOT.color
+  ctx.lineWidth = 1
+  ctx.setLineDash([4, 3])
+  ctx.beginPath()
+  ctx.roundRect(-half, -half, half * 2, half * 2, 3)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.fillStyle = SLOT.text
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = '400 22px "DM Sans", system-ui, sans-serif'
+  ctx.fillText('?', 0, 1)
+  if ((view?.scale ?? 1) >= LOD_LABEL_FADE_OUT) {
+    const { generation = 1, role = 'parent' } = node._data.slot
+    const label = (SLOT_LABELS[generation] || SLOT_LABELS[1])[role] || SLOT_LABELS[1].parent
+    ctx.font = '400 12px "DM Sans", system-ui, sans-serif'
+    ctx.textBaseline = 'top'
+    ctx.fillText(label(), 0, half + 10)
+  }
+  ctx.restore()
 }
 
 // Personne proposée : portrait délavé, cercle en pointillés, étiquette (« Proposé », « En attente », « Brouillon »)

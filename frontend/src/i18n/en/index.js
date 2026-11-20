@@ -8,6 +8,7 @@ import photos from './photos.js'
 import souvenir from './souvenir.js'
 import gestion from './gestion.js'
 import recherche from './recherche.js'
+import proches from './proches.js'
 
 export default {
   ...app,
@@ -19,5 +20,6 @@ export default {
   ...souvenir,
   ...gestion,
   ...recherche,
+  ...proches,
 }
 

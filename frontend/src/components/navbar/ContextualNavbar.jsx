@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  Brush, ImagePlus, Plus, UserPlus, User, MousePointer2, Pencil, Type, Star, Trash2, Image, ArrowLeft, Search, TreeDeciduous,
+  Brush, ImagePlus, Plus, User, MousePointer2, Pencil, Type, Star, Trash2, Image, ArrowLeft, Search, TreeDeciduous,
 } from 'lucide-react'
-import { NavMenu, NavMenuGroup, NavMenuItem } from './NavMenu'
 import AvatarMenu from './AvatarMenu'
+import KinAddMenu from './KinAddMenu'
 import DrawingOptions from '../annotations/DrawingOptions'
 import TextOptions from '../annotations/TextOptions'
 import StickerPicker from '../annotations/StickerPicker'
@@ -12,7 +12,6 @@ import { t } from '../../i18n/index.js'
 import { PHONE_QUERY } from '../../utils/sheetDrag'
 import './ContextualNavbar.css'
 import { initialOf } from '../../utils/initial.js'
-import Kbd from '../Kbd.jsx'
 import PortraitThumb from '../PortraitThumb.jsx'
 
 const ANNOT_TOOLS = [
@@ -30,6 +29,8 @@ const ANNOT_MENU = [
   { id: 'sticker', label: t('Poser un sticker'), Icon: Star },
   { id: 'photo', label: t('Poser une photo'), Icon: Image },
 ]
+
+const ADD_HINT_KEY = 'pz-astuce-ajouter'
 
 // Téléphone (ou pointeur grossier) : le « + » et le compte s'ouvrent en feuille, sinon en popover (PHONE_QUERY, partagé avec la fiche)
 const ICON = { size: 18, strokeWidth: 2, 'aria-hidden': true }
@@ -61,6 +62,13 @@ function ContextualNavbar({
   onSettingsClick,
   onLogout,
   annotationTools = null,
+  // « + » (#245) : la personne dont on ajoute un proche, les liens encore possibles, la liste « Pour qui ? »
+  kinTarget = null,
+  kinChoices = null,
+  getKinPeople = null,
+  onKinAdd = null,
+  onKinTargetChange = null,
+  addHint = false,
 }) {
   // Un seul menu ouvert à la fois : 'add' (le +), 'account' (le rond), ou null
   const [openMenu, setOpenMenu] = useState(null)
@@ -69,6 +77,20 @@ function ContextualNavbar({
   const [isPhone, setIsPhone] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches
   )
+
+  // Flèche d'accueil « Pour ajouter quelqu'un, c'est ici » : une seule fois, jusqu'au premier appui sur le « + »
+  const [hintOpen, setHintOpen] = useState(() => {
+    try { return addHint && localStorage.getItem(ADD_HINT_KEY) !== '1' } catch { return false }
+  })
+  useEffect(() => {
+    if (!addHint || hintOpen) return
+    try { if (localStorage.getItem(ADD_HINT_KEY) !== '1') setHintOpen(true) } catch { /* stockage indisponible : pas de flèche */ }
+  }, [addHint]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!hintOpen) return
+    try { localStorage.setItem(ADD_HINT_KEY, '1') } catch { /* stockage indisponible */ }
+  }, [hintOpen])
+  const closeHint = () => setHintOpen(false)
 
   const navRef = useRef(null)
   const addBtnRef = useRef(null)
@@ -144,11 +166,6 @@ function ContextualNavbar({
     }
     scrollWhenReady(20)
   }
-  // Chaque action ferme le menu avant de se lancer
-  const run = (action) => () => {
-    closeMenus()
-    action?.()
-  }
 
   // Création de compte dans l'app
   // via : « ajouter » (menu Ajouter de la famille) ou « compte » (menu du compte)
@@ -191,42 +208,31 @@ function ContextualNavbar({
         ? t('Modifier la démo')
         : t("Modifier l'arbre")
 
-  let addGroups = []
-  if (showMobileAnnot) {
-    addGroups = [{
-      label: t('Ajouter'),
-      items: [
-        { key: 'person', icon: <UserPlus {...ICON} />, label: t('Une personne'), onSelect: onAddPersonClick },
-        ...ANNOT_MENU.map((tool) => ({
-          key: tool.id,
-          icon: <tool.Icon {...ICON} />,
-          label: tool.label,
-          onSelect: () => { setAnnotMode(true); handleAnnotToolClick(tool.id) },
-        })),
-      ],
-    }]
-  } else {
-    const addItems = []
-    if (onAddSouvenirClick) {
-      addItems.push({ key: 'souvenir', icon: <ImagePlus {...ICON} />, label: t('Un souvenir'), sub: t('photo, vidéo, voix, document'), onSelect: onAddSouvenirClick })
-    }
-    if (isFamily || isOwner || isDemo) {
-      addItems.push({ key: 'person', icon: <UserPlus {...ICON} />, label: t('Une personne'), onSelect: onAddPersonClick })
-      addItems.push({ key: 'word', icon: <Brush {...ICON} />, label: t("Un mot ou un dessin sur l'arbre"), onSelect: onEditClick })
-    }
-    const fixItems = []
-    if (isFamily) {
-      fixItems.push({ key: 'edit', icon: <Pencil {...ICON} />, label: editLabel, sub: editModeActive ? null : t('dates, noms, liens, le propriétaire relit'), onSelect: onEditClick, shortcut: 'e' })
-    } else if (isOwner || isDemo) {
-      fixItems.push({ key: 'edit', icon: <Pencil {...ICON} />, label: editLabel, onSelect: onEditClick, shortcut: 'e' })
-    }
-    if (addItems.length) addGroups.push({ label: t('Ajouter'), items: addItems })
-    if (fixItems.length) addGroups.push({ label: t('Corriger'), items: fixItems })
-    // Chercher quelqu'un dans des sources publiques (décès INSEE, archives, presse) : panneau à droite de l'arbre
-    if (onSearchClick) {
-      addGroups.push({ label: t('Chercher'), items: [{ key: 'search', icon: <Search {...ICON} />, label: t("Quelqu'un ailleurs"), sub: t('décès depuis 1970, archives, presse'), onSelect: onSearchClick }] })
-    }
+  // Téléphone en modification : les outils de dessin passent dans le menu « + », sous les quatre liens
+  const annotGroups = showMobileAnnot ? [{
+    label: kinTarget ? t('Autre chose') : t('Ajouter'),
+    items: ANNOT_MENU.map((tool) => ({
+      key: tool.id,
+      icon: <tool.Icon {...ICON} />,
+      label: tool.label,
+      onSelect: () => { setAnnotMode(true); handleAnnotToolClick(tool.id) },
+    })),
+  }] : []
+
+  // Le « + » ajoute, le crayon corrige (#245) : deux boutons, chacun son geste
+  const canAdd = isFamily || isOwner || isDemo
+  const otherItems = []
+  if (onAddSouvenirClick) {
+    otherItems.push({ key: 'souvenir', icon: <ImagePlus {...ICON} />, label: t('Un souvenir'), sub: t('photo, vidéo, voix, document'), onSelect: onAddSouvenirClick })
   }
+  if (canAdd) {
+    otherItems.push({ key: 'word', icon: <Brush {...ICON} />, label: t("Un mot ou un dessin sur l'arbre"), onSelect: () => { if (!editModeActive) onEditClick?.() } })
+  }
+  // Chercher quelqu'un dans des sources publiques (décès INSEE, archives, presse) : panneau à droite de l'arbre
+  if (onSearchClick) {
+    otherItems.push({ key: 'search', icon: <Search {...ICON} />, label: t("Quelqu'un ailleurs"), sub: t('décès depuis 1970, archives, presse'), onSelect: onSearchClick })
+  }
+  const otherGroups = otherItems.length ? [{ label: canAdd && kinTarget ? t('Autre chose') : t('Ajouter'), items: otherItems }] : []
   // La famille sans compte trouve « Faire le mien » en bas du menu qu'elle ouvre, le menu Ajouter, et la ligne quitte
   // le menu du compte. Seulement si l'instance invite à créer son arbre (SIGNUP_PROMPTS).
   const ownTreeInAddMenu = signupPrompts && canRegister && isFamily && !authenticated && !showMobileAnnot
@@ -236,27 +242,24 @@ function ContextualNavbar({
   const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('embed')
   const demoSignupInBar = signupPrompts && canRegister && isDemo && !isEmbed && !authenticated && !showMobileAnnot
   if (ownTreeInAddMenu) {
-    addGroups.push({ label: t('Votre famille'), items: [{ key: 'own-tree', icon: <TreeDeciduous {...ICON} />, label: t('Faire le mien'), sub: t('un arbre pour votre famille, gratuit'), onSelect: () => handleCreateAccountClick('ajouter') }] })
+    otherGroups.push({ label: t('Votre famille'), items: [{ key: 'own-tree', icon: <TreeDeciduous {...ICON} />, label: t('Faire le mien'), sub: t('un arbre pour votre famille, gratuit'), onSelect: () => handleCreateAccountClick('ajouter') }] })
   }
-  const hasAddMenu = addGroups.length > 0
 
-  const renderAddMenu = () => (
-    <NavMenu phone={isPhone} label={t('Ajouter ou corriger')} onClose={closeMenus} triggerRef={addBtnRef}>
-      {addGroups.map((group) => (
-        <NavMenuGroup key={group.label} label={group.label}>
-          {group.items.map((item) => (
-            <NavMenuItem
-              key={item.key}
-              icon={item.icon}
-              label={item.label}
-              sub={item.sub}
-              onSelect={run(item.onSelect)}
-              right={item.shortcut ? <Kbd mod="ctrl" k={item.shortcut} /> : null}
-            />
-          ))}
-        </NavMenuGroup>
-      ))}
-    </NavMenu>
+  const hasAddMenu = canAdd || otherGroups.length > 0
+
+  const renderAddMenu = (groups = otherGroups) => (
+    <KinAddMenu
+      phone={isPhone}
+      triggerRef={addBtnRef}
+      onClose={closeMenus}
+      target={canAdd ? kinTarget : null}
+      choices={kinChoices}
+      getPeople={getKinPeople}
+      onKin={(type) => onKinAdd?.(type, kinTarget)}
+      onTarget={onKinTargetChange}
+      onAddPerson={canAdd ? onAddPersonClick : null}
+      otherGroups={groups}
+    />
   )
 
   const avatarInitial = initialOf(linkedPersonName || userDisplayName || userEmail, 'P')
@@ -330,7 +333,7 @@ function ContextualNavbar({
             >
               <Plus size={20} strokeWidth={2.2} aria-hidden="true" />
             </button>
-            {openMenu === 'add' && renderAddMenu()}
+            {openMenu === 'add' && renderAddMenu(annotGroups)}
 
             {(annotationTools.selectedAnnotationId || annotationTools.isDragging) && renderAnnotTrash()}
           </>
@@ -373,23 +376,41 @@ function ContextualNavbar({
         ) : (
           <>
             {hasAddMenu && (
-              <button
-                type="button"
-                ref={addBtnRef}
-                className={`nav-add${isPhone ? '' : ' nav-add--label'}${demoSignupInBar ? ' nav-add--soft' : ''}${openMenu === 'add' ? ' is-open' : ''}${editModeActive ? ' is-editing' : ''}`}
-                onClick={() => setOpenMenu((v) => (v === 'add' ? null : 'add'))}
-                aria-expanded={openMenu === 'add'}
-                aria-haspopup="menu"
-                aria-label={isOwner || isDemo ? t('Modifier') : t('Ajouter ou corriger')}
-              >
-                {/* Qui gère l'arbre (et la démo) : « Modifier » ; la famille garde « Ajouter », son geste est d'ajouter un souvenir */}
-                {isOwner || isDemo
-                  ? <Pencil size={18} strokeWidth={2.2} aria-hidden="true" />
-                  : <Plus size={20} strokeWidth={2.2} aria-hidden="true" />}
-                {!isPhone && <span className="nav-add-label">{isOwner || isDemo ? t('Modifier') : t('Ajouter')}</span>}
-              </button>
+              <span className="nav-add-wrap">
+                {hintOpen && canAdd && openMenu !== 'add' && (
+                  <button type="button" className="nav-add-hint" onClick={closeHint}>
+                    {t("Pour ajouter quelqu'un, c'est ici.")}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  ref={addBtnRef}
+                  className={`nav-add${isPhone ? '' : ' nav-add--label'}${demoSignupInBar ? ' nav-add--soft' : ''}${openMenu === 'add' ? ' is-open' : ''}`}
+                  onClick={() => { closeHint(); setOpenMenu((v) => (v === 'add' ? null : 'add')) }}
+                  aria-expanded={openMenu === 'add'}
+                  aria-haspopup="menu"
+                  aria-label={t('Ajouter')}
+                >
+                  <Plus size={20} strokeWidth={2.2} aria-hidden="true" />
+                  {!isPhone && <span className="nav-add-label">{t('Ajouter')}</span>}
+                </button>
+              </span>
             )}
             {hasAddMenu && openMenu === 'add' && renderAddMenu()}
+
+            {canAdd && (
+              <button
+                type="button"
+                className={`nav-edit${isPhone ? '' : ' nav-edit--label'}${editModeActive ? ' is-editing' : ''}`}
+                onClick={() => { closeMenus(); onEditClick?.() }}
+                aria-pressed={editModeActive}
+                aria-label={editLabel}
+                title={editLabel}
+              >
+                <Pencil size={18} strokeWidth={2.2} aria-hidden="true" />
+                {!isPhone && <span className="nav-add-label">{editModeActive ? t('Terminé') : isFamily ? t('Proposer') : t('Modifier')}</span>}
+              </button>
+            )}
 
             {demoSignupInBar && (
               <button
