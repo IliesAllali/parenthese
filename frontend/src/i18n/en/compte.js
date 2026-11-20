@@ -3,7 +3,6 @@
 // « Dessin » est absent volontairement : déjà traduit ailleurs (app, arbre, contribution).
 export default {
   // Écran d'accès par mot de passe (AccessGate)
-  "Arbre partagé": "Shared tree",
   "Cet arbre est *introuvable*": "This tree *can't be found*",
   "Ouvrir {slot}": "Open {slot}",
   "Ouvrir un arbre *partagé*": "Open a *shared* tree",

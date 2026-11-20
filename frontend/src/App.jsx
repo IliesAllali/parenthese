@@ -2,11 +2,14 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { buildMediaUrl } from './utils/mediaToken.js'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
-import { FamilyWelcome, SouvenirPicker } from './components/FamilyOnboarding.jsx'
+import { FamilyWelcome, SelfAsk, SouvenirPicker } from './components/FamilyOnboarding.jsx'
+import { findSelfCandidates, hasAnsweredSelf, markSelfAnswered } from './utils/selfMatch.js'
+import { readContributorName, saveContributorName } from './utils/contributorName.js'
 import { HELP_URL } from './utils/siteLinks.js'
 import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
 import { useUndoable } from './hooks/useUndoable.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
+import { readShareKey } from './utils/shareKey.js'
 import MediaViewer from './components/MediaViewer'
 import MediaManagerPanel from './components/MediaManagerPanel'
 import AdminPanel from './components/AdminPanel'
@@ -90,7 +93,6 @@ import {
 import './App.css'
 import './styles/pz.css'
 import { setBooting } from './bootSignal.js'
-import { saveContributorName } from './utils/contributorName'
 import { ghostsFromChanges, hasGhosts, mergeGhosts } from './utils/ghosts'
 import ProposalCard from './components/ProposalCard'
 import { summarizeChanges } from './utils/proposalSummary'
@@ -502,6 +504,9 @@ function readOidcReturn() {
   return { code: params.get('oidc'), error: params.get('oidc_error') }
 }
 const OIDC_RETURN = readOidcReturn()
+// Lien de partage porteur du mot de passe (#cle=…, #247) : lu une fois, retiré de l'adresse
+const SHARE_KEY = readShareKey()
+const KEY_FAILED_MESSAGE = () => t("Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.")
 
 // Lien d'invitation à co-gérer un arbre (/invitation/<jeton>, issue #145) : lu une fois au chargement, la page
 // d'invitation passe avant tout le reste jusqu'à ce que l'arbre s'ouvre
@@ -667,6 +672,12 @@ function App() {
   // Famille arrivée par le lien (mot de passe de partage, avec ou sans compte)
   const isFamilyVisitor = userRole.navbarType === 'contributor_anon' || userRole.navbarType === 'contributor_auth'
   const [familyWelcomeVisible, setFamilyWelcomeVisible] = useState(false)
+  // Arrivé par le lien qui porte la clé : l'accueil au prénom remplace la porte
+  const [arrivedByKey, setArrivedByKey] = useState(false)
+  // Prénom donné à l'accueil ou à la porte : il signe les envois et sert à « C'est vous ? »
+  const [visitorName, setVisitorName] = useState(() => readContributorName())
+  // Change à chaque réponse à « C'est vous ? » : la question se referme
+  const [selfAskTick, setSelfAskTick] = useState(0)
   const [souvenirPickerVisible, setSouvenirPickerVisible] = useState(false)
   const [pendingMediaPersonId, setPendingMediaPersonId] = useState(null)
   // Message bref (toast) : enregistrement automatique d'une fiche, erreurs d'ordre des fratries
@@ -675,10 +686,10 @@ function App() {
   const personSaveOnLeaveRef = useRef(null)
 
   useEffect(() => {
-    if (isFamilyVisitor && tree.bootState === 'ready' && !hasSeenFamilyWelcome(tree.treeContext.treeId)) {
+    if (isFamilyVisitor && arrivedByKey && tree.bootState === 'ready' && !hasSeenFamilyWelcome(tree.treeContext.treeId)) {
       setFamilyWelcomeVisible(true)
     }
-  }, [isFamilyVisitor, tree.bootState, tree.treeContext.treeId])
+  }, [isFamilyVisitor, arrivedByKey, tree.bootState, tree.treeContext.treeId])
 
   // La personne choisie dans « Pour qui ? » est sélectionnée : ouvrir ses souvenirs
   useEffect(() => {
@@ -688,10 +699,30 @@ function App() {
     media.handleOpenMediaManager()
   }, [pendingMediaPersonId, tree.selectedPerson]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const closeFamilyWelcome = useCallback(() => {
+  const closeFamilyWelcome = useCallback((name = '') => {
     markFamilyWelcomeSeen(tree.treeContext.treeId)
     setFamilyWelcomeVisible(false)
-  }, [tree.treeContext.treeId])
+    if (name && name !== readContributorName()) {
+      saveContributorName(name)
+      setVisitorName(name)
+      // La visite a été notée à l'ouverture, sans prénom : un nouveau chargement le lui ajoute (onglet Visites)
+      tree.refreshCurrentTreeGraph({ relayout: false }).catch(() => {})
+    }
+  }, [tree.treeContext.treeId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // « C'est vous, Claire ? » : la famille qui a donné son prénom, pas encore reconnue ni interrogée sur cet arbre
+  const selfCandidates = useMemo(() => {
+    const treeId = tree.treeContext.treeId
+    if (!isFamilyVisitor || tree.bootState !== 'ready' || familyWelcomeVisible || linkedSelfPersonId) return []
+    if (!visitorName || hasAnsweredSelf(treeId)) return []
+    return findSelfCandidates(persons, visitorName)
+  }, [isFamilyVisitor, tree.bootState, tree.treeContext.treeId, tree.graphRevision, familyWelcomeVisible, linkedSelfPersonId, visitorName, selfAskTick]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const answerSelfAsk = useCallback((person = null) => {
+    if (person) handleSelectSelfPerson(person.id)
+    markSelfAnswered(tree.treeContext.treeId)
+    setSelfAskTick((tick) => tick + 1)
+  }, [tree.treeContext.treeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const accountUser = auth.userAuth.user || null
   const linkedSelfPerson = useMemo(() => (
@@ -1057,6 +1088,11 @@ function App() {
   const galaxyTransformReadRef = useRef(null)
   // Ref exposant l'API zoom de Galaxy au ZoomControl
   const galaxyZoomApiRef = useRef(null)
+  // « C'est vous, Claire ? » : l'arbre montre la personne trouvée
+  const selfFocusId = selfCandidates.length === 1 ? selfCandidates[0].id : null
+  useEffect(() => {
+    if (selfFocusId) requestAnimationFrame(() => galaxyZoomApiRef.current?.focusPerson?.(selfFocusId))
+  }, [selfFocusId])
 
   // Called by AnnotationToolbar when user picks a photo file for canvas annotation
   const handleAnnotationPhotoFile = useCallback(async (file) => {
@@ -2506,6 +2542,23 @@ function App() {
       const resolvedTreeOwnerName = ''
       const resolvedTreeOwnerEmail = ''
 
+      // Lien porteur de la clé : ouvre l'arbre sans passer par la porte. null = pas de clé, false = clé refusée
+      const openWithShareKey = async (treeId, userToken) => {
+        if (!SHARE_KEY) return null
+        const access = await tree.handleUnlock(treeId, SHARE_KEY, {
+          userToken,
+          treeName: resolvedTreeName,
+          treeDescription: resolvedTreeDescription,
+        })
+        if (!access) return false
+        setArrivedByKey(true)
+        if (userToken) {
+          await auth.loadAccountTrees(userToken)
+          auth.persistLastOpenedTree({ treeId, accessMode: 'share' })
+        }
+        return true
+      }
+
       // Root app:
       // - not connected, arrivé par un lien de diffusion (?source=…) => la démo, comme avant le 18/10 : ces liens
       //   promettent l'arbre d'exemple et ont été envoyés sans ?demo (presse, créateurs, groupes)
@@ -2578,6 +2631,9 @@ function App() {
               }
             }
 
+            const keyOpened = await openWithShareKey(resolvedTreeId, userToken)
+            if (!active || keyOpened) return
+
             tree.setTreeContext(buildEmptyTreeContext({
               treeId: resolvedTreeId,
               treeName: resolvedTreeName,
@@ -2585,7 +2641,7 @@ function App() {
               treeOwnerName: resolvedTreeOwnerName,
               treeOwnerEmail: resolvedTreeOwnerEmail,
             }))
-            tree.setGateError('')
+            tree.setGateError(keyOpened === false ? KEY_FAILED_MESSAGE() : '')
             tree.setBootState('need-access')
             return
           }
@@ -2647,6 +2703,9 @@ function App() {
         }
       }
 
+      const keyOpened = resolvedTreeId ? await openWithShareKey(resolvedTreeId, '') : null
+      if (!active || keyOpened) return
+
       await authOptionsReady
       if (!active) return
 
@@ -2658,7 +2717,8 @@ function App() {
           treeOwnerName: resolvedTreeOwnerName,
           treeOwnerEmail: resolvedTreeOwnerEmail,
         }))
-        tree.setGateError('')
+        // Clé refusée (mot de passe changé depuis l'envoi du lien) : la porte le dit, le mot de passe ouvre encore
+        tree.setGateError(keyOpened === false ? KEY_FAILED_MESSAGE() : '')
         tree.setBootState('need-access')
         return
       }
@@ -3096,6 +3156,8 @@ function App() {
     }
 
     setTreeNotFound(false)
+    // La porte a pu recevoir un prénom : il sert à « C'est vous ? »
+    setVisitorName(readContributorName())
     if (auth.userAuth.token) {
       await auth.loadAccountTrees(auth.userAuth.token)
       auth.persistLastOpenedTree({
@@ -3497,9 +3559,12 @@ function App() {
       <FamilyWelcome
         visible={familyWelcomeVisible && !souvenirPickerVisible}
         treeName={tree.treeContext.treeName}
-        onAddSouvenir={handleOpenSouvenirPicker}
+        askName={!auth.userAuth.token}
         onLook={closeFamilyWelcome}
       />
+      {!tree.selectedPerson && !tree.selectedMedia && !media.mediaManagerState.visible && !souvenirPickerVisible && (
+        <SelfAsk candidates={selfCandidates} onConfirm={answerSelfAsk} onDecline={() => answerSelfAsk(null)} />
+      )}
       <SouvenirPicker
         visible={souvenirPickerVisible}
         persons={persons}
@@ -3686,7 +3751,17 @@ function App() {
         errorMessage={media.mediaManagerState.error}
         notice={media.mediaManagerState.notice}
         canManage={tree.canEditCurrentTree}
+        allPersons={persons}
+        getPerson={(id) => persons.find((p) => p.id === id) || null}
         onClose={media.handleCloseMediaManager}
+        onSent={(count) => {
+          // La famille a envoyé : la feuille se ferme, la relecture revient à qui gère l'arbre
+          media.handleCloseMediaManager()
+          const owner = tree.treeContext.treeOwnerName
+          setDraftNotice(owner
+            ? (count > 1 ? t("Envoyé. {name} les verra et les ajoutera à l'arbre.", { name: owner }) : t("Envoyé. {name} le verra et l'ajoutera à l'arbre.", { name: owner }))
+            : (count > 1 ? t("Envoyé. La personne qui gère l'arbre les verra et les ajoutera.") : t("Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.")))
+        }}
         onUpload={media.handleUploadPersonMedia}
         onMove={media.handleMovePersonMedia}
         onDelete={handleMediaDelete}

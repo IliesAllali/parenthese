@@ -2,6 +2,21 @@
 .media-manager-modal-overlay { z-index: 2200; }
 
 .mm-form { display: grid; gap: 16px; }
+/* L'envoi reste au pouce : le bouton est collé en bas de la feuille pendant qu'on remplit */
+.mm-form > .pz-modal-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 -4px; padding: 12px 4px; background: var(--pz-surface); border-top: 1px solid var(--pz-line); }
+
+/* Photos choisies d'un coup : chacune avec qui est dessus, dit sur la photo (MediaPeople, comme la visionneuse) */
+.mm-photos { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.mm-photo { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.mm-photo-box { justify-self: start; line-height: 0; border-radius: var(--pz-r-s); overflow: visible; }
+.mm-photo-box img { display: block; max-width: 100%; max-height: 220px; border-radius: var(--pz-r-s); }
+.mm-photo-side { display: grid; gap: 8px; min-width: 0; }
+.mm-photo-file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mm-photo-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 13.5px var(--pz-sans); color: var(--pz-ink); }
+@media (max-width: 560px) {
+  .mm-photo { grid-template-columns: minmax(0, 1fr); }
+  .mm-photo-box img { max-height: 200px; }
+}
 .mm-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
 
 .mm-types { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }

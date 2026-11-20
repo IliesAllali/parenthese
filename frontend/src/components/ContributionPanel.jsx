@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react'
 import { buildMediaUrl } from '../utils/mediaToken.js'
 import { API_BASE_URL } from '../api/client'
 import { persons as treePersons } from '../data/mockData'
-import { Check, ChevronDown, Copy, RefreshCw, X } from 'lucide-react'
+import { Check, ChevronDown, Copy, RefreshCw, Send, X } from 'lucide-react'
 import './SettingsPanels.css'
 import PzBusy from './PzBusy.jsx'
-import { HELP_URL } from '../utils/siteLinks.js'
 import { t, dateLocale } from '../i18n/index.js'
-import { buildInviteText, isChristmasSeason } from '../utils/inviteText.js'
+import { buildInviteText } from '../utils/inviteText.js'
+import { buildShareLink } from '../utils/shareKey.js'
 import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
 import { sexLabel } from '../utils/personSex.js'
 import Skeleton from './Skeleton.jsx'
@@ -254,7 +254,6 @@ const ContributionPanel = ({
   const [inviteLocalError, setInviteLocalError] = useState('')
   const [copyFeedback, setCopyFeedback] = useState('')
   // Le message d'invitation reste replié : une ligne, le texte ne s'ouvre que sur demande
-  const [showInviteMessage, setShowInviteMessage] = useState(false)
 
   // Load persisted decisions from localStorage
   useEffect(() => {
@@ -344,11 +343,22 @@ const ContributionPanel = ({
   }, [inviteKnownPasswords?.share, visible])
 
   const knownShare = inviteKnownPasswords?.share || ''
-  const defaultInviteText = knownShare && inviteShareUrl ? buildInviteText(inviteShareUrl, knownShare, { seasonal: seasonalInvite }) : ''
-  const [inviteText, setInviteText] = useState('')
-  useEffect(() => { setInviteText(defaultInviteText) }, [defaultInviteText])
+  // Le lien porte le mot de passe après le « # » (#247) : il ouvre l'arbre sans rien taper
+  const shareLink = buildShareLink(inviteShareUrl, knownShare)
+  // Le message n'est plus affiché : « Envoyer le lien » le donne au menu de partage et le copie
+  const inviteText = knownShare && inviteShareUrl ? buildInviteText(shareLink, { seasonal: seasonalInvite }) : ''
 
-  // what : link, password ou message. Ce qui a été copié, jamais le texte lui-même
+  // Menu de partage du téléphone avec le message, copié aussi ; sans menu de partage, copié seulement
+  const handleSend = async () => {
+    if (!inviteText) return
+    const copied = navigator.clipboard?.writeText(inviteText).then(() => true, () => false) ?? Promise.resolve(false)
+    if (typeof navigator.share === 'function') {
+      try { await navigator.share({ text: inviteText }) } catch { /* partage refermé : le message reste copié */ }
+    }
+    setCopyFeedback(await copied ? t('Message copié') : t('Copie indisponible'))
+  }
+
+  // what : link ou password. Ce qui a été copié, jamais le texte lui-même
   const handleCopy = async (value, label, what) => {
     const text = String(value || '').trim()
     if (!text) return
@@ -357,7 +367,6 @@ const ContributionPanel = ({
       setCopyFeedback(label)
       trackAppEvent('share_copied', {
         what,
-        ...(what === 'message' ? { seasonal: Boolean(seasonalInvite && isChristmasSeason()) } : {}),
         tree_id: toOpaqueTreeId(treeId),
       })
     }
@@ -401,65 +410,56 @@ const ContributionPanel = ({
         {canModerate ? (
           <div className="contrib-list-section">
 
-            {/* ── Section invitation ── */}
-            <div className="contrib-invite">
-              <div className="contrib-invite-top">
-                <strong className="contrib-invite-title">{inviteFamilyName ? t('Le lien à envoyer à la famille {name}', { name: inviteFamilyName }) : t('Le lien à envoyer à la famille')}</strong>
-                {copyFeedback && <span className="contrib-copy-feedback">{copyFeedback}</span>}
+            {/* ── Le lien de l'arbre ── (deux blocs blancs pareils, R25 du 20/11) */}
+            <section className="contrib-block" aria-labelledby="contrib-link-title">
+              <div className="contrib-block-top">
+                <h2 id="contrib-link-title" className="contrib-block-title">{inviteFamilyName ? t('Le lien de la famille {name}', { name: inviteFamilyName }) : t("Le lien de l'arbre")}</h2>
+                {copyFeedback && <span className="contrib-copy-feedback" role="status">{copyFeedback}</span>}
               </div>
               <div className="contrib-invite-link">
-                <code className="contrib-link-url">{inviteShareUrl || t('Lien indisponible')}</code>
-                <button type="button" className="pz-btn pz-btn--primary pz-btn--sm" disabled={!inviteShareUrl} onClick={() => handleCopy(inviteShareUrl, t('Lien copié'), 'link')}><Copy size={14} strokeWidth={2} />{t('Copier')}</button>
+                <span className="contrib-link-url">{inviteShareUrl ? inviteShareUrl.replace(/^https?:\/\//, '') : t('Lien indisponible')}</span>
+                <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={!shareLink} onClick={() => handleCopy(shareLink, t('Lien copié'), 'link')}><Copy size={14} strokeWidth={2} />{t('Copier')}</button>
               </div>
-              <div className="contrib-invite-passwords">
-                <div className="contrib-role-row">
-                  <span className="contrib-role-badge"><strong>{t('Mot de passe')}</strong><small>{t('pour regarder et ajouter')}</small></span>
-                  {passwordMode ? (
-                    <form className="contrib-pass-edit-inline" onSubmit={handleSavePassword}>
-                      <input className="contrib-pass-edit-input" type="text" value={newPassword} placeholder={passwordMode === 'remember' ? t('Celui déjà donné à la famille') : t('8 caractères minimum')} aria-label={passwordMode === 'remember' ? t('Mot de passe actuel') : t('Nouveau mot de passe')} autoFocus autoComplete="off" onChange={(e) => setNewPassword(e.target.value)} />
-                      <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel={t('Enregistrement en cours')}>{passwordMode === 'remember' ? t('Vérifier') : t('Enregistrer')}</PzBusy></button>
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setPasswordMode(''); setNewPassword(''); setInviteLocalError('') }}>{t('Annuler')}</button>
-                    </form>
-                  ) : (
-                    <>
+              <div className={`contrib-role-row${passwordMode ? '' : ' contrib-role-row--pass'}`}>
+                {passwordMode && <span className="contrib-role-badge"><strong>{t('Mot de passe')}</strong></span>}
+                {passwordMode ? (
+                  <form className="contrib-pass-edit-inline" onSubmit={handleSavePassword}>
+                    <input className="contrib-pass-edit-input" type="text" value={newPassword} placeholder={passwordMode === 'remember' ? t('Celui déjà donné à la famille') : t('8 caractères minimum')} aria-label={passwordMode === 'remember' ? t('Mot de passe actuel') : t('Nouveau mot de passe')} autoFocus autoComplete="off" onChange={(e) => setNewPassword(e.target.value)} />
+                    <button type="submit" className="contrib-pill-btn contrib-pill-btn--save" disabled={inviteSaving}><PzBusy busy={inviteSaving} busyLabel={t('Enregistrement en cours')}>{passwordMode === 'remember' ? t('Vérifier') : t('Enregistrer')}</PzBusy></button>
+                    <button type="button" className="contrib-pill-btn contrib-pill-btn--ghost" onClick={() => { setPasswordMode(''); setNewPassword(''); setInviteLocalError('') }}>{t('Annuler')}</button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="contrib-role-badge">
+                      <strong>{t('Mot de passe')}</strong>
                       <button type="button" className={`contrib-pass-reveal${knownShare && !showPassword ? ' contrib-pass-reveal--blurred' : ''}`} onClick={() => setShowPassword((v) => !v)} disabled={!knownShare} title={showPassword ? t('Cliquer pour masquer') : t('Cliquer pour révéler')}>{knownShare || t('Pas encore enregistré')}</button>
-                      {knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(knownShare, t('Mot de passe copié'), 'password')}>{t('Copier')}</button>}
-                      {!knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('remember')}>{t("Saisir l'actuel")}</button>}
-                      <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('change')}>{t('Changer')}</button>
-                    </>
-                  )}
-                </div>
-                <p className="contrib-pass-hint">
-                  {passwordMode === 'remember' || (!knownShare && !passwordMode)
-                    ? t("Déjà donné à la famille ? Saisissez-le ici. Il est vérifié puis gardé, rien ne change pour ceux qui ont déjà ouvert l'arbre.")
-                    : t("Changer le mot de passe oblige les personnes qui ont déjà ouvert l'arbre à saisir le nouveau.")}
-                </p>
+                    </span>
+                    {knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(knownShare, t('Mot de passe copié'), 'password')}>{t('Copier')}</button>}
+                    {!knownShare && <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('remember')}>{t("Saisir l'actuel")}</button>}
+                    <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" disabled={inviteSaving} onClick={() => setPasswordMode('change')}>{t('Changer')}</button>
+                  </>
+                )}
               </div>
-              {defaultInviteText && (
-                <div className="contrib-invite-message">
-                  <div className="contrib-invite-message-row">
-                    <button type="button" className="contrib-pill-btn contrib-pill-btn--edit" onClick={() => handleCopy(inviteText, t('Message copié'), 'message')}><Copy size={14} strokeWidth={2} />{t("Copier le message d'invitation")}</button>
-                    <button type="button" className="contrib-link-btn" aria-expanded={showInviteMessage} aria-controls="contrib-invite-text" onClick={() => setShowInviteMessage((v) => !v)}>
-                      {showInviteMessage ? t('Masquer le message') : t('Voir ou modifier le message')}
-                    </button>
-                  </div>
-                  {showInviteMessage && (
-                    <>
-                      <label className="contrib-invite-message-label" htmlFor="contrib-invite-text">{t('Le message à envoyer')}</label>
-                      <textarea id="contrib-invite-text" className="contrib-invite-textarea" rows={6} value={inviteText} onChange={(e) => setInviteText(e.target.value)} />
-                    </>
-                  )}
-                </div>
-              )}
+              <p className="contrib-pass-hint">
+                {passwordMode === 'remember' || (!knownShare && !passwordMode)
+                  ? t("Déjà donné à la famille ? Saisissez-le ici. Il est vérifié puis gardé, rien ne change pour ceux qui ont déjà ouvert l'arbre.")
+                  : t("Le lien ouvre l'arbre sans le taper. Changer le mot de passe change aussi le lien.")}
+              </p>
               {(inviteLocalError || inviteError) && <div className="contrib-error">{inviteLocalError || inviteError}</div>}
               {inviteMessage && <div className="contrib-ok">{inviteMessage}</div>}
-            </div>
+              {inviteText && (
+                <div className="contrib-send">
+                  <button type="button" className="pz-btn pz-btn--primary pz-btn--block contrib-send-btn" onClick={handleSend}><Send size={17} strokeWidth={2} aria-hidden="true" />{t('Envoyer le lien')}</button>
+                  <p className="contrib-pass-hint">{t("Le message d'invitation est aussi copié.")}</p>
+                </div>
+              )}
+            </section>
 
-            {/* ── En-tête sessions ── */}
+            {/* ── Propositions à relire ── */}
+            <section className="contrib-block" aria-labelledby="contrib-propositions">
             <div className="contrib-list-header">
               <div className="contrib-list-heading">
-                <h2 id="contrib-propositions">{t('Propositions à relire')}</h2>
-                <p>{t('Acceptez ou refusez chaque modification, puis appliquez vos choix.')}</p>
+                <h2 id="contrib-propositions" className="contrib-block-title">{t('Propositions à relire')}</h2>
               </div>
               <div className="contrib-list-header-actions">
                 <span className="contrib-count">{sessions.length || 0}</span>
@@ -748,6 +748,7 @@ const ContributionPanel = ({
                 })}
               </div>
             )}
+            </section>
           </div>
         ) : (
           <div className="contrib-readonly">

@@ -60,6 +60,7 @@ export function useMediaManager({
     citationText = '',
     youtubeUrl = null,
     submittedByLabel = null,
+    people = [],
   }) => {
     if (!canUploadMedia || !selectedPerson || !treeContext.treeId || !treeContext.accessToken) {
       return false
@@ -90,10 +91,11 @@ export function useMediaManager({
         )
         await refreshAfterMediaMutation(personId)
         setMediaManagerState((current) => ({ ...current, loading: false, error: '', notice: noticeFor(created) }))
+        return true
       } catch (error) {
         setMediaManagerState((current) => ({ ...current, loading: false, error: getAccountErrorMessage(error) }))
+        return false
       }
-      return
     }
 
     const resolvedType = resolveUploadMediaType(file, mediaType)
@@ -143,6 +145,8 @@ export function useMediaManager({
             dataBase64,
             caption,
             source,
+            // Qui est sur la photo, dit à l'envoi : relu avec le souvenir quand il vient de la famille
+            ...(resolvedType === 'photo' && people.length ? { people } : {}),
             ...byLabel,
           },
           treeContext.accessToken,

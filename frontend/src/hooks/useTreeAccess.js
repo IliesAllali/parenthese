@@ -96,7 +96,8 @@ export function useTreeAccess() {
       treeId,
       treeName: options.treeName ?? current.treeName,
       treeDescription: options.treeDescription ?? current.treeDescription,
-      treeOwnerName: options.treeOwnerName ?? current.treeOwnerName,
+      // Prénom de qui gère l'arbre, donné avec le graphe (« Lucie les verra ») ; la porte n'en montre jamais
+      treeOwnerName: graphPayload.ownerFirstName || options.treeOwnerName || current.treeOwnerName,
       treeOwnerEmail: options.treeOwnerEmail ?? current.treeOwnerEmail,
       role: normalizeRole(options.role ?? current.role),
       accessMode: options.accessMode ?? current.accessMode,

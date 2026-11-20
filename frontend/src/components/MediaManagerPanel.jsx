@@ -11,6 +11,7 @@ import ImmichAssetPicker from './ImmichAssetPicker.jsx'
 import { fetchImmichConfig } from '../api/immichApi.js'
 import { blurPlaceholder } from '../utils/blurhash.js'
 import { youtubeWatchUrl } from '../utils/youtube.js'
+import { MediaPeopleList, MediaPeopleMarkers } from './MediaPeople.jsx'
 
 const MEDIA_TYPES = [
   { value: 'photo', label: t('Photo'), Icon: Image },
@@ -28,6 +29,47 @@ const TYPE_SHORT = { video: t('Vidéo'), audio: t('Voix'), citation: '«', docum
 
 const HTTP_URL_RE = /^https?:\/\/\S+$/i
 
+// Une photo choisie, avant l'envoi : qui est dessus se dit sur la photo, comme dans la visionneuse (MediaViewer) :
+// on ajoute la personne, puis on touche son visage, et le point y reste
+function PhotoDraft({ item, getPerson, allPersons, disabled, onChange, onRemove }) {
+  const [activeId, setActiveId] = useState(null)
+  const setPeople = (people) => onChange({ ...item, people })
+  const place = (event) => {
+    if (!activeId) return
+    const box = event.currentTarget.getBoundingClientRect()
+    const clamp = (value) => Math.min(1, Math.max(0, value))
+    const x = Number(clamp((event.clientX - box.left) / box.width).toFixed(4))
+    const y = Number(clamp((event.clientY - box.top) / box.height).toFixed(4))
+    setPeople(item.people.map((tag) => (tag.personId === activeId ? { ...tag, x, y } : tag)))
+    setActiveId(null)
+  }
+  return (
+    <li className="mm-photo">
+      <div className={`mv-photo-box is-tagging mm-photo-box${activeId ? ' is-placing' : ''}`} onClick={place}>
+        <img src={item.preview} alt="" />
+        <MediaPeopleMarkers people={item.people} getPerson={getPerson} activeId={activeId} onOpenPerson={(id) => setActiveId(id)} />
+      </div>
+      <div className="mm-photo-side">
+        <div className="mm-photo-file">
+          <span className="mm-photo-name">{item.file.name}</span>
+          <button type="button" className="pz-btn pz-btn--ghost pz-btn--sm" onClick={onRemove} disabled={disabled}>{t('Retirer')}</button>
+        </div>
+        <MediaPeopleList
+          people={item.people}
+          getPerson={getPerson}
+          allPersons={allPersons}
+          editing
+          canPlace
+          activeId={activeId}
+          onActivate={setActiveId}
+          onAdd={(personId) => { setPeople([...item.people, { personId, x: null, y: null }]); setActiveId(personId) }}
+          onRemove={(personId) => { setPeople(item.people.filter((tag) => tag.personId !== personId)); setActiveId((current) => (current === personId ? null : current)) }}
+        />
+      </div>
+    </li>
+  )
+}
+
 const MediaManagerPanel = ({
   visible,
   person,
@@ -38,7 +80,10 @@ const MediaManagerPanel = ({
   canManage = true,
   treeId,
   token,
+  allPersons = [],
+  getPerson = () => null,
   onClose,
+  onSent,
   onUpload,
   onMove,
   onDelete,
@@ -46,6 +91,8 @@ const MediaManagerPanel = ({
   const [caption, setCaption] = useState('')
   const [source, setSource] = useState('')
   const [file, setFile] = useState(null)
+  // Photos choisies d'un coup (comme MomentSheet) : un souvenir par photo, envoyées l'une après l'autre
+  const [photos, setPhotos] = useState([])
   const [immichConfigured, setImmichConfigured] = useState(false)
   const [pickingImmich, setPickingImmich] = useState(false)
   // Souvenirs choisis dans Immich : un souvenir par fichier, envoyés l'un après l'autre à l'enregistrement
@@ -66,9 +113,22 @@ const MediaManagerPanel = ({
   const [videoMode, setVideoMode] = useState('file') // 'file' | 'youtube'
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [contributorName, setContributorName] = useState(() => readContributorName())
+  // Le prénom donné à l'accueil signe l'envoi : le champ n'apparaît que s'il manque à l'ouverture
+  const [askName, setAskName] = useState(() => !readContributorName())
   // Le panneau est monté dès le départ : relire le prénom à chaque ouverture (il a pu être donné entre-temps)
   useEffect(() => {
-    if (visible) setContributorName((current) => current || readContributorName())
+    if (!visible) return
+    const known = readContributorName()
+    setContributorName((current) => current || known)
+    setAskName(!known)
+  }, [visible])
+  // Aperçus des photos choisies : libérés quand on en retire une, et tous à la fermeture
+  const photosRef = useRef(photos)
+  useEffect(() => { photosRef.current = photos }, [photos])
+  useEffect(() => () => photosRef.current.forEach((item) => URL.revokeObjectURL(item.preview)), [])
+  useEffect(() => {
+    if (visible) return
+    setPhotos((list) => { list.forEach((item) => URL.revokeObjectURL(item.preview)); return [] })
   }, [visible])
 
   const isCitation = mediaType === 'citation'
@@ -86,6 +146,10 @@ const MediaManagerPanel = ({
       return true
     }
 
+    if (mediaType === 'photo') {
+      return photos.length > 0
+    }
+
     if (isCitation) {
       return citationText.trim().length > 0
     }
@@ -95,7 +159,7 @@ const MediaManagerPanel = ({
     }
 
     return Boolean(file)
-  }, [canManage, citationText, contributorName, file, immichFiles, isCitation, isYoutubeVideo, loading, pickingImmich, sending, youtubeUrl])
+  }, [canManage, citationText, contributorName, file, immichFiles, isCitation, isYoutubeVideo, loading, mediaType, photos, pickingImmich, sending, youtubeUrl])
   const fileAccept = useMemo(() => getAcceptForMediaType(mediaType), [mediaType])
 
   if (!visible || !person) {
@@ -128,8 +192,36 @@ const MediaManagerPanel = ({
       }
       setSending(false)
       if (left.length > 0) return
+    } else if (mediaType === 'photo') {
+      // Une photo après l'autre, chacune avec ses personnes ; une photo envoyée sort de la liste, pour qu'un nouvel
+      // essai n'envoie que celles qui restent
+      setSending(true)
+      let left = photos
+      for (const item of photos) {
+        const ok = await onUpload({
+          file: item.file,
+          caption: caption.trim() || null,
+          source: source.trim() || null,
+          mediaType: 'photo',
+          citationText: '',
+          youtubeUrl: null,
+          people: item.people,
+          submittedByLabel: canManage ? null : contributorName.trim(),
+        })
+        if (ok === false) break
+        URL.revokeObjectURL(item.preview)
+        left = left.filter((entry) => entry.key !== item.key)
+        setPhotos(left)
+      }
+      setSending(false)
+      if (left.length > 0) return
+      if (!canManage) {
+        setCaption('')
+        onSent?.(photos.length)
+        return
+      }
     } else {
-      await onUpload({
+      const ok = await onUpload({
         file,
         caption: caption.trim() || null,
         source: source.trim() || null,
@@ -138,6 +230,15 @@ const MediaManagerPanel = ({
         youtubeUrl: isYoutubeVideo ? youtubeWatchUrl(youtubeUrl) : null,
         submittedByLabel: canManage ? null : contributorName.trim(),
       })
+      if (ok === false) return
+      if (!canManage) {
+        setFile(null)
+        setCaption('')
+        setCitationText('')
+        setYoutubeUrl('')
+        onSent?.(1)
+        return
+      }
     }
     setFile(null)
     setImmichFiles([])
@@ -148,6 +249,12 @@ const MediaManagerPanel = ({
     setVideoMode('file')
     setYoutubeUrl('')
   }
+
+  // Le bouton dit ce qui manque : le prénom, quand le champ est là et vide
+  const batch = immichFiles.length || (mediaType === 'photo' ? photos.length : 0)
+  const submitLabel = !canManage && askName && !contributorName.trim() && (batch > 0 || file || citationText.trim())
+    ? t('Il manque votre prénom')
+    : batch > 1 ? t('Ajouter ces {n} souvenirs', { n: batch }) : t('Ajouter ce souvenir')
 
   const handleOverlayClick = (event) => {
     if (event.target === event.currentTarget) {
@@ -172,9 +279,26 @@ const MediaManagerPanel = ({
     return normalized
   }
 
+  const addPhotos = (list) => {
+    const next = [...list].map((picked) => ({ key: `${picked.name}-${picked.size}-${picked.lastModified}`, file: picked, preview: URL.createObjectURL(picked), people: [] }))
+    setPhotos((current) => {
+      const merged = [...current]
+      for (const item of next) {
+        if (merged.some((existing) => existing.key === item.key)) URL.revokeObjectURL(item.preview)
+        else merged.push(item)
+      }
+      return merged
+    })
+  }
+  const removePhoto = (key) => setPhotos((list) => {
+    list.filter((item) => item.key === key).forEach((item) => URL.revokeObjectURL(item.preview))
+    return list.filter((item) => item.key !== key)
+  })
+
   const changeType = (value) => {
     setMediaType(value)
     setFile(null)
+    setPhotos((list) => { list.forEach((item) => URL.revokeObjectURL(item.preview)); return [] })
     setImmichFiles([])
     setCitationText('')
     setVideoMode('file')
@@ -239,19 +363,21 @@ const MediaManagerPanel = ({
             // Le lien est un bouton dans le label : un clic dessus n'ouvre pas le sélecteur de fichiers
             const immichLink = withImmich && <button type="button" className="mm-drop-link" disabled={loading || sending} onClick={() => setPickingImmich(true)}>{t('depuis Immich')}</button>
             const count = immichFiles.length
+            const isPhoto = mediaType === 'photo'
             const title = count === 1 ? t('1 souvenir choisi dans Immich')
               : count > 1 ? t('{n} souvenirs choisis dans Immich', { n: count })
-                : file ? file.name : t('Choisir un fichier')
+                : isPhoto ? (photos.length ? t('Ajouter d’autres photos') : t('Choisir des photos'))
+                  : file ? file.name : t('Choisir un fichier')
             const hint = count > 0 ? <>{t('En ajouter d’autres')} {immichLink}</>
-              : file ? t('Pour en prendre un autre, touchez ici')
-                : mediaType === 'photo' ? t('5 Mo au maximum') : t('20 Mo au maximum')
+              : isPhoto ? t('5 Mo au maximum') : file ? '' : t('20 Mo au maximum')
             return (
+              <>
               <div className="pz-field">
                 <label htmlFor="mediaUploadFile" className="mm-drop">
                   <span className="mm-drop-icon" aria-hidden="true"><Upload size={20} strokeWidth={1.8} /></span>
                   <span className="mm-drop-text">
                     <strong>{title}{withImmich && count === 0 && !file && <> {t('ou')} {immichLink}</>}</strong>
-                    <span>{hint}</span>
+                    {hint && <span>{hint}</span>}
                   </span>
                 </label>
                 <input
@@ -260,7 +386,11 @@ const MediaManagerPanel = ({
                   className="mm-drop-input"
                   type="file"
                   accept={fileAccept}
-                  onChange={(event) => { setFile(event.target.files?.[0] || null); setImmichFiles([]) }}
+                  multiple={isPhoto}
+                  onChange={(event) => {
+                    if (isPhoto) { addPhotos(event.target.files || []); event.target.value = '' } else setFile(event.target.files?.[0] || null)
+                    setImmichFiles([])
+                  }}
                 />
                 {count > 0 && (
                   <ul className="mm-immich-queue" aria-label={t('Souvenirs choisis dans Immich')}>
@@ -273,6 +403,22 @@ const MediaManagerPanel = ({
                   </ul>
                 )}
               </div>
+              {isPhoto && photos.length > 0 && (
+                <ul className="mm-photos" aria-label={t('Photos choisies')}>
+                  {photos.map((item) => (
+                    <PhotoDraft
+                      key={item.key}
+                      item={item}
+                      getPerson={getPerson}
+                      allPersons={allPersons}
+                      disabled={sending}
+                      onChange={(next) => setPhotos((list) => list.map((entry) => (entry.key === next.key ? next : entry)))}
+                      onRemove={() => removePhoto(item.key)}
+                    />
+                  ))}
+                </ul>
+              )}
+              </>
             )
           })()}
 
@@ -327,7 +473,7 @@ const MediaManagerPanel = ({
             </div>}
           </div>
 
-          {!canManage && (
+          {!canManage && askName && (
             <div className="pz-field">
               <label htmlFor="mm-contributor-name">{t('Votre prénom')}</label>
               <input
@@ -347,7 +493,7 @@ const MediaManagerPanel = ({
           <div className="pz-modal-actions">
             <button type="submit" className="pz-btn pz-btn--primary" disabled={!canUpload}>
               <Plus size={16} aria-hidden="true" />
-              <PzBusy busy={loading || sending} busyLabel={t('Envoi du souvenir')}>{immichFiles.length > 1 ? t('Ajouter ces {n} souvenirs', { n: immichFiles.length }) : t('Ajouter ce souvenir')}</PzBusy>
+              <PzBusy busy={loading || sending} busyLabel={t('Envoi du souvenir')}>{submitLabel}</PzBusy>
             </button>
           </div>
         </form>

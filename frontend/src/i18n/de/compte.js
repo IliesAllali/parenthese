@@ -3,7 +3,6 @@
 // « Dessin » est absent volontairement : déjà traduit ailleurs (app, arbre, contribution).
 export default {
   // Écran d'accès par mot de passe (AccessGate)
-  "Arbre partagé": "Geteilter Stammbaum",
   "Cet arbre est *introuvable*": "Dieser Stammbaum ist *nicht auffindbar*",
   "Ouvrir {slot}": "{slot} öffnen",
   "Ouvrir un arbre *partagé*": "Einen *geteilten* Stammbaum öffnen",

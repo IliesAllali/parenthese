@@ -122,7 +122,6 @@ export default {
   'Un fichier': 'A file',
   'Un lien YouTube': 'A YouTube link',
   'Choisir un fichier': 'Choose a file',
-  'Pour en prendre un autre, touchez ici': 'Tap here to pick another one',
   '5 Mo au maximum': '5 MB max',
   '20 Mo au maximum': '20 MB max',
   'Lien de la vidéo': 'Video link',

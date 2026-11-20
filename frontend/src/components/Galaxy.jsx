@@ -111,6 +111,9 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   const ghostsRef = useRef(ghosts)
   const fullNamesRef = useRef(fullNames)
   useEffect(() => { fullNamesRef.current = fullNames; needsRedrawRef.current = true }, [fullNames])
+  // La personne reconnue comme « vous » : bord d'accent et « vous » sous son nom
+  const selfIdRef = useRef(selfPersonId)
+  useEffect(() => { selfIdRef.current = selfPersonId; needsRedrawRef.current = true }, [selfPersonId])
   // Noms en capitales : le libellé se relit au dessin (surnameLabel), il suffit de redessiner
   useEffect(() => { needsRedrawRef.current = true }, [surnameUppercase])
   useEffect(() => { ghostsRef.current = ghosts; needsRedrawRef.current = true }, [ghosts])
@@ -1182,6 +1185,7 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
         liftScales: liftScalesRef.current,
         ghostPatches: ghostsRef.current?.patches || null,
         fullNames: fullNamesRef.current,
+        selfId: selfIdRef.current == null ? null : String(selfIdRef.current),
       })
       drawRenvoiPills(ctx)
       // Annotations dessinées APRES les noeuds pour que stickers/texte soient au-dessus.
