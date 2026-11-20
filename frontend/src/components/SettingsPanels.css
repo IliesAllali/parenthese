@@ -253,27 +253,31 @@
 @media (hover: hover) and (pointer: fine) { .contrib-apply-btn:hover:not(:disabled) { background: #3d3731; } }
 .contrib-confirm-approve { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 500 13px var(--pz-sans); color: var(--pz-ink); }
 
-/* ── Notification après envoi d'une contribution (montée dans App.jsx) ── */
-/* Centrée par left: 50%, elle n'avait que la moitié de l'écran : sur téléphone, quatre lignes dans une pilule.
-   Sa largeur suit maintenant le texte, jusqu'à l'écran moins les marges. Pas d'animation : elle apparaît nette. */
+/* ── Notification de l'app (montée dans App.jsx) ── */
+/* En haut à gauche (R33, 20/11) : ce coin est souvent vide, alors qu'en bas au centre elle passait sur l'arbre, le dock
+   et les feuilles qui montent. Sa largeur suit le texte ; sur téléphone, elle laisse la place du bouton de recherche.
+   Pas d'animation : elle apparaît nette. */
 .contrib-success-toast {
   position: fixed;
-  bottom: 92px;
-  left: 50%;
+  top: 16px;
+  left: 16px;
   z-index: 3000;
   width: max-content;
-  max-width: min(560px, calc(100vw - 32px));
+  max-width: min(440px, calc(100vw - 104px));
   padding: 11px 20px;
-  border-radius: 999px;
+  border-radius: var(--pz-r-m);
   background: var(--pz-ink);
   color: var(--pz-bg);
   font: 500 14px/1.4 var(--pz-sans);
-  text-align: center;
-  text-wrap: balance;
+  text-align: left;
+  text-wrap: pretty;
   box-shadow: var(--pz-shadow-lg);
   pointer-events: none;
-  transform: translateX(-50%);
 }
+/* Sous les onglets de familles et sous le bandeau du mode modification, quand ils sont là */
+body:has(.family-tabs) .contrib-success-toast { top: 68px; }
+body:has(.edit-mode-toast) .contrib-success-toast { top: 72px; }
+body:has(.family-tabs):has(.edit-mode-toast) .contrib-success-toast { top: 124px; }
 /* Sur deux lignes, une pilule se déforme : des coins arrondis simples */
 /* Suppression annulable : le bouton Annuler doit rester cliquable */
 .undo-toast { display: flex; align-items: center; gap: 14px; padding-right: 8px; pointer-events: auto; }
@@ -293,7 +297,12 @@
 .undo-toast-btn:focus-visible { outline: 2px solid var(--pz-bg); outline-offset: 2px; }
 /* Le lien d'une invitation (démo) reste cliquable, le reste de la bulle laisse passer les clics */
 .contrib-success-toast a { pointer-events: auto; }
-@media (max-width: 768px) { .contrib-success-toast { bottom: 78px; padding: 11px 16px; border-radius: 16px; font-size: 13px; } }
+@media (max-width: 768px) {
+  .contrib-success-toast { top: 10px; left: 10px; padding: 11px 16px; font-size: 13px; }
+  body:has(.family-tabs) .contrib-success-toast { top: 62px; }
+  body:has(.edit-mode-toast) .contrib-success-toast { top: 120px; }
+  body:has(.family-tabs):has(.edit-mode-toast) .contrib-success-toast { top: 172px; }
+}
 
 @media (max-width: 560px) {
   .contrib-session-footer { flex-direction: column; align-items: stretch; }
