@@ -16,7 +16,6 @@ import type { Actor, MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
-import { hasAnyName } from '../lib/person-names.js'
 import { sexOrNull, sexSchema } from '../lib/person-sex.js'
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -90,7 +89,7 @@ const personCreateSchema = z.object({
   nationality: z.string().max(120).optional().nullable(),
   sex: sexSchema,
   notes: z.string().max(2000).optional().nullable(),
-}).refine((value) => hasAnyName(value.firstName, value.lastName), { message: 'name_required', path: ['lastName'] })
+})
 
 const personUpdateSchema = z
   .object({
@@ -465,16 +464,6 @@ async function applyContributionChange(
           select: { birthDate: true, deathDate: true },
         })
         : null
-
-      if (parsed.data.firstName !== undefined || parsed.data.lastName !== undefined) {
-        const before = await tx.person.findFirst({
-          where: { id: change.entityId, treeId, deletedAt: null },
-          select: { firstName: true, lastName: true },
-        })
-        if (before && !hasAnyName(parsed.data.firstName ?? before.firstName, parsed.data.lastName ?? before.lastName)) {
-          throw new ContributionRouteError(400, 'invalid_change_after')
-        }
-      }
 
       const result = await tx.person.updateMany({
         where: {

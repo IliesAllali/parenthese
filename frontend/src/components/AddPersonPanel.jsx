@@ -67,7 +67,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   const [selectedRelationType, setSelectedRelationType] = useState('parent')
   const [touched, setTouched] = useState({})
   // Prénom inconnu sans nom de famille : la personne n'aurait aucun nom
-  const [lastNameMissing, setLastNameMissing] = useState(false)
   const [justAdded, setJustAdded] = useState(false)
   // Formulaire court (#245) : ouvert depuis une case « ? », le « + » ou une fiche, le lien est déjà connu
   const [kin, setKin] = useState(null)
@@ -100,7 +99,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       setIsDeceased(false)
       setDateFieldsKey((k) => k + 1)
       setSexMissing(false)
-      setLastNameMissing(false)
     }
     setTouched({})
     if (prefill.relation?.personId != null) {
@@ -162,7 +160,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       setDateFieldsKey((k) => k + 1)
       setRelations([])
       setTouched({})
-      setLastNameMissing(false)
       setSexMissing(false)
       setJustAdded(false)
       firstNameRef.current?.focus()
@@ -197,11 +194,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     if (!unknownFirstName && !firstName.trim()) {
       setTouched({ firstName: true })
       firstNameRef.current?.focus()
-      return
-    }
-
-    if (unknownFirstName && !lastName.trim()) {
-      setLastNameMissing(true)
       return
     }
 
@@ -353,15 +345,11 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           type="text"
           className={isSurnameUppercase() ? 'pz-caps' : undefined}
           value={lastName}
-          onChange={(e) => {
-            setLastName(e.target.value)
-            setLastNameMissing(false)
-          }}
+          onChange={(e) => setLastName(e.target.value)}
           autoComplete="off"
           autoCapitalize="words"
         />
       </div>
-      {lastNameMissing && <p className="apn-error-text">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
 
       {duplicateBox}
 
@@ -478,10 +466,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                 type="text"
                 className={isSurnameUppercase() ? 'pz-caps' : undefined}
                 value={lastName}
-                onChange={(e) => {
-                  setLastName(e.target.value)
-                  setLastNameMissing(false)
-                }}
+                onChange={(e) => setLastName(e.target.value)}
                 placeholder={t('Dupont')}
                 autoComplete="off"
               />
@@ -490,7 +475,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           {touched.firstName && !unknownFirstName && !firstName.trim() && (
             <p className="apn-error-text">{t('Il faut au moins un prénom.')}</p>
           )}
-          {lastNameMissing && <p className="apn-error-text">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
           {duplicateBox}
 
           <div className="pz-field">

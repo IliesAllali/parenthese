@@ -449,7 +449,6 @@ export default {
   "Décédée, date inconnue": "Verstorben, Datum unbekannt",
   "Prénom inconnu": "Vorname unbekannt",
   "Je ne connais pas son prénom": "Ich kenne den Vornamen nicht",
-  "Il faut au moins un nom si le prénom est inconnu.": "Ist der Vorname unbekannt, braucht es mindestens einen Nachnamen.",
   // Recadrage du portrait (PortraitCropModal, menu du badge, App)
   "Recadrer la photo": "Foto zuschneiden",
   "Forme du cadre": "Form des Rahmens",
