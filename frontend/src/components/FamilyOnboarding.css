@@ -5,7 +5,7 @@
 .fo-big { min-height: 54px; font-size: 17px; justify-content: center; }
 .fo-optional { font-weight: 400; color: var(--pz-faint); margin-left: 4px; }
 /* « Voir l'arbre » reste au pouce : collé en bas de la feuille, même quand le clavier est ouvert */
-.fo-foot { position: sticky; bottom: 0; padding-top: 14px; margin-top: 4px; border-top: 1px solid var(--pz-line); background: inherit; }
+.fo-foot { position: sticky; bottom: 0; padding-top: 8px; background: inherit; }
 
 .fo-self {
   position: fixed;
@@ -23,7 +23,6 @@
 }
 .fo-self-title { margin: 0; font: 400 22px/1.2 var(--pz-serif); color: var(--pz-ink); }
 .fo-self-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.fo-self-actions .pz-btn { min-height: 48px; }
 
 .fo-picker { width: min(100%, 520px); gap: 16px; }
 .fo-search {

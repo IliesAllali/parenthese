@@ -3,7 +3,7 @@
 
 .mm-form { display: grid; gap: 16px; }
 /* L'envoi reste au pouce : le bouton est collé en bas de la feuille pendant qu'on remplit */
-.mm-form > .pz-modal-actions { position: sticky; bottom: 0; z-index: 2; margin: 0 -4px; padding: 12px 4px; background: var(--pz-surface); border-top: 1px solid var(--pz-line); }
+.mm-form > .pz-modal-actions { position: sticky; bottom: 0; z-index: 2; padding: 12px 0; background: var(--pz-surface); }
 
 /* Photos choisies d'un coup : chacune avec qui est dessus, dit sur la photo (MediaPeople, comme la visionneuse) */
 .mm-photos { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
