@@ -89,6 +89,18 @@
 .contrib-block-title { margin: 0; font: 400 22px/1.2 var(--pz-serif); color: var(--pz-ink); }
 .contrib-block .contrib-list-header { padding-top: 0; border-top: 0; align-items: center; }
 .contrib-block .contrib-empty { padding: 0; border: 0; background: none; text-align: left; font: 400 15px/1.55 var(--pz-sans); color: var(--pz-ink-2); }
+/* Deux niveaux d'encadrement au plus (Patch, 20/11) : la feuille, puis le bloc. Dans un bloc, les propositions et
+   leurs changements sont des lignes séparées par un filet, sans cadre ni fond ; l'étiquette devient du texte. */
+.contrib-block .contrib-list { gap: 0; }
+.contrib-block .contrib-item { border: 0; border-top: 1px solid var(--pz-line); border-radius: 0; background: none; overflow: visible; }
+.contrib-block .contrib-item-main { padding: 16px 0 8px; }
+.contrib-block .contrib-change-list { padding: 0 0 8px; }
+.contrib-block .contrib-change-card,
+.contrib-block .contrib-change-card--approved,
+.contrib-block .contrib-change-card--rejected { margin-top: 0; padding: 12px 0; border: 0; border-top: 1px solid var(--pz-line-soft); border-radius: 0; background: none; }
+.contrib-block .contrib-action-badge { position: static; justify-self: start; padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.contrib-block .contrib-session-footer { padding: 4px 0 16px; border-top: 0; background: none; }
+@media (hover: hover) and (pointer: fine) { .contrib-block .contrib-item-main--clickable:hover { background: none; } }
 .contrib-send { display: grid; gap: 8px; justify-items: center; margin-top: 4px; }
 /* Lien et mot de passe : une ligne chacun, séparées comme les lignes de l'app, texte à la taille courante (pz-sub) */
 .contrib-share-row { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 12px 0; border-bottom: 1px solid var(--pz-line-soft); }
