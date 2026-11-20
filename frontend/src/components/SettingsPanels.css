@@ -64,8 +64,13 @@
 .ts-icon:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
 
 /* Cinq onglets : ils rétrécissent (texte sur deux lignes) au lieu de déborder du panneau sur un petit téléphone */
-.ts-tabs .pz-tab { min-width: 0; }
-@media (max-width: 420px) { .ts-tabs .pz-tab { padding: 0 4px; font-size: 12.5px; line-height: 1.2; } }
+/* Chaque onglet prend la largeur de son texte, sur une ligne. Si une langue déborde (l'allemand au téléphone),
+   la rangée défile plutôt que de couper « Votre arbre » en deux. */
+.ts-tabs { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.ts-tabs::-webkit-scrollbar { display: none; }
+.ts-tabs .pz-tab { flex: 1 0 auto; white-space: nowrap; }
+@media (max-width: 420px) { .ts-tabs .pz-tab { padding: 0 7px; font-size: 12.5px; } }
+@media (max-width: 380px) { .ts-tabs { gap: 2px; } .ts-tabs .pz-tab { padding: 0 5px; } }
 
 /* ── Gestion : propriétaire et co-gestionnaires (issue #145) ── */
 .tm-row { padding: 12px 14px; }
