@@ -213,4 +213,6 @@ export default {
   "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "Die Verbindung wurde unterbrochen. Prüfe dein Netz und versuche es noch einmal.",
   "Ça n'a pas marché. Réessayez dans un moment.": "Das hat nicht geklappt. Versuche es gleich noch einmal.",
   "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "Dieses Foto ist im HEIC-Format, das Parenthèse noch nicht lesen kann. Schick es als JPEG oder mach einen Screenshot davon.",
+  "Souvenir pour {name}": "Erinnerung an {name}",
+  "Moment pour {name}": "Moment für {name}",
 }
