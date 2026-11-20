@@ -111,9 +111,6 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   const ghostsRef = useRef(ghosts)
   const fullNamesRef = useRef(fullNames)
   useEffect(() => { fullNamesRef.current = fullNames; needsRedrawRef.current = true }, [fullNames])
-  // La personne reconnue comme « vous » : bord d'accent et « vous » sous son nom
-  const selfIdRef = useRef(selfPersonId)
-  useEffect(() => { selfIdRef.current = selfPersonId; needsRedrawRef.current = true }, [selfPersonId])
   // Noms en capitales : le libellé se relit au dessin (surnameLabel), il suffit de redessiner
   useEffect(() => { needsRedrawRef.current = true }, [surnameUppercase])
   useEffect(() => { ghostsRef.current = ghosts; needsRedrawRef.current = true }, [ghosts])
@@ -520,6 +517,17 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       const screenX = phone ? rect.width / 2 : (408 + rect.width) / 2
       const screenY = phone ? rect.height * 0.22 : rect.height / 2
       targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
+    },
+    // Où tombe le bas d'un portrait et de son prénom à l'écran, une fois le cadrage demandé atteint (« C'est vous ? »
+    // s'y accroche sur ordinateur). null si la personne n'est pas dans l'onglet affiché.
+    labelBottomOf: (personId) => {
+      const canvas = canvasRef.current
+      const node = layoutDataRef.current?.children.find(n => n.id === `p-${personId}`)
+      if (!canvas || !node) return null
+      const rect = canvas.getBoundingClientRect()
+      const pos = getAnimatedPos(node, performance.now())
+      const { x, y, scale } = targetTransformRef.current
+      return { x: rect.left + pos.cx * scale + x, y: rect.top + (pos.cy + PERSON_R + 58) * scale + y }
     },
     // Plusieurs personnes venant d'être ajoutées : toutes dans le champ, au-dessus de la barre du bas. Si l'arbre
     // n'est pas encore reposé avec elles, le cadrage attend la prochaine mise en place.
@@ -1185,7 +1193,6 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
         liftScales: liftScalesRef.current,
         ghostPatches: ghostsRef.current?.patches || null,
         fullNames: fullNamesRef.current,
-        selfId: selfIdRef.current == null ? null : String(selfIdRef.current),
       })
       drawRenvoiPills(ctx)
       // Annotations dessinées APRES les noeuds pour que stickers/texte soient au-dessus.

@@ -55,13 +55,20 @@ export function FamilyWelcome({ visible, treeName, askName = true, onLook }) {
   )
 }
 
-// « C'est vous, Claire ? » : posée sur l'arbre, la personne trouvée au centre. Plusieurs personnes portent ce
+// « C'est vous, Claire ? » : posée sur l'arbre, la personne trouvée au centre et sélectionnée. Plusieurs personnes portent ce
 // prénom : chacune a son bouton, avec son année.
-export function SelfAsk({ candidates = [], onConfirm, onDecline }) {
+// anchor : sur ordinateur, le bas du prénom de la personne trouvée ; la question se pose juste dessous
+export function SelfAsk({ candidates = [], anchor = null, onConfirm, onDecline }) {
   if (!candidates.length) return null
   const single = candidates.length === 1 ? candidates[0] : null
+  const anchored = single && anchor
   return (
-    <div className="fo-self" role="dialog" aria-labelledby="foSelfTitle">
+    <div
+      className={`fo-self${anchored ? ' fo-self--anchored' : ''}`}
+      style={anchored ? { left: `${anchor.x}px`, top: `${anchor.y}px` } : undefined}
+      role="dialog"
+      aria-labelledby="foSelfTitle"
+    >
       <h2 id="foSelfTitle" className="fo-self-title">
         {single ? t("C'est vous, {name} ?", { name: single.firstName }) : t("C'est vous ?")}
       </h2>

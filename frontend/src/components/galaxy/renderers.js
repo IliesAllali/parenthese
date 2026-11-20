@@ -511,7 +511,7 @@ function measureTextCached(ctx, text, fontKey) {
 // ============================================================
 function drawPersonNode(ctx, node, pos, nodeProgress, {
   nodeRandomData, imageCache, hoverScales, selectedGlowScales, searchGlowScales,
-  mediaHoverState, entrance, entranceActive, elapsed, view = null, liftScales = null, fullNames = false, selfId = null,
+  mediaHoverState, entrance, entranceActive, elapsed, view = null, liftScales = null, fullNames = false,
 }) {
   const { cx, cy } = pos
   const person = getPersonById(node._data.id) || node._data
@@ -653,8 +653,6 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   }
 
   drawPortrait(ctx, frameType, person, img, person.toVerify && withDetail)
-  const isSelf = selfId != null && String(person.id) === selfId
-  if (isSelf) drawSelfRing(ctx, frameType, person, img)
   // Anniversaire du jour : un chapeau sur le cadre (absent au dézoom, comme « À vérifier »)
   const birthday = withDetail ? birthdayToday(person, frameNow) : null
   if (birthday) drawBirthdayHat(ctx, frameTopOf(frameType, person, img))
@@ -732,14 +730,6 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
     const years = person.deathYear
       ? `${birthYearLabel}–${person.deathYear}`
       : person.isAlive === false ? `${birthYearLabel}–?` : `${birthYearLabel}`
-    const yearsY = (hasNickname ? 31 : 15) + lineShift
-    if (isSelf) {
-      ctx.save()
-      ctx.font = '500 12px "DM Sans", system-ui, sans-serif'
-      ctx.fillStyle = SELF_COLOR
-      ctx.fillText(t('vous'), 0, yearsY + 15)
-      ctx.restore()
-    }
     if (birthday) {
       // Le jour J, l'âge remplace l'année, en terracotta
       ctx.font = '500 11px "DM Sans", system-ui, sans-serif'
@@ -1151,35 +1141,6 @@ function drawToVerifyMark(ctx) {
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('?', x, y + 0.5)
-}
-
-// « Vous » : un bord d'accent autour du cadre, à 2 px du blanc, sans ombre (même forme que drawFrame)
-const SELF_COLOR = '#93402A'
-function drawSelfRing(ctx, frameType, person, img) {
-  const gap = 3
-  ctx.save()
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.strokeStyle = SELF_COLOR
-  ctx.lineWidth = 2
-  ctx.beginPath()
-  if (frameType === 'polaroid') {
-    const p = PERSON_R + 4
-    ctx.roundRect(-p - 4 - gap, -p - 4 - gap, (p + 4 + gap) * 2, (p + 4) + p + 10 + gap * 2, 5)
-  } else if (frameType === 'square') {
-    const half = PERSON_R + 7 + gap
-    ctx.roundRect(-half, -half, half * 2, half * 2, 6)
-  } else if (frameType === 'rect') {
-    const ratio = img?.naturalWidth && img?.naturalHeight ? img.naturalWidth / img.naturalHeight : 1
-    const landscape = isLandscapeRect(ratio, cropShape(person.avatarCrop))
-    const rw = (landscape ? PERSON_R + 12 : PERSON_R + 2) + 3 + gap
-    const rh = (landscape ? PERSON_R - 8 : PERSON_R + 6) + 3 + gap
-    ctx.roundRect(-rw, -rh, rw * 2, rh * 2, 7)
-  } else {
-    ctx.arc(0, 0, PERSON_R + 3 + gap, 0, Math.PI * 2)
-  }
-  ctx.stroke()
-  ctx.restore()
 }
 
 function drawFrame(ctx, frameType, person, img) {

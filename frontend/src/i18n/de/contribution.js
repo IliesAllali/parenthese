@@ -200,9 +200,7 @@ export default {
   "Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).": "Diese Datei ist kein Foto, das Parenthèse anzeigen kann (JPEG, PNG, WebP oder GIF).",
   "Cette proposition a déjà été relue, peut-être par une autre personne qui gère l’arbre.": "Dieser Vorschlag wurde schon geprüft, vielleicht von einer anderen Person, die den Stammbaum verwaltet.",
   "Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.": "Dieser Link öffnet den Stammbaum nicht mehr. Gib das erhaltene Passwort ein oder bitte um den neuen Link.",
-  "Envoyé. {name} les verra et les ajoutera à l'arbre.": "Gesendet. {name} sieht sie sich an und fügt sie dem Stammbaum hinzu.",
   "Envoyé. {name} le verra et l'ajoutera à l'arbre.": "Gesendet. {name} sieht es sich an und fügt es dem Stammbaum hinzu.",
-  "Envoyé. La personne qui gère l'arbre les verra et les ajoutera.": "Gesendet. Die Person, die den Stammbaum verwaltet, sieht sie sich an und fügt sie hinzu.",
   "Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.": "Gesendet. Die Person, die den Stammbaum verwaltet, sieht es sich an und fügt es hinzu.",
   "Le lien de la famille {name}": "Der Link der Familie {name}",
   "Le lien de l'arbre": "Der Link zum Stammbaum",
@@ -212,8 +210,4 @@ export default {
   "C'est vous, {name} ?": "Bist du das, {name}?",
   "C'est vous ?": "Bist du das?",
   "Il manque votre prénom": "Ihr Vorname fehlt",
-  "Ajouter d’autres photos": "Weitere Fotos hinzufügen",
-  "Choisir des photos": "Fotos auswählen",
-  "Photos choisies": "Ausgewählte Fotos",
-  "vous": "du",
 }

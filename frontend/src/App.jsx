@@ -1110,10 +1110,18 @@ function App() {
   const galaxyTransformReadRef = useRef(null)
   // Ref exposant l'API zoom de Galaxy au ZoomControl
   const galaxyZoomApiRef = useRef(null)
-  // « C'est vous, Claire ? » : l'arbre montre la personne trouvée
+  // « C'est vous, Claire ? » : l'arbre montre la personne trouvée, sélectionnée comme quand on la touche. Sur
+  // ordinateur, la question s'accroche sous son prénom ; sur téléphone, elle reste en bas, au pouce.
   const selfFocusId = selfCandidates.length === 1 ? selfCandidates[0].id : null
+  const [selfAnchor, setSelfAnchor] = useState(null)
   useEffect(() => {
-    if (selfFocusId) requestAnimationFrame(() => galaxyZoomApiRef.current?.focusPerson?.(selfFocusId))
+    if (!selfFocusId) { setSelfAnchor(null); return undefined }
+    const frame = requestAnimationFrame(() => {
+      galaxyZoomApiRef.current?.focusPerson?.(selfFocusId)
+      const desktop = window.matchMedia?.('(min-width: 769px)').matches
+      setSelfAnchor(desktop ? galaxyZoomApiRef.current?.labelBottomOf?.(selfFocusId) ?? null : null)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [selfFocusId])
 
   // Called by AnnotationToolbar when user picks a photo file for canvas annotation
@@ -3606,7 +3614,7 @@ function App() {
         onLook={closeFamilyWelcome}
       />
       {!tree.selectedPerson && !tree.selectedMedia && !media.mediaManagerState.visible && !souvenirPickerVisible && (
-        <SelfAsk candidates={selfCandidates} onConfirm={answerSelfAsk} onDecline={() => answerSelfAsk(null)} />
+        <SelfAsk candidates={selfCandidates} anchor={selfAnchor} onConfirm={answerSelfAsk} onDecline={() => answerSelfAsk(null)} />
       )}
       <SouvenirPicker
         visible={souvenirPickerVisible}
@@ -3680,7 +3688,8 @@ function App() {
       <Galaxy
         onPersonSelect={handlePersonSelect}
         onMediaSelect={handleMediaSelectFresh}
-        selectedPersonId={tree.selectedPerson?.id || null}
+        // La famille reconnue (« C'est vous ? », puis « C'est moi ») ressort comme une personne sélectionnée
+        selectedPersonId={tree.selectedPerson?.id || selfFocusId || (isFamilyVisitor ? linkedSelfPersonId : null) || null}
         searchHighlightIds={search.matchedPersonIds}
         graphRevision={tree.graphRevision}
         annotationHandlers={editMode.isActive ? annot : null}
@@ -3803,13 +3812,13 @@ function App() {
         allPersons={persons}
         getPerson={(id) => persons.find((p) => p.id === id) || null}
         onClose={media.handleCloseMediaManager}
-        onSent={(count) => {
+        onSent={() => {
           // La famille a envoyé : la feuille se ferme, la relecture revient à qui gère l'arbre
           media.handleCloseMediaManager()
           const owner = tree.treeContext.treeOwnerName
           setDraftNotice(owner
-            ? (count > 1 ? t("Envoyé. {name} les verra et les ajoutera à l'arbre.", { name: owner }) : t("Envoyé. {name} le verra et l'ajoutera à l'arbre.", { name: owner }))
-            : (count > 1 ? t("Envoyé. La personne qui gère l'arbre les verra et les ajoutera.") : t("Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.")))
+            ? t("Envoyé. {name} le verra et l'ajoutera à l'arbre.", { name: owner })
+            : t("Envoyé. La personne qui gère l'arbre le verra et l'ajoutera."))
         }}
         onUpload={media.handleUploadPersonMedia}
         onMove={media.handleMovePersonMedia}

@@ -214,9 +214,7 @@ export default {
   'Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).': "This file isn't a photo Parenthèse can show (JPEG, PNG, WebP or GIF).",
   'Cette proposition a déjà été relue, peut-être par une autre personne qui gère l’arbre.': 'This suggestion has already been reviewed, maybe by another person who manages the tree.',
   "Ce lien n'ouvre plus l'arbre. Tapez le mot de passe reçu, ou demandez le nouveau lien.": "This link no longer opens the tree. Type the password you were given, or ask for the new link.",
-  "Envoyé. {name} les verra et les ajoutera à l'arbre.": "Sent. {name} will see them and add them to the tree.",
   "Envoyé. {name} le verra et l'ajoutera à l'arbre.": "Sent. {name} will see it and add it to the tree.",
-  "Envoyé. La personne qui gère l'arbre les verra et les ajoutera.": "Sent. The person who manages the tree will see them and add them.",
   "Envoyé. La personne qui gère l'arbre le verra et l'ajoutera.": "Sent. The person who manages the tree will see it and add it.",
   "Le lien de la famille {name}": "The {name} family link",
   "Le lien de l'arbre": "The tree link",
@@ -226,8 +224,4 @@ export default {
   "C'est vous, {name} ?": "Is this you, {name}?",
   "C'est vous ?": "Is this you?",
   "Il manque votre prénom": "Your first name is missing",
-  "Ajouter d’autres photos": "Add more photos",
-  "Choisir des photos": "Choose photos",
-  "Photos choisies": "Chosen photos",
-  "vous": "you",
 }
