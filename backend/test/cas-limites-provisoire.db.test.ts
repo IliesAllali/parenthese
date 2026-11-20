@@ -14,7 +14,7 @@ const nextIp = () => `10.7.${Math.floor(++ip / 250)}.${ip % 250 + 1}`
 const run = Date.now().toString(36)
 const DAY = 86_400_000
 
-type Call = { status: number; body: any; cookie: string | null }
+type Call = { status: number; body: any; cookie: string | null; retryAfter: number | null }
 async function call(method: string, url: string, options: { token?: string; payload?: unknown; cookie?: string; from?: string } = {}): Promise<Call> {
   const res = await app.inject({
     method: method as 'GET',
@@ -28,7 +28,8 @@ async function call(method: string, url: string, options: { token?: string; payl
   })
   const setCookie = res.headers['set-cookie']
   const raw = Array.isArray(setCookie) ? setCookie[0] : setCookie
-  return { status: res.statusCode, body: res.body ? res.json() : null, cookie: raw ? String(raw).split(';')[0] : null }
+  const retryAfter = res.headers['retry-after']
+  return { status: res.statusCode, body: res.body ? res.json() : null, cookie: raw ? String(raw).split(';')[0] : null, retryAfter: retryAfter === undefined ? null : Number(retryAfter) }
 }
 
 const treeBody = (name: string, slug = name) => ({ name, slug, visitorPassword: 'partage-demo-1', contributorPassword: 'partage-demo-1' })
@@ -153,12 +154,28 @@ describe.skipIf(!TEST_DB)('cas limites du compte provisoire et de l’adresse, v
 
   it('dix familles derrière la même box font leur arbre ; le filet par adresse arrête une rafale', async () => {
     const box = '10.99.0.1'
-    const statuses: number[] = []
+    const results: Call[] = []
     for (let i = 0; i < 31; i += 1) {
       const { token } = await provisional(`box${i}`)
-      statuses.push((await call('POST', '/trees', { token, from: box, payload: treeBody(`Famille Box ${i} ${run}`) })).status)
+      results.push(await call('POST', '/trees', { token, from: box, payload: treeBody(`Famille Box ${i} ${run}`) }))
     }
-    expect(statuses.slice(0, 30).every((status) => status === 201)).toBe(true)
-    expect(statuses[30]).toBe(429)
+    expect(results.slice(0, 30).every((result) => result.status === 201)).toBe(true)
+    expect(results[30].status).toBe(429)
+    // L'app dit la vraie attente (« Réessayez dans une heure ») à partir de Retry-After
+    expect(results[30].retryAfter).toBeGreaterThan(55 * 60)
+  }, 60_000)
+
+  it('un même compte : dix arbres par heure, puis 429 avec la vraie attente, d’où qu’il vienne', async () => {
+    const owner = await call('POST', '/auth/register', { payload: { email: `rafale-${run}@exemple.fr`, password: 'mot-de-passe-solide', firstName: 'Rafale' } })
+    const token = owner.body.token as string
+    for (let i = 0; i < 10; i += 1) {
+      const created = await call('POST', '/trees', { token, payload: treeBody(`Famille Rafale ${i} ${run}`) })
+      expect(created.status).toBe(201)
+      // Supprimé aussitôt : on éprouve la limite par heure, pas le plafond de dix arbres par compte
+      expect((await call('DELETE', `/trees/${created.body.tree.id}`, { token })).status).toBeLessThan(300)
+    }
+    const eleventh = await call('POST', '/trees', { token, payload: treeBody(`Famille Rafale 10 ${run}`) })
+    expect(eleventh.status).toBe(429)
+    expect(eleventh.retryAfter).toBeGreaterThan(55 * 60)
   }, 60_000)
 })

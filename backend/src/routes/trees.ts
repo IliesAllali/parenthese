@@ -506,9 +506,18 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
 
   // Dix arbres par heure et par compte, compté après l'authentification (le compte provisoire en fait un seul de
   // toute façon). Les familles qui commencent ensemble derrière une même box ne se bloquent plus entre elles ; le
-  // filet par adresse reste, plus large, contre une rafale de comptes provisoires.
+  // filet par adresse reste, plus large, contre une rafale de comptes provisoires. Le plugin ne fait passer qu'un
+  // limiteur par requête : le filet est appelé à la main, et répond comme lui (429 et Retry-After, que l'app lit).
+  const treeCreationsPerAddress = app.createRateLimit({ max: 30, timeWindow: '1 hour' })
   app.post('/trees', {
-    onRequest: app.rateLimit({ max: 30, timeWindow: '1 hour' }),
+    onRequest: async (request, reply) => {
+      const limit = await treeCreationsPerAddress(request)
+      if (limit.isAllowed || !limit.isExceeded) return
+      return reply
+        .code(429)
+        .header('retry-after', limit.ttlInSeconds)
+        .send({ statusCode: 429, error: 'Too Many Requests', message: `Rate limit exceeded, retry in ${limit.ttlInSeconds} seconds` })
+    },
     config: {
       rateLimit: {
         max: 10,

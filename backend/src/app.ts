@@ -84,6 +84,8 @@ export function createApp() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     // Le cookie de la session provisoire (lib/user-session.ts) quand l'API n'est pas à l'adresse de l'app
     credentials: true,
+    // L'attente d'une limite atteinte, que l'app dit en clair (« Réessayez dans une heure »)
+    exposedHeaders: ['Retry-After'],
   })
 
   app.register(rateLimit, {
