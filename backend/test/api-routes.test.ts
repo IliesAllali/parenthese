@@ -19,6 +19,13 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // Anciennes adresses des arbres renommés : aucune par défaut
+    treeSlugAlias: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     tree: {
       // Adresses déjà prises : aucune par défaut
       findMany: vi.fn(async () => []),

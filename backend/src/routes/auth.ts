@@ -7,14 +7,16 @@ import { confirmsWithPassword, hashPassword, verifyPassword } from '../lib/auth.
 import { isOidcEnabled } from '../lib/oidc.js'
 import { createAccountIfAllowed, isRegistrationOpen } from '../lib/registration.js'
 import { acceptInvitation, findPendingInvitationByToken } from '../lib/tree-invitations.js'
-import { signUserSession } from '../lib/user-session.js'
+import { clearProvisionalCookie, isUserSessionValid, setProvisionalCookie, signUserSession } from '../lib/user-session.js'
 import { revokeUserToken } from '../lib/token-revocation.js'
 import { removeTreeMediaDirectories } from '../lib/tree-purge.js'
 import {
   adoptProvisionalAccount,
   deleteAccountRecords,
   isProvisional,
+  PROVISIONAL_COOKIE,
   provisionalExpiry,
+  provisionalLastSeen,
 } from '../lib/provisional-account.js'
 import type { AnyJwtPayload } from '../types/auth.js'
 
@@ -151,12 +153,51 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const user = await app.prisma.user.create({
-        data: { email: null, firstName: trimmedFirstName(parsed.data.firstName), passwordHash: null },
-        select: { id: true, email: true, firstName: true, createdAt: true },
+        data: { email: null, firstName: trimmedFirstName(parsed.data.firstName), passwordHash: null, lastSeenAt: new Date() },
+        select: { id: true, email: true, firstName: true, createdAt: true, lastSeenAt: true },
       })
+      const token = signUserSession(app, user)
+      setProvisionalCookie(request, reply, token)
       return reply.code(201).send({
-        token: signUserSession(app, user),
-        user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, provisional: true, provisionalUntil: provisionalExpiry(user.createdAt) },
+        token,
+        user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, provisional: true, provisionalUntil: provisionalExpiry(provisionalLastSeen(user)) },
+      })
+    },
+  )
+
+  // Chaque visite d'un arbre provisoire : la session revient (du cookie si Safari a vidé le stockage de la page),
+  // renouvelée, et les 30 jours repartent. lastVisitAt, la visite d'avant, dit à l'app si l'arbre allait s'effacer.
+  app.post(
+    '/provisional/resume',
+    { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      let userId = request.actor?.kind === 'user' && request.actor.email === null ? request.actor.userId : null
+      const cookieToken = request.cookies[PROVISIONAL_COOKIE]
+      if (!userId && cookieToken) {
+        try {
+          const payload = app.jwt.verify<AnyJwtPayload>(cookieToken)
+          if (payload.kind === 'user' && payload.email === null && await isUserSessionValid(app, payload)) userId = payload.userId
+        } catch {
+          // Jeton expiré ou modifié : pas de session à reprendre
+        }
+      }
+      const user = userId
+        ? await app.prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, firstName: true, createdAt: true, lastSeenAt: true } })
+        : null
+      if (!user || !isProvisional(user)) {
+        clearProvisionalCookie(request, reply)
+        return reply.code(401).send({ error: 'authentication_required' })
+      }
+
+      const lastVisitAt = provisionalLastSeen(user)
+      const seenAt = new Date()
+      await app.prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: seenAt } })
+      const token = signUserSession(app, user)
+      setProvisionalCookie(request, reply, token)
+      return reply.send({
+        token,
+        lastVisitAt,
+        user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, oidcLinked: false, provisional: true, provisionalUntil: provisionalExpiry(seenAt) },
       })
     },
   )
@@ -208,6 +249,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         await revokeUserToken(app.prisma, payload.jti, payload.exp)
       }
 
+      clearProvisionalCookie(request, reply)
       return reply.send({ token: signUserSession(app, kept), user: { ...kept, hasPassword: true, provisional: false } })
     },
   )
@@ -334,6 +376,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       // compte retrouvé au lieu d'être perdu
       if (request.actor?.kind === 'user' && request.actor.email === null) {
         await adoptProvisionalAccount(app.prisma, request.actor.userId, user.id)
+        clearProvisionalCookie(request, reply)
       }
 
       return reply.send({
@@ -356,7 +399,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const user = await app.prisma.user.findUnique({
       where: { id: request.actor.userId },
-      select: { id: true, email: true, firstName: true, passwordHash: true, createdAt: true, identities: { select: { id: true }, take: 1 } },
+      select: { id: true, email: true, firstName: true, passwordHash: true, createdAt: true, lastSeenAt: true, identities: { select: { id: true }, take: 1 } },
     })
     if (!user) {
       return reply.code(401).send({ error: 'authentication_required' })
@@ -364,7 +407,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     // Compte provisoire : l'app propose de garder l'arbre, et dit jusqu'à quand il reste
     if (isProvisional(user)) {
-      return reply.send({ user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, oidcLinked: false, provisional: true, provisionalUntil: provisionalExpiry(user.createdAt) } })
+      return reply.send({ user: { id: user.id, email: null, firstName: user.firstName, hasPassword: false, oidcLinked: false, provisional: true, provisionalUntil: provisionalExpiry(provisionalLastSeen(user)) } })
     }
 
     // hasPassword : l'écran de suppression demande le mot de passe, ou l'email pour un compte sans mot de passe.
@@ -540,6 +583,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
       await removeTreeMediaDirectories(ownedTreeIds, request.log)
 
+      clearProvisionalCookie(request, reply)
       return reply.send({ ok: true })
     },
   )

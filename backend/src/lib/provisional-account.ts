@@ -6,7 +6,10 @@ import { deleteTreeRecords, removeTreeMediaDirectories, type PurgeLogger } from 
 // Compte provisoire (#251) : « Créer mon arbre » ouvre l'arbre tout de suite, avant tout compte. Le serveur crée un
 // compte sans email ni mot de passe, et sa session vit dans le navigateur comme une autre. La personne le garde
 // (« Gardez votre arbre ») en lui donnant un email et un mot de passe, ou par le fournisseur OIDC : c'est le même
-// compte, le même arbre. Sinon il est effacé avec ses arbres au bout de PROVISIONAL_DAYS.
+// compte, le même arbre. Sinon il est effacé avec ses arbres après PROVISIONAL_DAYS sans visite.
+// La session vit dans le stockage du navigateur, doublée d'un cookie posé par le serveur : Safari vide le stockage
+// d'un site après 7 jours sans visite, pas les cookies du serveur. À chaque visite, POST /auth/provisional/resume
+// rend la session (depuis le cookie si le stockage est vide) et fait repartir les 30 jours.
 
 export const PROVISIONAL_DAYS = 30
 export const PROVISIONAL_SESSION_EXPIRES_IN = `${PROVISIONAL_DAYS}d`
@@ -16,8 +19,16 @@ export function isProvisional(user: { email: string | null }): boolean {
   return user.email === null
 }
 
-export function provisionalExpiry(createdAt: Date): Date {
-  return new Date(createdAt.getTime() + PROVISIONAL_DAYS * DAY_MS)
+export const PROVISIONAL_COOKIE = 'parenthese_provisoire'
+export const PROVISIONAL_MAX_AGE_S = PROVISIONAL_DAYS * 24 * 60 * 60
+
+// La dernière visite, ou la création pour un compte qui n'est pas revenu depuis
+export function provisionalLastSeen(user: { createdAt: Date; lastSeenAt: Date | null }): Date {
+  return user.lastSeenAt ?? user.createdAt
+}
+
+export function provisionalExpiry(lastSeen: Date): Date {
+  return new Date(lastSeen.getTime() + PROVISIONAL_DAYS * DAY_MS)
 }
 
 // Tout ce qui tient à un compte et doit partir ou rester avant de supprimer la ligne users, dans la transaction de
@@ -86,10 +97,16 @@ export async function adoptProvisionalAccount(prisma: PrismaClient, provisionalU
   })
 }
 
-// Comptes provisoires de plus de PROVISIONAL_DAYS : effacés avec leurs arbres, puis leurs fichiers
+// Comptes provisoires sans visite depuis PROVISIONAL_DAYS : effacés avec leurs arbres, puis leurs fichiers
 export async function purgeExpiredProvisionalAccounts(prisma: PrismaClient, logger: PurgeLogger, now = new Date()): Promise<number> {
   const expired = await prisma.user.findMany({
-    where: { email: null, createdAt: { lt: new Date(now.getTime() - PROVISIONAL_DAYS * DAY_MS) } },
+    where: {
+      email: null,
+      OR: [
+        { lastSeenAt: { lt: new Date(now.getTime() - PROVISIONAL_DAYS * DAY_MS) } },
+        { lastSeenAt: null, createdAt: { lt: new Date(now.getTime() - PROVISIONAL_DAYS * DAY_MS) } },
+      ],
+    },
     select: { id: true },
     take: 200,
   })

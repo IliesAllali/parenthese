@@ -57,6 +57,8 @@ const AdminPanel = ({
   onTreeDeleted,
   onLeftTree,
   onOpenShare,
+  // Arbre provisoire : inviter un co-gérant demande d'abord de garder l'arbre
+  onKeepRequired,
   onTreeUpdated,
   onGedcomImported,
   onOpenPhotoStart,
@@ -218,11 +220,13 @@ const AdminPanel = ({
         icon: treeIcon,
       }
 
+      // Seulement quand le nom change : un arbre à suffixe (famille-martin-2) ne redemande rien à chaque
+      // enregistrement. L'ancienne adresse reste à l'arbre, les liens déjà envoyés marchent encore.
       const normalized = normalizeSlug(nextName)
-      const slugWillChange = normalized && normalized !== tree.slug
+      const slugWillChange = nextName !== tree.name && normalized && normalized !== tree.slug
       if (slugWillChange) {
         const confirmSlugUpdate = window.confirm(
-          t('Souhaitez-vous mettre à jour aussi le lien de partage avec ce nouveau nom ?'),
+          t("Mettre aussi à jour l'adresse de l'arbre avec ce nouveau nom ? Les liens déjà envoyés continueront de marcher."),
         )
         if (confirmSlugUpdate) {
           payload.slug = normalized
@@ -477,7 +481,7 @@ const AdminPanel = ({
               {successMessage && <div className="pz-success" role="status">{successMessage}</div>}
 
               {section === 'visits' && <TreeVisitsSection treeId={treeId} authToken={authToken} />}
-              {section === 'managers' && <TreeManagersSection treeId={treeId} authToken={authToken} currentUserId={currentUserId} oidcName={oidcName} onOpenShare={onOpenShare} />}
+              {section === 'managers' && <TreeManagersSection treeId={treeId} authToken={authToken} currentUserId={currentUserId} oidcName={oidcName} onOpenShare={onOpenShare} onKeepRequired={onKeepRequired} />}
 
               {section === 'tree' && (
                 <form className="ts-panel" onSubmit={handleSaveTree}>

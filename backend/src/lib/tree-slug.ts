@@ -2,6 +2,7 @@ import type { PrismaClient } from '../generated/prisma/client.js'
 
 // L'adresse d'un arbre (/arbre/<slug>) vient de son nom et doit être unique. Deux familles Martin
 // ne doivent pas se gêner : la seconde reçoit famille-martin-2, puis -3, et ainsi de suite (#251).
+// Un arbre renommé garde ses anciennes adresses (tree_slug_aliases) : elles mènent à lui et restent prises.
 
 export const SLUG_MAX_LENGTH = 64
 
@@ -12,7 +13,10 @@ export function normalizeSlug(input: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^-+/, '')
+    // Un nom de famille long ne doit pas rendre l'adresse invalide : on la coupe
+    .slice(0, SLUG_MAX_LENGTH)
+    .replace(/-+$/, '')
 }
 
 export function isValidSlug(value: string): boolean {
@@ -34,9 +38,10 @@ export function nextFreeSlug(base: string, taken: Iterable<string>): string {
   }
 }
 
-// Les arbres supprimés gardent leur adresse jusqu'à la purge : ils comptent comme pris.
+// Les arbres supprimés gardent leur adresse jusqu'à la purge, et les anciennes adresses des autres arbres restent
+// à eux : elles comptent comme prises. Celles de l'arbre lui-même (exceptTreeId) restent libres pour lui.
 export async function findFreeSlug(
-  prisma: Pick<PrismaClient, 'tree'>,
+  prisma: Pick<PrismaClient, 'tree' | 'treeSlugAlias'>,
   base: string,
   exceptTreeId?: string,
 ): Promise<string> {
@@ -49,7 +54,14 @@ export async function findFreeSlug(
     },
     select: { slug: true },
   })
-  return nextFreeSlug(base, rows.map((row) => row.slug))
+  const aliases = await prisma.treeSlugAlias.findMany({
+    where: {
+      slug: { startsWith: stem },
+      ...(exceptTreeId ? { NOT: { treeId: exceptTreeId } } : {}),
+    },
+    select: { slug: true },
+  })
+  return nextFreeSlug(base, [...rows, ...aliases].map((row) => row.slug))
 }
 
 export function isUniqueViolation(error: unknown): boolean {

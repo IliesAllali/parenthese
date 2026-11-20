@@ -190,14 +190,14 @@ describe.skipIf(!TEST_DB)('compte provisoire, vraie base', () => {
     })
   })
 
-  it('effacé avec ses arbres au bout de 30 jours, pas avant ; un compte gardé reste', async () => {
+  it('effacé avec ses arbres après 30 jours sans visite, pas avant ; un compte gardé reste', async () => {
     const { purgeExpiredProvisionalAccounts } = await import('../src/lib/provisional-account.js')
     const old = await provisionalTree('vieux')
     const recent = await provisionalTree('recent')
     const keptOld = await provisionalTree('garde')
     await call('POST', '/auth/keep', keptOld.token, { email: mail('garde'), password: 'mot-de-passe-solide' })
     const longAgo = new Date(Date.now() - 31 * 86_400_000)
-    await prisma.user.updateMany({ where: { id: { in: [old.userId, keptOld.userId] } }, data: { createdAt: longAgo } })
+    await prisma.user.updateMany({ where: { id: { in: [old.userId, keptOld.userId] } }, data: { createdAt: longAgo, lastSeenAt: longAgo } })
 
     const logger = { warn: vi.fn(), error: vi.fn() }
     expect(await purgeExpiredProvisionalAccounts(prisma, logger)).toBeGreaterThanOrEqual(1)

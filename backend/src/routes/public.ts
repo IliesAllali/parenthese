@@ -13,9 +13,11 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: 'invalid_slug' })
     }
 
+    // L'adresse actuelle, ou une ancienne adresse d'un arbre renommé : le lien déjà envoyé mène encore à lui
+    const alias = await app.prisma.treeSlugAlias.findUnique({ where: { slug: params.data.slug }, select: { treeId: true } })
     const tree = await app.prisma.tree.findFirst({
       where: {
-        slug: params.data.slug,
+        ...(alias ? { id: alias.treeId } : { slug: params.data.slug }),
         deletedAt: null,
       },
       select: {

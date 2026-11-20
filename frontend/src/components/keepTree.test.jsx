@@ -21,10 +21,10 @@ describe('« Commencez par vous », seul écran avant l’arbre', () => {
 })
 
 describe('« Gardez votre arbre »', () => {
-  it('à la cinquième personne : email et mot de passe, « Plus tard », et la date d’effacement', () => {
-    const html = sheet({ reason: 'fifth', provisionalUntil: '2026-12-20T10:00:00.000Z' })
+  it('à la cinquième personne : email et mot de passe, « Plus tard », et les 30 jours depuis la dernière visite', () => {
+    const html = sheet({ reason: 'fifth' })
     expect(html).toContain('Gardez <em>votre arbre</em>')
-    expect(html).toMatch(/jusqu'au 20 décembre/)
+    expect(html).toContain('30 jours après votre dernière visite')
     expect(html).toContain('id="keepEmail"')
     expect(html).toContain('Plus tard')
     expect(html).toContain('Garder mon arbre')
@@ -36,6 +36,27 @@ describe('« Gardez votre arbre »', () => {
     expect(html).toContain("Pour l'envoyer, <em>gardez votre arbre</em>")
     expect(html).toContain('Annuler')
     expect(html).toContain('Garder et envoyer')
+    expect(html).not.toContain('Plus tard')
+  })
+
+  it('dans le navigateur d’une appli : l’arbre ne suivra pas dans le navigateur', () => {
+    const html = sheet({ reason: 'fifth', inApp: true })
+    expect(html).toContain('ne suivra pas dans votre navigateur')
+    expect(html).toContain('Plus tard')
+  })
+
+  it('retour après plus de 23 jours : la dernière visite, et l’effacement après 30 jours sans visite', () => {
+    const html = sheet({ reason: 'return', lastVisitAt: '2026-10-25T10:00:00.000Z' })
+    expect(html).toMatch(/dernière visite date du 25 octobre/)
+    expect(html).toContain('30 jours sans visite')
+    expect(html).toContain('Plus tard')
+  })
+
+  it('pour inviter un co-gérant : le compte est demandé, « Annuler »', () => {
+    const html = sheet({ reason: 'manager' })
+    expect(html).toContain('Pour inviter, <em>gardez votre arbre</em>')
+    expect(html).toContain('Garder mon arbre')
+    expect(html).toContain('Annuler')
     expect(html).not.toContain('Plus tard')
   })
 

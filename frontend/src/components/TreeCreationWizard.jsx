@@ -137,7 +137,7 @@ function TreeCreationWizard({
               <input
                 id="wizardSelfLastName"
                 type="text"
-                maxLength={120}
+                maxLength={112} /* « Famille » + le nom tient dans les 120 caractères du nom d’un arbre */
                 autoComplete="family-name"
                 value={form.selfLastName}
                 onChange={(event) => updateField('selfLastName', event.target.value)}

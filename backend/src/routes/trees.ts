@@ -504,7 +504,29 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/trees', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
+  // Dix arbres par heure et par compte, compté après l'authentification (le compte provisoire en fait un seul de
+  // toute façon). Les familles qui commencent ensemble derrière une même box ne se bloquent plus entre elles ; le
+  // filet par adresse reste, plus large, contre une rafale de comptes provisoires. Le plugin ne fait passer qu'un
+  // limiteur par requête : le filet est appelé à la main, et répond comme lui (429 et Retry-After, que l'app lit).
+  const treeCreationsPerAddress = app.createRateLimit({ max: 30, timeWindow: '1 hour' })
+  app.post('/trees', {
+    onRequest: async (request, reply) => {
+      const limit = await treeCreationsPerAddress(request)
+      if (limit.isAllowed || !limit.isExceeded) return
+      return reply
+        .code(429)
+        .header('retry-after', limit.ttlInSeconds)
+        .send({ statusCode: 429, error: 'Too Many Requests', message: `Rate limit exceeded, retry in ${limit.ttlInSeconds} seconds` })
+    },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 hour',
+        hook: 'preHandler',
+        keyGenerator: (request) => (request.actor?.kind === 'user' ? `user:${request.actor.userId}` : request.ip),
+      },
+    },
+  }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
       return
@@ -683,6 +705,12 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         updateData.slug = await findFreeSlug(app.prisma, normalizedSlug, params.data.id)
       }
 
+      // Nouvelle adresse : l'ancienne reste à l'arbre, pour les liens déjà envoyés
+      const previous = updateData.slug
+        ? await app.prisma.tree.findFirst({ where: { id: params.data.id, deletedAt: null }, select: { slug: true } })
+        : null
+      const slugChanges = Boolean(previous && updateData.slug && previous.slug !== updateData.slug)
+
       if (payload.data.description !== undefined) {
         updateData.description = payload.data.description
       }
@@ -714,13 +742,25 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      if (previous && !slugChanges) delete updateData.slug
       const changedFields = Object.keys(updateData)
-      const updateResult = await app.prisma.tree.updateMany({
-        where: {
-          id: params.data.id,
-          deletedAt: null,
-        },
-        data: updateData,
+      const updateResult = await app.prisma.$transaction(async (tx) => {
+        if (slugChanges && previous && updateData.slug) {
+          await tx.treeSlugAlias.upsert({
+            where: { slug: previous.slug },
+            create: { slug: previous.slug, treeId: params.data.id },
+            update: {},
+          })
+          // Revenir à une ancienne adresse : elle redevient l'adresse de l'arbre
+          await tx.treeSlugAlias.deleteMany({ where: { slug: updateData.slug, treeId: params.data.id } })
+        }
+        return tx.tree.updateMany({
+          where: {
+            id: params.data.id,
+            deletedAt: null,
+          },
+          data: updateData,
+        })
       })
 
       if (updateResult.count === 0) {

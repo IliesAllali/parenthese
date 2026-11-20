@@ -17,7 +17,7 @@ import { confirmsWithPassword } from '../lib/auth.js'
 import { adoptProvisionalAccount } from '../lib/provisional-account.js'
 import { createAccountIfAllowed } from '../lib/registration.js'
 import { claimInvitationsForVerifiedEmail, hasPendingInvitationForEmail } from '../lib/tree-invitations.js'
-import { signUserSession } from '../lib/user-session.js'
+import { clearProvisionalCookie, signUserSession } from '../lib/user-session.js'
 
 // Parcours : /auth/oidc/start pose un cookie signé (state, nonce, vérificateur PKCE) et part chez le fournisseur ;
 // /auth/oidc/callback vérifie tout, trouve ou crée le compte, et renvoie vers l'app avec un jeton de passage dans le
@@ -271,6 +271,9 @@ export const oidcRoutes: FastifyPluginAsync = async (app) => {
       if (identity.email && identity.emailVerified) {
         await claimInvitationsForVerifiedEmail(app.prisma, result.userId, identity.email)
       }
+
+      // L'arbre provisoire est gardé (ou a rejoint un compte) : son cookie de session ne sert plus
+      if (provisional) clearProvisionalCookie(request, reply)
 
       const handoff = app.jwt.sign(
         { kind: 'oidc_handoff', sub: result.userId, jti: randomUUID() },
