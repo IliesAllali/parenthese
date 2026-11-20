@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSlotId, kinSlots } from './kinSlots'
+import { isSlotId, kinSlots, singleParentGroup } from './kinSlots'
 import { normalizeFiliationsForLayout } from '../components/galaxy/elkLayout'
 
 const person = (id, sex = null) => ({ id, firstName: id, lastName: 'Martin', sex })
@@ -59,5 +59,45 @@ describe('kinSlots', () => {
   it('sans personne de départ : rien', () => {
     expect(kinSlots({ selfId: null, persons: [person('a')] }).persons).toEqual([])
     expect(kinSlots({ selfId: 'absent', persons: [person('a')] }).persons).toEqual([])
+  })
+
+  it('père, puis une sœur : la case « Mère » vaut pour la fratrie, sans « Inconnu » à côté du père', () => {
+    const persons = [person('lucie', 'female'), person('marc', 'male'), person('zoe', 'female')]
+    const filiations = [
+      { id: 'f1', childId: 'lucie', parentId: 'marc', unionId: null },
+      { id: 'f2', childId: 'zoe', parentId: 'marc', unionId: null },
+    ]
+    const slots = kinSlots({ selfId: 'lucie', persons, unions: [], filiations })
+    const normalized = normalizeFiliationsForLayout([...filiations, ...slots.filiations], slots.unions)
+    for (const childId of ['lucie', 'zoe']) {
+      const own = normalized.filter((f) => f.childId === childId)
+      expect(own).toHaveLength(1)
+      expect(own[0].unionId).toBe('ghost:slot:lucie:u')
+    }
+    // Plus aucune filiation directe : le placement ne dessine pas d'« Inconnu »
+    expect(normalized.some((f) => !f.unionId && f.parentId === 'marc')).toBe(false)
+  })
+})
+
+describe('singleParentGroup', () => {
+  const persons = [person('lucie', 'female'), person('marc', 'male'), person('zoe', 'female'), person('hugo', 'male'), person('ines', 'female'), person('anne', 'female')]
+
+  it('les enfants du parent seul, sans ceux qui ont un autre parent', () => {
+    const unions = [{ id: 'u2', partner1Id: 'marc', partner2Id: 'anne' }]
+    const filiations = [
+      { id: 'f1', childId: 'lucie', parentId: 'marc', unionId: null },
+      { id: 'f2', childId: 'zoe', parentId: 'marc', unionId: null },
+      { id: 'f3', childId: 'ines', parentId: null, unionId: 'u2' },
+      { id: 'f4', childId: 'hugo', parentId: 'anne', unionId: null },
+    ]
+    expect(singleParentGroup({ childId: 'lucie', persons, unions, filiations })).toEqual({
+      parentId: 'marc', siblingIds: ['zoe'], children: ['lucie', 'zoe'],
+    })
+  })
+
+  it('deux parents ou aucun : rien à faire', () => {
+    expect(singleParentGroup({ childId: 'lucie', persons, unions: [], filiations: [] })).toBeNull()
+    const unions = [{ id: 'u2', partner1Id: 'marc', partner2Id: 'anne' }]
+    expect(singleParentGroup({ childId: 'ines', persons, unions, filiations: [{ id: 'f', childId: 'ines', parentId: null, unionId: 'u2' }] })).toBeNull()
   })
 })

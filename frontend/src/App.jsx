@@ -97,7 +97,8 @@ import './App.css'
 import './styles/pz.css'
 import { setBooting } from './bootSignal.js'
 import { ghostsFromChanges, hasGhosts, mergeGhosts } from './utils/ghosts'
-import { kinSlots } from './utils/kinSlots'
+import { kinSlots, singleParentGroup } from './utils/kinSlots'
+import { buildAnnotationBatch, isEmptyBatch, newBatchKey, readPendingBatch, writePendingBatch, clearPendingBatch, isFinalFailure } from './utils/annotationBatch'
 import { kinAvailability, remainingParentSex } from './utils/kinForm'
 import { kinPeople } from './utils/kinPeople'
 import ProposalCard from './components/ProposalCard'
@@ -882,9 +883,10 @@ function App() {
         list.push(ghostsFromChanges(draftChanges, { source: 'draft', key: 'brouillon', summary: summarizeChanges(draftChanges) }, graph))
       }
     }
-    // Cases à remplir : les parents et grands-parents qui manquent autour de soi, pour qui gère l'arbre
-    if (tree.canEditCurrentTree) {
-      list.push(kinSlots({ selfId: linkedSelfPersonId || tree.treeContext.rootPersonId, persons, unions, filiations }))
+    // Cases à remplir : les parents et grands-parents qui manquent autour de soi, pour qui gère l'arbre. Seulement
+    // autour de la personne reliée à « C'est vous ? » : la racine d'un arbre importé est souvent un ancêtre
+    if (tree.canEditCurrentTree && linkedSelfPersonId) {
+      list.push(kinSlots({ selfId: linkedSelfPersonId, persons, unions, filiations }))
     }
     const merged = mergeGhosts(list)
     // Photo posée sur l'arbre : l'adresse se refait depuis son chemin, seulement pour une photo de cet arbre
@@ -1034,12 +1036,21 @@ function App() {
     }
 
     try {
-      const saved = localStorage.getItem(getAccountSelfPersonStorageKey(accountEmail, treeId)) || ''
+      let saved = localStorage.getItem(getAccountSelfPersonStorageKey(accountEmail, treeId)) || ''
+      // Compte provisoire gardé (#259) : son choix était rangé sans email. Le propriétaire le reprend sous son email
+      if (!saved && accountEmail && userRole.isOwner) {
+        const provisionalKey = getAccountSelfPersonStorageKey('', treeId)
+        saved = localStorage.getItem(provisionalKey) || ''
+        if (saved) {
+          localStorage.setItem(getAccountSelfPersonStorageKey(accountEmail, treeId), saved)
+          localStorage.removeItem(provisionalKey)
+        }
+      }
       setLinkedSelfPersonId(saved)
     } catch {
       setLinkedSelfPersonId('')
     }
-  }, [accountEmail, tree.treeContext.treeId])
+  }, [accountEmail, tree.treeContext.treeId, userRole.isOwner])
 
   useEffect(() => {
     if (!linkedSelfPersonId || !tree.treeContext.treeId) {
@@ -1236,12 +1247,17 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree.treeContext.treeId, tree.treeContext.accessToken, auth.userAuth.token])
 
-  // Afficher le banner de restauration si un draft existe au mount
+  // Un brouillon resté d'une visite précédente : le bandeau « Restaurer » à l'ouverture de l'arbre. Le brouillon est lu
+  // dans le navigateur : au premier rendu, l'arbre n'est pas encore chargé et useEditMode ne le connaît pas encore
   useEffect(() => {
-    if (editMode.hasDraft && !editMode.isActive) {
-      setShowDraftBanner(true)
+    const treeId = tree.treeContext.treeId
+    if (!treeId || editMode.isActive) return
+    try {
+      if (localStorage.getItem(`edit-draft-${treeId}`)) setShowDraftBanner(true)
+    } catch {
+      // Stockage indisponible : pas de bandeau
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tree.treeContext.treeId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Toggle édition avec confirmation si draft en cours
   const handleEditToggle = useCallback(() => {
@@ -1355,6 +1371,8 @@ function App() {
     const parents = type === 'parent' ? getParents(person.id) : []
     // Le second parent : son sexe se déduit du premier, et les deux forment un couple
     const coParent = parents.length === 1 ? parents[0] : null
+    // Ses frères et sœurs qui n'ont que ce parent reçoivent aussi le second (#253)
+    const group = coParent ? singleParentGroup({ childId: person.id, persons, unions, filiations }) : null
     if (!(await leaveSelectedPerson())) return
     await chooseSelectedPerson(null)
     setAddPersonPrefill({
@@ -1367,10 +1385,11 @@ function App() {
         person: { id: person.id, firstName: person.firstName, lastName: person.lastName, sex: person.sex || null },
         sex: sex || remainingParentSex(parents),
         coParentId: coParent ? coParent.id : null,
+        siblingIds: group?.siblingIds || [],
       },
     })
     openAddPanel(via)
-  }, [leaveSelectedPerson, chooseSelectedPerson, openAddPanel]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [leaveSelectedPerson, chooseSelectedPerson, openAddPanel, tree.graphRevision]) // eslint-disable-line react-hooks/exhaustive-deps
   const openKinFormRef = useRef(openKinForm)
   useEffect(() => { openKinFormRef.current = openKinForm }, [openKinForm])
 
@@ -1771,36 +1790,9 @@ function App() {
         }
 
         // Appliquer les annotations
-        const addedAnnIds = new Set(draft.addedAnnotations || [])
-        const modifiedAnnIds = new Set(draft.modifiedAnnotations || [])
-        const deletedAnnIds = draft.deletedAnnotations || []
-        const annData = draft.annotationsData || []
+        const batchPayload = buildAnnotationBatch(draft)
 
-        const batchPayload = {
-          create: annData
-            .filter((a) => addedAnnIds.has(a.id))
-            .map((a) => ({
-              type: a.type,
-              x: a.x,
-              y: a.y,
-              content: a.content,
-              style: a.style || {},
-              zIndex: a.zIndex || 0,
-            })),
-          update: annData
-            .filter((a) => modifiedAnnIds.has(a.id))
-            .map((a) => ({
-              id: a.id,
-              x: a.x,
-              y: a.y,
-              content: a.content,
-              style: a.style || {},
-              zIndex: a.zIndex || 0,
-            })),
-          delete: deletedAnnIds,
-        }
-
-        const hasAnnotationChanges = batchPayload.create.length > 0 || batchPayload.update.length > 0 || batchPayload.delete.length > 0
+        const hasAnnotationChanges = !isEmptyBatch(batchPayload)
 
         let annotationsFailed = false
         if (hasAnnotationChanges) {
@@ -1818,8 +1810,13 @@ function App() {
             ...(annotationsFailed ? {} : { addedAnnotations: [], modifiedAnnotations: [], deletedAnnotations: [] }),
           })
           editMode.saveDraft()
-          await tree.refreshCurrentTreeGraph({ relayout: false })
-          setDraftNotice(t("Une partie n'a pas été enregistrée ({error}). Elle reste dans vos modifications : réessayez.", { error: failures[0] }))
+          // Sans réseau, relire l'arbre échoue aussi : la sortie ne doit pas en dépendre
+          await tree.refreshCurrentTreeGraph({ relayout: false }).catch(() => {})
+          // On sort quand même (#253) : rester bloqué dans la modification sans réseau ne sert à rien. Ce qui n'est pas
+          // enregistré reste sur cet appareil, et le bandeau « Des modifications non enregistrées vous attendent » le
+          // rend avec « Restaurer » pour réessayer
+          editMode.deactivate()
+          setShowDraftBanner(true)
           return
         }
       }
@@ -1841,6 +1838,69 @@ function App() {
     }
   }, [userRole.isAdmin, auth.userAuth.token, tree.treeContext.treeId, isDemoMode]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { editSubmitRef.current = handleEditSubmit }, [handleEditSubmit])
+
+  // Quitter la page en pleine modification (#253) : le brouillon est écrit tout de suite, sans attendre les 15 s de
+  // l'enregistrement automatique. Qui gère l'arbre envoie aussi ses mots et dessins : l'envoi part avec keepalive, et
+  // reste gardé avec sa clé jusqu'au retour, où il est renvoyé (le serveur ne crée rien deux fois).
+  const leavePageRef = useRef(null)
+  useEffect(() => {
+    leavePageRef.current = (sending) => {
+      if (!editMode.isActive) return
+      const treeId = tree.treeContext.treeId
+      const token = auth.userAuth.token
+      if (!sending || !savesOnLeave || !treeId || !token) {
+        editMode.saveDraft()
+        return
+      }
+      const batch = buildAnnotationBatch(editMode.restoreDraft())
+      if (isEmptyBatch(batch)) return
+      const pending = { key: newBatchKey(), batch }
+      if (!writePendingBatch(treeId, pending)) {
+        editMode.saveDraft()
+        return
+      }
+      // L'envoi est gardé à part : le brouillon ne le porte plus, sinon « Restaurer » le recréerait
+      editMode.clearDraft()
+      batchAnnotations(treeId, batch, token, { key: pending.key, keepalive: true }).catch(() => {})
+    }
+  })
+  useEffect(() => {
+    // En fermant la page, pagehide part avant visibilitychange : une fois la page quittée, plus rien ne se réécrit
+    let left = false
+    const onHidden = () => { if (document.visibilityState === 'hidden' && !left) leavePageRef.current?.(false) }
+    const onPageHide = () => { left = true; leavePageRef.current?.(true) }
+    const onPageShow = () => { left = false }
+    document.addEventListener('visibilitychange', onHidden)
+    window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('pageshow', onPageShow)
+    return () => {
+      document.removeEventListener('visibilitychange', onHidden)
+      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('pageshow', onPageShow)
+    }
+  }, [])
+
+  // Au retour : l'envoi fait en quittant la page est renvoyé avec la même clé, puis oublié. Au chargement de l'arbre,
+  // et quand le navigateur rend la page depuis son cache (retour arrière), sans la recharger
+  useEffect(() => {
+    const treeId = tree.treeContext.treeId
+    const token = auth.userAuth.token
+    if (!treeId || !token || !savesOnLeave) return undefined
+    const resend = () => {
+      const pending = readPendingBatch(treeId)
+      if (!pending) return
+      batchAnnotations(treeId, pending.batch, token, { key: pending.key })
+        .then(() => {
+          clearPendingBatch(treeId)
+          return tree.refreshCurrentTreeGraph({ relayout: false })
+        })
+        .catch((err) => { if (isFinalFailure(err)) clearPendingBatch(treeId) })
+    }
+    resend()
+    const onPageShow = (event) => { if (event.persisted) resend() }
+    window.addEventListener('pageshow', onPageShow)
+    return () => window.removeEventListener('pageshow', onPageShow)
+  }, [tree.treeContext.treeId, auth.userAuth.token, savesOnLeave]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleContribSessionSubmit = useCallback(async ({ comment, name }) => {
     setContribSubmitLoading(true)
@@ -3280,6 +3340,12 @@ function App() {
           { rootPersonId: createdSelf.id },
           token,
         )
+        // « Commencez par vous » : la personne saisie est celle qui crée l'arbre, reliée à « C'est vous ? »
+        try {
+          localStorage.setItem(getAccountSelfPersonStorageKey(accountEmail, createdTree.id), String(createdSelf.id))
+        } catch {
+          // Stockage indisponible : « C'est vous ? » se choisira dans le menu
+        }
       }
 
       await auth.loadAccountTrees(token)
@@ -3333,7 +3399,7 @@ function App() {
     if (!shareAfterKeepRef.current || auth.provisional) return
     shareAfterKeepRef.current = false
     handleOpenContributionPanel()
-  }, [tree.treeContext.accessToken, auth.provisional]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tree.treeContext.accessToken, auth.provisional, accountEmail]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Par le fournisseur depuis un arbre provisoire : le ticket de rattachement désigne le compte provisoire, qui devient
   // le compte au retour, ou rejoint avec ses arbres le compte déjà relié à cette identité
