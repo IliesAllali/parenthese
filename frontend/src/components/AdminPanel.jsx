@@ -763,7 +763,7 @@ const AdminPanel = ({
                   <div className="ts-danger">
                     <div className="ts-row-text">
                       <strong>{t('Quitter la gestion de cet arbre')}</strong>
-                      <p className="pz-small">{t('Vous ne pourrez plus le modifier. Seul son propriétaire peut le supprimer.')}</p>
+                      <p className="pz-small">{t('Vous ne pourrez plus ni le modifier ni l’ouvrir. Pour le revoir, il vous faudra le lien de la famille. Seul son propriétaire peut le supprimer.')}</p>
                     </div>
                     {confirmLeave ? (
                       <div className="ts-row-actions">

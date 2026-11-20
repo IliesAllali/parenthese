@@ -77,6 +77,11 @@ export function describeDate(date, end, precision) {
   const endYear = yearOf(end)
   if (!year) return ''
   switch (precision) {
+    // « mars 1950 » tapé dans la fiche : le mois seul, l'année est déjà dans la colonne
+    case 'month': {
+      const month = String(date).match(/^\d{4}-(\d{2})/)
+      return month ? new Date(Date.UTC(year, Number(month[1]) - 1, 1)).toLocaleDateString(dateLocale, { month: 'long', timeZone: 'UTC' }) : ''
+    }
     case 'about':
     case 'estimated':
     case 'calculated':
@@ -129,8 +134,12 @@ export function buildLifeTimeline(person, family = {}, life = null) {
   const birthYear = yearOf(person.birthDate) ?? person.birthYear ?? null
   const birthDate = person.birthDate || birthYear
   const deathYear = yearOf(person.deathDate) ?? person.deathYear ?? null
-  const lastYear = deathYear ?? new Date().getFullYear()
-  const within = (year) => year && (!birthYear || year >= birthYear) && year <= lastYear
+  // Décès saisi avant la naissance (une erreur de saisie, signalée sous le champ) : la frise garde la période
+  // entre les deux dates au lieu de se vider de toute la famille
+  const [firstYear, lastYear] = birthYear && deathYear && deathYear < birthYear
+    ? [deathYear, birthYear]
+    : [birthYear, deathYear ?? new Date().getFullYear()]
+  const within = (year) => year && (!firstYear || year >= firstYear) && year <= lastYear
   const sourcesOf = (type, unionId = null) => events.find((e) => e.type === type && (unionId ? String(e.unionId) === String(unionId) : !e.unionId))
   const out = []
 
@@ -207,7 +216,7 @@ export function buildLifeTimeline(person, family = {}, life = null) {
     const year = yearOf(child.birthDate) ?? child.birthYear
     if (within(year)) out.push({ key: `child-${child.id}`, year, order: 5, kind: 'fam', title: t('Naissance de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
     const death = yearOf(child.deathDate) ?? child.deathYear
-    if (within(death) && death !== deathYear) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
+    if (within(death)) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
   }
   for (const sibling of family.siblings || []) {
     const year = yearOf(sibling.birthDate) ?? sibling.birthYear

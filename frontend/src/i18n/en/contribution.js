@@ -226,4 +226,6 @@ export default {
   "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "The connection was cut. Check your network, then try again.",
   "Ça n'a pas marché. Réessayez dans un moment.": "That didn't work. Try again in a moment.",
   "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "This photo is in HEIC format, which Parenthèse can't read yet. Send it as a JPEG, or take a screenshot of it.",
+  "Souvenir pour {name}": "Memory for {name}",
+  "Moment pour {name}": "Moment for {name}",
 }

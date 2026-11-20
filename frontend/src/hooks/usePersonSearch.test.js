@@ -34,3 +34,46 @@ describe('recherche « à vérifier »', () => {
     expect(calculateScore('a verifier', sure)).toBeLessThan(MIN_SCORE_THRESHOLD)
   })
 })
+
+describe('recherche tolérante (cas limites du 20/11)', () => {
+  const marie = { firstName: 'Marie-Thérèse', lastName: 'Martin', birthName: 'Dupont', birthPlace: 'Brive-la-Gaillarde', birthYear: 1931 }
+  const helene = { firstName: 'Hélène', lastName: 'Lefèvre', birthPlace: 'Guéret' }
+  const jeanne = { firstName: 'Jeanne', lastName: 'd’Arc' }
+  const found = (q, p) => calculateScore(q, p) >= MIN_SCORE_THRESHOLD
+
+  it('ignore les accents, dans la requête comme dans le nom', () => {
+    expect(found('andre', andre)).toBe(true)
+    expect(found('helene lefevre', helene)).toBe(true)
+    expect(found('LEFÈVRE', helene)).toBe(true)
+    expect(found('gueret', helene)).toBe(true)
+  })
+
+  it('lit les traits d’union et les apostrophes comme des espaces', () => {
+    expect(found('marie therese', marie)).toBe(true)
+    expect(found("jeanne d'arc", jeanne)).toBe(true)
+  })
+
+  it('trouve par le nom de naissance, et le dit', () => {
+    expect(found('dupont', marie)).toBe(true)
+    expect(found('marie therese dupont', marie)).toBe(true)
+    expect(getMatchReason('dupont', marie)).toBe('Nom de naissance')
+  })
+
+  it('trouve « Nom Prénom » et les mots dans le désordre', () => {
+    expect(found('dupont andré', andre)).toBe(true)
+    expect(found('martin marie', marie)).toBe(true)
+    expect(getMatchReason('dupont andre', andre)).toBe('Nom')
+  })
+
+  it('trouve un lieu par un de ses mots', () => {
+    expect(found('brive', marie)).toBe(true)
+    expect(found('gaillarde', marie)).toBe(true)
+    expect(getMatchReason('brive', marie)).toBe('Lieu')
+  })
+
+  it('ne remonte pas pour autant n’importe qui', () => {
+    expect(found('dupont', helene)).toBe(false)
+    expect(found('martin paul', marie)).toBe(false)
+    expect(found('rive', marie)).toBe(false)
+  })
+})

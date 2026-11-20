@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dateToInputText, formatDigitsAsDate, isYearOnly, parseDateInput } from './dateInput.js'
+import { dateEntryToText, dateWarnings, dateToInputText, formatDigitsAsDate, isYearOnly, parseDateEntry, parseDateInput } from './dateInput.js'
 
 describe('saisie d’une date (issue #77)', () => {
   it('une année seule ou une date complète', () => {
@@ -99,5 +99,53 @@ describe('mois en lettres, français, anglais ou allemand', () => {
     expect(parseDateInput('12.03.1950', DE)).toBe('1950-03-12')
     expect(dateToInputText('1950-03-12', DE)).toBe('12.03.1950')
     expect(parseDateInput('31. Juni 1950', DE)).toBeUndefined()
+  })
+})
+
+describe('date approchée (cas limites du 20/11)', () => {
+  const fr = { order: 'dmy', sep: '/' }
+  it('mois et année : en lettres, en chiffres, au pavé numérique', () => {
+    for (const text of ['mars 1950', 'Mars 1950', 'March 1950', 'März 1950', '03/1950', '3.1950', '1950-03', '031950', '03/19/50']) {
+      expect(parseDateEntry(text, fr)).toEqual({ date: '1950-03-01', precision: 'month' })
+    }
+  })
+
+  it('vers une année, en français, en anglais, en allemand', () => {
+    for (const text of ['vers 1920', 'Vers 1920', 'v. 1920', 'env. 1920', 'about 1920', 'circa 1920', 'ca. 1920', 'um 1920', '~1920']) {
+      expect(parseDateEntry(text, fr)).toEqual({ date: '1920-01-01', precision: 'about' })
+    }
+  })
+
+  it('une date exacte ou vide garde sa forme, le reste est refusé', () => {
+    expect(parseDateEntry('1950', fr)).toEqual({ date: '1950-01-01', precision: null })
+    expect(parseDateEntry('12/03/1950', fr)).toEqual({ date: '1950-03-12', precision: null })
+    expect(parseDateEntry('', fr)).toEqual({ date: '', precision: null })
+    for (const text of ['13/1950', 'vers mars', 'bientôt 1920', '10/11/19', 'vers 19']) {
+      expect(parseDateEntry(text, fr)).toBeUndefined()
+    }
+  })
+
+  it('réaffiche une date approchée comme on la dit', () => {
+    expect(dateEntryToText('1920-01-01', 'about', fr)).toBe('vers 1920')
+    expect(dateEntryToText('1950-03-01', 'month', fr)).toMatch(/^mars 1950$/i)
+    expect(dateEntryToText('1950-03-12', null, fr)).toBe('12/03/1950')
+    expect(parseDateEntry(dateEntryToText('1950-03-01', 'month', fr), fr)).toEqual({ date: '1950-03-01', precision: 'month' })
+  })
+})
+
+describe('avertissements doux des dates (cas limites du 20/11)', () => {
+  const today = '2026-11-20'
+  it('signale un décès avant la naissance', () => {
+    expect(dateWarnings({ birthDate: '1950-03-12', deathDate: '1949-12-31' }, today).death).toBe('Le décès est avant la naissance')
+    expect(dateWarnings({ birthDate: '1950-03-12', deathDate: '2001-01-01' }, today)).toEqual({ birth: '', death: '' })
+  })
+  it('compare à l’année près une date à l’année, au mois ou « vers »', () => {
+    expect(dateWarnings({ birthDate: '1950-06-12', deathDate: '1950-01-01' }, today).death).toBe('')
+    expect(dateWarnings({ birthDate: '1920-01-01', birthDatePrecision: 'about', deathDate: '1919-05-01', deathDatePrecision: 'month' }, today).death).toBe('Le décès est avant la naissance')
+  })
+  it('signale une date dans le futur', () => {
+    expect(dateWarnings({ birthDate: '2026-12-01' }, today).birth).toBe('Cette date est dans le futur')
+    expect(dateWarnings({ birthDate: '2026-01-01' }, today).birth).toBe('')
+    expect(dateWarnings({ birthDate: '1950-01-01', deathDate: '2027-01-01' }, today).death).toBe('Cette date est dans le futur')
   })
 })

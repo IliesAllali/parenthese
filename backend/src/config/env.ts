@@ -132,6 +132,10 @@ if (!env.PASSWORD_LOGIN && !env.OIDC_ISSUER) {
 // Corps maximal des routes qui reçoivent un fichier en base64 ou un gros envoi (le reste de l'API : 1 Mo)
 export const UPLOAD_BODY_LIMIT = 12 * 1024 * 1024
 
+// L'envoi d'un souvenir seulement : un fichier de 20 Mo (la limite annoncée) pèse 26,7 Mo en base64. À 12 Mo, une
+// vidéo de plus de 9 Mo était refusée. nginx laisse passer 30 Mo (deploy/nginx.conf).
+export const MEDIA_UPLOAD_BODY_LIMIT = 28 * 1024 * 1024
+
 // Sans NODE_ENV, le schéma suppose « development » et la clé de signature retomberait sur une valeur publiée :
 // un `node dist/server.js` lancé à la main avec un .env incomplet signerait alors les sessions avec une clé
 // connue de tous. Hors développement ou test déclaré, une valeur publiée est refusée.

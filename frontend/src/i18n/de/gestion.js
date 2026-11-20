@@ -34,7 +34,6 @@ export default {
   // Avancé, pour un co-gestionnaire (AdminPanel)
   "Impossible de quitter la gestion de cet arbre.": "Die Mitverwaltung dieses Stammbaums konnte nicht beendet werden.",
   "Quitter la gestion de cet arbre": "Mitverwaltung dieses Stammbaums beenden",
-  "Vous ne pourrez plus le modifier. Seul son propriétaire peut le supprimer.": "Du kannst ihn dann nicht mehr bearbeiten. Nur der Eigentümer kann ihn löschen.",
   "Rester": "Bleiben",
   "Quitter": "Beenden",
   // Page du lien d'invitation (InvitationScreen)
@@ -68,4 +67,6 @@ export default {
   "Cette invitation est pour une autre adresse. Utilisez l'adresse à laquelle vous avez été invité.": "Diese Einladung gilt für eine andere Adresse. Verwende die Adresse, an die die Einladung ging.",
   "Ce lien d'invitation ne marche plus. Demandez-en un nouveau à la personne qui vous a invité.": "Dieser Einladungslink funktioniert nicht mehr. Bitte die Person, die dich eingeladen hat, um einen neuen.",
   "Vous êtes déjà propriétaire de cet arbre.": "Dir gehört dieser Stammbaum bereits.",
+  "Vous ne pourrez plus ni le modifier ni l’ouvrir. Pour le revoir, il vous faudra le lien de la famille. Seul son propriétaire peut le supprimer.": "Du kannst ihn dann weder bearbeiten noch öffnen. Um ihn wiederzusehen, brauchst du den Link der Familie. Nur sein Eigentümer kann ihn löschen.",
+  "{name} ne pourra plus ni modifier ni ouvrir l’arbre. Pour le revoir, il lui faudra le lien de la famille.": "{name} kann den Stammbaum dann weder bearbeiten noch öffnen. Um ihn wiederzusehen, braucht diese Person den Link der Familie.",
 }

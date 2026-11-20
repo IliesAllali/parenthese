@@ -6,7 +6,7 @@ import { Prisma } from '../generated/prisma/client.js'
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
-import { env, UPLOAD_BODY_LIMIT } from '../config/env.js'
+import { env, MEDIA_UPLOAD_BODY_LIMIT, UPLOAD_BODY_LIMIT } from '../config/env.js'
 import {
   applyMediaResponseHeaders,
   extensionForMime,
@@ -214,11 +214,13 @@ export async function exceedsStorageQuota(app: FastifyRequest['server'], treeId:
   return (pending._sum.sizeBytes ?? 0) + incomingBytes > env.MEDIA_PENDING_QUOTA_PER_TREE_MB * MB
 }
 
-// Seules les routes d'envoi acceptent un corps de 12 Mo (fichier en base64), le reste de l'API est à 1 Mo (app.ts)
-const UPLOAD_RATE_LIMIT = { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
+// Seules les routes d'envoi acceptent un gros corps (fichier en base64), le reste de l'API est à 1 Mo (app.ts).
+// Un souvenir va jusqu'à 20 Mo, soit 26,7 Mo en base64 ; un portrait ou une photo d'annotation reste sous 12 Mo.
+const UPLOAD_RATE_LIMIT = { bodyLimit: MEDIA_UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
 // Portraits : réservés au propriétaire, mais l'app peut en placer quelques centaines d'un coup (photos
 // retrouvées après un import GEDCOM), envoyées une par une. Le quota de stockage de l'arbre s'applique.
 const AVATAR_RATE_LIMIT = { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 120, timeWindow: '1 minute' } } }
+const ANNOTATION_PHOTO_RATE_LIMIT = { bodyLimit: UPLOAD_BODY_LIMIT, config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }
 
 export async function requireAdminMembership(app: FastifyRequest['server'], userId: string, treeId: string) {
   const membership = await app.prisma.treeMembership.findUnique({
@@ -1195,7 +1197,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
   // Photo posée sur l'arbre. Un gestionnaire la pose tout de suite ; la famille (lien de partage ou membre) la
   // propose : le fichier attend la relecture, noté dans annotation_photo_uploads (lib/annotation-changes.ts).
-  app.post('/trees/:id/annotation-photos', UPLOAD_RATE_LIMIT, async (request, reply) => {
+  app.post('/trees/:id/annotation-photos', ANNOTATION_PHOTO_RATE_LIMIT, async (request, reply) => {
     if (!request.actor) {
       return reply.code(401).send({ error: 'authentication_required' })
     }

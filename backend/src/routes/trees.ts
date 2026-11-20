@@ -17,7 +17,7 @@ import { createHmac } from 'node:crypto'
 import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
-import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
+import { personPrecisionResets, typedDatePrecisionSchema, unionPrecisionResets } from '../lib/date-precision.js'
 import { sexSchema } from '../lib/person-sex.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 
@@ -90,6 +90,8 @@ const createPersonSchema = z.object({
   nickname: z.string().max(120).optional().nullable(),
   birthDate: z.string().regex(isoDateRegex).optional().nullable(),
   deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+  birthDatePrecision: typedDatePrecisionSchema,
+  deathDatePrecision: typedDatePrecisionSchema,
   isDeceased: z.boolean().optional(),
   toVerify: z.boolean().optional(),
   birthPlace: z.string().max(200).optional().nullable(),
@@ -109,6 +111,8 @@ const patchPersonSchema = z
     nickname: z.string().max(120).optional().nullable(),
     birthDate: z.string().regex(isoDateRegex).optional().nullable(),
     deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+    birthDatePrecision: typedDatePrecisionSchema,
+    deathDatePrecision: typedDatePrecisionSchema,
     isDeceased: z.boolean().optional(),
     // « À vérifier » : la famille n'est pas sûre de cette personne (retour d'Anaïs, 23/10)
     toVerify: z.boolean().optional(),
@@ -1272,6 +1276,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         nickname: toTrimmedStringOrNull(payload.data.nickname),
         birthDate: toDateOrNull(payload.data.birthDate),
         deathDate: toDateOrNull(payload.data.deathDate),
+        birthDatePrecision: payload.data.birthDate ? payload.data.birthDatePrecision ?? null : null,
+        deathDatePrecision: payload.data.deathDate ? payload.data.deathDatePrecision ?? null : null,
         // Une date de décès dit déjà que la personne est décédée : le drapeau ne sert que sans date
         isDeceased: !payload.data.deathDate && Boolean(payload.data.isDeceased),
         toVerify: Boolean(payload.data.toVerify),
@@ -1425,7 +1431,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         treeId: params.data.id,
         deletedAt: null,
       },
-      data: { ...data, ...personPrecisionResets(current, data) },
+      data: { ...data, ...personPrecisionResets(current, data, payload.data) },
     })
 
     if (updated.count === 0) {

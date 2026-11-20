@@ -39,7 +39,6 @@ export default {
   // Avancé, pour un co-gestionnaire (AdminPanel)
   'Impossible de quitter la gestion de cet arbre.': 'Could not stop managing this tree.',
   'Quitter la gestion de cet arbre': 'Stop managing this tree',
-  'Vous ne pourrez plus le modifier. Seul son propriétaire peut le supprimer.': 'You will no longer be able to edit it. Only its owner can delete it.',
   'Rester': 'Stay',
   'Quitter': 'Leave',
 
@@ -78,4 +77,6 @@ export default {
   "Cette invitation est pour une autre adresse. Utilisez l'adresse à laquelle vous avez été invité.": 'This invitation is for another address. Use the address you were invited at.',
   "Ce lien d'invitation ne marche plus. Demandez-en un nouveau à la personne qui vous a invité.": 'This invitation link no longer works. Ask the person who invited you for a new one.',
   'Vous êtes déjà propriétaire de cet arbre.': 'You already own this tree.',
+  "Vous ne pourrez plus ni le modifier ni l’ouvrir. Pour le revoir, il vous faudra le lien de la famille. Seul son propriétaire peut le supprimer.": "You will no longer be able to edit it or open it. To see it again, you will need the family link. Only its owner can delete it.",
+  "{name} ne pourra plus ni modifier ni ouvrir l’arbre. Pour le revoir, il lui faudra le lien de la famille.": "{name} will no longer be able to edit or open the tree. To see it again, they will need the family link.",
 }

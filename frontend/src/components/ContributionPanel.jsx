@@ -12,6 +12,7 @@ import { buildShareLink } from '../utils/shareKey.js'
 import { copyText } from '../utils/copyText.js'
 import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
 import { sexLabel } from '../utils/personSex.js'
+import { proposalTitle } from '../utils/proposalSummary.js'
 import Skeleton from './Skeleton.jsx'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -511,7 +512,7 @@ const ContributionPanel = ({
                         onKeyDown={(e) => e.key === 'Enter' && toggleCollapse(session.id)}
                       >
                         <div className="contrib-item-top">
-                          <strong className="contrib-session-title">{session.title || t('Proposition sans titre')}</strong>
+                          <strong className="contrib-session-title">{proposalTitle(session.title)}</strong>
                           <div className="contrib-session-top-right">
                             {formatSessionDate(session.createdAt) && (
                               <span className="contrib-session-date">{formatSessionDate(session.createdAt)}</span>

@@ -438,7 +438,7 @@ export default {
   "Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.": "Danke, ist abgeschickt. Das Ereignis erscheint in ihrem Leben, sobald die Person, die den Stammbaum verwaltet, es angenommen hat.",
   // Dates : année seule, décès sans date (issue #77)
   "Année ou date": "Jahr oder Datum",
-  "Une année (1950) ou une date ({exemple})": "Ein Jahr (1950) oder ein Datum ({exemple})",
+  "Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »": "Ein Jahr (1950), ein Datum ({exemple}), ein Monat (März 1950) oder „um 1920“",
   "Date inconnue": "Datum unbekannt",
   "date inconnue": "Datum unbekannt",
   "Décédé(e), date inconnue": "Verstorben, Datum unbekannt",
@@ -479,4 +479,7 @@ export default {
   "Ajouter un frère ou une sœur": "Bruder oder Schwester hinzufügen",
   "Ajoutez d'abord un parent pour lui rattacher un frère ou une sœur.": "Füge zuerst einen Elternteil hinzu, um Geschwister zu verbinden.",
   "Créer « {name} »": "„{name}“ anlegen",
+  "La photo est supprimée. Elle était aussi sur la fiche de {names}.": "Das Foto ist gelöscht. Es war auch auf der Seite von {names}.",
+  "Cette date est dans le futur": "Dieses Datum liegt in der Zukunft",
+  "Le décès est avant la naissance": "Der Tod liegt vor der Geburt",
 }

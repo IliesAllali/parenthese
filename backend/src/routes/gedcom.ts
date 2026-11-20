@@ -173,6 +173,8 @@ function exportedDate(value: Date | null): string | null {
 function qualifiedGedcomDate(start: Date | null, end: Date | null, precision: string | null, text?: string | null): string | null {
   // Le texte d'origine (calendrier républicain, julien, période) prime : on le rend tel qu'il a été lu
   if (text && precision) return oneLine(text)
+  // « mars 1950 » tapé dans la fiche : le mois et l'année, sans le 1er
+  if (precision === 'month' && start) return isoToGedcomDate(start.toISOString().slice(0, 7))
   const from = exportedDate(start)
   const to = exportedDate(end)
   if (!from) return text ? oneLine(text) : null
