@@ -440,11 +440,13 @@ export async function deletePersonAvatar(treeId, personId, token) {
   return data
 }
 
-export async function batchAnnotations(treeId, payload, token) {
+// options.key : clé Idempotency-Key d'un envoi rejouable ; options.keepalive : envoi qui survit à la page quittée
+export async function batchAnnotations(treeId, payload, token, { key = null, keepalive = false } = {}) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/annotations/batch`, {
     method: 'POST',
-    headers: bearer(token),
+    headers: { ...bearer(token), ...(key ? { 'Idempotency-Key': key } : {}) },
     body: JSON.stringify(payload),
+    ...(keepalive ? { keepalive: true } : {}),
   })
 
   return data
