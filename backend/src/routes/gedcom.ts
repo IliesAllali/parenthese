@@ -299,37 +299,19 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: 'authentication_required' })
     }
 
-    let treeName = 'arbre'
-
-    if (actor.kind === 'tree_access') {
-      if (actor.treeId !== treeId) {
-        return reply.code(403).send({ error: 'forbidden' })
-      }
-      const tree = await app.prisma.tree.findFirst({
-        where: { id: treeId, deletedAt: null },
-        select: { name: true },
-      })
-      if (!tree) return reply.code(404).send({ error: 'tree_not_found' })
-      treeName = tree.name
-    } else {
-      const membership = await app.prisma.treeMembership.findUnique({
-        where: { treeId_userId: { treeId, userId: actor.userId } },
-        include: { tree: { select: { deletedAt: true, name: true } } },
-      })
-
-      if (membership && !membership.tree.deletedAt) {
-        treeName = membership.tree.name
-      } else {
-        const shared = await app.prisma.userTreeAccess.findUnique({
-          where: { treeId_userId: { treeId, userId: actor.userId } },
-          include: { tree: { select: { deletedAt: true, name: true } } },
-        })
-        if (!shared || shared.tree.deletedAt) {
-          return reply.code(403).send({ error: 'forbidden' })
-        }
-        treeName = shared.tree.name
-      }
+    // Export réservé à ceux qui gèrent l'arbre (propriétaire et co-gestionnaires) : le fichier sort de
+    // Parenthèse avec les vivants, la famille qui le consulte par le mot de passe de partage ne l'a pas
+    if (actor.kind !== 'user') {
+      return reply.code(403).send({ error: 'forbidden' })
     }
+    const membership = await app.prisma.treeMembership.findUnique({
+      where: { treeId_userId: { treeId, userId: actor.userId } },
+      include: { tree: { select: { deletedAt: true, name: true } } },
+    })
+    if (!membership || membership.tree.deletedAt || !hasAdminRight(membership.role)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+    const treeName = membership.tree.name || 'arbre'
 
     const [persons, unions, links, lifeEvents] = await Promise.all([
       app.prisma.person.findMany({ where: { treeId, deletedAt: null } }),
@@ -351,52 +333,56 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    // Map: personId → first unionId where that person is a partner (fallback only)
-    const firstUnionOfPerson = new Map<string, string>()
-    for (const union of unions) {
-      if (union.partner1PersonId && !firstUnionOfPerson.has(union.partner1PersonId)) {
-        firstUnionOfPerson.set(union.partner1PersonId, union.id)
-      }
-      if (union.partner2PersonId && !firstUnionOfPerson.has(union.partner2PersonId)) {
-        firstUnionOfPerson.set(union.partner2PersonId, union.id)
-      }
+    // Familles sans union en base : un parent seul (l'« Inconnu » de l'arbre), ou deux parents jamais mis en
+    // couple. Elles s'écrivent comme des FAM à part, jamais sous l'union d'un des parents avec quelqu'un d'autre
+    // (ce repli faisait du conjoint d'un remariage le parent de l'enfant, et un parent seul disparaissait du fichier).
+    const syntheticParents = new Map<string, string[]>()
+    const syntheticFamily = (parentIds: string[]) => {
+      const sorted = [...parentIds].sort()
+      const id = sorted.length === 1 ? `S${sorted[0]}` : `P${sorted.join('_')}`
+      if (!syntheticParents.has(id)) syntheticParents.set(id, sorted)
+      return id
     }
 
-    // Gather all parent IDs per child
-    const parentsByChild = new Map<string, string[]>()
+    const unionIds = new Set(unions.map((union) => union.id))
+    const linksByChild = new Map<string, typeof links>()
     for (const link of links) {
-      const arr = parentsByChild.get(link.childPersonId) ?? []
-      if (!arr.includes(link.parentPersonId)) arr.push(link.parentPersonId)
-      parentsByChild.set(link.childPersonId, arr)
+      linksByChild.set(link.childPersonId, [...(linksByChild.get(link.childPersonId) ?? []), link])
     }
 
-    // Assign each child to a union FAM
+    // Chaque enfant rangé dans ses familles
     const childrenByUnion = new Map<string, Set<string>>()
     const adoptedInUnion = new Set<string>()
-    for (const link of links) {
-      const childId = link.childPersonId
-      let unionId: string | undefined
-
-      if (link.viaUnionId) {
-        unionId = link.viaUnionId
-      } else {
-        const parents = parentsByChild.get(childId) ?? []
-        for (let i = 0; i < parents.length; i++) {
-          for (let j = i + 1; j < parents.length; j++) {
-            const [a, b] = [parents[i], parents[j]].sort()
-            const found = unionByPair.get(`${a}|${b}`)
-            if (found) { unionId = found; break }
-          }
-          if (unionId) break
-        }
-        if (!unionId) unionId = firstUnionOfPerson.get(link.parentPersonId)
-      }
-
-      if (!unionId) continue
-      if (link.parentageType === 'adoption') adoptedInUnion.add(`${unionId}|${childId}`)
-      const set = childrenByUnion.get(unionId) ?? new Set()
+    const place = (familyId: string, childId: string, adopted: boolean) => {
+      if (adopted) adoptedInUnion.add(`${familyId}|${childId}`)
+      const set = childrenByUnion.get(familyId) ?? new Set()
       set.add(childId)
-      childrenByUnion.set(unionId, set)
+      childrenByUnion.set(familyId, set)
+    }
+    for (const [childId, childLinks] of linksByChild) {
+      const loose: typeof childLinks = []
+      for (const link of childLinks) {
+        if (link.viaUnionId && unionIds.has(link.viaUnionId)) place(link.viaUnionId, childId, link.parentageType === 'adoption')
+        else loose.push(link)
+      }
+      // Parents sans union indiquée : leur couple s'il existe, sinon une famille à part
+      while (loose.length > 0) {
+        const link = loose.shift()!
+        const partnerIndex = loose.findIndex((other) => unionByPair.has([link.parentPersonId, other.parentPersonId].sort().join('|')))
+        if (partnerIndex >= 0) {
+          const [other] = loose.splice(partnerIndex, 1)
+          const unionId = unionByPair.get([link.parentPersonId, other.parentPersonId].sort().join('|'))!
+          place(unionId, childId, link.parentageType === 'adoption' || other.parentageType === 'adoption')
+        } else if (loose.length > 0) {
+          // Deux parents connus, jamais mis en couple : une famille pour les deux
+          const other = loose.shift()!
+          place(syntheticFamily([link.parentPersonId, other.parentPersonId]), childId, link.parentageType === 'adoption' || other.parentageType === 'adoption')
+        } else {
+          // Parent seul : son union sans conjoint (import GEDCOM) si elle existe, sinon une famille à part
+          const alone = unions.find((u) => u.partner1PersonId === link.parentPersonId && !u.partner2PersonId)
+          place(alone ? alone.id : syntheticFamily([link.parentPersonId]), childId, link.parentageType === 'adoption')
+        }
+      }
     }
 
     // FAMS: personId → [unionIds where person is a spouse]
@@ -408,6 +394,10 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
         arr.push(union.id)
         famsByPerson.set(pid, arr)
       }
+    }
+
+    for (const [familyId, parentIds] of syntheticParents) {
+      for (const pid of parentIds) famsByPerson.set(pid, [...(famsByPerson.get(pid) ?? []), familyId])
     }
 
     // FAMC: personId → [unionIds where person appears as CHIL]
@@ -539,6 +529,18 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
       }
       for (const event of unionEvents) {
         if (event.type !== 'marriage') pushLifeEvent(lines, event, FAMILY_EVENT_TAGS)
+      }
+    }
+
+    for (const [familyId, parentIds] of syntheticParents) {
+      lines.push(`0 @F${sanitizeXref(familyId)}@ FAM`)
+      const ordered = [...parentIds].sort((a, b) => Number(sexOrNull(personById.get(a)?.sex) === 'female') - Number(sexOrNull(personById.get(b)?.sex) === 'female'))
+      const [first, second] = ordered
+      const firstTag = !second && sexOrNull(personById.get(first)?.sex) === 'female' ? 'WIFE' : 'HUSB'
+      lines.push(`1 ${firstTag} @I${sanitizeXref(first)}@`)
+      if (second) lines.push(`1 WIFE @I${sanitizeXref(second)}@`)
+      for (const childId of childrenByUnion.get(familyId) ?? []) {
+        lines.push(`1 CHIL @I${sanitizeXref(childId)}@`)
       }
     }
 

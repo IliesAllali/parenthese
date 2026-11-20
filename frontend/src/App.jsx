@@ -558,11 +558,10 @@ function removePersonFromGraph(personId) {
   replaceGraph({
     persons: persons.filter((candidate) => String(candidate.id) !== id),
     unions: unions.filter((union) => !removedUnionIds.has(union.id)),
-    filiations: filiations.filter((filiation) => (
-      String(filiation.childId) !== id
-      && String(filiation.parentId) !== id
-      && !(filiation.unionId && removedUnionIds.has(filiation.unionId))
-    )),
+    // Les liens de l'autre parent restent, détachés de l'union retirée (comme sur le serveur)
+    filiations: filiations
+      .filter((filiation) => String(filiation.childId) !== id && String(filiation.parentId) !== id)
+      .map((filiation) => (filiation.unionId && removedUnionIds.has(filiation.unionId) ? { ...filiation, unionId: null } : filiation)),
     medias: medias.filter((media) => String(media.personId) !== id),
   })
   return snapshot

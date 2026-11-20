@@ -505,13 +505,8 @@ describe('Graph routes', () => {
   it('export GEDCOM : précisions, événements, sources et adoption relus à l’identique', async () => {
     const app = createApp()
     await app.ready()
-    const token = (app as any).jwt.sign({
-      kind: 'tree_access',
-      sub: 'tree:tree-1:visitor',
-      treeId: 'tree-1',
-      role: 'visitor',
-      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
-    })
+    // L'export est réservé à ceux qui gèrent l'arbre
+    const token = await createUserToken(app)
     const base = { birthDateEnd: null, deathDateEnd: null, deathDatePrecision: null, deathPlace: null, nickname: null, notes: null, profession: null, deathDate: null }
     prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', name: 'Ragot', rootPersonId: null })
     prismaMock.person.findMany.mockResolvedValue([
@@ -950,7 +945,7 @@ describe('Sexe dans le GEDCOM (issue #114)', () => {
   it('aller-retour : other sort en SEX U (GEDCOM 5.5.1), non précisé sans ligne SEX, le reste se relit à l’identique', async () => {
     const app = createApp()
     await app.ready()
-    const token = (app as any).jwt.sign({ kind: 'tree_access', sub: 'tree:tree-1:visitor', treeId: 'tree-1', role: 'visitor', accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime() })
+    const token = await createUserToken(app)
     const base = { lastName: 'Martin', birthDate: null, birthDatePrecision: null, birthPlace: null, birthDateEnd: null, deathDateEnd: null, deathDatePrecision: null, deathPlace: null, nickname: null, notes: null, profession: null, deathDate: null }
     prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', name: 'Martin', rootPersonId: null })
     prismaMock.person.findMany.mockResolvedValue([
