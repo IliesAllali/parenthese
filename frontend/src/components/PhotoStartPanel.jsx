@@ -6,8 +6,8 @@ import PzBusy from './PzBusy.jsx'
 import { t } from '../i18n/index.js'
 import { matchPhotoFiles } from '../utils/photoImport.js'
 import { materializeFile } from '../utils/zipReader.js'
-import { initialsOf } from '../utils/initial.js'
 import { withEmphasis } from '../utils/richText.jsx'
+import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 
 function lifeYears(person) {
   if (!person.birthYear) return ''
@@ -308,7 +308,7 @@ export default function PhotoStartPanel({
                 return (
                   <li key={person.id} className="psp-face">
                     <span className={`psp-face-photo ${state.preview ? 'is-set' : ''}`} aria-hidden="true">
-                      {state.preview ? <img src={state.preview} alt="" /> : initialsOf(person)}
+                      {state.preview ? <img src={state.preview} alt="" /> : <NoPhotoPortrait />}
                     </span>
                     <span className="psp-face-id">
                       <span className="psp-face-name">{fullNameLabel(person)}</span>

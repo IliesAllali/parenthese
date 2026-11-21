@@ -24,9 +24,9 @@ import DateField from './DateField.jsx'
 import { runOnce } from '../utils/saveOnLeave.js'
 import { normalizeSex, SEX_CHOICES } from '../utils/personSex.js'
 import { ProposalBanner } from './ProposalCard.jsx'
-import { initialsOf } from '../utils/initial.js'
 import { blurPlaceholder } from '../utils/blurhash.js'
 import PortraitThumb from './PortraitThumb.jsx'
+import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 
 // Aucune modification en cours (référence stable)
 const NO_EDITS = Object.freeze({})
@@ -640,7 +640,6 @@ const PersonCard = ({
   const visualMedias = personMedias.filter((m) => m.type === 'photo' || m.type === 'video')
   const otherMedias = personMedias.filter((m) => !['citation', 'audio', 'photo', 'video'].includes(m.type) || (m.type === 'citation' && m !== quoteMedia))
 
-  const initials = initialsOf(person)
   const lifeLine = (() => {
     const born = person.birthYear || (person.birthDate ? String(person.birthDate).slice(0, 4) : '')
     const died = person.deathYear || (person.deathDate ? String(person.deathDate).slice(0, 4) : '')
@@ -739,7 +738,7 @@ const PersonCard = ({
           <div className="pc-photo" style={person.photo ? blurPlaceholder(person.avatarBlurhash).style : undefined}>
             {person.photo
               ? <img src={person.photo} alt={fullNameLabel(person)} onLoad={(event) => { event.currentTarget.parentElement.style.backgroundImage = 'none'; setPhotoSize({ w: event.currentTarget.naturalWidth, h: event.currentTarget.naturalHeight }) }} style={photoStyle} />
-              : <span className="pc-photo-initials">{initials}</span>}
+              : <NoPhotoPortrait />}
           </div>
           {editMode && onAvatarUpload && (
             <button

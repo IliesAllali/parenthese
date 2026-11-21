@@ -58,9 +58,14 @@ export const ENTRANCE_ORBIT_DELAY = 300
 export const ENTRANCE_ORBIT_DURATION = 400
 export const ENTRANCE_ORBIT_STAGGER = 100
 
+// Part du cadre occupée par la silhouette d'une personne sans photo
+export const NO_PHOTO_ICON_SCALE = 0.6
+
 export const COLORS = {
   nodeAlive: '#F2EFEA',
   nodeDead: '#EBE6DF',
+  // Silhouette d'une personne sans photo (#244) : un ton à peine plus foncé que le cadre
+  noPhotoIcon: '#D6CEC3',
   borderAlive: '#93402A',
   borderDead: '#6B645D',
   text: '#2A2622',

@@ -6,10 +6,10 @@ import PzBusy from './PzBusy.jsx'
 import { t } from '../i18n/index.js'
 import { firstNameLabel, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
 import { SEX_CHOICES } from '../utils/personSex.js'
-import { initialOf } from '../utils/initial.js'
 import { findLikelyDuplicates } from '../utils/duplicates.js'
 import PortraitThumb from './PortraitThumb.jsx'
 import { withEmphasis } from '../utils/richText.jsx'
+import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 import { kinNamePrefill, kinSexChoices, kinTitle } from '../utils/kinForm.js'
 import { dateWarnings, datePrecisionsOf } from '../utils/dateInput.js'
 
@@ -600,7 +600,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
                     <li key={p.id}>
                       <button type="button" className="apn-dropdown-item" onClick={() => handleAddRelation(p)}>
                         <span className="apn-avatar" aria-hidden="true">
-                          {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : initialOf(p.firstName)}
+                          {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : <NoPhotoPortrait />}
                         </span>
                         <span className="apn-dropdown-name">{firstNameLabel(p)} <em>{surnameLabel(p.lastName)}</em></span>
                         {(p.birthYear || p.birthDate) && (
