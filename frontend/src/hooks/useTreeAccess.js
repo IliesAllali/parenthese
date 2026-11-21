@@ -104,6 +104,8 @@ export function useTreeAccess() {
       rootPersonId: preferredRootPersonId,
       accessToken: token,
       surnameUppercase: graphPayload.surnameUppercase,
+      // Visuel de l'arbre (photo, icône ou lettre) : l'onglet du navigateur le reprend
+      treeVisual: graphPayload.visual,
     }))
 
     const effectiveRole = normalizeRole(options.role)

@@ -32,6 +32,8 @@
 .pcrop-window--round { border-radius: 50%; }
 .pcrop-window--square { border-radius: 4px; }
 .pcrop-window--rect { border-radius: 6px; }
+/* Forme imposée (photo d'un arbre) : le carré arrondi de sa pastille dans les menus */
+.pcrop-window--locked { border-radius: 22%; }
 /* Polaroid : une bordure blanche autour de la zone photo */
 .pcrop-window--polaroid { border-radius: 2px; box-shadow: 0 0 0 7px #fff, 0 0 0 999px rgba(42, 38, 34, .55); }
 

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastif
 import { z } from 'zod'
 
 import { signMediaToken } from '../lib/tree-access.js'
+import { TREE_VISUAL_SELECT, treeImageOf } from '../lib/tree-visual.js'
 import { recordTreeVisit, type VisitAccessKind } from '../lib/tree-visits.js'
 import { buildGraphPayload } from '../utils/graph-payload.js'
 
@@ -165,7 +166,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
         where: { treeId },
         select: { surnameUppercase: true },
       }),
-      app.prisma.tree.findUnique({ where: { id: treeId }, select: { owner: { select: { firstName: true } } } }),
+      app.prisma.tree.findUnique({ where: { id: treeId }, select: { id: true, owner: { select: { firstName: true } }, ...TREE_VISUAL_SELECT } }),
     ])
 
     const graph = buildGraphPayload(treeId, persons, unions, links, medias, annotations, mediaPeople)
@@ -178,6 +179,8 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       display: { surnameUppercase: Boolean(settings?.surnameUppercase) },
       // Prénom de la personne qui gère l'arbre, jamais son adresse : « Lucie les verra » après un envoi de la famille
       ownerFirstName: owner?.owner?.firstName?.trim() || null,
+      // Visuel de l'arbre (icône ou photo, sinon la lettre) : l'onglet du navigateur le reprend
+      visual: owner ? { icon: owner.imagePath ? null : owner.icon, image: treeImageOf(owner) } : null,
       // Pour l'adresse des images (<img src> n'envoie pas la session) : lecture des médias de cet arbre seulement
       mediaToken: signMediaToken(app, treeId, actor),
     })

@@ -7,8 +7,9 @@ import ProviderButton from './ProviderButton.jsx'
 import LanguageSwitch from './navbar/LanguageSwitch'
 import { t } from '../i18n/index.js'
 import { PRIVACY_URL } from '../utils/siteLinks.js'
-import { initialOf } from '../utils/initial.js'
 import { richText } from '../utils/richText.jsx'
+import { visualOf } from '../utils/treeVisual.js'
+import TreeMark from './TreeMark.jsx'
 
 const AccountDashboard = ({
   authenticated,
@@ -280,7 +281,7 @@ const AccountDashboard = ({
                     className={`tree-item pz-tree-item ${isActive ? 'active' : ''}`}
                     onClick={() => onOpenTree(tree.id)}
                   >
-                    <span className={`pz-tree-mono${tree.icon ? ' pz-tree-mono--emoji' : ''}`} aria-hidden="true">{tree.icon || initialOf(tree.name)}</span>
+                    <TreeMark base="pz-tree-mono" name={tree.name} {...visualOf(tree)} />
                     <span className="tree-name pz-tree-name">{tree.name}</span>
                     {isActive && <span className="pz-tag pz-tag--accent">{t('Ouvert')}</span>}
                     <ChevronRight size={18} aria-hidden="true" className="pz-tree-chevron" />

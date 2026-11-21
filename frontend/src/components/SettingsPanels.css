@@ -56,12 +56,37 @@
   .ts-row-actions { justify-content: flex-start; }
 }
 
-/* Icône de l'arbre : la lettre ou un emoji */
-.ts-icons { display: flex; flex-wrap: wrap; gap: 6px; }
-.ts-icon { width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--pz-line); background: var(--pz-surface); font-size: 19px; line-height: 1; cursor: pointer; }
-.ts-icon--letter { width: auto; padding: 0 12px; border-radius: 999px; font: 500 13px var(--pz-sans); color: var(--pz-ink-2); }
+/* Visuel de l'arbre : l'aperçu, le choix entre la lettre, une icône et une photo, puis le seul contrôle du choix fait */
+.ts-visual-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.ts-tree-mark {
+  width: 56px; height: 56px; flex: none; display: grid; place-items: center; overflow: hidden;
+  border-radius: 16px; background: var(--pz-a100); color: var(--pz-a700); font: 400 28px/1 var(--pz-serif);
+}
+.ts-tree-mark--emoji { background: var(--pz-a50); font-size: 30px; }
+.ts-tree-mark--photo { background: transparent; }
+.ts-visual-meta { min-width: 0; }
+.ts-visual-meta strong { display: block; font: 400 19px/1.2 var(--pz-serif); color: var(--pz-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-visual-meta span { display: block; font: 400 13px/1.35 var(--pz-sans); color: var(--pz-muted); }
+.ts-visual-modes { margin-bottom: 12px; }
+.ts-visual-modes .pz-tab { white-space: nowrap; padding: 0 8px; }
+.ts-visual-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-hint.ts-visual-note { color: var(--pz-a700); }
+
+/* Menu d'icônes : fermé, il ne prend que la place de son bouton */
+.ts-icon-pick { position: relative; display: inline-block; }
+.ts-icon-pick-btn {
+  display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px 0 8px; cursor: pointer;
+  border: 1px solid var(--pz-line); border-radius: 12px; background: var(--pz-surface); font: 500 15px var(--pz-sans); color: var(--pz-ink);
+}
+.ts-icon-pick-btn svg { color: var(--pz-muted); }
+.ts-icon-pick-current { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; background: var(--pz-a50); font-size: 19px; line-height: 1; }
+.ts-icon-menu {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 5; display: grid; grid-template-columns: repeat(6, 40px); gap: 6px;
+  padding: 10px; background: var(--pz-surface); border: 1px solid var(--pz-line); border-radius: 16px; box-shadow: var(--pz-shadow);
+}
+.ts-icon { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--pz-line); background: var(--pz-surface); font-size: 19px; line-height: 1; cursor: pointer; }
 .ts-icon[aria-checked="true"] { border-color: var(--pz-a500); background: var(--pz-a50); box-shadow: 0 0 0 3px var(--pz-a100); }
-.ts-icon:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
+.ts-icon:focus-visible, .ts-icon-pick-btn:focus-visible { outline: 2px solid var(--pz-a500); outline-offset: 2px; }
 
 /* Cinq onglets : ils rétrécissent (texte sur deux lignes) au lieu de déborder du panneau sur un petit téléphone */
 /* Chaque onglet prend la largeur de son texte, sur une ligne. Si une langue déborde (l'allemand au téléphone),

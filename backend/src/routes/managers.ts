@@ -14,6 +14,7 @@ import {
   normalizeEmail,
   pendingInvitationWhere,
 } from '../lib/tree-invitations.js'
+import { sendTreeImage, treeImageOf } from '../lib/tree-visual.js'
 
 // Co-gestion d'un arbre (issue #145). Un co-gestionnaire est un membre « admin » : il fait tout ce que fait le
 // propriétaire, sauf inviter ou retirer un co-gestionnaire et supprimer l'arbre (DELETE /trees/:id, réservé au
@@ -204,6 +205,15 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true })
   })
 
+  // Photo de l'arbre pour la page d'invitation : lue avec le lien, tant qu'il est valable
+  app.get('/invitations/:token/tree-image', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const params = tokenParamSchema.safeParse(request.params)
+    if (!params.success) return reply.code(404).send({ error: 'invitation_invalid' })
+    const invitation = await findPendingInvitationByToken(app.prisma, params.data.token)
+    if (!invitation) return reply.code(404).send({ error: 'invitation_invalid' })
+    return sendTreeImage(reply, invitation.tree)
+  })
+
   // Page du lien, sans compte : l'arbre, qui invite, l'adresse masquée, et les façons d'entrer sur ce serveur
   app.get('/invitations/:token', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = tokenParamSchema.safeParse(request.params)
@@ -220,7 +230,9 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     }
     return reply.send({
       treeName: invitation.tree.name,
-      treeIcon: invitation.tree.icon,
+      // Le lien est personnel : la page montre le visuel de l'arbre, photo comprise (lue avec ce même lien)
+      treeIcon: invitation.tree.imagePath ? null : invitation.tree.icon,
+      treeImage: treeImageOf(invitation.tree, `/invitations/${encodeURIComponent(params.data.token)}/tree-image`),
       invitedBy: invitation.tree.owner.firstName || null,
       emailHint: maskEmail(invitation.email),
       expiresAt: invitation.expiresAt,

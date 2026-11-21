@@ -6,6 +6,7 @@ import ProviderButton from './ProviderButton.jsx'
 import { acceptInvitation, fetchInvitation } from '../api/managersApi.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
 import { t } from '../i18n/index.js'
+import TreeMark from './TreeMark.jsx'
 
 // Page d'un lien d'invitation à co-gérer un arbre (/invitation/<jeton>, issue #145). Trois portes selon l'instance :
 // le fournisseur OIDC, un compte existant, un compte à créer (même inscription fermée : l'invitation l'ouvre).
@@ -85,7 +86,7 @@ const InvitationScreen = ({
   } else {
     const head = (
       <div className="pz-auth-head">
-        {invitation.treeIcon && <span className="invite-tree-icon" aria-hidden="true">{invitation.treeIcon}</span>}
+        <TreeMark base="invite-tree-mark" name={invitation.treeName} icon={invitation.treeIcon || null} image={invitation.treeImage || null} />
         <h1 className="pz-title">{t('Gérer « {name} »', { name: invitation.treeName })}</h1>
         <p className="pz-sub">
           {invitation.invitedBy

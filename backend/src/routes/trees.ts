@@ -11,6 +11,8 @@ import { removeStoredFile } from '../lib/media-files.js'
 import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
+import { signMediaToken } from '../lib/tree-access.js'
+import { withTreeVisual } from '../lib/tree-visual.js'
 import { findFreeSlug, isUniqueViolation, isValidSlug, normalizeSlug } from '../lib/tree-slug.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { createHmac } from 'node:crypto'
@@ -384,6 +386,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               description: true,
               icon: true,
+              imagePath: true,
+              imageCrop: true,
+              imageUpdatedAt: true,
               rootPersonId: true,
               createdAt: true,
               updatedAt: true,
@@ -406,6 +411,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               description: true,
               icon: true,
+              imagePath: true,
+              imageCrop: true,
+              imageUpdatedAt: true,
               rootPersonId: true,
               createdAt: true,
               updatedAt: true,
@@ -436,6 +444,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       name: string
       description: string | null
       icon: string | null
+      imagePath: string | null
+      imageCrop: unknown
+      imageUpdatedAt: Date | null
       rootPersonId: string | null
       createdAt: Date
       updatedAt: Date
@@ -495,8 +506,17 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         })
       : null
 
+    // Les menus montrent la photo de chaque arbre, ouvert ou non : son adresse porte un jeton médias de cet arbre
+    const actor = request.actor
+    const treesWithVisual = mergedTrees.map((tree) => {
+      const shaped = withTreeVisual(tree)
+      if (!shaped.image || !actor) return shaped
+      const token = signMediaToken(app, tree.id, actor)
+      return { ...shaped, image: { ...shaped.image, urlPath: `${shaped.image.urlPath}&token=${encodeURIComponent(token)}` } }
+    })
+
     return reply.send({
-      trees: mergedTrees,
+      trees: treesWithVisual,
       lastOpenedTree: lastOpenedTree
         ? {
             treeId: lastOpenedTree.id,
@@ -653,7 +673,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return reply.send({
-      tree,
+      tree: withTreeVisual(tree),
       role: membership.role,
     })
   })
@@ -719,6 +739,11 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         updateData.description = payload.data.description
       }
 
+      // Un seul visuel à la fois : choisir une icône, ou la lettre (null), retire la photo
+      const replacesImage = payload.data.icon !== undefined
+      const previousImage = replacesImage
+        ? await app.prisma.tree.findFirst({ where: { id: params.data.id, deletedAt: null }, select: { imagePath: true } })
+        : null
       if (payload.data.icon !== undefined) {
         updateData.icon = payload.data.icon
       }
@@ -763,12 +788,19 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
             id: params.data.id,
             deletedAt: null,
           },
-          data: updateData,
+          data: previousImage?.imagePath
+            ? { ...updateData, imagePath: null, imageMimeType: null, imageCrop: Prisma.DbNull, imageUpdatedAt: null }
+            : updateData,
         })
       })
 
       if (updateResult.count === 0) {
         return reply.code(404).send({ error: 'tree_not_found' })
+      }
+
+      // La photo remplacée ne reste pas sur le disque, et libère sa place
+      if (previousImage?.imagePath) {
+        await removeStoredFile(path.resolve(env.MEDIA_STORAGE_PATH), previousImage.imagePath)
       }
 
       const updated = await app.prisma.tree.findUnique({
@@ -789,7 +821,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         },
       })
 
-      return reply.send({ tree: updated })
+      return reply.send({ tree: updated ? withTreeVisual(updated) : null })
     } catch (error: unknown) {
       if (isUniqueViolation(error)) {
         return reply.code(409).send({ error: 'slug_already_exists' })

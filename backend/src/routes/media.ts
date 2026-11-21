@@ -27,6 +27,7 @@ import { syncPersonMediaOrder } from '../lib/media-order.js'
 import { mediaPeopleSchema, normalizeMediaPeople, replaceMediaPeople } from '../lib/media-people.js'
 import { resolveTreeMediaDirectory } from '../lib/tree-purge.js'
 import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
+import { sendTreeImage, treeImageOf } from '../lib/tree-visual.js'
 import type { MembershipRole } from '../types/auth.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 import { forgetPendingPhoto, reservePendingPhoto, sweepStalePendingPhotos } from '../lib/annotation-changes.js'
@@ -99,6 +100,11 @@ const uploadAvatarSchema = z.object({
   mimeType: z.string().min(1).max(120),
   sizeBytes: z.number().int().positive().max(MAX_IMAGE_BYTES),
   dataBase64: z.string().min(1),
+})
+
+// Photo de l'arbre : le même envoi qu'un portrait, avec le cadrage choisi dans la fenêtre de recadrage
+const uploadTreeImageSchema = uploadAvatarSchema.extend({
+  crop: avatarCropInputSchema.shape.crop.optional(),
 })
 
 const reorderMediaSchema = z.object({
@@ -1115,6 +1121,151 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     applyMediaResponseHeaders(reply, person.avatarMimeType, 'portrait')
 
     return reply.send(fileBuffer)
+  })
+
+  // Photo de l'arbre, à la place de l'icône ou de la lettre. Les gestionnaires seuls, comme les portraits.
+  // La photo compte dans la place de l'arbre : elle vit dans son dossier. L'icône est retirée, un seul visuel à la fois.
+  app.post('/trees/:id/image', AVATAR_RATE_LIMIT, async (request, reply) => {
+    if (!request.actor || request.actor.kind !== 'user') {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+    const payload = uploadTreeImageSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+    const membership = await requireAdminMembership(app, request.actor.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+
+    const fileBuffer = Buffer.from(stripDataUrlPrefix(payload.data.dataBase64), 'base64')
+    if (!fileBuffer.length) {
+      return reply.code(400).send({ error: 'empty_media_file' })
+    }
+    if (fileBuffer.length !== payload.data.sizeBytes) {
+      return reply.code(400).send({ error: 'size_mismatch' })
+    }
+    if (fileBuffer.length > MAX_IMAGE_BYTES) {
+      return reply.code(400).send({ error: 'image_too_large' })
+    }
+
+    let prepared: Awaited<ReturnType<typeof prepareUploadedFile>>
+    try {
+      prepared = await prepareUploadedFile(fileBuffer, 'photo', payload.data.fileName)
+    } catch (error) {
+      if (error instanceof InvalidMediaError) {
+        return reply.code(400).send({ error: error.message === HEIC_REFUSED ? HEIC_REFUSED : 'invalid_avatar_mime_type' })
+      }
+      throw error
+    }
+
+    if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length, false)) {
+      return reply.code(413).send({ error: 'storage_quota_exceeded' })
+    }
+
+    const previous = await app.prisma.tree.findFirst({
+      where: { id: params.data.id, deletedAt: null },
+      select: { imagePath: true },
+    })
+    if (!previous) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+
+    const relativePath = path.posix.join(params.data.id, `arbre-${randomUUID()}${prepared.extension}`)
+    const storageRoot = getStorageRoot()
+    const absolutePath = path.resolve(storageRoot, relativePath)
+    if (!absolutePath.startsWith(storageRoot + path.sep)) {
+      return reply.code(400).send({ error: 'invalid_media_path' })
+    }
+    await mkdir(path.dirname(absolutePath), { recursive: true })
+    await writeFile(absolutePath, prepared.buffer)
+
+    const crop = payload.data.crop ? toStoredAvatarCrop({ x: payload.data.crop.x, y: payload.data.crop.y, zoom: payload.data.crop.zoom }) : null
+    const updated = await app.prisma.tree.update({
+      where: { id: params.data.id },
+      data: {
+        imagePath: relativePath,
+        imageMimeType: prepared.mimeType,
+        imageCrop: crop ?? Prisma.DbNull,
+        imageUpdatedAt: new Date(),
+        icon: null,
+      },
+      select: { id: true, icon: true, imagePath: true, imageCrop: true, imageUpdatedAt: true },
+    })
+
+    // L'ancienne photo ne reste pas sur le disque
+    await removeStoredFile(storageRoot, previous.imagePath)
+
+    await app.prisma.auditLog.create({
+      data: {
+        treeId: params.data.id,
+        actorType: 'user',
+        actorId: request.actor.userId,
+        action: 'tree_image_updated',
+        entityType: 'tree',
+        entityId: params.data.id,
+      },
+    })
+
+    return reply.code(201).send({ image: treeImageOf(updated) })
+  })
+
+  // Recadrer la photo de l'arbre : l'original reste, seul le cadrage change
+  app.put('/trees/:id/image/crop', async (request, reply) => {
+    if (!request.actor || request.actor.kind !== 'user') {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+    const payload = avatarCropInputSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload', details: payload.error.flatten() })
+    }
+    const membership = await requireAdminMembership(app, request.actor.userId, params.data.id)
+    if (!membership) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+    const tree = await app.prisma.tree.findFirst({ where: { id: params.data.id, deletedAt: null }, select: { imagePath: true } })
+    if (!tree?.imagePath) {
+      return reply.code(404).send({ error: 'tree_image_not_found' })
+    }
+    const crop = payload.data.crop ? toStoredAvatarCrop({ x: payload.data.crop.x, y: payload.data.crop.y, zoom: payload.data.crop.zoom }) : null
+    const updated = await app.prisma.tree.update({
+      where: { id: params.data.id },
+      data: { imageCrop: crop ?? Prisma.DbNull },
+      select: { id: true, icon: true, imagePath: true, imageCrop: true, imageUpdatedAt: true },
+    })
+    return reply.send({ image: treeImageOf(updated) })
+  })
+
+  // Lecture de la photo de l'arbre : mêmes droits que les portraits (membre, compte rattaché, jeton médias).
+  // La porte de l'arbre, publique, ne la montre jamais.
+  app.get('/trees/:id/image', async (request, reply) => {
+    const params = treeIdParamSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+    const query = downloadQuerySchema.safeParse(request.query)
+    if (!query.success) {
+      return reply.code(400).send({ error: 'invalid_query' })
+    }
+    if (!(await canReadMedia(app, params.data.id, request, query.data.token))) {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    const tree = await app.prisma.tree.findFirst({
+      where: { id: params.data.id, deletedAt: null },
+      select: { imagePath: true, imageMimeType: true },
+    })
+    if (!tree) {
+      return reply.code(404).send({ error: 'tree_not_found' })
+    }
+    return sendTreeImage(reply, tree)
   })
 
   app.get('/trees/:id/media/:mediaId', async (request, reply) => {

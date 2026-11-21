@@ -25,6 +25,8 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         slug: true,
         name: true,
         description: true,
+        icon: true,
+        imagePath: true,
       },
     })
 
@@ -33,12 +35,14 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Route publique, appelée avant tout mot de passe : rien sur le propriétaire (ni son email, ni sa partie locale).
+    // L'icône aide la famille à reconnaître son arbre ; la photo ne sort jamais ici (la porte montre alors la lettre).
     return reply.send({
       tree: {
         id: tree.id,
         slug: tree.slug,
         name: tree.name,
         description: tree.description,
+        icon: tree.imagePath ? null : tree.icon,
       },
     })
   })
