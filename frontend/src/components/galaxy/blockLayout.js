@@ -470,8 +470,9 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
       const pcPersons = pc.filter(x => byId.get(x)._type === 'person')
       const keep = new Set(pcPersons)
       const extra = [...block.members].filter(m => byId.get(m)?._type === 'person' && !keep.has(m) && chainOf.get(m) !== pc)
-      // Une famille de FAMILY_TAB_MIN personnes ou moins reste dessinée : pas d'onglet pour si peu (Patch, 20/10)
-      if (extra.length <= FAMILY_TAB_MIN) return block
+      // Une famille de FAMILY_TAB_MIN personnes ou moins reste dessinée : pas d'onglet pour si peu (Patch, 20/10).
+      // Onglets éteints, rien ne devient onglet : la belle-famille reste dessinée entière (#258)
+      if (!familyTabs || extra.length <= FAMILY_TAB_MIN) return block
       const nested = forgetTabs(snap.tabsBefore, snap.tabsAfter)
       unplace(block.members)
       forgetExternal(snap.externalBefore, snap.externalAfter)

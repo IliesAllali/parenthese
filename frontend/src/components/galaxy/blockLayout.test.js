@@ -228,3 +228,16 @@ describe('familyTabsOf, graphe passé en entier (worker)', () => {
     expect(fromWorker).toEqual(expected)
   })
 })
+
+describe('computeBlockLayout, onglets de familles coupés (#258)', () => {
+  it('dessine toutes les personnes, sans aucun badge d’onglet', () => {
+    const tree = generate('desc', 5)
+    mockData.loadGraphData(tree.graph, { apiBaseUrl: '' })
+    const withTabs = computeBlockLayout(null, tree.rootPersonId)
+    expect(withTabs.children.some((n) => n._familyTab)).toBe(true)
+    const whole = computeBlockLayout(null, tree.rootPersonId, { familyTabs: false })
+    const drawn = new Set(whole.children.filter((n) => n._type === 'person').map((n) => n.id))
+    expect(whole.children.some((n) => n._familyTab)).toBe(false)
+    expect(drawn.size).toBe(mockData.persons.length)
+  })
+})
