@@ -6,7 +6,7 @@ import { t } from '../../i18n/index.js'
 import { withEmphasis } from '../../utils/richText.jsx'
 import { ofName } from '../../utils/kinForm.js'
 import { firstNameLabel, surnameLabel } from '../../utils/personName.js'
-import { initialOf } from '../../utils/initial.js'
+import NoPhotoPortrait from '../NoPhotoPortrait.jsx'
 
 const ICON = { size: 18, strokeWidth: 2, 'aria-hidden': true }
 // Au-delà, la liste « Pour qui ? » prend un champ de recherche
@@ -63,7 +63,7 @@ export default function KinAddMenu({
               key={person.id}
               icon={(
                 <span className="apn-avatar">
-                  {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : initialOf(person.firstName)}
+                  {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <NoPhotoPortrait />}
                 </span>
               )}
               label={`${firstNameLabel(person)} ${surnameLabel(person.lastName)}`.trim()}
@@ -82,7 +82,9 @@ export default function KinAddMenu({
         <>
           {getPeople ? (
             <button type="button" role="menuitem" className="navm-item navm-head" onClick={() => setView('who')}>
-              <span className="navm-head-mono" aria-hidden="true">{initialOf(target.firstName)}</span>
+              <span className="navm-head-mono navm-head-mono--portrait" aria-hidden="true">
+                {target.photo ? <PortraitThumb src={target.photo} crop={target.avatarCrop} /> : <NoPhotoPortrait />}
+              </span>
               <span className="navm-text">
                 <strong>{withEmphasis(t('Un proche <em>{ofName}</em>', { ofName: ofName(target) }))}</strong>
                 <small>{t("Pour quelqu'un d'autre")}</small>

@@ -30,6 +30,8 @@
   color: var(--pz-a700);
   font: 400 19px/1 var(--pz-serif);
 }
+/* Une personne de l'arbre (#244) : sa photo ou la silhouette, rognées au rond */
+.navm-head-mono--portrait { overflow: hidden; background: var(--pz-line-soft); }
 .navm-chevron { color: var(--pz-faint); flex: none; }
 
 .navm-tree-mono {
