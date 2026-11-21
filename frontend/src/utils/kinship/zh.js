@@ -1,5 +1,5 @@
 import { normalizeSex } from './index.js'
-import { isHalfSibling, isStepSibling, kinshipFacts } from './facts.js'
+import { isHalfSibling, isStepSibling } from './facts.js'
 
 // Mot genré quand le sexe de la personne nommée est connu, forme double sinon
 const g = (sex, male, female, other) => (sex === 'male' ? male : sex === 'female' ? female : other)
@@ -28,7 +28,21 @@ export const
 
   SON = 'e',
   DAUGHTER = 'n',
-  CHILD = 'C'
+  CHILD = 'C',
+
+  // Regexes for common checks
+  TANG_HIGHER_ORDER_COUSIN = /^f+[gd]$/,
+  HIGHER_ORDER_COUSIN = /^[fm]{3,}/,
+  BO_UNCLE = /fg/,
+  SHU_UNCLE = /fd/,
+  PATERNAL_AUNT = /f[jk]/,
+  MATERNAL_UNCLE = /m[gd]/,
+  MATERNAL_AUNT = /m[jk]/,
+  DIRECT_ANCESTOR_DESCENDENT = /^([fm]|[en])+.$/,
+  ENDS_WITH_SPOUSE = /[hw]$/,
+  STARTS_WITH_SPOUSE = /^[hw]/,
+  MORE_THAN_TWO_UNKNOWNS = /(.*[A-Z].*){2,}/,
+  SINGLE_UNKNOWN = /^(?<known1>[a-z]*)(?<unknown>[A-Z])(?<known2>[a-z]*)$/
 
 // Lookup table for common relatives
 const links = {
@@ -138,7 +152,7 @@ const links = {
   'fffg': '曾伯祖父',
   'fffd': '曾叔祖父',
   'fffj': '曾姑祖母',
-  'ffmg': '外曾舅祖父',
+  'ffmg': '曾舅祖父',
   'ffmj': '曾姨祖母',
 
   'ffff': '高祖父',
@@ -146,27 +160,23 @@ const links = {
   'ffffg': '高伯祖父',
   'ffffd': '高叔祖父',
   'ffffj': '高姑祖母',
-  'fffmg': '外高舅祖父',
+  'fffmg': '高舅祖父',
   'fffmj': '高姨祖母',
 }
 
 // Prefixes for labels for higher degree or removed cousins
 // (in Chinese, removed cousins are aunts and uncles)
 function getCousinPrefix(intermediaries) {
-  if (intermediaries.match(/^f[gd]$/)) {
-    return '堂'
-  }
-  if (intermediaries.match(/^(f[jk]|m[gdjk])$/)) {
-    return '表'
-  }
-
   let label
 
   let suffix = '表'
-  if (intermediaries.match(/^f+[gd]$/)) {
+  if (intermediaries.match(TANG_HIGHER_ORDER_COUSIN)) {
     suffix = '堂'
   }
-  let ups = intermediaries.match(/^[fm]{3,}/)
+
+  if (intermediaries.length === 2) return suffix
+
+  let ups = intermediaries.match(HIGHER_ORDER_COUSIN)
   if (ups) {
     // For third cousins, repeat the cousin suffix
     // For higher order cousins, use a number (numeral if beyond tenth cousins)
@@ -181,19 +191,19 @@ function getCousinPrefix(intermediaries) {
     }
   }
 
-  if (intermediaries.match(/fg/)) {
+  if (intermediaries.match(BO_UNCLE)) {
     label = '伯'
   }
-  if (intermediaries.match(/fd/)) {
+  if (intermediaries.match(SHU_UNCLE)) {
     label = '叔'
   }
-  if (intermediaries.match(/f[jk]/)) {
+  if (intermediaries.match(PATERNAL_AUNT)) {
     label = '姑'
   }
-  if (intermediaries.match(/m[gd]/)) {
+  if (intermediaries.match(MATERNAL_UNCLE)) {
     label = '舅'
   }
-  if (intermediaries.match(/m[jk]/)) {
+  if (intermediaries.match(MATERNAL_AUNT)) {
     label = '姨'
   }
 
@@ -261,14 +271,14 @@ function getPromoted(pathCode) {
     return links[pathCode]
   }
 
-  if (pathCode.match(/^([fm]|[en])+.$/)) {
+  if (pathCode.match(DIRECT_ANCESTOR_DESCENDENT)) {
     let middle, end
 
-    if (pathCode.match(/[hw]$/)) {
-      middle = pathCode.substring(0, pathCode.length - 2)
-      end = pathCode.substr(pathCode.length - 2)
+    if (pathCode.match(ENDS_WITH_SPOUSE)) {
+      middle = pathCode.slice(0, -2)
+      end = pathCode.slice(-2)
     } else {
-      middle = pathCode.substring(0, pathCode.length - 1)
+      middle = pathCode.slice(0, -1)
       end = pathCode.charAt(pathCode.length - 1)
     }
 
@@ -290,7 +300,7 @@ function getPromoted(pathCode) {
   }
 
   let end = pathCode.charAt(pathCode.length - 1)
-  pathCode = pathCode.substring(0, pathCode.length - 1)
+  pathCode = pathCode.slice(0, -1)
     .replaceAll(DAUGHTER, SON)
   pathCode = `${pathCode}${end}`
 
@@ -301,16 +311,8 @@ function getPromoted(pathCode) {
   return undefined
 }
 
-export function getName(pathCode, isOlder, generationDistance, generationIndices) {
-  // If there are two or more ambiguous steps in the path, don't
-  // attempt to find any concrete label
-  if (pathCode.match(/(.*[A-Z].*){2,}/)) {
-    return undefined
-  }
-
-  // If there is a single ambiguous step, attempt to find a label for both
-  // of the possibilities and return both
-  let singleUnknown = pathCode.match(/^(?<known1>[a-z]*)(?<unknown>[A-Z])(?<known2>[a-z]*)$/)
+function getDisambiguated(pathCode, { isOlder, generationDistance, generationIndices }) {
+  let singleUnknown = pathCode.match(SINGLE_UNKNOWN)
   if (singleUnknown) {
     let k1 = singleUnknown.groups.known1
     let k2 = singleUnknown.groups.known2
@@ -321,26 +323,50 @@ export function getName(pathCode, isOlder, generationDistance, generationIndices
       return undefined
     }
 
-    let isAgeDisambiguation = singleUnknown in [BROTHER, SISTER]
+    let isAgeDisambiguation = singleUnknown.groups.unknown === BROTHER || singleUnknown.groups.unknown === SISTER
 
-    a = getName(`${k1}${a}${k2}`, isAgeDisambiguation ? true : isOlder, generationDistance, generationIndices)
-    b = getName(`${k1}${b}${k2}`, isAgeDisambiguation ? false : isOlder, generationDistance, generationIndices)
+    a = getName(`${k1}${a}${k2}`, {
+      isOlder: isAgeDisambiguation ? true : isOlder,
+      generationDistance,
+      generationIndices
+    })
+    b = getName(`${k1}${b}${k2}`, {
+      isOlder: isAgeDisambiguation ? false : isOlder,
+      generationDistance,
+      generationIndices
+    })
 
     if (a === b) return a
 
     return [a, b].filter((x) => x !== undefined).join('/')
   }
+}
+
+export function getName(pathCode, { isOlder, generationDistance, generationIndices }) {
+  // If there are two or more ambiguous steps in the path, don't
+  // attempt to find any concrete label
+  if (pathCode.match(MORE_THAN_TWO_UNKNOWNS)) {
+    return undefined
+  }
+
+  // If there is a single ambiguous step, attempt to find a label for both
+  // of the possibilities and return both
+  let disambiguated = getDisambiguated(pathCode, { isOlder, generationDistance, generationIndices })
+  if (disambiguated) return disambiguated
 
   if (pathCode in links) {
     return links[pathCode]
   } else {
     // For in-laws that aren't already in the lookup, use the same label that your spouse would use
-    if (pathCode.match(/^[hw]/)) {
-      Object.keys(generationIndices).forEach(g => {
-        generationIndices[g].start++
-        generationIndices[g].end++
-      });
-      return getName(pathCode.substr(1), isOlder, generationDistance, generationIndices)
+    if (pathCode.match(STARTS_WITH_SPOUSE)) {
+      return getName(pathCode.slice(1), { isOlder, generationDistance,
+        generationIndices: Object.fromEntries(Object.entries(generationIndices).map(([g, v]) => [
+          g, {
+            start: v.start >= 0 ? v.start - 1 : v.start,
+            end: v.end ? v.end - 1 : undefined
+          },
+        ]))
+      })
     }
 
     // Try finding a label based on the "promoted" path
@@ -353,14 +379,14 @@ export function getName(pathCode, isOlder, generationDistance, generationIndices
   // and connect the blood relatives on the same level as pseudo-siblings,
   // then recompute using the new chain and add a prefix
   let { start, end } = generationIndices[Math.max(generationDistance, 0)]
-  if (pathCode.match(/[hw]$/)) {
+  if (pathCode.match(ENDS_WITH_SPOUSE)) {
     end--
   }
   let pseudoSibling = getPseudoSibling(isOlder, pathCode.charAt(end) === SON)
-  let pseudoLink = `${pathCode.substr(0, start + 1)}${pseudoSibling}${pathCode.substr(end + 1)}`
+  let pseudoLink = `${pathCode.slice(0, start + 1)}${pseudoSibling}${pathCode.slice(end + 1)}`
   if (!(pseudoLink in links)) pseudoLink = promoteSiblings(pseudoLink)
   if (pseudoLink in links) {
-    let intermediaries = pathCode.substr(0, end)
+    let intermediaries = pathCode.slice(0, end)
     let prefix = getCousinPrefix(intermediaries)
     if (prefix) {
       return `${prefix}${links[pseudoLink].replace(/([\p{Script=Han}])\1/u, "$1")}`
@@ -375,7 +401,7 @@ export function getName(pathCode, isOlder, generationDistance, generationIndices
 export function encodePath(path) {
   let pathCode = ""
 
-  let generationIndices = {0: {"start": -1}}
+  let generationIndices = {0: {start: -1}}
 
   let myBirth = path.from.birthYear ?? path.from.birthDate
   let lastBirth = myBirth
@@ -413,7 +439,7 @@ export function encodePath(path) {
     if (generationDistance in generationIndices) {
       generationIndices[generationDistance].end = i
     } else {
-      generationIndices[generationDistance] = {"start": i}
+      generationIndices[generationDistance] = {start: i}
     }
 
     lastBirth = personBirth
@@ -438,19 +464,18 @@ export function encodePath(path) {
   } else {
     isOlder = births[birthCount - 1] < births[0]
   }
-  let relevantBirth = lastFamilialBirth[generationDistance]
 
   return { pathCode, generationDistance, isOlder, generationIndices }
 }
 
 export default function nameZh(path) {
   let { pathCode, generationDistance, isOlder, generationIndices } = encodePath(path)
-  const { ups, downs, hasSpouse, sex } = kinshipFacts(path)
+  const sex = path.steps[path.steps.length - 1].person.sex
 
   // Check for half- and stepsiblings first
   if (isHalfSibling(path)) {
     let prefix
-    if (pathCode.match(/^f/)) {
+    if (pathCode.match(`^${FATHER}`)) {
       prefix = '同父异母'
     } else {
       prefix = '同母异父'
@@ -464,7 +489,7 @@ export default function nameZh(path) {
     return `继${links[label]}`
   }
 
-  let label = getName(pathCode, isOlder, generationDistance, generationIndices)
+  let label = getName(pathCode, { isOlder, generationDistance, generationIndices })
   if (label === undefined) {
     // If no label can be found, fall back to "distant relative"
     return '远亲'

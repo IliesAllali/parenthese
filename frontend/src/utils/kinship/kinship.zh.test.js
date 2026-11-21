@@ -8,16 +8,20 @@ const path = (steps) => ({
   steps: steps
 })
 
-const getCousin = (isOlder, distance, indices, ...steps) => (
-  getName([...steps].join(''), isOlder, distance, indices)
+const getCousin = (isOlder, generationDistance, generationIndices, ...steps) => (
+  getName([...steps].join(''), { isOlder, generationDistance, generationIndices })
 )
 const getFirstCousin = (isOlder, ...steps) => (
   getCousin(isOlder, 0, {
-    0: {"start": -1, "end": steps.length - 1},
-    1: {"start": 0, "end": 1}
+    0: {start: -1, end: steps.length - 1},
+    1: {start: 0, end: 1}
   }, ...steps)
 )
-const getRelative = (...steps) => (getName([...steps].join(''), false, 0, {0: {"start": -1, "end": 0}}))
+const getRelative = (...steps) => (getName([...steps].join(''), {
+  isOlder: false,
+  generationDistance: 0,
+  generationIndices: {0: {start: -1, end: 0}}
+}))
 
 describe('nommage chinois', () => {
   it('name for a given path', () => {
@@ -37,24 +41,24 @@ describe('nommage chinois', () => {
 
   it('higher order cousins and aunts/uncles', () => {
     expect(getCousin(true, 1, {
-      0: {"start": -1},
-      1: {"start": 0, "end": 3},
-      2: {"start": 1, "end": 2}
+      0: {start: -1},
+      1: {start: 0, end: 3},
+      2: {start: 1, end: 2}
     }, zh.FATHER, zh.MOTHER, zh.YOUNGER_BROTHER, zh.SON)).toEqual('舅表伯父')
     expect(getCousin(true, 1, {
-      0: {"start": -1},
-      1: {"start": 0, "end": 3},
-      2: {"start": 1, "end": 2}
+      0: {start: -1},
+      1: {start: 0, end: 3},
+      2: {start: 1, end: 2}
     }, zh.FATHER, zh.FATHER, zh.YOUNGER_BROTHER, zh.SON)).toEqual('叔堂伯父')
     expect(getCousin(true, 1, {
-      0: {"start": -1},
-      1: {"start": 0, "end": 3},
-      2: {"start": 1, "end": 2}
+      0: {start: -1},
+      1: {start: 0, end: 3},
+      2: {start: 1, end: 2}
     }, zh.MOTHER, zh.FATHER, zh.OLDER_SISTER, zh.DAUGHTER)).toEqual('姑表姨母')
     expect(getCousin(true, 0, {
-      0: {"start": -1, "end": 4},
-      1: {"start": 0, "end": 3},
-      2: {"start": 1, "end": 2}
+      0: {start: -1, end: 4},
+      1: {start: 0, end: 3},
+      2: {start: 1, end: 2}
     }, zh.MOTHER, zh.FATHER, zh.OLDER_SISTER, zh.DAUGHTER, zh.SON)).toEqual('姑表哥')
   })
 
@@ -85,6 +89,7 @@ describe('nommage chinois', () => {
   it('disambiguate when two options are available', () => {
     expect(getRelative(zh.PARENT)).toEqual('父亲/母亲')
     expect(getRelative(zh.FATHER, zh.BROTHER)).toEqual('伯父/叔父')
+    expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟妇')
     expect(getRelative(zh.MOTHER, zh.OLDER_SIBLING)).toEqual('舅父/姨母')
     expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟妇')
   })
@@ -114,11 +119,11 @@ describe('nommage chinois', () => {
     ]))).toEqual({
       generationDistance: 1,
       generationIndices: {
-        0: {"start": -1},
-        1: {"start": 0},
+        0: {start: -1},
+        1: {start: 0},
       },
       isOlder: false,
-      pathCode: 'f'
+      pathCode: zh.FATHER
     })
     expect(encodePath(path([
       { move: 'up', person: { birthYear: -30, sex: 'male' } },
@@ -126,11 +131,11 @@ describe('nommage chinois', () => {
     ]))).toEqual({
       generationDistance: 1,
       generationIndices: {
-        0: {"start": -1},
-        1: {"start": 0, "end": 1},
+        0: {start: -1},
+        1: {start: 0, end: 1},
       },
       isOlder: true,
-      pathCode: 'fg'
+      pathCode: [zh.FATHER, zh.OLDER_BROTHER].join('')
     })
     expect(encodePath(path([
       { move: 'up', person: { birthYear: -30, sex: 'male' } },
@@ -138,11 +143,11 @@ describe('nommage chinois', () => {
     ]))).toEqual({
       generationDistance: 1,
       generationIndices: {
-        0: {"start": -1},
-        1: {"start": 0, "end": 1},
+        0: {start: -1},
+        1: {start: 0, end: 1},
       },
       isOlder: false,
-      pathCode: 'fd'
+      pathCode: [zh.FATHER, zh.YOUNGER_BROTHER].join('')
     })
     expect(encodePath(path([
       { move: 'up', person: { birthYear: -30, sex: 'male' } },
@@ -152,11 +157,11 @@ describe('nommage chinois', () => {
     ]))).toEqual({
       generationDistance: 0,
       generationIndices: {
-        0: {"start": -1, "end": 3},
-        1: {"start": 0, "end": 1},
+        0: {start: -1, end: 3},
+        1: {start: 0, end: 1},
       },
       isOlder: false,
-      pathCode: 'fdew'
+      pathCode: [zh.FATHER, zh.YOUNGER_BROTHER, zh.SON, zh.WIFE].join('')
     })
     expect(encodePath(path([
       { move: 'up', person: { birthYear: -30, sex: 'female' } },
@@ -167,12 +172,12 @@ describe('nommage chinois', () => {
     ]))).toEqual({
       generationDistance: 0,
       generationIndices: {
-        0: {"start": -1, "end": 4},
-        1: {"start": 0, "end": 3},
-        2: {"start": 1, "end": 2}
+        0: {start: -1, end: 4},
+        1: {start: 0, end: 3},
+        2: {start: 1, end: 2}
       },
       isOlder: true,
-      pathCode: 'mfjne'
+      pathCode: [zh.MOTHER, zh.FATHER, zh.OLDER_SISTER, zh.DAUGHTER, zh.SON].join('')
     })
   })
 })
