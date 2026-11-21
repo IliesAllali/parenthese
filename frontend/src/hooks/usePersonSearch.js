@@ -40,112 +40,112 @@ const asksToVerify = (q) => {
  */
 const MIN_SCORE_THRESHOLD = 30
 
+// Texte comparable : sans accents ni majuscules, traits d'union, apostrophes et ponctuation lus comme des espaces.
+// « andre » trouve André, « jean pierre » Jean-Pierre, « d'arc » d’Arc (apostrophe typographique d'un téléphone).
+export function fold(value) {
+  return String(value ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[-‐‑–—'’‘ʼ`.,;:/()]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Les champs d'une personne, une fois rendus comparables
+function fieldsOf(person) {
+  const firstName = fold(person.firstName)
+  const lastName = fold(person.lastName)
+  const birthName = fold(person.birthName)
+  return {
+    firstName,
+    lastName,
+    birthName: birthName !== lastName ? birthName : '',
+    // Les deux ordres : « andre dupont » et « dupont andre », l'ordre des registres
+    names: [`${firstName} ${lastName}`.trim(), `${lastName} ${firstName}`.trim()],
+    birthNames: birthName && birthName !== lastName ? [`${firstName} ${birthName}`.trim(), `${birthName} ${firstName}`.trim()] : [],
+    nickname: fold(person.nickname),
+    profession: fold(person.profession),
+    birthPlace: fold(person.birthPlace),
+    region: fold(person.region),
+    note: fold(person.note),
+    birthYear: person.birthYear?.toString() || '',
+    deathYear: person.deathYear?.toString() || '',
+  }
+}
+
+const wordsOf = (text) => text.split(' ').filter(Boolean)
+// Un mot de la requête commence un mot du champ : « brive » dans « brive la gaillarde »
+const startsAWord = (text, q) => text === q || text.startsWith(q) || text.includes(` ${q}`)
+// Chaque mot de la requête commence un mot du nom, dans n'importe quel ordre : « martin jean pierre »
+const everyWordInName = (f, q) => {
+  const nameWords = wordsOf([f.firstName, f.lastName, f.birthName, f.nickname].join(' '))
+  const queryWords = wordsOf(q)
+  return queryWords.length > 1 && queryWords.every((word) => nameWords.some((name) => name.startsWith(word)))
+}
+
 /**
  * Calcule le score de pertinence pour une personne
- * @param {string} query - Requête de recherche (normalisée lowercase)
+ * @param {string} query - Requête de recherche
  * @param {Object} person - Objet personne
  * @returns {number} Score de pertinence
  */
 function calculateScore(query, person) {
   let score = 0
-  const q = query.toLowerCase().trim()
+  const q = fold(query)
 
   if (!q || q.length < 2) return 0
   if (person.toVerify && asksToVerify(q)) return SCORE_WEIGHTS.NAME_EXACT
 
-  // Normaliser les données de la personne
-  const firstName = (person.firstName || '').toLowerCase()
-  const lastName = (person.lastName || '').toLowerCase()
-  const fullName = `${firstName} ${lastName}`
-  const profession = (person.profession || '').toLowerCase()
-  const birthPlace = (person.birthPlace || '').toLowerCase()
-  const region = (person.region || '').toLowerCase()
-  const note = (person.note || '').toLowerCase()
-  const nickname = (person.nickname || '').toLowerCase()
-  const birthYear = person.birthYear?.toString() || ''
-  const deathYear = person.deathYear?.toString() || ''
+  const f = fieldsOf(person)
 
   // === NOM/PRÉNOM ===
-
-  // Exact match nom complet
-  if (fullName === q) {
-    score += SCORE_WEIGHTS.NAME_EXACT
-  }
-
-  // Exact match prénom
-  if (firstName === q) {
-    score += SCORE_WEIGHTS.FIRSTNAME_EXACT
-  }
-
-  // Exact match nom
-  if (lastName === q) {
-    score += SCORE_WEIGHTS.LASTNAME_EXACT
-  }
-
-  // Starts with prénom
-  if (firstName.startsWith(q)) {
-    score += SCORE_WEIGHTS.FIRSTNAME_STARTS_WITH
-  }
-
-  // Starts with nom
-  if (lastName.startsWith(q)) {
-    score += SCORE_WEIGHTS.LASTNAME_STARTS_WITH
-  }
-
-  // Starts with nom complet
-  if (fullName.startsWith(q)) {
+  if (f.names.includes(q)) score += SCORE_WEIGHTS.NAME_EXACT
+  if (f.firstName === q) score += SCORE_WEIGHTS.FIRSTNAME_EXACT
+  if (f.lastName === q) score += SCORE_WEIGHTS.LASTNAME_EXACT
+  if (f.firstName.startsWith(q)) score += SCORE_WEIGHTS.FIRSTNAME_STARTS_WITH
+  if (f.lastName.startsWith(q)) score += SCORE_WEIGHTS.LASTNAME_STARTS_WITH
+  if (f.names.some((name) => name.startsWith(q))) {
     score += SCORE_WEIGHTS.NAME_STARTS_WITH
-  }
-
-  // Contains dans nom complet (mais pas déjà compté)
-  if (fullName.includes(q) && !fullName.startsWith(q) && fullName !== q) {
+  } else if (f.names.some((name) => name.includes(q)) || everyWordInName(f, q)) {
     score += SCORE_WEIGHTS.NAME_CONTAINS
   }
 
-  // === PROFESSION ===
+  // === NOM DE NAISSANCE === (une grand-mère née Dupont, mariée Martin)
+  if (f.birthName) {
+    if (f.birthName === q || f.birthNames.includes(q)) score += SCORE_WEIGHTS.LASTNAME_EXACT
+    else if (f.birthName.startsWith(q) || f.birthNames.some((name) => name.startsWith(q))) score += SCORE_WEIGHTS.LASTNAME_STARTS_WITH
+  }
 
-  if (profession) {
-    if (profession === q) {
-      score += SCORE_WEIGHTS.PROFESSION_EXACT
-    } else if (profession.includes(q)) {
-      score += SCORE_WEIGHTS.PROFESSION_CONTAINS
-    }
+  // === PROFESSION ===
+  if (f.profession) {
+    if (f.profession === q) score += SCORE_WEIGHTS.PROFESSION_EXACT
+    else if (f.profession.includes(q)) score += SCORE_WEIGHTS.PROFESSION_CONTAINS
   }
 
   // === SURNOM ===
-
-  if (nickname && nickname.includes(q)) {
-    score += nickname.startsWith(q) ? SCORE_WEIGHTS.NICKNAME_STARTS_WITH : SCORE_WEIGHTS.NICKNAME_CONTAINS
+  if (f.nickname && f.nickname.includes(q)) {
+    score += f.nickname.startsWith(q) ? SCORE_WEIGHTS.NICKNAME_STARTS_WITH : SCORE_WEIGHTS.NICKNAME_CONTAINS
   }
 
   // === LIEUX ===
-
-  if (birthPlace && birthPlace === q) {
-    score += SCORE_WEIGHTS.BIRTH_PLACE_EXACT
+  if (f.birthPlace) {
+    if (f.birthPlace === q || f.birthPlace.split(' ')[0] === q) score += SCORE_WEIGHTS.BIRTH_PLACE_EXACT
+    else if (startsAWord(f.birthPlace, q)) score += SCORE_WEIGHTS.REGION_MATCH
   }
+  if (f.region && f.region.includes(q)) score += SCORE_WEIGHTS.REGION_MATCH
 
-  if (region && region.includes(q)) {
-    score += SCORE_WEIGHTS.REGION_MATCH
-  }
-
-  // === DATES/ÂGES ===
-
-  if (birthYear && birthYear.includes(q)) {
-    score += SCORE_WEIGHTS.BIRTH_YEAR_MATCH
-  }
-
-  if (deathYear && deathYear.includes(q)) {
-    score += SCORE_WEIGHTS.DEATH_YEAR_MATCH
-  }
+  // === DATES ===
+  if (f.birthYear && f.birthYear.includes(q)) score += SCORE_WEIGHTS.BIRTH_YEAR_MATCH
+  if (f.deathYear && f.deathYear.includes(q)) score += SCORE_WEIGHTS.DEATH_YEAR_MATCH
 
   // === CONTENU (notes, etc.) ===
-
-  if (note && note.includes(q)) {
-    score += SCORE_WEIGHTS.NOTE_CONTAINS
-  }
+  if (f.note && f.note.includes(q)) score += SCORE_WEIGHTS.NOTE_CONTAINS
 
   return score
 }
+
+const matchesName = (f, q) => f.names.some((name) => name.includes(q)) || f.firstName.startsWith(q) || f.lastName.startsWith(q) || everyWordInName(f, q)
+const matchesBirthName = (f, q) => Boolean(f.birthName) && (f.birthName.startsWith(q) || f.birthNames.some((name) => name.startsWith(q)))
 
 /**
  * Détermine la raison principale du match (pour affichage badge)
@@ -154,42 +154,16 @@ function calculateScore(query, person) {
  * @returns {string} Raison du match
  */
 function getMatchReason(query, person) {
-  const q = query.toLowerCase().trim()
-  const firstName = (person.firstName || '').toLowerCase()
-  const lastName = (person.lastName || '').toLowerCase()
-  const fullName = `${firstName} ${lastName}`
-  const profession = (person.profession || '').toLowerCase()
-  const birthPlace = (person.birthPlace || '').toLowerCase()
-  const birthYear = person.birthYear?.toString() || ''
+  const q = fold(query)
+  const f = fieldsOf(person)
 
-  if (person.toVerify && asksToVerify(q)) {
-    return 'À vérifier'
-  }
-
-  if (fullName === q || firstName === q || lastName === q) {
-    return 'Nom'
-  }
-
-  if (firstName.startsWith(q) || lastName.startsWith(q)) {
-    return 'Nom'
-  }
-
-  if ((person.nickname || '').toLowerCase().includes(q)) {
-    return 'Surnom'
-  }
-
-  if (profession && profession.includes(q)) {
-    return 'Profession'
-  }
-
-  if (birthPlace && birthPlace.includes(q)) {
-    return 'Lieu'
-  }
-
-  if (birthYear && birthYear.includes(q)) {
-    return 'Date'
-  }
-
+  if (person.toVerify && asksToVerify(q)) return 'À vérifier'
+  if (matchesName(f, q)) return 'Nom'
+  if (matchesBirthName(f, q)) return 'Nom de naissance'
+  if (f.nickname.includes(q)) return 'Surnom'
+  if (f.profession && f.profession.includes(q)) return 'Profession'
+  if (f.birthPlace && startsAWord(f.birthPlace, q)) return 'Lieu'
+  if (f.birthYear && f.birthYear.includes(q)) return 'Date'
   return 'Contenu'
 }
 
@@ -200,56 +174,31 @@ function getMatchReason(query, person) {
  * @returns {string}
  */
 function getMatchDetail(query, person) {
-  const q = query.toLowerCase().trim()
+  const q = fold(query)
   if (!q) return ''
+  const f = fieldsOf(person)
 
-  const firstName = person.firstName || ''
-  const lastName = person.lastName || ''
-  const fullName = `${firstName} ${lastName}`.trim()
-  const fullNameNorm = fullName.toLowerCase()
-  const firstNameNorm = firstName.toLowerCase()
-  const lastNameNorm = lastName.toLowerCase()
-  const profession = person.profession || ''
-  const birthPlace = person.birthPlace || ''
-  const region = person.region || ''
-  const note = person.note || ''
-  const birthYear = person.birthYear?.toString() || ''
-  const deathYear = person.deathYear?.toString() || ''
+  const fullName = `${person.firstName || ''} ${person.lastName || ''}`.trim()
+  if (matchesName(f, q)) return fullName
+  if (matchesBirthName(f, q)) return String(person.birthName || '').trim()
+  if (f.nickname.includes(q)) return person.nickname
+  if (f.profession.includes(q)) return person.profession || ''
+  if (f.birthPlace && startsAWord(f.birthPlace, q)) return person.birthPlace || ''
+  if (f.region.includes(q)) return person.region || ''
 
-  if (fullNameNorm.includes(q) || firstNameNorm.includes(q) || lastNameNorm.includes(q)) {
-    return fullName
+  if (f.birthYear.includes(q) || f.deathYear.includes(q)) {
+    if (f.birthYear && f.deathYear) return `${f.birthYear}-${f.deathYear}`
+    return f.birthYear || f.deathYear
   }
 
-  if ((person.nickname || '').toLowerCase().includes(q)) {
-    return person.nickname
-  }
-
-  if (profession.toLowerCase().includes(q)) {
-    return profession
-  }
-
-  if (birthPlace.toLowerCase().includes(q)) {
-    return birthPlace
-  }
-
-  if (region.toLowerCase().includes(q)) {
-    return region
-  }
-
-  if (birthYear.includes(q) || deathYear.includes(q)) {
-    if (birthYear && deathYear) return `${birthYear}-${deathYear}`
-    return birthYear || deathYear
-  }
-
-  if (note.toLowerCase().includes(q)) {
-    const index = note.toLowerCase().indexOf(q)
-    if (index >= 0) {
-      const start = Math.max(0, index - 10)
-      const end = Math.min(note.length, index + q.length + 18)
-      const excerpt = note.slice(start, end).trim()
-      return start > 0 ? `...${excerpt}` : excerpt
-    }
-    return note.length > 28 ? `${note.slice(0, 28)}...` : note
+  if (f.note.includes(q)) {
+    // L'extrait se prend dans la note telle qu'écrite ; la position vient du texte rendu comparable, à peu près
+    const note = String(person.note || '')
+    const index = Math.max(0, f.note.indexOf(q))
+    const start = Math.max(0, index - 10)
+    const end = Math.min(note.length, index + q.length + 18)
+    const excerpt = note.slice(start, end).trim()
+    return start > 0 ? `...${excerpt}` : excerpt
   }
 
   return ''

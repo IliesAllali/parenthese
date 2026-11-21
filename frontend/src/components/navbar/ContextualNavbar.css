@@ -328,3 +328,36 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* Flèche d'accueil, une seule fois (#245) : la notification de l'app (.contrib-success-toast), posée au-dessus du « + »,
+   sa pointe sur lui */
+.nav-add-wrap { position: relative; display: inline-flex; }
+.nav-add-hint {
+  position: absolute;
+  /* La pointe (29 px du bord droit) tombe au milieu du « + », quelle que soit sa largeur */
+  right: calc(50% - 29px);
+  bottom: calc(100% + 16px);
+  width: max-content;
+  max-width: min(240px, calc(100vw - 32px));
+  padding: 11px 20px;
+  border: 0;
+  border-radius: var(--pz-r-m);
+  background: var(--pz-ink);
+  color: var(--pz-bg);
+  font: 500 14px/1.4 var(--pz-sans);
+  text-align: left;
+  text-wrap: balance;
+  box-shadow: var(--pz-shadow-lg);
+  cursor: pointer;
+}
+.nav-add-hint::after {
+  content: '';
+  position: absolute;
+  right: 23px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}

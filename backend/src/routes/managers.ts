@@ -14,6 +14,7 @@ import {
   normalizeEmail,
   pendingInvitationWhere,
 } from '../lib/tree-invitations.js'
+import { sendTreeImage, treeImageOf } from '../lib/tree-visual.js'
 
 // Co-gestion d'un arbre (issue #145). Un co-gestionnaire est un membre « admin » : il fait tout ce que fait le
 // propriétaire, sauf inviter ou retirer un co-gestionnaire et supprimer l'arbre (DELETE /trees/:id, réservé au
@@ -27,12 +28,20 @@ const managerParamsSchema = z.object({ id: z.string().min(1), userId: z.string()
 const tokenParamSchema = z.object({ token: z.string().min(1).max(200) })
 const inviteSchema = z.object({ email: z.string().trim().email().max(254) })
 
-function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string } | null {
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string | null } | null {
   if (!request.actor || request.actor.kind !== 'user') {
     reply.code(401).send({ error: 'authentication_required' })
     return null
   }
-  return { userId: request.actor.userId }
+  return { userId: request.actor.userId, email: request.actor.email }
+}
+
+// Un arbre provisoire s'efface au bout de 30 jours sans visite : on n'y fait pas entrer un co-gérant, qui y
+// travaillerait pour rien. La personne garde d'abord son arbre (« Gardez votre arbre »).
+function refuseProvisional(user: { email: string | null }, reply: FastifyReply): boolean {
+  if (user.email !== null) return false
+  reply.code(403).send({ error: 'keep_required' })
+  return true
 }
 
 async function membershipOf(app: FastifyInstance, treeId: string, userId: string) {
@@ -87,6 +96,7 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
   app.post('/trees/:id/invitations', { config: { rateLimit: { max: 20, timeWindow: '10 minutes' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
+    if (refuseProvisional(user, reply)) return
     const params = treeIdParamSchema.safeParse(request.params)
     if (!params.success) return reply.code(400).send({ error: 'invalid_tree_id' })
     const payload = inviteSchema.safeParse(request.body)
@@ -131,6 +141,7 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
   app.post('/trees/:id/invitations/:invitationId/link', { config: { rateLimit: { max: 30, timeWindow: '10 minutes' } } }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) return
+    if (refuseProvisional(user, reply)) return
     const params = invitationParamsSchema.safeParse(request.params)
     if (!params.success) return reply.code(400).send({ error: 'invalid_params' })
 
@@ -194,6 +205,15 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({ ok: true })
   })
 
+  // Photo de l'arbre pour la page d'invitation : lue avec le lien, tant qu'il est valable
+  app.get('/invitations/:token/tree-image', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const params = tokenParamSchema.safeParse(request.params)
+    if (!params.success) return reply.code(404).send({ error: 'invitation_invalid' })
+    const invitation = await findPendingInvitationByToken(app.prisma, params.data.token)
+    if (!invitation) return reply.code(404).send({ error: 'invitation_invalid' })
+    return sendTreeImage(reply, invitation.tree)
+  })
+
   // Page du lien, sans compte : l'arbre, qui invite, l'adresse masquée, et les façons d'entrer sur ce serveur
   app.get('/invitations/:token', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const params = tokenParamSchema.safeParse(request.params)
@@ -210,7 +230,9 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     }
     return reply.send({
       treeName: invitation.tree.name,
-      treeIcon: invitation.tree.icon,
+      // Le lien est personnel : la page montre le visuel de l'arbre, photo comprise (lue avec ce même lien)
+      treeIcon: invitation.tree.imagePath ? null : invitation.tree.icon,
+      treeImage: treeImageOf(invitation.tree, `/invitations/${encodeURIComponent(params.data.token)}/tree-image`),
       invitedBy: invitation.tree.owner.firstName || null,
       emailHint: maskEmail(invitation.email),
       expiresAt: invitation.expiresAt,
@@ -230,6 +252,8 @@ export const managerRoutes: FastifyPluginAsync = async (app) => {
     if (!invitation) return reply.code(404).send({ error: 'invitation_invalid' })
     const account = await app.prisma.user.findUnique({ where: { id: user.userId }, select: { email: true } })
     if (!account) return reply.code(401).send({ error: 'authentication_required' })
+    // Compte provisoire : il garde d'abord son arbre (un email), l'invitation se vérifie sur l'adresse
+    if (!account.email) return reply.code(403).send({ error: 'invitation_email_mismatch' })
 
     const result = await acceptInvitation(app.prisma, invitation.id, user.userId, account.email)
     if (!result.ok) {

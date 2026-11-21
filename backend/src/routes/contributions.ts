@@ -15,8 +15,7 @@ import { mediaPeopleSchema, normalizeMediaPeople, replaceMediaPeople } from '../
 import type { Actor, MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
-import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
-import { hasAnyName } from '../lib/person-names.js'
+import { personPrecisionResets, typedDatePrecisionSchema, unionPrecisionResets } from '../lib/date-precision.js'
 import { sexOrNull, sexSchema } from '../lib/person-sex.js'
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -36,6 +35,9 @@ const MAX_CHANGE_JSON_CHARS = 64_000
 const MAX_PENDING_SESSIONS_PER_TREE = 200
 // Annotations proposées avant la 1.5.1 : écartées à la relecture si elles ne se posent pas
 const SKIPPABLE_ANNOTATION_ERRORS = new Set(['invalid_annotation_change', 'invalid_annotation_photo_path', 'unsupported_change_action_for_annotation'])
+// Souvenir ou moment envoyé par la famille, effacé avant la relecture avec la personne qu'il concernait : écarté,
+// le reste de la proposition passe (avant, toute la relecture échouait en 400)
+const ENTITY_GONE = 'entity_gone'
 const boundedJson = z.unknown().optional().refine(
   (value) => value === undefined || JSON.stringify(value).length <= MAX_CHANGE_JSON_CHARS,
   { message: 'change_too_large' },
@@ -81,6 +83,8 @@ const personCreateSchema = z.object({
   nickname: z.string().max(120).optional().nullable(),
   birthDate: z.string().regex(isoDateRegex).optional().nullable(),
   deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+  birthDatePrecision: typedDatePrecisionSchema,
+  deathDatePrecision: typedDatePrecisionSchema,
   isDeceased: z.boolean().optional(),
   toVerify: z.boolean().optional(),
   birthPlace: z.string().max(200).optional().nullable(),
@@ -90,7 +94,7 @@ const personCreateSchema = z.object({
   nationality: z.string().max(120).optional().nullable(),
   sex: sexSchema,
   notes: z.string().max(2000).optional().nullable(),
-}).refine((value) => hasAnyName(value.firstName, value.lastName), { message: 'name_required', path: ['lastName'] })
+})
 
 const personUpdateSchema = z
   .object({
@@ -100,6 +104,8 @@ const personUpdateSchema = z
     nickname: z.string().max(120).optional().nullable(),
     birthDate: z.string().regex(isoDateRegex).optional().nullable(),
     deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+    birthDatePrecision: typedDatePrecisionSchema,
+    deathDatePrecision: typedDatePrecisionSchema,
     isDeceased: z.boolean().optional(),
     toVerify: z.boolean().optional(),
     birthPlace: z.string().max(200).optional().nullable(),
@@ -350,7 +356,7 @@ async function applyContributionChange(
       data: { status: 'approved' },
     })
     if (updated.count === 0) {
-      throw new ContributionRouteError(400, 'invalid_entity_reference')
+      throw new ContributionRouteError(400, ENTITY_GONE)
     }
     return { entityId: change.entityId }
   }
@@ -387,7 +393,7 @@ async function applyContributionChange(
     })
 
     if (!media) {
-      throw new ContributionRouteError(400, 'invalid_entity_reference')
+      throw new ContributionRouteError(400, ENTITY_GONE)
     }
 
     await tx.mediaItem.update({
@@ -420,6 +426,8 @@ async function applyContributionChange(
           nickname: toTrimmedStringOrNull(parsed.data.nickname),
           birthDate: toDateOrNull(parsed.data.birthDate),
           deathDate: toDateOrNull(parsed.data.deathDate),
+          birthDatePrecision: parsed.data.birthDate ? parsed.data.birthDatePrecision ?? null : null,
+          deathDatePrecision: parsed.data.deathDate ? parsed.data.deathDatePrecision ?? null : null,
           isDeceased: !parsed.data.deathDate && Boolean(parsed.data.isDeceased),
           toVerify: Boolean(parsed.data.toVerify),
           birthPlace: toTrimmedStringOrNull(parsed.data.birthPlace),
@@ -466,16 +474,6 @@ async function applyContributionChange(
         })
         : null
 
-      if (parsed.data.firstName !== undefined || parsed.data.lastName !== undefined) {
-        const before = await tx.person.findFirst({
-          where: { id: change.entityId, treeId, deletedAt: null },
-          select: { firstName: true, lastName: true },
-        })
-        if (before && !hasAnyName(parsed.data.firstName ?? before.firstName, parsed.data.lastName ?? before.lastName)) {
-          throw new ContributionRouteError(400, 'invalid_change_after')
-        }
-      }
-
       const result = await tx.person.updateMany({
         where: {
           id: change.entityId,
@@ -483,7 +481,7 @@ async function applyContributionChange(
           deletedAt: null,
         },
         data: {
-          ...personPrecisionResets(currentDates, nextDates),
+          ...personPrecisionResets(currentDates, nextDates, parsed.data),
           firstName: parsed.data.firstName !== undefined ? parsed.data.firstName.trim() : undefined,
           lastName: parsed.data.lastName !== undefined ? parsed.data.lastName.trim() : undefined,
           birthName: parsed.data.birthName !== undefined ? toTrimmedStringOrNull(parsed.data.birthName) : undefined,
@@ -1055,7 +1053,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
       autoStatus,
       mode: 'user' as const,
       submittedByUserId: actor.userId,
-      submittedByLabel: actor.email,
+      submittedByLabel: actor.email ?? 'Contributeur',
       actorId: actor.userId,
       actorType: 'user' as const,
     }
@@ -1092,7 +1090,7 @@ export async function resolveSubmissionContext(app: FastifyInstance, actor: Acto
     autoStatus: policy === 'direct' ? ('approved' as const) : ('pending' as const),
     mode: 'tree_access' as const,
     submittedByUserId: actor.userId,
-    submittedByLabel: actor.email,
+    submittedByLabel: actor.email ?? 'Contributeur',
     actorId: actor.userId,
     actorType: 'user' as const,
   }
@@ -1509,7 +1507,7 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
             } catch (error) {
               // Lien vers une personne ajoutée mais refusée, ou annotation d'avant la 1.5.1 que le serveur ne
               // peut pas poser (contenu incomplet) : la proposition est écartée, pas la relecture
-              if (error instanceof ContributionRouteError && (error.code === 'unresolved_reference' || SKIPPABLE_ANNOTATION_ERRORS.has(error.code))) {
+              if (error instanceof ContributionRouteError && (error.code === 'unresolved_reference' || error.code === ENTITY_GONE || SKIPPABLE_ANNOTATION_ERRORS.has(error.code))) {
                 decision = 'rejected'
                 rejectedCount += 1
                 if (change.entityType === 'annotation') rejectedAnnotationAfters.push(change.afterJson)

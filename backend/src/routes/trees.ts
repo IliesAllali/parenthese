@@ -11,12 +11,15 @@ import { removeStoredFile } from '../lib/media-files.js'
 import { matchSharePassword } from '../lib/password-variants.js'
 import { decryptSharePassword, encryptSharePassword } from '../lib/share-password.js'
 import { purgeTrees } from '../lib/tree-purge.js'
+import { signMediaToken } from '../lib/tree-access.js'
+import { withTreeVisual } from '../lib/tree-visual.js'
+import { findFreeSlug, isUniqueViolation, isValidSlug, normalizeSlug } from '../lib/tree-slug.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
+import { createHmac } from 'node:crypto'
 import { reserveTreeUnlockAttempt, serializePasswordCheck } from '../lib/unlock-guard.js'
 import type { MembershipRole } from '../types/auth.js'
 import { findParentChildValidationError, findUnionValidationError } from '../utils/relationship-guards.js'
-import { personPrecisionResets, unionPrecisionResets } from '../lib/date-precision.js'
-import { hasAnyName } from '../lib/person-names.js'
+import { personPrecisionResets, typedDatePrecisionSchema, unionPrecisionResets } from '../lib/date-precision.js'
 import { sexSchema } from '../lib/person-sex.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 
@@ -89,6 +92,8 @@ const createPersonSchema = z.object({
   nickname: z.string().max(120).optional().nullable(),
   birthDate: z.string().regex(isoDateRegex).optional().nullable(),
   deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+  birthDatePrecision: typedDatePrecisionSchema,
+  deathDatePrecision: typedDatePrecisionSchema,
   isDeceased: z.boolean().optional(),
   toVerify: z.boolean().optional(),
   birthPlace: z.string().max(200).optional().nullable(),
@@ -98,7 +103,7 @@ const createPersonSchema = z.object({
   nationality: z.string().max(120).optional().nullable(),
   sex: sexSchema,
   notes: z.string().max(2000).optional().nullable(),
-}).refine((value) => hasAnyName(value.firstName, value.lastName), { message: 'name_required', path: ['lastName'] })
+})
 
 const patchPersonSchema = z
   .object({
@@ -108,6 +113,8 @@ const patchPersonSchema = z
     nickname: z.string().max(120).optional().nullable(),
     birthDate: z.string().regex(isoDateRegex).optional().nullable(),
     deathDate: z.string().regex(isoDateRegex).optional().nullable(),
+    birthDatePrecision: typedDatePrecisionSchema,
+    deathDatePrecision: typedDatePrecisionSchema,
     isDeceased: z.boolean().optional(),
     // « À vérifier » : la famille n'est pas sûre de cette personne (retour d'Anaïs, 23/10)
     toVerify: z.boolean().optional(),
@@ -244,7 +251,7 @@ const childrenOrderSchema = z.object({
     .max(200),
 })
 
-function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string } | null {
+function requireUser(request: FastifyRequest, reply: FastifyReply): { userId: string; email: string | null } | null {
   if (!request.actor || request.actor.kind !== 'user') {
     reply.code(401).send({ error: 'authentication_required' })
     return null
@@ -320,20 +327,6 @@ function toTrimmedStringOrNull(value?: string | null): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function normalizeSlug(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function isValidSlug(value: string): boolean {
-  return /^[a-z0-9-]{3,64}$/.test(value)
-}
-
 async function getAdminMembership(app: FastifyInstance, userId: string, treeId: string) {
   const membership = await app.prisma.treeMembership.findUnique({
     where: {
@@ -393,6 +386,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               description: true,
               icon: true,
+              imagePath: true,
+              imageCrop: true,
+              imageUpdatedAt: true,
               rootPersonId: true,
               createdAt: true,
               updatedAt: true,
@@ -415,6 +411,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
               name: true,
               description: true,
               icon: true,
+              imagePath: true,
+              imageCrop: true,
+              imageUpdatedAt: true,
               rootPersonId: true,
               createdAt: true,
               updatedAt: true,
@@ -445,6 +444,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
       name: string
       description: string | null
       icon: string | null
+      imagePath: string | null
+      imageCrop: unknown
+      imageUpdatedAt: Date | null
       rootPersonId: string | null
       createdAt: Date
       updatedAt: Date
@@ -472,7 +474,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         ...(membership.role === 'owner' ? {
           coManagers: coManagerRows
             .filter((row: { treeId: string }) => row.treeId === membership.tree.id)
-            .map((row: { user: { firstName: string | null; email: string } }) => row.user.firstName || row.user.email),
+            .map((row: { user: { firstName: string | null; email: string | null } }) => row.user.firstName || row.user.email || ''),
         } : {}),
       })
     }
@@ -504,8 +506,17 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         })
       : null
 
+    // Les menus montrent la photo de chaque arbre, ouvert ou non : son adresse porte un jeton médias de cet arbre
+    const actor = request.actor
+    const treesWithVisual = mergedTrees.map((tree) => {
+      const shaped = withTreeVisual(tree)
+      if (!shaped.image || !actor) return shaped
+      const token = signMediaToken(app, tree.id, actor)
+      return { ...shaped, image: { ...shaped.image, urlPath: `${shaped.image.urlPath}&token=${encodeURIComponent(token)}` } }
+    })
+
     return reply.send({
-      trees: mergedTrees,
+      trees: treesWithVisual,
       lastOpenedTree: lastOpenedTree
         ? {
             treeId: lastOpenedTree.id,
@@ -517,7 +528,29 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/trees', { config: { rateLimit: { max: 10, timeWindow: '1 hour' } } }, async (request, reply) => {
+  // Dix arbres par heure et par compte, compté après l'authentification (le compte provisoire en fait un seul de
+  // toute façon). Les familles qui commencent ensemble derrière une même box ne se bloquent plus entre elles ; le
+  // filet par adresse reste, plus large, contre une rafale de comptes provisoires. Le plugin ne fait passer qu'un
+  // limiteur par requête : le filet est appelé à la main, et répond comme lui (429 et Retry-After, que l'app lit).
+  const treeCreationsPerAddress = app.createRateLimit({ max: 30, timeWindow: '1 hour' })
+  app.post('/trees', {
+    onRequest: async (request, reply) => {
+      const limit = await treeCreationsPerAddress(request)
+      if (limit.isAllowed || !limit.isExceeded) return
+      return reply
+        .code(429)
+        .header('retry-after', limit.ttlInSeconds)
+        .send({ statusCode: 429, error: 'Too Many Requests', message: `Rate limit exceeded, retry in ${limit.ttlInSeconds} seconds` })
+    },
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 hour',
+        hook: 'preHandler',
+        keyGenerator: (request) => (request.actor?.kind === 'user' ? `user:${request.actor.userId}` : request.ip),
+      },
+    },
+  }, async (request, reply) => {
     const user = requireUser(request, reply)
     if (!user) {
       return
@@ -532,7 +565,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const ownedTrees = await app.prisma.treeMembership.count({
       where: { userId: user.userId, role: 'owner', tree: { deletedAt: null } },
     })
-    if (ownedTrees >= MAX_TREES_PER_ACCOUNT) {
+    // Un compte provisoire fait un seul arbre : celui qu'il garde ensuite
+    if (ownedTrees >= (user.email === null ? 1 : MAX_TREES_PER_ACCOUNT)) {
       return reply.code(403).send({ error: 'tree_limit_reached' })
     }
 
@@ -552,57 +586,59 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const visitorHash = await hashPassword(parsed.data.visitorPassword)
     const contributorHash = await hashPassword(parsed.data.contributorPassword)
 
-    try {
-      const tree = await app.prisma.tree.create({
-        data: {
-          ownerUserId: user.userId,
-          name: parsed.data.name,
-          slug: normalizedSlug,
-          description: parsed.data.description ?? null,
-          accessPasswords: {
-            create: {
-              visitorHash,
-              contributorHash,
+    // Adresse déjà prise : suffixe automatique (famille-martin-2). Deux créations simultanées
+    // peuvent viser le même suffixe, la contrainte unique tranche et on recalcule.
+    for (let attempt = 0; ; attempt += 1) {
+      const slug = await findFreeSlug(app.prisma, normalizedSlug)
+      try {
+        const tree = await app.prisma.tree.create({
+          data: {
+            ownerUserId: user.userId,
+            name: parsed.data.name,
+            slug,
+            description: parsed.data.description ?? null,
+            accessPasswords: {
+              create: {
+                visitorHash,
+                contributorHash,
+              },
+            },
+            ...(parsed.data.visitorPassword === parsed.data.contributorPassword
+              ? { sharePassword: { create: { passwordEnc: encryptSharePassword(parsed.data.visitorPassword) } } }
+              : {}),
+            memberships: {
+              create: {
+                userId: user.userId,
+                role: 'owner',
+              },
+            },
+            settings: {
+              create: {
+                memberContributionPolicy: 'pending',
+                visitorPolicy: 'read_only',
+                contributorPolicy: 'pending',
+              },
             },
           },
-          ...(parsed.data.visitorPassword === parsed.data.contributorPassword
-            ? { sharePassword: { create: { passwordEnc: encryptSharePassword(parsed.data.visitorPassword) } } }
-            : {}),
-          memberships: {
-            create: {
-              userId: user.userId,
-              role: 'owner',
-            },
-          },
-          settings: {
-            create: {
-              memberContributionPolicy: 'pending',
-              visitorPolicy: 'read_only',
-              contributorPolicy: 'pending',
-            },
-          },
-        },
-      })
+        })
 
-      await app.prisma.user.update({
-        where: {
-          id: user.userId,
-        },
-        data: {
-          lastOpenedTreeId: tree.id,
-          lastOpenedAccessMode: 'member',
-          lastOpenedRole: 'owner',
-          lastOpenedAt: new Date(),
-        },
-      })
+        await app.prisma.user.update({
+          where: {
+            id: user.userId,
+          },
+          data: {
+            lastOpenedTreeId: tree.id,
+            lastOpenedAccessMode: 'member',
+            lastOpenedRole: 'owner',
+            lastOpenedAt: new Date(),
+          },
+        })
 
-      return reply.code(201).send({ tree })
-    } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
-        return reply.code(409).send({ error: 'slug_already_exists' })
+        return reply.code(201).send({ tree })
+      } catch (error: unknown) {
+        if (isUniqueViolation(error) && attempt < 4) continue
+        throw error
       }
-
-      throw error
     }
   })
 
@@ -637,7 +673,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return reply.send({
-      tree,
+      tree: withTreeVisual(tree),
       role: membership.role,
     })
   })
@@ -690,13 +726,24 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
           })
         }
 
-        updateData.slug = normalizedSlug
+        updateData.slug = await findFreeSlug(app.prisma, normalizedSlug, params.data.id)
       }
+
+      // Nouvelle adresse : l'ancienne reste à l'arbre, pour les liens déjà envoyés
+      const previous = updateData.slug
+        ? await app.prisma.tree.findFirst({ where: { id: params.data.id, deletedAt: null }, select: { slug: true } })
+        : null
+      const slugChanges = Boolean(previous && updateData.slug && previous.slug !== updateData.slug)
 
       if (payload.data.description !== undefined) {
         updateData.description = payload.data.description
       }
 
+      // Un seul visuel à la fois : choisir une icône, ou la lettre (null), retire la photo
+      const replacesImage = payload.data.icon !== undefined
+      const previousImage = replacesImage
+        ? await app.prisma.tree.findFirst({ where: { id: params.data.id, deletedAt: null }, select: { imagePath: true } })
+        : null
       if (payload.data.icon !== undefined) {
         updateData.icon = payload.data.icon
       }
@@ -724,17 +771,36 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      if (previous && !slugChanges) delete updateData.slug
       const changedFields = Object.keys(updateData)
-      const updateResult = await app.prisma.tree.updateMany({
-        where: {
-          id: params.data.id,
-          deletedAt: null,
-        },
-        data: updateData,
+      const updateResult = await app.prisma.$transaction(async (tx) => {
+        if (slugChanges && previous && updateData.slug) {
+          await tx.treeSlugAlias.upsert({
+            where: { slug: previous.slug },
+            create: { slug: previous.slug, treeId: params.data.id },
+            update: {},
+          })
+          // Revenir à une ancienne adresse : elle redevient l'adresse de l'arbre
+          await tx.treeSlugAlias.deleteMany({ where: { slug: updateData.slug, treeId: params.data.id } })
+        }
+        return tx.tree.updateMany({
+          where: {
+            id: params.data.id,
+            deletedAt: null,
+          },
+          data: previousImage?.imagePath
+            ? { ...updateData, imagePath: null, imageMimeType: null, imageCrop: Prisma.DbNull, imageUpdatedAt: null }
+            : updateData,
+        })
       })
 
       if (updateResult.count === 0) {
         return reply.code(404).send({ error: 'tree_not_found' })
+      }
+
+      // La photo remplacée ne reste pas sur le disque, et libère sa place
+      if (previousImage?.imagePath) {
+        await removeStoredFile(path.resolve(env.MEDIA_STORAGE_PATH), previousImage.imagePath)
       }
 
       const updated = await app.prisma.tree.findUnique({
@@ -755,9 +821,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         },
       })
 
-      return reply.send({ tree: updated })
+      return reply.send({ tree: updated ? withTreeVisual(updated) : null })
     } catch (error: unknown) {
-      if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
+      if (isUniqueViolation(error)) {
         return reply.code(409).send({ error: 'slug_already_exists' })
       }
 
@@ -839,7 +905,9 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: 'tree_not_found' })
       }
 
-      const releaseAttempt = reserveTreeUnlockAttempt(params.data.id)
+      // Condensé gardé en mémoire 15 minutes : le même mot de passe faux ne compte qu'une fois (unlock-guard.ts)
+      const fingerprint = createHmac('sha256', env.JWT_SECRET).update(`${params.data.id}:${payload.data.password}`).digest('base64url')
+      const releaseAttempt = reserveTreeUnlockAttempt(params.data.id, Date.now(), fingerprint)
       if (!releaseAttempt) {
         return reply.code(429).send({ error: 'too_many_attempts' })
       }
@@ -1240,6 +1308,8 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         nickname: toTrimmedStringOrNull(payload.data.nickname),
         birthDate: toDateOrNull(payload.data.birthDate),
         deathDate: toDateOrNull(payload.data.deathDate),
+        birthDatePrecision: payload.data.birthDate ? payload.data.birthDatePrecision ?? null : null,
+        deathDatePrecision: payload.data.deathDate ? payload.data.deathDatePrecision ?? null : null,
         // Une date de décès dit déjà que la personne est décédée : le drapeau ne sert que sans date
         isDeceased: !payload.data.deathDate && Boolean(payload.data.isDeceased),
         toVerify: Boolean(payload.data.toVerify),
@@ -1292,17 +1362,6 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
     const membership = await getAdminMembership(app, user.userId, params.data.id)
     if (!hasActiveAdminMembership(membership)) {
       return reply.code(403).send({ error: 'forbidden' })
-    }
-
-    // Au moins un nom : on regarde le résultat de la modification, pas seulement ce qu'elle envoie
-    if (payload.data.firstName !== undefined || payload.data.lastName !== undefined) {
-      const before = await app.prisma.person.findFirst({
-        where: { id: params.data.personId, treeId: params.data.id, deletedAt: null },
-        select: { firstName: true, lastName: true },
-      })
-      if (before && !hasAnyName(payload.data.firstName ?? before.firstName, payload.data.lastName ?? before.lastName)) {
-        return reply.code(400).send({ error: 'invalid_payload', details: 'name_required' })
-      }
     }
 
     const data: {
@@ -1404,7 +1463,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         treeId: params.data.id,
         deletedAt: null,
       },
-      data: { ...data, ...personPrecisionResets(current, data) },
+      data: { ...data, ...personPrecisionResets(current, data, payload.data) },
     })
 
     if (updated.count === 0) {

@@ -17,7 +17,7 @@ import { imagePlacement } from '../utils/portraitCrop.js'
 import { t, dateLocale } from '../i18n/index.js'
 import { formatPlace } from '../utils/place.js'
 import { firstNameLabel, fullNameLabel, isFirstNameUnknown, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
-import { isYearOnly } from '../utils/dateInput.js'
+import { dateEntryToText, dateWarnings, isYearOnly } from '../utils/dateInput.js'
 import { ageInYears } from '../utils/age.js'
 import { birthdayToday } from '../utils/birthday.js'
 import DateField from './DateField.jsx'
@@ -133,7 +133,6 @@ const PersonCard = ({
   // Prénom inconnu (case cochée) et saisie de prénom vide sans case : le prénom est demandé avant l'enregistrement
   const [unknownFirstName, setUnknownFirstName] = useState(() => isFirstNameUnknown(person))
   const [firstNameMissing, setFirstNameMissing] = useState(false)
-  const [lastNameMissing, setLastNameMissing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -187,7 +186,6 @@ const PersonCard = ({
     setEditState({ personId: person.id, values: {}, changed: false })
     setUnknownFirstName(isFirstNameUnknown(person))
     setFirstNameMissing(false)
-    setLastNameMissing(false)
     setActiveRelationSearch(null)
     setRelationSearchQuery('')
     setSaveSuccess(false)
@@ -312,6 +310,19 @@ const PersonCard = ({
     return field in edits ? edits[field] : (fallback ?? '')
   }
 
+  // Avertissements doux des dates en cours de modification : décès avant la naissance, date dans le futur
+  const editedIsoDate = (field, fallback) => {
+    const value = getEditValue(field, fallback)
+    if (value === null || value === undefined || value === '') return null
+    return /^\d{4}$/.test(String(value)) ? `${value}-01-01` : String(value)
+  }
+  const dateWarningsNow = () => dateWarnings({
+    birthDate: editedIsoDate('birthYear', person.birthDate || person.birthYear),
+    deathDate: editedIsoDate('deathYear', person.deathDate || person.deathYear),
+    birthDatePrecision: getEditValue('birthDatePrecision', person.birthDatePrecision ?? null) || null,
+    deathDatePrecision: getEditValue('deathDatePrecision', person.deathDatePrecision ?? null) || null,
+  })
+
   const handleFieldChange = (field, value) => {
     const personId = person.id
     setEditState(prev => ({
@@ -367,11 +378,6 @@ const PersonCard = ({
     if (!hasChanges || !onSave) return 'unchanged'
     if (!unknownFirstName && 'firstName' in edits && !String(edits.firstName).trim()) {
       setFirstNameMissing(true)
-      return 'blocked'
-    }
-    // Prénom inconnu : il faut alors un nom de famille
-    if (unknownFirstName && !String(getEditValue('lastName', person.lastName) ?? '').trim()) {
-      setLastNameMissing(true)
       return 'blocked'
     }
     const savedFor = person.id
@@ -595,19 +601,25 @@ const PersonCard = ({
       const isEmptyValue = value === null || value === undefined || value === ''
       // Une date complète se lit « 22 octobre 1928 », une année seule « 1928 », pas « 1 janvier 1928 »
       let shown = format ? format(value) : value
-      if (type === 'date' && isYearOnly(value)) shown = String(value).slice(0, 4)
+      const precision = field === 'deathYear' ? person.deathDatePrecision : person.birthDatePrecision
+      if (type === 'date' && (precision === 'about' || precision === 'month')) shown = dateEntryToText(value, precision)
+      else if (type === 'date' && isYearOnly(value)) shown = String(value).slice(0, 4)
       else if (type === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(value))) {
         shown = new Date(`${String(value).slice(0, 10)}T00:00:00Z`).toLocaleDateString(dateLocale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
       }
       return <span className="value">{isEmptyValue ? emptyLabel : shown}</span>
     }
     if (type === 'date') {
+      // « vers 1920 », « mars 1950 » : la précision voyage avec la date (birthYear → birthDatePrecision)
+      const precisionField = field === 'deathYear' ? 'deathDatePrecision' : 'birthDatePrecision'
       return (
         <DateField
           key={`${person.id}-${field}`}
           className="pc-input value--editable"
           value={getEditValue(field, value)}
-          onChange={(next) => handleFieldChange(field, next)}
+          precision={getEditValue(precisionField, person[precisionField] ?? null) || null}
+          warning={dateWarningsNow()[field === 'deathYear' ? 'death' : 'birth']}
+          onChange={(next, precision) => { handleFieldChange(field, next); handleFieldChange(precisionField, precision) }}
         />
       )
     }
@@ -765,15 +777,11 @@ const PersonCard = ({
                 type="text"
                 className={`pc-input pc-input--name pc-input--last${isSurnameUppercase() ? ' pz-caps' : ''}`}
                 value={getEditValue('lastName', person.lastName)}
-                onChange={(e) => {
-                  setLastNameMissing(false)
-                  handleFieldChange('lastName', e.target.value)
-                }}
+                onChange={(e) => handleFieldChange('lastName', e.target.value)}
                 placeholder={t('Nom')}
                 aria-label={t('Nom')}
               />
               {firstNameMissing && <p className="pc-name-error">{t('Il faut au moins un prénom.')}</p>}
-              {lastNameMissing && <p className="pc-name-error">{t('Il faut au moins un nom si le prénom est inconnu.')}</p>}
             </div>
           ) : (
             <h2 className="pc-name">
@@ -821,7 +829,6 @@ const PersonCard = ({
               onChange={(e) => {
                 setUnknownFirstName(e.target.checked)
                 setFirstNameMissing(false)
-                setLastNameMissing(false)
                 handleFieldChange('firstName', '')
               }}
             />

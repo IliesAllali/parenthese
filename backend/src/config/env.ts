@@ -51,7 +51,9 @@ const envSchema = z.object({
   // une fois. Avancer cette date (ISO 8601) déconnecte tout le monde, sans changer JWT_SECRET (qui chiffre aussi
   // les mots de passe de partage lisibles).
   SESSIONS_NOT_BEFORE: z.coerce.date().default(new Date('2026-10-01T00:00:00Z')),
-  JWT_TREE_ACCESS_EXPIRES_IN: z.string().default('24h'),
+  // Accès d'un proche par le mot de passe ou le lien à clé. 24 h obligeait à rouvrir le lien chaque lendemain, alors que
+  // l'adresse gardée par le navigateur n'a plus la clé. Changer le mot de passe fait tomber tous ces accès (accessVersion).
+  JWT_TREE_ACCESS_EXPIRES_IN: z.string().default('30d'),
   CORS_ORIGIN: z
     .string()
     .default('http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176')
@@ -84,6 +86,9 @@ const envSchema = z.object({
   // même adresse) ; à renseigner quand le front a sa propre adresse (développement).
   OIDC_APP_URL: z.string().trim().default(''),
   OIDC_SCOPES: z.string().default('openid email profile'),
+  // Page de l'app (frontend/dist/index.html) que /arbre/… renvoie avec l'aperçu du lien (balises og) de l'arbre.
+  // Par défaut celle du dépôt, à côté du dossier backend (pm2 lance l'API depuis backend/).
+  FRONTEND_INDEX_PATH: z.string().trim().default(''),
   // Nom du bouton « Se connecter avec … »
   OIDC_PROVIDER_NAME: z.string().trim().max(40).default('SSO'),
   // Un compte n'est créé ou relié par son email que si le fournisseur le dit vérifié (email_verified). À false
@@ -129,6 +134,10 @@ if (!env.PASSWORD_LOGIN && !env.OIDC_ISSUER) {
 
 // Corps maximal des routes qui reçoivent un fichier en base64 ou un gros envoi (le reste de l'API : 1 Mo)
 export const UPLOAD_BODY_LIMIT = 12 * 1024 * 1024
+
+// L'envoi d'un souvenir seulement : un fichier de 20 Mo (la limite annoncée) pèse 26,7 Mo en base64. À 12 Mo, une
+// vidéo de plus de 9 Mo était refusée. nginx laisse passer 30 Mo (deploy/nginx.conf).
+export const MEDIA_UPLOAD_BODY_LIMIT = 28 * 1024 * 1024
 
 // Sans NODE_ENV, le schéma suppose « development » et la clé de signature retomberait sur une valeur publiée :
 // un `node dist/server.js` lancé à la main avec un .env incomplet signerait alors les sessions avec une clé

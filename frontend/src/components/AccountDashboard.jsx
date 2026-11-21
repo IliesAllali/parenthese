@@ -3,11 +3,13 @@ import { ChevronRight, KeyRound, LogIn, LogOut, Plus, Sparkles, X } from 'lucide
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import ProviderButton from './ProviderButton.jsx'
 import LanguageSwitch from './navbar/LanguageSwitch'
 import { t } from '../i18n/index.js'
 import { PRIVACY_URL } from '../utils/siteLinks.js'
-import { initialOf } from '../utils/initial.js'
 import { richText } from '../utils/richText.jsx'
+import { visualOf } from '../utils/treeVisual.js'
+import TreeMark from './TreeMark.jsx'
 
 const AccountDashboard = ({
   authenticated,
@@ -34,6 +36,8 @@ const AccountDashboard = ({
   onDeleteAccount,
   onBackToAccess,
   onBackToTree,
+  // L'arbre avant le compte (#251) : « Créer mon arbre » ouvre « Commencez par vous » au lieu de l'inscription
+  onStartTree,
   onUseDemo,
 }) => {
   const [mode, setMode] = useState(defaultMode === 'register' ? 'register' : 'login')
@@ -136,12 +140,7 @@ const AccountDashboard = ({
             )}
 
             {/* Fournisseur d'identité de l'instance (OIDC, #115) : il connecte, et crée le compte si l'instance en accepte */}
-            {onOidcLogin && (
-              <button type="button" className="pz-btn pz-btn--primary pz-btn--block account-oidc" onClick={onOidcLogin} disabled={loading}>
-                <LogIn size={16} aria-hidden="true" />
-                {t('Se connecter avec {name}', { name: oidcName })}
-              </button>
-            )}
+            {onOidcLogin && <ProviderButton name={oidcName} onClick={onOidcLogin} disabled={loading} alone={!passwordLogin} />}
 
             {/* Sans formulaire à mot de passe, le refus du fournisseur s'affiche ici */}
             {!passwordLogin && errorMessage && <div className="account-error pz-error" role="alert">{errorMessage}</div>}
@@ -225,7 +224,14 @@ const AccountDashboard = ({
             </button>
           </div>
 
-          {canRegister && (
+          {onStartTree && !isRegister ? (
+            <p className="pz-auth-switch pz-small">
+              {t("Pas encore d'arbre ?")}{' '}
+              <button type="button" className="pz-link account-signup-toggle" onClick={onStartTree} disabled={loading}>
+                {t('Créer mon arbre')}
+              </button>
+            </p>
+          ) : canRegister && (
             <p className="pz-auth-switch pz-small">
               {isRegister ? t('Déjà inscrit ?') : t('Pas encore de compte ?')}{' '}
               <button
@@ -275,7 +281,7 @@ const AccountDashboard = ({
                     className={`tree-item pz-tree-item ${isActive ? 'active' : ''}`}
                     onClick={() => onOpenTree(tree.id)}
                   >
-                    <span className={`pz-tree-mono${tree.icon ? ' pz-tree-mono--emoji' : ''}`} aria-hidden="true">{tree.icon || initialOf(tree.name)}</span>
+                    <TreeMark base="pz-tree-mono" name={tree.name} {...visualOf(tree)} />
                     <span className="tree-name pz-tree-name">{tree.name}</span>
                     {isActive && <span className="pz-tag pz-tag--accent">{t('Ouvert')}</span>}
                     <ChevronRight size={18} aria-hidden="true" className="pz-tree-chevron" />

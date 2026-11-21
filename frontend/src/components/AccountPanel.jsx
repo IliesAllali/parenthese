@@ -1,4 +1,4 @@
-import { surnameLabel } from '../utils/personName.js'
+import { firstNameLabel, surnameLabel } from '../utils/personName.js'
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import './AccountScreens.css'
@@ -92,7 +92,7 @@ const AccountPanel = ({
                     <span className="ap-item-avatar" aria-hidden="true">
                       {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <NoPhotoPortrait />}
                     </span>
-                    <span className="ap-item-name">{person.firstName} <em>{surnameLabel(person.lastName)}</em></span>
+                    <span className="ap-item-name">{firstNameLabel(person)} <em>{surnameLabel(person.lastName)}</em></span>
                     {isSelected && <span className="pz-tag pz-tag--accent">{t("C'est moi")}</span>}
                   </button>
                 )

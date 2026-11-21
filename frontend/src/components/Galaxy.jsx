@@ -518,6 +518,17 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
       const screenY = phone ? rect.height * 0.22 : rect.height / 2
       targetTransformRef.current = { scale, x: screenX - pos.cx * scale, y: screenY - pos.cy * scale }
     },
+    // Où tombe le bas d'un portrait et de son prénom à l'écran, une fois le cadrage demandé atteint (« C'est vous ? »
+    // s'y accroche sur ordinateur). null si la personne n'est pas dans l'onglet affiché.
+    labelBottomOf: (personId) => {
+      const canvas = canvasRef.current
+      const node = layoutDataRef.current?.children.find(n => n.id === `p-${personId}`)
+      if (!canvas || !node) return null
+      const rect = canvas.getBoundingClientRect()
+      const pos = getAnimatedPos(node, performance.now())
+      const { x, y, scale } = targetTransformRef.current
+      return { x: rect.left + pos.cx * scale + x, y: rect.top + (pos.cy + PERSON_R + 58) * scale + y }
+    },
     // Plusieurs personnes venant d'être ajoutées : toutes dans le champ, au-dessus de la barre du bas. Si l'arbre
     // n'est pas encore reposé avec elles, le cadrage attend la prochaine mise en place.
     focusPersons: (personIds) => {

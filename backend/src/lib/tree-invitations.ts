@@ -37,7 +37,7 @@ export async function findPendingInvitationByToken(db: Db, token: string) {
   if (!token || token.length > 200) return null
   return db.treeInvitation.findFirst({
     where: { tokenHash: hashInvitationToken(token), ...pendingInvitationWhere() },
-    include: { tree: { select: { id: true, name: true, icon: true, ownerUserId: true, owner: { select: { firstName: true } } } } },
+    include: { tree: { select: { id: true, name: true, icon: true, imagePath: true, imageMimeType: true, imageCrop: true, imageUpdatedAt: true, ownerUserId: true, owner: { select: { firstName: true } } } } },
   })
 }
 
@@ -104,7 +104,7 @@ export async function claimInvitationsForVerifiedEmail(prisma: PrismaClient, use
   const invitations = await prisma.treeInvitation.findMany({ where: { email, ...pendingInvitationWhere() }, select: { id: true } })
   if (!invitations.length) return []
   const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
-  if (!account || normalizeEmail(account.email) !== email) return []
+  if (!account?.email || normalizeEmail(account.email) !== email) return []
   const joined: string[] = []
   for (const invitation of invitations) {
     const result = await acceptInvitation(prisma, invitation.id, userId, email)

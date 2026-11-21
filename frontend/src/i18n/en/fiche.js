@@ -122,7 +122,6 @@ export default {
   'Un fichier': 'A file',
   'Un lien YouTube': 'A YouTube link',
   'Choisir un fichier': 'Choose a file',
-  'Pour en prendre un autre, touchez ici': 'Tap here to pick another one',
   '5 Mo au maximum': '5 MB max',
   '20 Mo au maximum': '20 MB max',
   'Lien de la vidéo': 'Video link',
@@ -205,11 +204,9 @@ export default {
 
   // Création d'un arbre (TreeCreationWizard)
   'Vous': 'You',
-  'Étape {step} sur 2': 'Step {step} of 2',
-  "Comment s'appelle <em>votre famille</em> ?": "What's <em>your family</em> called?",
+  'Famille {name}': 'The {name} family',
+  'Mon arbre': 'My tree',
   "Ce nom apparaîtra en haut de l'arbre et dans le lien que vous partagerez.": 'This name will appear at the top of the tree and in the link you share.',
-  'Nom de la famille': 'Family name',
-  'Famille Martin': 'The Johnson family',
   'Continuer': 'Continue',
   'Commencez <em>par vous</em>': 'Start <em>with yourself</em>',
   "L'arbre « {name} » démarre avec votre fiche. Vous ajouterez les autres ensuite.": 'The "{name}" tree starts with your profile. You can add everyone else next.',
@@ -448,7 +445,7 @@ export default {
   'Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.': 'Thanks, it has been sent. The moment will show in their life once the person who manages the tree has accepted it.',
   // Dates : année seule, décès sans date (issue #77)
   'Année ou date': 'Year or date',
-  'Une année (1950) ou une date ({exemple})': 'A year (1950) or a date ({exemple})',
+  'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': 'A year (1950), a date ({exemple}), a month (March 1950) or “about 1920”',
   'Date inconnue': 'Date unknown',
   'date inconnue': 'date unknown',
   'Décédé(e), date inconnue': 'Deceased, date unknown',
@@ -456,7 +453,6 @@ export default {
   'Décédée, date inconnue': 'Deceased, date unknown',
   'Prénom inconnu': 'Unknown first name',
   'Je ne connais pas son prénom': "I don't know their first name",
-  'Il faut au moins un nom si le prénom est inconnu.': 'A last name is required when the first name is unknown.',
   // Recadrage du portrait (PortraitCropModal, menu du badge, App)
   'Recadrer la photo': 'Crop photo',
   'Forme du cadre': 'Frame shape',
@@ -491,4 +487,7 @@ export default {
   'Ajouter un frère ou une sœur': 'Add a sibling',
   "Ajoutez d'abord un parent pour lui rattacher un frère ou une sœur.": 'Add a parent first to link a sibling.',
   'Créer « {name} »': 'Create “{name}”',
+  "La photo est supprimée. Elle était aussi sur la fiche de {names}.": "The photo is deleted. It was also on {names}’s page.",
+  "Cette date est dans le futur": "This date is in the future",
+  "Le décès est avant la naissance": "The death is before the birth",
 }

@@ -22,3 +22,21 @@ export function summarizeChanges(changes = []) {
     count.other && plural(count.other, '{n} autre changement', '{n} autres changements'),
   ].filter(Boolean).join(', ')
 }
+
+// Titre d'une proposition. Le serveur écrit en français ceux qu'il crée lui-même (un souvenir ou un moment envoyé
+// par la famille) : ils sont recomposés ici dans la langue de l'écran. Les autres viennent déjà du navigateur.
+const SERVER_TITLES = [
+  [/^Souvenir pour (.+)$/, (name) => t('Souvenir pour {name}', { name })],
+  [/^Moment pour (.+)$/, (name) => t('Moment pour {name}', { name })],
+  [/^Personnes sur un souvenir$/, () => t('Personnes sur un souvenir')],
+]
+
+export function proposalTitle(title) {
+  const text = String(title ?? '').trim()
+  if (!text) return t('Proposition sans titre')
+  for (const [pattern, compose] of SERVER_TITLES) {
+    const match = text.match(pattern)
+    if (match) return compose(match[1])
+  }
+  return text
+}

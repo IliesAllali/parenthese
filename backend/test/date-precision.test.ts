@@ -21,3 +21,21 @@ describe('précision d’une date corrigée à la main', () => {
     expect(unionPrecisionResets({ startDate: d('1905-01-01') }, {})).toEqual({})
   })
 })
+
+describe('précision tapée dans la fiche (« vers 1920 », « mars 1950 »)', () => {
+  const current = { birthDate: d('1879-01-01'), deathDate: null }
+
+  it('remplace la précision d’avant, et la fin d’une période lue dans un GEDCOM', () => {
+    expect(personPrecisionResets(current, { birthDate: d('1920-01-01') }, { birthDatePrecision: 'about' }))
+      .toEqual({ birthDatePrecision: 'about', birthDateEnd: null })
+    expect(personPrecisionResets(current, { birthDate: d('1950-03-01') }, { birthDatePrecision: 'month' }))
+      .toEqual({ birthDatePrecision: 'month', birthDateEnd: null })
+  })
+
+  it('une date redevenue exacte efface la précision, sans précision tapée rien ne change', () => {
+    expect(personPrecisionResets(current, { birthDate: d('1879-01-01') }, { birthDatePrecision: null }))
+      .toEqual({ birthDatePrecision: null, birthDateEnd: null })
+    expect(personPrecisionResets(current, { birthDate: d('1879-01-01') }, {})).toEqual({})
+    expect(personPrecisionResets(null, {}, { deathDatePrecision: 'about' })).toEqual({ deathDatePrecision: 'about', deathDateEnd: null })
+  })
+})

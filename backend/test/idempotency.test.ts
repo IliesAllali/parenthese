@@ -23,6 +23,10 @@ beforeAll(async () => {
     created += 1
     return reply.code(201).send({ session: { id: `s${created}` } })
   })
+  app.post('/trees/:id/annotations/batch', async () => {
+    created += 1
+    return { created: { count: created } }
+  })
   app.post('/trees/:id/autre', async () => {
     created += 1
     return { ok: created }
@@ -48,6 +52,13 @@ describe('Idempotency-Key', () => {
     expect(second.statusCode).toBe(201)
     expect(second.json()).toEqual(first.json())
     expect(second.headers['idempotent-replayed']).toBe('true')
+  })
+
+  it('les mots et dessins envoyés en quittant la page, renvoyés au retour : une seule création', async () => {
+    const first = await send({ 'idempotency-key': KEY }, '/trees/t1/annotations/batch')
+    const second = await send({ 'idempotency-key': KEY }, '/trees/t1/annotations/batch')
+    expect(created).toBe(1)
+    expect(second.json()).toEqual(first.json())
   })
 
   it('deux essais simultanés : un seul est traité', async () => {

@@ -96,13 +96,16 @@ export function useTreeAccess() {
       treeId,
       treeName: options.treeName ?? current.treeName,
       treeDescription: options.treeDescription ?? current.treeDescription,
-      treeOwnerName: options.treeOwnerName ?? current.treeOwnerName,
+      // Prénom de qui gère l'arbre, donné avec le graphe (« Lucie les verra ») ; la porte n'en montre jamais
+      treeOwnerName: graphPayload.ownerFirstName || options.treeOwnerName || current.treeOwnerName,
       treeOwnerEmail: options.treeOwnerEmail ?? current.treeOwnerEmail,
       role: normalizeRole(options.role ?? current.role),
       accessMode: options.accessMode ?? current.accessMode,
       rootPersonId: preferredRootPersonId,
       accessToken: token,
       surnameUppercase: graphPayload.surnameUppercase,
+      // Visuel de l'arbre (photo, icône ou lettre) : l'onglet du navigateur le reprend
+      treeVisual: graphPayload.visual,
     }))
 
     const effectiveRole = normalizeRole(options.role)
@@ -160,6 +163,8 @@ export function useTreeAccess() {
       return access
     } catch (error) {
       setGateError(getShareErrorMessage(error))
+      // Le lien à clé distingue un mot de passe refusé (401) d'une panne ou d'un « trop de tentatives »
+      if (options.rethrow) throw error
       return null
     } finally {
       setGateLoading(false)

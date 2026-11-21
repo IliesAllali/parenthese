@@ -118,6 +118,50 @@ describe.skipIf(!TEST_DB)('souvenir en attente, vraie base', () => {
     expect((await read(media.id, shareToken)).status).toBe(200)
   })
 
+  // Qui est sur la photo, dit par la famille à l'envoi (flow invité, #249) : rien ne s'affiche avant la relecture,
+  // puis le souvenir et ses visages arrivent ensemble
+  it("les personnes dites à l'envoi attendent la relecture avec le souvenir", async () => {
+    const sent = await call('POST', `/trees/${treeId}/persons/${personId}/media`, shareToken, {
+      type: 'photo', fileName: 'photo.png', mimeType: 'image/png', sizeBytes: Buffer.from(PIXEL, 'base64').length, dataBase64: PIXEL,
+      submittedByLabel: 'Claire', people: [{ personId, x: 0.4, y: 0.3 }],
+    })
+    expect(sent.status).toBe(201)
+    const media = sent.body.media ?? sent.body
+    expect(media.status).toBe('pending')
+    const tagsOf = async () => ((await call('GET', `/trees/${treeId}/graph`, owner.token)).body.graph.medias ?? [])
+      .find((entry: { id: string }) => entry.id === media.id)?.people ?? []
+    expect(await tagsOf()).toEqual([])
+    const reviewed = await call('POST', `/trees/${treeId}/contributions/sessions/${media.contributionSessionId}/review`, owner.token, { decision: 'approved' })
+    expect(reviewed.status).toBe(200)
+    expect(await tagsOf()).toMatchObject([{ personId, x: 0.4, y: 0.3 }])
+  })
+
+  // La personne de la photo est supprimée avant la relecture : la photo est écartée, la relecture aboutit
+  it('une photo dont la personne a été supprimée entre-temps est écartée sans bloquer la relecture', async () => {
+    const added = await call('POST', `/trees/${treeId}/persons`, owner.token, { firstName: 'Lucien', lastName: 'Duval' })
+    expect(added.status).toBe(201)
+    const lucienId = added.body.person?.id ?? added.body.id
+    const sent = await call('POST', `/trees/${treeId}/persons/${lucienId}/media`, member.token, {
+      type: 'photo', fileName: 'photo.png', mimeType: 'image/png', sizeBytes: Buffer.from(PIXEL, 'base64').length, dataBase64: PIXEL,
+      people: [{ personId: lucienId, x: 0.5, y: 0.5 }],
+    })
+    expect(sent.status).toBe(201)
+    const media = sent.body.media ?? sent.body
+    expect((await call('DELETE', `/trees/${treeId}/persons/${lucienId}`, owner.token)).status).toBeLessThan(300)
+    const reviewed = await call('POST', `/trees/${treeId}/contributions/sessions/${media.contributionSessionId}/review`, owner.token, { decision: 'approved' })
+    expect(reviewed.status).toBe(200)
+    expect((await read(media.id, reader.token)).status).toBe(404)
+  })
+
+  it("refuse une personne venue d'un autre arbre", async () => {
+    const stranger = await call('POST', `/trees/${treeId}/persons/${personId}/media`, shareToken, {
+      type: 'photo', fileName: 'photo.png', mimeType: 'image/png', sizeBytes: Buffer.from(PIXEL, 'base64').length, dataBase64: PIXEL,
+      people: [{ personId: 'personne-inconnue' }],
+    })
+    expect(stranger.status).toBe(400)
+    expect(stranger.body.error).toBe('invalid_person_reference')
+  })
+
   it('un souvenir posé par le gestionnaire est visible tout de suite', async () => {
     const sent = await upload(owner.token)
     expect(sent.status).toBe(201)

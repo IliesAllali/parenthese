@@ -3,7 +3,9 @@
 // L'ordre et le séparateur suivent la région du navigateur : « 03/12/1950 » en en-US, « 1950-03-12 » en fr-CA
 // (issue #152). Le mois s'écrit aussi en lettres, en français, en anglais ou en allemand : « 12 mars 1950 »,
 // « March 12, 1950 », « 12. März 1950 ».
-import { dateFormat } from '../i18n/index.js'
+// Une date approchée se tape aussi (cas limites du 20/11) : « mars 1950 » ou « 03/1950 », rangée au 1er du mois avec la
+// précision « month », et « vers 1920 » (about, around, um, ca.), rangée au 1er janvier avec la précision « about ».
+import { dateFormat, dateLocale, t } from '../i18n/index.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -84,3 +86,83 @@ export function parseDateInput(text, { order } = dateFormat) {
 
 // Une année seule (rangée au 1er janvier) se lit « 1950 », pas « 1 janvier 1950 »
 export const isYearOnly = (value) => /^\d{4}(-01-01)?$/.test(String(value ?? '').slice(0, 10))
+
+// « vers », « environ », « about », « um », « ca. », « ~ » devant une année
+const ABOUT_WORDS = ['vers', 'v', 'env', 'environ', 'about', 'abt', 'around', 'circa', 'ca', 'c', 'um', 'etwa', 'ungefahr', 'gegen']
+function stripAbout(raw) {
+  const tilde = raw.match(/^~\s*(.+)$/)
+  if (tilde) return tilde[1]
+  const match = raw.match(/^([^\s\d]+)\.?\s+(.+)$/)
+  if (match && ABOUT_WORDS.includes(normalize(match[1]).replace(/\.$/, ''))) return match[2]
+  return null
+}
+
+// « mars 1950 », « March 1950 », « März 1950 », « 03/1950 », « 3.1950 », « 1950-03 »
+function parseMonthYear(raw) {
+  const words = raw.replace(/,/g, ' ').split(/\s+/).filter(Boolean)
+  let month
+  let year
+  if (words.length === 2 && /^\d{4}$/.test(words[1]) && monthFromWord(words[0])) [month, year] = [monthFromWord(words[0]), words[1]]
+  const digits = raw.match(/^(\d{1,2})[/.\-\s](\d{4})$/) || raw.match(/^(\d{4})[/.-](\d{1,2})$/)
+  if (!month && digits) [month, year] = /^\d{4}$/.test(digits[1]) ? [Number(digits[2]), digits[1]] : [Number(digits[1]), digits[2]]
+  // Pavé numérique du téléphone, sans barre : « 031950 », que le champ a mis en forme « 03/19/50 ». Une année avant
+  // 1500 est écartée, pour ne pas lire « 10/11/19 » (le début de 10/11/1950) comme octobre 1119.
+  const compact = raw.replace(/[/.\-\s]/g, '')
+  if (!month && /^\d{5,6}$/.test(compact) && Number(compact.slice(-4)) >= 1500) [month, year] = [Number(compact.slice(0, -4)), compact.slice(-4)]
+  if (!month || month < 1 || month > 12) return undefined
+  return `${year}-${pad(month)}-01`
+}
+
+// Texte du champ vers { date, precision } : date « AAAA-MM-JJ » (ou '' si vide), precision null, 'month' ou 'about' ;
+// undefined si on ne comprend pas
+export function parseDateEntry(text, format = dateFormat) {
+  const raw = String(text ?? '').trim()
+  const exact = parseDateInput(raw, format)
+  if (exact !== undefined) return { date: exact, precision: null }
+  const month = parseMonthYear(raw)
+  if (month) return { date: month, precision: 'month' }
+  const about = stripAbout(raw)
+  if (about && /^\d{4}$/.test(about.trim())) return { date: `${about.trim()}-01-01`, precision: 'about' }
+  return undefined
+}
+
+// Valeur stockée et sa précision vers le texte du champ : « vers 1920 », « mars 1950 », sinon comme dateToInputText
+export function dateEntryToText(value, precision, format = dateFormat) {
+  const raw = String(value ?? '').trim()
+  const parts = raw.match(/^(\d{4})-(\d{2})/)
+  if (parts && precision === 'about') return t('vers {year}', { year: parts[1] })
+  if (parts && precision === 'month') {
+    return new Date(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, 1)).toLocaleDateString(dateLocale, { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  }
+  return dateToInputText(value, format)
+}
+
+// Précisions à envoyer avec les dates d'une personne : seulement celles d'une date présente
+export function datePrecisionsOf(person = {}) {
+  return {
+    birthDatePrecision: person.birthDate ? person.birthDatePrecision || null : null,
+    deathDatePrecision: person.deathDate ? person.deathDatePrecision || null : null,
+  }
+}
+
+// Avertissements doux sous les champs de date (rien n'est bloqué : une date ancienne peut être incertaine).
+// Une date à l'année, au mois ou « vers » se compare à l'année près.
+const isoToday = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+const yearOf = (value) => Number(String(value).slice(0, 4))
+const isRough = (value, precision) => isYearOnly(value) || precision === 'about' || precision === 'month'
+
+export function dateWarnings({ birthDate, deathDate, birthDatePrecision = null, deathDatePrecision = null } = {}, today = isoToday()) {
+  const out = { birth: '', death: '' }
+  const inFuture = (value, precision) => Boolean(value) && (isRough(value, precision) ? yearOf(value) > yearOf(today) : String(value).slice(0, 10) > today)
+  if (inFuture(birthDate, birthDatePrecision)) out.birth = t('Cette date est dans le futur')
+  if (inFuture(deathDate, deathDatePrecision)) out.death = t('Cette date est dans le futur')
+  else if (birthDate && deathDate) {
+    const rough = isRough(birthDate, birthDatePrecision) || isRough(deathDate, deathDatePrecision)
+    const before = rough ? yearOf(deathDate) < yearOf(birthDate) : String(deathDate).slice(0, 10) < String(birthDate).slice(0, 10)
+    if (before) out.death = t('Le décès est avant la naissance')
+  }
+  return out
+}

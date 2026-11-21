@@ -8,6 +8,8 @@ export async function resolveTreeBySlug(slug) {
     slug: data?.tree?.slug || '',
     name: data?.tree?.name || '',
     description: data?.tree?.description || null,
+    // L'icône seule : la porte publique ne donne jamais la photo
+    icon: data?.tree?.icon || null,
   }
 }
 
@@ -50,6 +52,8 @@ export async function fetchTreeGraph(treeId, token) {
     graph: data?.graph || { persons: [], unions: [], filiations: [], medias: [] },
     mediaToken: data?.mediaToken || '',
     surnameUppercase: Boolean(data?.display?.surnameUppercase),
+    ownerFirstName: data?.ownerFirstName || '',
+    visual: data?.visual || null,
   }
 }
 
@@ -430,6 +434,24 @@ export async function saveAvatarCrop(treeId, personId, crop, token) {
   return data
 }
 
+// Photo de l'arbre, avec son cadrage : elle remplace l'icône. Renvoie { image: { urlPath, crop } }.
+export async function uploadTreeImage(treeId, payload, token) {
+  return apiRequest(`/trees/${encodeURIComponent(treeId)}/image`, {
+    method: 'POST',
+    headers: bearer(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+// Recadrer la photo de l'arbre ({ x, y, zoom }) : l'original reste
+export async function saveTreeImageCrop(treeId, crop, token) {
+  return apiRequest(`/trees/${encodeURIComponent(treeId)}/image/crop`, {
+    method: 'PUT',
+    headers: bearer(token),
+    body: JSON.stringify({ crop }),
+  })
+}
+
 export async function deletePersonAvatar(treeId, personId, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/avatar`, {
     method: 'DELETE',
@@ -439,11 +461,13 @@ export async function deletePersonAvatar(treeId, personId, token) {
   return data
 }
 
-export async function batchAnnotations(treeId, payload, token) {
+// options.key : clé Idempotency-Key d'un envoi rejouable ; options.keepalive : envoi qui survit à la page quittée
+export async function batchAnnotations(treeId, payload, token, { key = null, keepalive = false } = {}) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/annotations/batch`, {
     method: 'POST',
-    headers: bearer(token),
+    headers: { ...bearer(token), ...(key ? { 'Idempotency-Key': key } : {}) },
     body: JSON.stringify(payload),
+    ...(keepalive ? { keepalive: true } : {}),
   })
 
   return data

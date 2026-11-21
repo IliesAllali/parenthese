@@ -118,3 +118,47 @@ describe('frise de vie', () => {
     expect(describeDate('1920-01-01', null, null)).toBe('')
   })
 })
+
+describe('frise de vie, proches sans prénom ni nom (#255)', () => {
+  it('nomme « Prénom inconnu » au lieu de laisser un blanc, et garde le lien vers la fiche', () => {
+    const anon = { id: 20, firstName: '', lastName: '', birthYear: 1950, deathYear: 1960 }
+    const entries = buildLifeTimeline(
+      { id: 1, firstName: 'Rose', birthYear: 1925, deathYear: 2000 },
+      { children: [anon], unions: [{ id: 'u1', partner: { id: 21, firstName: '', lastName: '' }, startYear: 1948, endYear: 1970 }] },
+      null,
+    )
+    const titles = entries.map((e) => e.title)
+    expect(titles).toContain('Naissance de Prénom inconnu')
+    expect(titles).toContain('Décès de Prénom inconnu')
+    expect(titles).toContain('Mariage avec Prénom inconnu')
+    expect(titles).toContain('Fin de l’union avec Prénom inconnu')
+    expect(titles.some((title) => /de $|avec $/.test(title))).toBe(false)
+    expect(entries.find((e) => e.title === 'Naissance de Prénom inconnu').link).toEqual({ personId: 20, name: 'Prénom inconnu' })
+  })
+})
+
+describe('décès d’un enfant l’année du décès du parent (cas limites du 20/11)', () => {
+  it('reste dans la frise, avant le décès du parent', () => {
+    const parent = { id: 1, firstName: 'Louis', birthDate: '1890-01-01', deathDate: '1944-08-02' }
+    const child = { id: 2, firstName: 'Paul', birthDate: '1920-01-01', deathDate: '1944-06-06' }
+    const entries = buildLifeTimeline(parent, { children: [child] }, null)
+    const keys = entries.map((entry) => entry.key)
+    expect(keys).toContain('child-death-2')
+    expect(keys.indexOf('child-death-2')).toBeLessThan(keys.indexOf('death'))
+  })
+})
+
+describe('date au mois (cas limites du 20/11)', () => {
+  it('se lit « mars », pas « 1 mars »', () => {
+    expect(describeDate('1950-03-01', null, 'month')).toMatch(/^mars$/i)
+    expect(describeDate('1920-01-01', null, 'about')).toBe('vers 1920')
+  })
+})
+
+describe('décès saisi avant la naissance (cas limites du 20/11)', () => {
+  it('la frise garde la famille au lieu de se vider', () => {
+    const person = { id: 1, firstName: 'Louis', birthDate: '1950-01-01', deathDate: '1905-01-01' }
+    const entries = buildLifeTimeline(person, { children: [{ id: 2, firstName: 'Paul', birthDate: '1930-01-01' }] }, null)
+    expect(entries.map((entry) => entry.key)).toContain('child-2')
+  })
+})

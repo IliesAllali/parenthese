@@ -1,4 +1,4 @@
-import { surnameLabel } from '../utils/personName.js'
+import { fullNameLabel } from '../utils/personName.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Check, FolderOpen, ImagePlus, X } from 'lucide-react'
 import './PhotoStartPanel.css'
@@ -311,7 +311,7 @@ export default function PhotoStartPanel({
                       {state.preview ? <img src={state.preview} alt="" /> : <NoPhotoPortrait />}
                     </span>
                     <span className="psp-face-id">
-                      <span className="psp-face-name">{`${person.firstName} ${surnameLabel(person.lastName)}`.trim()}</span>
+                      <span className="psp-face-name">{fullNameLabel(person)}</span>
                       {years && <span className="psp-face-years">{years}</span>}
                       {state.error && <span className="psp-face-error">{state.error}</span>}
                     </span>

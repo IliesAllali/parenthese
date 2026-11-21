@@ -9,10 +9,15 @@
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_FAILURES = 30
 
-const attemptsByTree = new Map<string, number[]>()
+// Un essai par mot de passe distinct : un ancien lien à clé ouvert par toute la famille après un changement de mot
+// de passe envoie trente fois le même mot de passe périmé, et ne doit pas fermer l'arbre. Un dictionnaire, lui,
+// essaie des mots de passe tous différents et reste compté un par un. `fingerprint` est un condensé, jamais le mot de passe.
+type Attempt = { at: number; fingerprint: string | null }
 
-function recentAttempts(treeId: string, now: number): number[] {
-  const recent = (attemptsByTree.get(treeId) ?? []).filter((at) => now - at < WINDOW_MS)
+const attemptsByTree = new Map<string, Attempt[]>()
+
+function recentAttempts(treeId: string, now: number): Attempt[] {
+  const recent = (attemptsByTree.get(treeId) ?? []).filter((attempt) => now - attempt.at < WINDOW_MS)
   if (recent.length > 0) {
     attemptsByTree.set(treeId, recent)
   } else {
@@ -25,16 +30,19 @@ export function isTreeUnlockLocked(treeId: string, now = Date.now()): boolean {
   return recentAttempts(treeId, now).length >= MAX_FAILURES
 }
 
-// Réserve une place d'essai : renvoie de quoi la rendre si le mot de passe est bon, ou null si l'arbre est bloqué
-export function reserveTreeUnlockAttempt(treeId: string, now = Date.now()): (() => void) | null {
+// Réserve une place d'essai : renvoie de quoi la rendre si le mot de passe est bon, ou null si l'arbre est bloqué.
+// Un mot de passe déjà essayé dans la fenêtre ne prend pas de nouvelle place.
+export function reserveTreeUnlockAttempt(treeId: string, now = Date.now(), fingerprint: string | null = null): (() => void) | null {
   const recent = recentAttempts(treeId, now)
   if (recent.length >= MAX_FAILURES) return null
-  recent.push(now)
+  if (fingerprint && recent.some((attempt) => attempt.fingerprint === fingerprint)) return () => {}
+  const attempt: Attempt = { at: now, fingerprint }
+  recent.push(attempt)
   attemptsByTree.set(treeId, recent)
   return () => {
     const current = attemptsByTree.get(treeId)
     if (!current) return
-    const index = current.indexOf(now)
+    const index = current.indexOf(attempt)
     if (index >= 0) current.splice(index, 1)
     if (current.length === 0) attemptsByTree.delete(treeId)
   }

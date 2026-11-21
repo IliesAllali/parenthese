@@ -67,8 +67,6 @@ export default {
   "Choisir le fichier .ged": "Choose the .ged file",
   "Cliquez pour en choisir un autre": "Click to choose another one",
   "Importer mon arbre": "Import my tree",
-  "Votre arbre est créé, mais l'import n'a pas abouti.": "Your tree is created, but the import didn't go through.",
-  "Vous pouvez réessayer depuis les paramètres de l'arbre.": "You can try again from the tree settings.",
   // Import d’un zip (GEDCOM et ses photos)
   'Ajoute les personnes et les liens du fichier à cet arbre. Un fichier .ged, ou un zip qui contient le .ged et ses photos.': 'Adds the people and links from the file to this tree. A .ged file, or a zip with the .ged and its photos.',
   'Aucun fichier du zip ne correspond à ceux que votre logiciel citait. Choisissez le dossier où il les range.': 'No file in the zip matches the ones your software listed. Choose the folder where it keeps them.',

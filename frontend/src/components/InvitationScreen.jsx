@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { LogIn } from 'lucide-react'
 import logoUrl from '../assets/parenthese-logo.svg?url'
 import './AccountScreens.css'
 import PzBusy from './PzBusy.jsx'
+import ProviderButton from './ProviderButton.jsx'
 import { acceptInvitation, fetchInvitation } from '../api/managersApi.js'
 import { getAccountErrorMessage } from '../utils/errorMessages.js'
 import { t } from '../i18n/index.js'
+import TreeMark from './TreeMark.jsx'
 
 // Page d'un lien d'invitation à co-gérer un arbre (/invitation/<jeton>, issue #145). Trois portes selon l'instance :
 // le fournisseur OIDC, un compte existant, un compte à créer (même inscription fermée : l'invitation l'ouvre).
@@ -85,7 +86,7 @@ const InvitationScreen = ({
   } else {
     const head = (
       <div className="pz-auth-head">
-        {invitation.treeIcon && <span className="invite-tree-icon" aria-hidden="true">{invitation.treeIcon}</span>}
+        <TreeMark base="invite-tree-mark" name={invitation.treeName} icon={invitation.treeIcon || null} image={invitation.treeImage || null} />
         <h1 className="pz-title">{t('Gérer « {name} »', { name: invitation.treeName })}</h1>
         <p className="pz-sub">
           {invitation.invitedBy
@@ -112,10 +113,7 @@ const InvitationScreen = ({
           {head}
           <div className="invite-doors">
             {invitation.oidc && onOidcLogin && (
-              <button type="button" className="pz-btn pz-btn--primary pz-btn--block" onClick={onOidcLogin}>
-                <LogIn size={16} aria-hidden="true" />
-                {t('Se connecter avec {name}', { name: invitation.oidc.name })}
-              </button>
+              <ProviderButton name={invitation.oidc.name} onClick={onOidcLogin} alone={!invitation.passwordLogin} />
             )}
             {invitation.oidc && invitation.passwordLogin && <div className="pz-divider">{t('ou')}</div>}
             {invitation.passwordLogin && (

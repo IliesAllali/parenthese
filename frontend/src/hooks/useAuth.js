@@ -4,20 +4,20 @@ import {
   exchangeOidcCode,
   fetchAccountProfile,
   fetchLastOpenedTree,
+  keepProvisionalAccount,
   loginUser,
   logoutUser,
   registerUser,
+  startProvisionalAccount,
+  resumeProvisionalSession,
   updateLastOpenedTree,
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
-import * as errorMessages from '../utils/errorMessages'
-import { t } from '../i18n/index.js'
+import { getAccountDeletionErrorMessage, getAccountErrorMessage } from '../utils/errorMessages'
 import { clearAccountLocalData } from '../utils/localHygiene.js'
 
 const USER_TOKEN_STORAGE_KEY = 'user_auth_token'
 const USER_PROFILE_STORAGE_KEY = 'user_auth_profile'
-const getAccountErrorMessage = errorMessages.getAccountErrorMessage
-  || (() => t("Erreur backend. Vérifiez que l'API et la base sont lancées."))
 
 function saveUserProfile(user) {
   if (!user) {
@@ -50,6 +50,8 @@ export function useAuth() {
   const [accountError, setAccountError] = useState('')
 
   const authenticated = Boolean(userAuth.token)
+  // Arbre fait avant le compte (#251) : session sans email, à garder avant 30 jours
+  const provisional = authenticated && userAuth.user?.provisional === true
 
   // Prénom du compte : lu sur le serveur, gardé dans le profil local pour le bandeau de la porte
   const refreshAccountProfile = async (token) => {
@@ -86,7 +88,8 @@ export function useAuth() {
     ])
   }
 
-  const handleLogin = (email, password) => signIn(() => loginUser(email, password))
+  // Depuis un arbre provisoire, la session part avec la connexion : l'arbre rejoint le compte retrouvé
+  const handleLogin = (email, password) => signIn(() => loginUser(email, password, provisional ? userAuth.token : ''))
 
   // Retour d'une connexion OIDC : le jeton de passage devient une session, comme une connexion par mot de passe
   const handleOidcExchange = (code) => signIn(() => exchangeOidcCode(code))
@@ -132,6 +135,48 @@ export function useAuth() {
     }
   }
 
+  // « Créer mon arbre » sans compte : la session du compte provisoire, ouverte comme une autre
+  const handleStartProvisional = async (firstName) => {
+    const result = await startProvisionalAccount(firstName)
+    localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
+    saveUserProfile(result.user)
+    setUserAuth({ token: result.token, user: result.user })
+    return result.token
+  }
+
+  // Au chargement : la session provisoire revient (du cookie si le stockage est vide) et ses 30 jours repartent.
+  // Renvoie la visite d'avant, ou null sans arbre provisoire. Un arbre effacé entre-temps vide la session gardée.
+  const resumeProvisional = async () => {
+    const stored = restoreUserToken()
+    if (stored && loadUserProfile()?.provisional !== true) return null
+    try {
+      const result = await resumeProvisionalSession(stored || '')
+      localStorage.setItem(USER_TOKEN_STORAGE_KEY, result.token)
+      saveUserProfile(result.user)
+      setUserAuth({ token: result.token, user: result.user })
+      return { lastVisitAt: result.lastVisitAt || null }
+    } catch (error) {
+      if (stored && error?.status === 401) clearStoredUserToken()
+      return null
+    }
+  }
+
+  // « Gardez votre arbre » par email et mot de passe : une session de compte remplace la session provisoire
+  const handleKeep = async (email, password) => {
+    setAccountLoading(true)
+    setAccountError('')
+    try {
+      const result = await keepProvisionalAccount(userAuth.token, email, password)
+      await openSession(result.token, { ...(userAuth.user || {}), ...result.user })
+      return true
+    } catch (error) {
+      setAccountError(getAccountErrorMessage(error))
+      return false
+    } finally {
+      setAccountLoading(false)
+    }
+  }
+
   const handleLogout = async () => {
     const token = userAuth.token
     setAccountLoading(true)
@@ -168,13 +213,13 @@ export function useAuth() {
   const handleDeleteAccount = async (confirmation) => {
     const token = userAuth.token
     if (!token) {
-      return errorMessages.getAccountDeletionErrorMessage({ status: 401 })
+      return getAccountDeletionErrorMessage({ status: 401 })
     }
 
     try {
       await deleteAccount(token, confirmation)
     } catch (error) {
-      return errorMessages.getAccountDeletionErrorMessage(error, confirmation)
+      return getAccountDeletionErrorMessage(error, confirmation)
     }
 
     clearStoredUserToken()
@@ -203,9 +248,13 @@ export function useAuth() {
     accountLoading, setAccountLoading,
     accountError, setAccountError,
     authenticated,
+    provisional,
     loadAccountTrees,
     handleLogin,
     handleRegister,
+    handleStartProvisional,
+    handleKeep,
+    resumeProvisional,
     handleOidcExchange,
     handleLogout,
     handleDeleteAccount,

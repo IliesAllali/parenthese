@@ -39,7 +39,6 @@ export default {
   // Avancé, pour un co-gestionnaire (AdminPanel)
   'Impossible de quitter la gestion de cet arbre.': 'Could not stop managing this tree.',
   'Quitter la gestion de cet arbre': 'Stop managing this tree',
-  'Vous ne pourrez plus le modifier. Seul son propriétaire peut le supprimer.': 'You will no longer be able to edit it. Only its owner can delete it.',
   'Rester': 'Stay',
   'Quitter': 'Leave',
 
@@ -69,13 +68,22 @@ export default {
   // Fiche : droits retirés pendant une modification (PersonCard)
   "Vous ne pouvez plus modifier cet arbre. Rechargez la page pour voir vos droits actuels.": 'You can no longer edit this tree. Reload the page to see your current rights.',
 
-  // Icône de l'arbre (AdminPanel) et bouton du bas (ContextualNavbar)
-  "Icône de l'arbre": 'Tree icon',
+  // Visuel de l'arbre (TreeVisualField) et bouton du bas (ContextualNavbar)
+  "Visuel de l'arbre": 'Tree picture',
   'Première lettre': 'First letter',
-  "Elle remplace la première lettre dans vos menus et sur la page d'invitation.": 'It replaces the first letter in your menus and on the invitation page.',
+  'Icône': 'Icon',
+  'Icônes': 'Icons',
+  "Changer d'icône": 'Change icon',
+  'Changer de photo': 'Change photo',
+  'Comme dans vos menus et sur la page de la famille': 'As shown in your menus and on the family page',
+  'La photo sera retirée en enregistrant.': 'The photo will be removed when you save.',
+  "Photo de l'arbre enregistrée.": 'Tree photo saved.',
+  'Cadrage enregistré.': 'Framing saved.',
 
   // Erreurs (errorMessages.js)
   "Cette invitation est pour une autre adresse. Utilisez l'adresse à laquelle vous avez été invité.": 'This invitation is for another address. Use the address you were invited at.',
   "Ce lien d'invitation ne marche plus. Demandez-en un nouveau à la personne qui vous a invité.": 'This invitation link no longer works. Ask the person who invited you for a new one.',
   'Vous êtes déjà propriétaire de cet arbre.': 'You already own this tree.',
+  "Vous ne pourrez plus ni le modifier ni l’ouvrir. Pour le revoir, il vous faudra le lien de la famille. Seul son propriétaire peut le supprimer.": "You will no longer be able to edit it or open it. To see it again, you will need the family link. Only its owner can delete it.",
+  "{name} ne pourra plus ni modifier ni ouvrir l’arbre. Pour le revoir, il lui faudra le lien de la famille.": "{name} will no longer be able to edit or open the tree. To see it again, they will need the family link.",
 }

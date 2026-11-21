@@ -1,4 +1,5 @@
 import { t } from '../i18n/index.js'
+import { gedcomTooLargeMessage } from './gedcomText.js'
 
 export function getShareErrorMessage(error) {
   if (error?.status === 401) {
@@ -10,10 +11,27 @@ export function getShareErrorMessage(error) {
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
-  return t('Connexion backend impossible. Vérifiez API/DB puis réessayez.')
+  return interruptedMessage(error)
+}
+
+// Trop d'essais : la durée vient de l'en-tête Retry-After quand le serveur l'envoie (api/client.js)
+export function tooManyAttemptsMessage(error) {
+  const seconds = Number(error?.retryAfterSeconds)
+  if (!Number.isFinite(seconds) || seconds <= 90) return t('Trop de tentatives. Réessayez dans une minute.')
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 55) return t('Trop de tentatives. Réessayez dans {count} minutes.', { count: minutes })
+  return t('Trop de tentatives. Réessayez dans une heure.')
+}
+
+// Ces messages s'affichent à toute la famille : ni « backend » ni « API ». Réseau coupé ou serveur muet, puis le reste.
+function interruptedMessage(error) {
+  if (['network_error', 'request_timeout'].includes(error?.payload?.error) || error instanceof TypeError) {
+    return t('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
+  }
+  return t("Ça n'a pas marché. Réessayez dans un moment.")
 }
 
 export function getAccountDeletionErrorMessage(error, confirmation = {}) {
@@ -39,17 +57,22 @@ export function getAccountDeletionErrorMessage(error, confirmation = {}) {
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
   return t('Impossible de supprimer le compte pour le moment. Réessayez plus tard.')
 }
 
-export function getAccountErrorMessage(error) {
+// providerName : le nom du fournisseur OIDC de l'instance, pour les refus qui renvoient vers lui
+export function getAccountErrorMessage(error, providerName = '') {
   const errorCode = error?.payload?.error || error?.message || ''
 
   if (errorCode === 'image_too_large') {
     return t('Image trop volumineuse (maximum 5 Mo).')
+  }
+
+  if (errorCode === 'photo_heic_unsupported') {
+    return t("Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.")
   }
 
   if (errorCode === 'invalid_avatar_mime_type') {
@@ -80,8 +103,22 @@ export function getAccountErrorMessage(error) {
     return t('Ce fichier n’est pas une photo que Parenthèse sait afficher (JPEG, PNG, WebP ou GIF).')
   }
 
+  // Import GEDCOM : fichier au-delà des limites du serveur, ou un autre import en cours sur l'instance
+  if (errorCode === 'gedcom_too_large') {
+    return gedcomTooLargeMessage()
+  }
+
+  if (errorCode === 'gedcom_import_busy') {
+    return t('Un autre import est en cours sur Parenthèse. Réessayez dans une minute.')
+  }
+
   if (errorCode === 'storage_quota_exceeded') {
     return t("L'arbre n'a plus de place pour de nouveaux souvenirs. Son propriétaire peut en supprimer.")
+  }
+
+  // Inscription, ou « Gardez votre arbre », avec l'adresse d'un compte qui existe déjà
+  if (errorCode === 'email_already_exists') {
+    return t('Cette adresse a déjà un compte. Connectez-vous avec elle.')
   }
 
   if (errorCode === 'password_login_disabled') {
@@ -101,7 +138,7 @@ export function getAccountErrorMessage(error) {
   }
 
   if (errorCode === 'oidc_email_taken') {
-    return t("Un compte avec mot de passe existe déjà pour cette adresse. Connectez-vous avec votre email et votre mot de passe.")
+    return t("Cette adresse a déjà un compte avec mot de passe. Connectez-vous avec votre email et votre mot de passe, puis choisissez « Se connecter aussi avec {name} » dans votre compte.", { name: providerName || t('votre fournisseur') })
   }
 
   if (errorCode === 'oidc_email_missing') {
@@ -138,11 +175,11 @@ export function getAccountErrorMessage(error) {
   }
 
   if (errorCode === 'database_error' || (error?.status === 500 && error?.payload?.error === 'database_error')) {
-    return t("Erreur base de données. Lancez `npm run prisma:deploy` puis redémarrez l'API.")
+    return interruptedMessage(error)
   }
 
   if (error?.status === 503 && error?.message === 'database_unavailable') {
-    return t('Base de données indisponible. Lancez `npm run db:bootstrap` dans le backend.')
+    return interruptedMessage(error)
   }
 
   if (error?.status === 400) {
@@ -151,7 +188,7 @@ export function getAccountErrorMessage(error) {
       const formErrors = error?.payload?.details?.formErrors || []
 
       if (fieldErrors.slug?.length) {
-        return t('Slug invalide : 3-64 caractères, uniquement lettres minuscules, chiffres et tirets.')
+        return t("Adresse de l'arbre invalide : 3 à 64 caractères, lettres minuscules, chiffres et tirets.")
       }
 
       if (fieldErrors.name?.length) {
@@ -162,12 +199,13 @@ export function getAccountErrorMessage(error) {
         return t('Mots de passe invalides : entre 8 et 128 caractères.')
       }
 
+      // Le détail de validation (nom du champ, message en anglais) ne parle qu'au développeur
       const firstField = Object.keys(fieldErrors)[0]
-      if (firstField && Array.isArray(fieldErrors[firstField]) && fieldErrors[firstField].length > 0) {
+      if (import.meta.env?.DEV && firstField && Array.isArray(fieldErrors[firstField]) && fieldErrors[firstField].length > 0) {
         return `${firstField}: ${fieldErrors[firstField][0]}`
       }
 
-      if (Array.isArray(formErrors) && formErrors.length > 0) {
+      if (import.meta.env?.DEV && Array.isArray(formErrors) && formErrors.length > 0) {
         return t('Erreur formulaire : {error}', { error: formErrors[0] })
       }
     }
@@ -187,15 +225,19 @@ export function getAccountErrorMessage(error) {
     return t('Ressource introuvable.')
   }
 
+  if (errorCode === 'slug_already_exists') {
+    return t("Cette adresse d'arbre est déjà prise. Choisissez-en une autre.")
+  }
+
   if (error?.status === 409) {
-    return t('Conflit détecté (email ou slug déjà utilisé).')
+    return t("C'est déjà enregistré.")
   }
 
   if (error?.status === 429) {
-    return t('Trop de tentatives. Réessayez dans une minute.')
+    return tooManyAttemptsMessage(error)
   }
 
-  return t("Erreur backend. Vérifiez que l'API et la base sont lancées.")
+  return interruptedMessage(error)
 }
 
 export function fileToBase64(file) {

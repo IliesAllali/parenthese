@@ -14,9 +14,10 @@ import {
   type OidcPending,
 } from '../lib/oidc.js'
 import { confirmsWithPassword } from '../lib/auth.js'
+import { adoptProvisionalAccount } from '../lib/provisional-account.js'
 import { createAccountIfAllowed } from '../lib/registration.js'
 import { claimInvitationsForVerifiedEmail, hasPendingInvitationForEmail } from '../lib/tree-invitations.js'
-import { signUserSession } from '../lib/user-session.js'
+import { clearProvisionalCookie, signUserSession } from '../lib/user-session.js'
 
 // Parcours : /auth/oidc/start pose un cookie signé (state, nonce, vérificateur PKCE) et part chez le fournisseur ;
 // /auth/oidc/callback vérifie tout, trouve ou crée le compte, et renvoie vers l'app avec un jeton de passage dans le
@@ -90,7 +91,46 @@ type AccountResult = { userId: string } | { error: 'registration_closed' | 'oidc
 
 // Compte relié à cette identité ; sinon le compte qui a cet email, si le fournisseur le garantit ; sinon un compte
 // neuf, seulement si l'instance en accepte (ALLOW_REGISTRATION, ou instance encore vide).
-async function resolveAccount(app: FastifyInstance, identity: OidcIdentity): Promise<AccountResult> {
+// provisionalUserId : la connexion part d'un arbre provisoire (#251). Un compte retrouvé reprend ses arbres ; sinon
+// le compte provisoire devient le compte, avec l'email et le prénom du fournisseur, sans rien d'autre.
+async function resolveAccount(app: FastifyInstance, identity: OidcIdentity, provisionalUserId?: string): Promise<AccountResult> {
+  const found = await findAccount(app, identity)
+  if (found && provisionalUserId && !('error' in found)) {
+    await adoptProvisionalAccount(app.prisma, provisionalUserId, found.userId)
+  }
+  if (found) return found
+
+  if (provisionalUserId) {
+    const provisional = await app.prisma.user.findUnique({ where: { id: provisionalUserId }, select: { email: true, firstName: true } })
+    // Déjà gardé par une autre requête : l'identité trouvera ce compte au prochain passage
+    if (!provisional || provisional.email !== null) return { error: 'oidc_email_taken' }
+    await app.prisma.user.update({
+      where: { id: provisionalUserId },
+      data: {
+        email: identity.email as string,
+        firstName: provisional.firstName ?? identity.firstName,
+        identities: { create: { issuer: identity.issuer, subject: identity.subject } },
+      },
+    })
+    return { userId: provisionalUserId }
+  }
+
+  // Une invitation à co-gérer un arbre ouvre un compte même inscription fermée, si le fournisseur garantit l'adresse
+  const created = await createAccountIfAllowed(app.prisma, (tx) => tx.user.create({
+    data: {
+      email: identity.email as string,
+      firstName: identity.firstName,
+      passwordHash: null,
+      identities: { create: { issuer: identity.issuer, subject: identity.subject } },
+    },
+    select: { id: true },
+  }), { invited: identity.emailVerified && await hasPendingInvitationForEmail(app.prisma, identity.email as string) })
+  return created ? { userId: created.id } : { error: 'registration_closed' }
+}
+
+// Le compte qui existe déjà pour cette identité, une erreur si l'identité ne peut pas en ouvrir, ou null s'il faut en
+// créer un (l'email est alors présent, et vérifié si l'instance le demande)
+async function findAccount(app: FastifyInstance, identity: OidcIdentity): Promise<AccountResult | null> {
   const linked = await app.prisma.userIdentity.findUnique({
     where: { issuer_subject: { issuer: identity.issuer, subject: identity.subject } },
     select: { userId: true },
@@ -121,17 +161,7 @@ async function resolveAccount(app: FastifyInstance, identity: OidcIdentity): Pro
     return { userId: existing.id }
   }
 
-  // Une invitation à co-gérer un arbre ouvre un compte même inscription fermée, si le fournisseur garantit l'adresse
-  const created = await createAccountIfAllowed(app.prisma, (tx) => tx.user.create({
-    data: {
-      email: identity.email as string,
-      firstName: identity.firstName,
-      passwordHash: null,
-      identities: { create: { issuer: identity.issuer, subject: identity.subject } },
-    },
-    select: { id: true },
-  }), { invited: identity.emailVerified && await hasPendingInvitationForEmail(app.prisma, identity.email) })
-  return created ? { userId: created.id } : { error: 'registration_closed' }
+  return null
 }
 
 function redirectToApp(reply: FastifyReply, returnTo: string, fragment: string) {
@@ -212,13 +242,23 @@ export const oidcRoutes: FastifyPluginAsync = async (app) => {
         return redirectToApp(reply, returnTo, 'oidc_error=oidc_failed')
       }
 
+      // Départ d'un arbre provisoire (« Gardez votre arbre ») : le ticket désigne un compte sans email, qui devient le
+      // compte ou rejoint celui de cette identité. Sinon le ticket relie le fournisseur à un compte à mot de passe.
+      const linkUserId = pending.linkUserId
+      const provisional = linkUserId
+        ? (await app.prisma.user.findUnique({ where: { id: linkUserId }, select: { email: true } }))?.email === null
+        : false
+      const settle = () => !linkUserId
+        ? resolveAccount(app, identity)
+        : provisional ? resolveAccount(app, identity, linkUserId) : linkIdentity(app, linkUserId, identity)
+
       let result: AccountResult | LinkResult
       try {
-        result = pending.linkUserId ? await linkIdentity(app, pending.linkUserId, identity) : await resolveAccount(app, identity)
+        result = await settle()
       } catch (error) {
         // Deux retours simultanés pour la même identité : le second retrouve le lien créé par le premier
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          result = pending.linkUserId ? await linkIdentity(app, pending.linkUserId, identity) : await resolveAccount(app, identity)
+          result = await settle()
         } else {
           throw error
         }
@@ -231,6 +271,9 @@ export const oidcRoutes: FastifyPluginAsync = async (app) => {
       if (identity.email && identity.emailVerified) {
         await claimInvitationsForVerifiedEmail(app.prisma, result.userId, identity.email)
       }
+
+      // L'arbre provisoire est gardé (ou a rejoint un compte) : son cookie de session ne sert plus
+      if (provisional) clearProvisionalCookie(request, reply)
 
       const handoff = app.jwt.sign(
         { kind: 'oidc_handoff', sub: result.userId, jti: randomUUID() },

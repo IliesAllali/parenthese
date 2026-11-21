@@ -1,9 +1,11 @@
-import { Check, ChevronRight, Globe, HelpCircle, LogIn, LogOut, Plus, Settings, Share2, TreeDeciduous, User, UserPlus } from 'lucide-react'
+import { Check, ChevronRight, Globe, HelpCircle, LogIn, LogOut, Plus, Settings, Share2, User, UserPlus } from 'lucide-react'
 import { t } from '../../i18n/index.js'
 import LanguageSwitch from './LanguageSwitch'
 import { NavMenu, NavMenuGroup, NavMenuItem, NavMenuSep } from './NavMenu'
 import './AvatarMenu.css'
 import { initialOf } from '../../utils/initial.js'
+import { visualOf } from '../../utils/treeVisual.js'
+import TreeMark from '../TreeMark.jsx'
 
 const ICON = { size: 18, strokeWidth: 2, 'aria-hidden': true }
 
@@ -15,6 +17,9 @@ function AvatarMenu({
   phone = false,
   triggerRef,
   guest = false,
+  // Arbre fait avant le compte (#251) : l'en-tête mène à « Gardez votre arbre » ; ni déconnexion (l'arbre serait
+  // perdu) ni second arbre
+  provisional = false,
   onClose,
   userDisplayName,
   userEmail,
@@ -82,7 +87,7 @@ function AvatarMenu({
         <span className="navm-head-mono" aria-hidden="true">{initialOf(displayName)}</span>
         <span className="navm-text">
           <strong>{displayName}</strong>
-          <small>{userEmail || t('Mon compte')}</small>
+          <small>{provisional ? t('Gardez votre arbre') : userEmail || t('Mon compte')}</small>
         </span>
         <ChevronRight size={16} aria-hidden="true" className="navm-chevron" />
       </button>
@@ -104,7 +109,7 @@ function AvatarMenu({
           return (
             <NavMenuItem
               key={tree.id}
-              icon={<span className={`navm-tree-mono${tree.icon ? ' navm-tree-mono--emoji' : ''}`} aria-hidden="true">{tree.icon || initialOf(tree.name)}</span>}
+              icon={<TreeMark base="navm-tree-mono" name={tree.name} {...visualOf(tree)} />}
               label={tree.name}
               onSelect={isActive ? undefined : () => { onClose(); onSelectTree?.(tree.id) }}
               disabled={isActive}
@@ -114,14 +119,15 @@ function AvatarMenu({
           )
         }) : (
           <NavMenuItem
-            icon={<TreeDeciduous {...ICON} />}
+            // Un seul arbre, le cas de presque toutes les familles : son visuel, pas un pictogramme générique
+            icon={<TreeMark base="navm-tree-mono" name={currentTreeName} {...visualOf(trees.find((tree) => String(tree.id) === String(activeTreeId)))} />}
             label={currentTreeName}
             disabled
             className="navm-current"
             right={<Check size={16} aria-hidden="true" className="navm-check" />}
           />
         )}
-        <NavMenuItem icon={<Plus {...ICON} />} label={t('Créer un nouvel arbre')} onSelect={() => { onClose(); onCreateTree?.() }} />
+        {!provisional && <NavMenuItem icon={<Plus {...ICON} />} label={t('Créer un nouvel arbre')} onSelect={() => { onClose(); onCreateTree?.() }} />}
       </NavMenuGroup>
 
       {isOwner && onShareClick && (
@@ -134,8 +140,12 @@ function AvatarMenu({
 
       <NavMenuSep />
       {helpRow}
-      <NavMenuSep />
-      <NavMenuItem danger icon={<LogOut {...ICON} />} label={t('Se déconnecter')} onSelect={() => { onClose(); onLogout?.() }} />
+      {!provisional && (
+        <>
+          <NavMenuSep />
+          <NavMenuItem danger icon={<LogOut {...ICON} />} label={t('Se déconnecter')} onSelect={() => { onClose(); onLogout?.() }} />
+        </>
+      )}
     </>
   )
 

@@ -7,10 +7,13 @@ import { t } from '../i18n/index.js'
 import { readContributorName, saveContributorName } from '../utils/contributorName.js'
 import { initialOf } from '../utils/initial.js'
 import { richText } from '../utils/richText.jsx'
+import TreeMark from './TreeMark.jsx'
 
 const AccessGate = ({
   initialTreeId,
   treeName,
+  // Icône de l'arbre, donnée par la porte publique : la famille reconnaît son arbre. Jamais la photo ici.
+  treeIcon = null,
   treeDescription = '',
   treeOwnerName = '',
   treeNotFound = false,
@@ -55,15 +58,19 @@ const AccessGate = ({
             {treeNotFound ? (
               <h1 className="pz-title">{richText(t('Cet arbre est *introuvable*'))}</h1>
             ) : (
-              <h1 className="pz-title">
-                {treeName ? richText(t('Ouvrir {slot}'), <em>{treeName}</em>) : richText(t('Ouvrir un arbre *partagé*'))}
-              </h1>
+              <>
+                {treeName && <TreeMark base="gate-tree-mark" name={treeName} icon={treeIcon} />}
+                <h1 className="pz-title">
+                  {/* Le nom de l'arbre seul, sous son visuel : le verbe reste sur le bouton « Voir l'arbre » (Patch, 21/11) */}
+                {treeName || richText(t('Ouvrir un arbre *partagé*'))}
+                </h1>
+              </>
             )}
             <p className="pz-sub">
               {treeNotFound
                 ? t("Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé.")
                 : treeName
-                  ? t('Tapez le mot de passe reçu avec le lien. Pas besoin de compte pour regarder.')
+                  ? t("Touchez à nouveau le lien reçu dans votre message, il ouvre l'arbre. Ou tapez le mot de passe de l'arbre.")
                   : t('Entrez le code et le mot de passe reçus avec votre lien de partage.')}
             </p>
           </div>
@@ -92,7 +99,7 @@ const AccessGate = ({
                     t('Vous êtes sur votre compte.')
                   )}
                   <span className="access-gate-session-step">
-                    {t("Tapez une fois le mot de passe reçu avec le lien. Ensuite, l'arbre s'ouvrira directement.")}
+                    {t("Touchez le lien reçu, ou tapez une fois le mot de passe de l'arbre. Ensuite, l'arbre s'ouvrira directement.")}
                   </span>
                 </div>
               )}
@@ -114,7 +121,7 @@ const AccessGate = ({
               )}
 
               <div className="pz-field">
-                <label htmlFor="sharePassword">{t('Mot de passe reçu avec le lien')}</label>
+                <label htmlFor="sharePassword">{t("Mot de passe de l'arbre")}</label>
                 <input
                   id="sharePassword"
                   type="password"

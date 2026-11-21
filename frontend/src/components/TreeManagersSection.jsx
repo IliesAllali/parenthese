@@ -5,6 +5,7 @@ import { dateLocale, t } from '../i18n/index.js'
 import { initialOf } from '../utils/initial.js'
 import Skeleton from './Skeleton.jsx'
 import { toOpaqueTreeId, trackAppEvent } from '../utils/analytics.js'
+import { copyText } from '../utils/copyText.js'
 
 // Onglet Gestion des paramètres de l'arbre (issue #145). Le propriétaire invite des co-gestionnaires par leur
 // adresse : Parenthèse n'envoie pas de mail, il donne un lien à transmettre. Les co-gestionnaires voient la liste.
@@ -19,7 +20,9 @@ function personInitial(person) {
   return initialOf(person.firstName || person.email)
 }
 
-const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName = '', onOpenShare }) => {
+// onKeepRequired : arbre provisoire, que le serveur refuse d'ouvrir à un co-gérant (il s'efface sans visite) ;
+// « Inviter » ouvre alors « Gardez votre arbre »
+const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName = '', onOpenShare, onKeepRequired }) => {
   const [state, setState] = useState({ loading: true, error: '', data: null })
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState('')
@@ -41,8 +44,7 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
 
   const offerLink = async (token, forEmail) => {
     const url = invitationUrl(token)
-    let copied
-    try { await navigator.clipboard.writeText(url); copied = true } catch { copied = false }
+    const copied = await copyText(url)
     // Le lien créé compte comme un partage même si le presse-papiers est refusé (il est alors montré en clair)
     trackAppEvent('share_copied', { what: 'manager_invite', copied, tree_id: toOpaqueTreeId(treeId) })
     setLink({ url, email: forEmail, copied })
@@ -51,6 +53,10 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
   const handleInvite = async (event) => {
     event.preventDefault()
     if (!email.trim() || busy) return
+    if (onKeepRequired) {
+      onKeepRequired()
+      return
+    }
     setBusy('invite')
     setMessage({ error: '', success: '' })
     try {
@@ -123,6 +129,10 @@ const TreeManagersSection = ({ treeId, authToken, currentUserId = null, oidcName
               <div className="ts-row-text">
                 <strong>{isYou ? t('Vous') : (manager.firstName || manager.email)}</strong>
                 <span className="tm-mail">{manager.email}</span>
+                {/* Retirer un co-gestionnaire lui retire aussi la lecture : son accès par le mot de passe de partage part avec */}
+                {confirmRemove === manager.userId && (
+                  <span className="pz-small" role="status">{t('{name} ne pourra plus ni modifier ni ouvrir l’arbre. Pour le revoir, il lui faudra le lien de la famille.', { name: manager.firstName || manager.email })}</span>
+                )}
               </div>
             </div>
             <div className="ts-row-actions">

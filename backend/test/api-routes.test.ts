@@ -19,7 +19,16 @@ const { prismaMock } = vi.hoisted(() => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // Anciennes adresses des arbres renommés : aucune par défaut
+    treeSlugAlias: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+    },
     tree: {
+      // Adresses déjà prises : aucune par défaut
+      findMany: vi.fn(async () => []),
       findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
@@ -503,13 +512,8 @@ describe('Graph routes', () => {
   it('export GEDCOM : précisions, événements, sources et adoption relus à l’identique', async () => {
     const app = createApp()
     await app.ready()
-    const token = (app as any).jwt.sign({
-      kind: 'tree_access',
-      sub: 'tree:tree-1:visitor',
-      treeId: 'tree-1',
-      role: 'visitor',
-      accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime(),
-    })
+    // L'export est réservé à ceux qui gèrent l'arbre
+    const token = await createUserToken(app)
     const base = { birthDateEnd: null, deathDateEnd: null, deathDatePrecision: null, deathPlace: null, nickname: null, notes: null, profession: null, deathDate: null }
     prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', name: 'Ragot', rootPersonId: null })
     prismaMock.person.findMany.mockResolvedValue([
@@ -948,7 +952,7 @@ describe('Sexe dans le GEDCOM (issue #114)', () => {
   it('aller-retour : other sort en SEX U (GEDCOM 5.5.1), non précisé sans ligne SEX, le reste se relit à l’identique', async () => {
     const app = createApp()
     await app.ready()
-    const token = (app as any).jwt.sign({ kind: 'tree_access', sub: 'tree:tree-1:visitor', treeId: 'tree-1', role: 'visitor', accessVersion: new Date('2026-02-11T10:00:00.000Z').getTime() })
+    const token = await createUserToken(app)
     const base = { lastName: 'Martin', birthDate: null, birthDatePrecision: null, birthPlace: null, birthDateEnd: null, deathDateEnd: null, deathDatePrecision: null, deathPlace: null, nickname: null, notes: null, profession: null, deathDate: null }
     prismaMock.tree.findFirst.mockResolvedValue({ id: 'tree-1', name: 'Martin', rootPersonId: null })
     prismaMock.person.findMany.mockResolvedValue([
@@ -1299,6 +1303,24 @@ describe('Lieu de décès et filiation adoptive (écriture)', () => {
     const res = await app.inject({ method: 'PATCH', url: '/trees/tree-1/links/link-1', headers: { authorization: `Bearer ${token}` }, payload: { parentageType: 'adoption' } })
     expect(res.statusCode).toBe(200)
     expect(prismaMock.parentChildLink.updateMany.mock.calls.at(-1)[0].data).toMatchObject({ parentageType: 'adoption' })
+    await app.close()
+  })
+})
+
+describe('taille des envois de souvenirs (cas limites du 20/11)', () => {
+  const body = (bytes: number) => ({ type: 'video', fileName: 'v.mp4', mimeType: 'video/mp4', sizeBytes: bytes, dataBase64: 'A'.repeat(Math.ceil(bytes / 3) * 4) })
+
+  it('une vidéo de 15 Mo arrive jusqu’à la route, au lieu d’être coupée par la taille du corps', async () => {
+    const app = createApp()
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/persons/p-1/media', payload: body(15 * 1024 * 1024) })
+    expect(response.statusCode).not.toBe(413)
+    await app.close()
+  })
+
+  it('au-delà de la limite annoncée (20 Mo), le corps est refusé', async () => {
+    const app = createApp()
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/persons/p-1/media', payload: body(22 * 1024 * 1024) })
+    expect(response.statusCode).toBe(413)
     await app.close()
   })
 })

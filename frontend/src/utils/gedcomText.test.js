@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodeAnsel, decodeGedcomBytes } from './gedcomText.js'
+import { decodeAnsel, decodeGedcomBytes, gedcomSizeError } from './gedcomText.js'
 
 const latin1 = (text) => Uint8Array.from([...text].map((c) => c.charCodeAt(0)))
 const utf8 = (text) => new TextEncoder().encode(text)
@@ -48,5 +48,18 @@ describe('encodage d’un fichier GEDCOM', () => {
 
   it('sans déclaration et pas de l’UTF-8 : Windows-1252', () => {
     expect(decodeGedcomBytes(latin1('0 HEAD\n1 NAME Jérôme /Hébert/\n')).text).toContain('Jérôme /Hébert/')
+  })
+})
+
+describe('taille d’un GEDCOM avant import (cas limites du 20/11)', () => {
+  const indi = (n) => `0 @I${n}@ INDI\n1 NAME Jean /Martin/\n`
+  it('laisse passer un fichier ordinaire', () => {
+    expect(gedcomSizeError('0 HEAD\n' + indi(1) + '0 TRLR')).toBe('')
+  })
+  it('refuse au-delà de 20 000 personnes, de 10 Mo ou de 300 000 lignes', () => {
+    expect(gedcomSizeError(Array.from({ length: 20001 }, (_, i) => indi(i)).join(''))).toMatch(/trop gros/)
+    expect(gedcomSizeError('x'.repeat(10 * 1024 * 1024 + 1))).toMatch(/trop gros/)
+    expect(gedcomSizeError('é'.repeat(6 * 1024 * 1024))).toMatch(/trop gros/)
+    expect(gedcomSizeError('1 NOTE x\n'.repeat(300001))).toMatch(/trop gros/)
   })
 })

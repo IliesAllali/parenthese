@@ -92,12 +92,19 @@ async function apiRequest(path, options = {}) {
     if (error?.name === 'TimeoutError') {
       throw new ApiError(t('Le serveur ne répond pas. Vérifiez la connexion et réessayez.'), 0, { error: 'request_timeout' })
     }
-    throw error
+    // Un envoi annulé par l'appelant reste une annulation ; le reste est un réseau coupé (mobile, wifi, mode avion)
+    if (error?.name === 'AbortError') throw error
+    throw new ApiError(t('La connexion a été coupée. Vérifiez le réseau, puis réessayez.'), 0, { error: 'network_error' })
   }
   const payload = await safeParseJson(text)
 
   if (!response.ok) {
-    throw new ApiError(payload?.error || `request_failed_${response.status}`, response.status, payload)
+    const apiError = new ApiError(payload?.error || `request_failed_${response.status}`, response.status, payload)
+    // Limites de débit : le serveur dit combien de secondes attendre (une minute pour une connexion, une heure pour
+    // la création d'arbres)
+    const retryAfter = Number(response.headers?.get?.('retry-after'))
+    if (Number.isFinite(retryAfter) && retryAfter > 0) apiError.retryAfterSeconds = retryAfter
+    throw apiError
   }
   if (print) unsettledKeys.delete(print)
 

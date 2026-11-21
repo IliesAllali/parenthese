@@ -58,22 +58,26 @@ export async function softDeletePersonCascade(
     },
   })
 
-  const [deletedUnions, deletedLinks, deletedMedia] = await Promise.all([
+  // Liens de la personne seulement. Ceux de l'autre parent passaient par l'union supprimée : ils restent,
+  // détachés de l'union (supprimer la mère retirait aussi le père à tous ses enfants).
+  const deletedLinks = await db.parentChildLink.updateMany({
+    where: {
+      treeId,
+      deletedAt: null,
+      OR: [{ parentPersonId: personId }, { childPersonId: personId }],
+    },
+    data: { deletedAt: now },
+  })
+  if (unionIds.length > 0) {
+    await db.parentChildLink.updateMany({
+      where: { treeId, deletedAt: null, viaUnionId: { in: unionIds } },
+      data: { viaUnionId: null },
+    })
+  }
+
+  const [deletedUnions, deletedMedia] = await Promise.all([
     db.union.updateMany({
       where: { treeId, id: { in: unionIds }, deletedAt: null },
-      data: { deletedAt: now },
-    }),
-    // Liens de la personne, et liens qui passaient par une de ses unions
-    db.parentChildLink.updateMany({
-      where: {
-        treeId,
-        deletedAt: null,
-        OR: [
-          { parentPersonId: personId },
-          { childPersonId: personId },
-          ...(unionIds.length > 0 ? [{ viaUnionId: { in: unionIds } }] : []),
-        ],
-      },
       data: { deletedAt: now },
     }),
     db.mediaItem.updateMany({

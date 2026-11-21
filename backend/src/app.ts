@@ -8,9 +8,11 @@ import { Prisma } from './generated/prisma/client.js'
 
 import { env } from './config/env.js'
 import { prisma } from './lib/prisma.js'
-import { isUserTokenRevoked, loadRevokedTokens } from './lib/token-revocation.js'
+import { loadRevokedTokens } from './lib/token-revocation.js'
+import { isUserSessionValid } from './lib/user-session.js'
 import { registerIdempotency } from './lib/idempotency.js'
 import { startBlurhashFiller } from './lib/blurhash.js'
+import { startProvisionalPurge } from './lib/provisional-account.js'
 import { authRoutes } from './routes/auth.js'
 import { contributionRoutes } from './routes/contributions.js'
 import { graphRoutes } from './routes/graph.js'
@@ -68,12 +70,22 @@ export function createApp() {
   })
   // Aperçus flous des photos et portraits qui n'en ont pas encore (lib/blurhash.ts) ; pas pendant les tests
   if (env.NODE_ENV !== 'test') app.addHook('onReady', async () => startBlurhashFiller(app, getStorageRoot()))
+  // Arbres provisoires de plus de 30 jours, jamais gardés : effacés avec leur compte (#251)
+  if (env.NODE_ENV !== 'test') {
+    let stopPurge: (() => void) | null = null
+    app.addHook('onReady', async () => { stopPurge = startProvisionalPurge(prisma, app.log) })
+    app.addHook('onClose', async () => { stopPurge?.() })
+  }
   app.decorateRequest('actor', null)
 
   app.register(cors, {
     origin: env.CORS_ORIGIN.length === 1 ? env.CORS_ORIGIN[0] : env.CORS_ORIGIN,
     // @fastify/cors 11 n'annonce plus par défaut que GET, HEAD et POST : l'API sert aussi PUT, PATCH, DELETE
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // Le cookie de la session provisoire (lib/user-session.ts) quand l'API n'est pas à l'adresse de l'app
+    credentials: true,
+    // L'attente d'une limite atteinte, que l'app dit en clair (« Réessayez dans une heure »)
+    exposedHeaders: ['Retry-After'],
   })
 
   app.register(rateLimit, {
@@ -101,18 +113,8 @@ export function createApp() {
       const payload = await request.jwtVerify<AnyJwtPayload>()
 
       if (payload.kind === 'user') {
-        if (isUserTokenRevoked(payload.jti)) {
-          return
-        }
-
-        // Sessions émises avant SESSIONS_NOT_BEFORE refusées (voir config/env.ts)
-        if (typeof payload.iat !== 'number' || payload.iat * 1000 < env.SESSIONS_NOT_BEFORE.getTime()) {
-          return
-        }
-
-        // Un compte supprimé invalide aussi les sessions ouvertes sur d'autres appareils
-        const accountCount = await app.prisma.user.count({ where: { id: payload.userId } })
-        if (accountCount === 0) {
+        // Session fermée, antérieure à SESSIONS_NOT_BEFORE, ou compte supprimé depuis un autre appareil
+        if (!(await isUserSessionValid(app, payload))) {
           return
         }
 

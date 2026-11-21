@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildInviteText, isChristmasSeason } from '../utils/inviteText.js'
+import { buildShareLink, readShareKey } from '../utils/shareKey.js'
 
 // Message d'invitation de Noël (SIGNUP_PROMPTS) : du 1er décembre au 6 janvier, et seulement si l'instance l'autorise
 describe("message d'invitation de Noël", () => {
@@ -13,14 +14,45 @@ describe("message d'invitation de Noël", () => {
   })
 
   it('parle de Noël en décembre quand l\'instance l\'autorise', () => {
-    const text = buildInviteText('https://exemple.test/arbre/x', 'lilas-1928', { seasonal: true, now: at('2026-12-15') })
+    const text = buildInviteText('https://exemple.test/arbre/x#cle=lilas-1928', { seasonal: true, now: at('2026-12-15') })
     expect(text).toContain('Pour Noël')
-    expect(text).toContain('https://exemple.test/arbre/x')
-    expect(text).toContain('lilas-1928')
+    expect(text).toContain('https://exemple.test/arbre/x#cle=lilas-1928')
   })
 
   it('garde le message habituel hors saison ou sur une instance qui ne l\'autorise pas', () => {
-    expect(buildInviteText('u', 'p', { seasonal: true, now: at('2026-11-15') })).toContain('Je rassemble')
-    expect(buildInviteText('u', 'p', { seasonal: false, now: at('2026-12-15') })).toContain('Je rassemble')
+    expect(buildInviteText('u', { seasonal: true, now: at('2026-11-15') })).toContain('Je rassemble')
+    expect(buildInviteText('u', { seasonal: false, now: at('2026-12-15') })).toContain('Je rassemble')
+  })
+
+  it('ne recopie ni mot de passe ni mode d\'emploi : le lien suffit', () => {
+    const text = buildInviteText('https://exemple.test/arbre/x#cle=p')
+    expect(text).not.toMatch(/mot de passe|mode d'emploi|En bas de l'écran/i)
+    expect(text.split('\n')).toHaveLength(5)
+  })
+})
+
+// Le lien qui ouvre l'arbre (#247) : la clé après le « # », retirée de l'adresse à l'arrivée
+describe('lien porteur de la clé', () => {
+  it('met le mot de passe après le #, encodé', () => {
+    expect(buildShareLink('https://app.test/arbre/famille', 'a b+c#d')).toBe('https://app.test/arbre/famille#cle=a%20b%2Bc%23d')
+    expect(buildShareLink('https://app.test/arbre/famille', '')).toBe('https://app.test/arbre/famille')
+  })
+
+  it('encode aussi la ponctuation que les messageries sortent du lien en fin d’adresse', () => {
+    const link = buildShareLink('https://app.test/arbre/famille', "soleil(2024)!.~*'")
+    expect(link).toBe('https://app.test/arbre/famille#cle=soleil%282024%29%21%2E%7E%2A%27')
+    globalThis.window = { history: { state: null, replaceState: () => {} } }
+    expect(readShareKey({ pathname: '/arbre/famille', search: '', hash: link.slice(link.indexOf('#')) })).toBe("soleil(2024)!.~*'")
+    delete globalThis.window
+  })
+
+  it("lit la clé une fois et la retire de la barre d'adresse", () => {
+    const calls = []
+    globalThis.window = { history: { state: null, replaceState: (...args) => calls.push(args[2]) } }
+    const location = { pathname: '/arbre/famille', search: '?famille=x', hash: '#cle=a%20b%2Bc%23d' }
+    expect(readShareKey(location)).toBe('a b+c#d')
+    expect(calls).toEqual(['/arbre/famille?famille=x'])
+    expect(readShareKey({ ...location, hash: '#oidc=1' })).toBe('')
+    delete globalThis.window
   })
 })

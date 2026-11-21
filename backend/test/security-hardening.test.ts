@@ -184,6 +184,15 @@ describe('mot de passe de partage', () => {
     expect(isTreeUnlockLocked('tree-ok', now)).toBe(false)
   })
 
+  it('un même mot de passe faux, envoyé par toute la famille, ne compte qu une fois', () => {
+    resetTreeUnlockGuard()
+    const now = Date.now()
+    for (let i = 0; i < 100; i += 1) reserveTreeUnlockAttempt('tree-lien', now, 'ancien-mot-de-passe')
+    expect(isTreeUnlockLocked('tree-lien', now)).toBe(false)
+    for (let i = 0; i < 29; i += 1) reserveTreeUnlockAttempt('tree-lien', now, `essai-${i}`)
+    expect(isTreeUnlockLocked('tree-lien', now)).toBe(true)
+  })
+
   it('refuse au-delà de 20 comparaisons en attente au lieu d allonger la file', async () => {
     let unblock: () => void = () => undefined
     const gate = new Promise<void>((resolve) => { unblock = resolve })

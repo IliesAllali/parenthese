@@ -10,9 +10,11 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 // En mémoire, sur une seule instance de l'API (le cas de Parenthèse et de l'auto-hébergement) : un redémarrage
 // oublie les clés, ce qui ne recrée de doublon que si un essai tombe pile pendant le redémarrage.
 
-// Les créations faites par la famille : propositions, souvenirs, photos posées sur l'arbre, moments
+// Les créations faites par la famille : propositions, souvenirs, photos posées sur l'arbre, moments. Et les mots et
+// dessins de qui gère l'arbre, envoyés en quittant la page puis renvoyés au retour si l'envoi n'a pas pu être confirmé
 const IDEMPOTENT_ROUTES = new Set([
   'POST /trees/:id/contributions/sessions',
+  'POST /trees/:id/annotations/batch',
   'POST /trees/:id/persons/:personId/media',
   'POST /trees/:id/annotation-photos',
   'POST /trees/:id/persons/:personId/life/events',

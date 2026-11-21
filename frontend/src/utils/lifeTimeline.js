@@ -6,7 +6,7 @@
 // enfant), limitée aux années où la personne a vécu. Une fiche sans aucun événement a donc déjà une frise.
 
 import { t, dateLocale } from '../i18n/index.js'
-import { firstNameLabel, surnameLabel } from './personName.js'
+import { firstNameLabel, fullNameLabel } from './personName.js'
 import { formatPlace } from './place.js'
 import { ageInYears } from './age.js'
 
@@ -62,7 +62,6 @@ const yearOf = (value) => {
   return match ? Number(match[1]) : null
 }
 
-const fullName = (p) => [p?.firstName, surnameLabel(p?.lastName)].filter(Boolean).join(' ')
 
 // « 12 mars » pour une date complète, rien pour une année seule (stockée au 1er janvier)
 function dayMonth(value) {
@@ -78,6 +77,11 @@ export function describeDate(date, end, precision) {
   const endYear = yearOf(end)
   if (!year) return ''
   switch (precision) {
+    // « mars 1950 » tapé dans la fiche : le mois seul, l'année est déjà dans la colonne
+    case 'month': {
+      const month = String(date).match(/^\d{4}-(\d{2})/)
+      return month ? new Date(Date.UTC(year, Number(month[1]) - 1, 1)).toLocaleDateString(dateLocale, { month: 'long', timeZone: 'UTC' }) : ''
+    }
     case 'about':
     case 'estimated':
     case 'calculated':
@@ -130,8 +134,12 @@ export function buildLifeTimeline(person, family = {}, life = null) {
   const birthYear = yearOf(person.birthDate) ?? person.birthYear ?? null
   const birthDate = person.birthDate || birthYear
   const deathYear = yearOf(person.deathDate) ?? person.deathYear ?? null
-  const lastYear = deathYear ?? new Date().getFullYear()
-  const within = (year) => year && (!birthYear || year >= birthYear) && year <= lastYear
+  // Décès saisi avant la naissance (une erreur de saisie, signalée sous le champ) : la frise garde la période
+  // entre les deux dates au lieu de se vider de toute la famille
+  const [firstYear, lastYear] = birthYear && deathYear && deathYear < birthYear
+    ? [deathYear, birthYear]
+    : [birthYear, deathYear ?? new Date().getFullYear()]
+  const within = (year) => year && (!firstYear || year >= firstYear) && year <= lastYear
   const sourcesOf = (type, unionId = null) => events.find((e) => e.type === type && (unionId ? String(e.unionId) === String(unionId) : !e.unionId))
   const out = []
 
@@ -150,7 +158,7 @@ export function buildLifeTimeline(person, family = {}, life = null) {
   for (const union of family.unions || []) {
     const detail = lifeUnions.get(String(union.id)) || {}
     const year = yearOf(detail.startDate) ?? union.startYear
-    const partnerName = union.partner ? fullName(union.partner) : t('Conjoint inconnu')
+    const partnerName = union.partner ? fullNameLabel(union.partner) : t('Conjoint inconnu')
     const place = formatPlace(detail.startPlace || '')
     const extra = sourcesOf('marriage', union.id)
     // Union sans date : à sa place logique, juste avant le premier enfant du couple, sinon avant la fin de
@@ -178,11 +186,11 @@ export function buildLifeTimeline(person, family = {}, life = null) {
     })
     const hasEndEvent = events.some((e) => String(e.unionId) === String(union.id) && ['divorce', 'annulment'].includes(e.type))
     if (union.endYear && !hasEndEvent) {
-      out.push({ key: `union-end-${union.id}`, year: union.endYear, order: 3, kind: 'minor', title: t('Fin de l’union avec {name}', { name: union.partner?.firstName || partnerName }), meta: ageAt(birthDate, union.endYear) })
+      out.push({ key: `union-end-${union.id}`, year: union.endYear, order: 3, kind: 'minor', title: t('Fin de l’union avec {name}', { name: String(union.partner?.firstName ?? '').trim() || partnerName }), meta: ageAt(birthDate, union.endYear) })
     }
     if (union.partner && within(yearOf(union.partner.deathDate) ?? union.partner.deathYear)) {
       const year2 = yearOf(union.partner.deathDate) ?? union.partner.deathYear
-      out.push({ key: `partner-death-${union.id}`, year: year2, order: 4, kind: 'fam', title: t('Décès de {name}', { name: union.partner.firstName }), link: linkTo(union.partner, union.partner.firstName) })
+      out.push({ key: `partner-death-${union.id}`, year: year2, order: 4, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(union.partner) }), link: linkTo(union.partner) })
     }
   }
 
@@ -192,7 +200,7 @@ export function buildLifeTimeline(person, family = {}, life = null) {
     let title = eventTitle(event)
     if (event.unionId) {
       const union = (family.unions || []).find((u) => String(u.id) === String(event.unionId))
-      if (union?.partner && ['divorce', 'annulment', 'engagement', 'marriage_contract'].includes(event.type)) title = `${title} (${union.partner.firstName})`
+      if (union?.partner && ['divorce', 'annulment', 'engagement', 'marriage_contract'].includes(event.type)) title = `${title} (${firstNameLabel(union.partner)})`
     }
     out.push({
       key: `event-${event.id}`, year, order: 1, kind: 'minor', title,
@@ -206,9 +214,9 @@ export function buildLifeTimeline(person, family = {}, life = null) {
 
   for (const child of family.children || []) {
     const year = yearOf(child.birthDate) ?? child.birthYear
-    if (within(year)) out.push({ key: `child-${child.id}`, year, order: 5, kind: 'fam', title: t('Naissance de {name}', { name: child.firstName }), link: linkTo(child, child.firstName) })
+    if (within(year)) out.push({ key: `child-${child.id}`, year, order: 5, kind: 'fam', title: t('Naissance de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
     const death = yearOf(child.deathDate) ?? child.deathYear
-    if (within(death) && death !== deathYear) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: child.firstName }), link: linkTo(child, child.firstName) })
+    if (within(death)) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
   }
   for (const sibling of family.siblings || []) {
     const year = yearOf(sibling.birthDate) ?? sibling.birthYear

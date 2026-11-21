@@ -6,6 +6,8 @@ import PortraitThumb from '../PortraitThumb.jsx'
 // Raison du match renvoyée par usePersonSearch (valeur française), traduite à l'affichage
 const REASON_LABELS = {
   Nom: t('Nom'),
+  'Nom de naissance': t('Nom de naissance'),
+  Surnom: t('Surnom'),
   Profession: t('Profession'),
   Lieu: t('Lieu'),
   Date: t('Date'),
