@@ -7,10 +7,13 @@ import { t } from '../i18n/index.js'
 import { readContributorName, saveContributorName } from '../utils/contributorName.js'
 import { initialOf } from '../utils/initial.js'
 import { richText } from '../utils/richText.jsx'
+import TreeMark from './TreeMark.jsx'
 
 const AccessGate = ({
   initialTreeId,
   treeName,
+  // Icône de l'arbre, donnée par la porte publique : la famille reconnaît son arbre. Jamais la photo ici.
+  treeIcon = null,
   treeDescription = '',
   treeOwnerName = '',
   treeNotFound = false,
@@ -55,9 +58,13 @@ const AccessGate = ({
             {treeNotFound ? (
               <h1 className="pz-title">{richText(t('Cet arbre est *introuvable*'))}</h1>
             ) : (
-              <h1 className="pz-title">
-                {treeName ? richText(t('Ouvrir {slot}'), <em>{treeName}</em>) : richText(t('Ouvrir un arbre *partagé*'))}
-              </h1>
+              <>
+                {treeName && <TreeMark base="gate-tree-mark" name={treeName} icon={treeIcon} />}
+                <h1 className="pz-title">
+                  {/* Le nom de l'arbre seul, sous son visuel : le verbe reste sur le bouton « Voir l'arbre » (Patch, 21/11) */}
+                {treeName || richText(t('Ouvrir un arbre *partagé*'))}
+                </h1>
+              </>
             )}
             <p className="pz-sub">
               {treeNotFound

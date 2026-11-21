@@ -104,6 +104,8 @@ import { kinAvailability, remainingParentSex } from './utils/kinForm'
 import { kinPeople } from './utils/kinPeople'
 import ProposalCard from './components/ProposalCard'
 import { summarizeChanges } from './utils/proposalSummary'
+import { applyFavicon, resetFavicon, treeFaviconHref } from './utils/favicon.js'
+import { visualOf } from './utils/treeVisual.js'
 
 function yearToIsoDate(value) {
   if (value === null || value === undefined || value === '') {
@@ -652,6 +654,8 @@ function App() {
     error: '',
   })
   const [treeNotFound, setTreeNotFound] = useState(false)
+  // Icône de l'arbre du lien partagé, montrée par la porte (jamais la photo, lisible sans mot de passe)
+  const [gateTreeIcon, setGateTreeIcon] = useState(null)
   const [accountEntryMode, setAccountEntryMode] = useState('login')
   // Options de l'instance. Inscription fermée (ALLOW_REGISTRATION=false, #113) ou mot de passe désactivé
   // (PASSWORD_LOGIN=false, #115) : plus de « Créer un compte » nulle part. oidc : le bouton du fournisseur.
@@ -846,6 +850,21 @@ function App() {
     )
     return activeTree?.name || tree.treeContext.treeName || ''
   }, [auth.accountTrees, tree.treeContext.treeId, tree.treeContext.treeName])
+
+  // Onglet du navigateur et écran d'accueil : le visuel de l'arbre ouvert (lettre, icône ou photo), sinon le logo
+  const openTreeVisual = tree.treeContext.treeId ? tree.treeContext.treeVisual : null
+  const faviconName = activeAccountTreeName
+  useEffect(() => {
+    if (!openTreeVisual) {
+      resetFavicon()
+      return undefined
+    }
+    let current = true
+    treeFaviconHref({ name: faviconName, ...openTreeVisual }).then((href) => {
+      if (current) applyFavicon(href)
+    })
+    return () => { current = false }
+  }, [openTreeVisual, faviconName])
 
   const isDemoMode = tree.treeContext.accessMode === 'demo'
 
@@ -2848,8 +2867,10 @@ function App() {
           resolvedTreeId = treeInfo.id
           resolvedTreeName = treeInfo.name || ''
           resolvedTreeDescription = treeInfo.description || ''
+          setGateTreeIcon(treeInfo.icon)
         } catch (error) {
           if (!active) return
+          setGateTreeIcon(null)
           tree.setBootState('need-access')
           tree.setTreeContext(buildEmptyTreeContext())
           const notFound = error?.status === 404 || error?.payload?.error === 'tree_not_found'
@@ -3747,6 +3768,7 @@ function App() {
         <AccessGate
           initialTreeId={tree.treeContext.treeId}
           treeName={tree.treeContext.treeName}
+          treeIcon={gateTreeIcon}
           treeDescription={tree.treeContext.treeDescription}
           treeOwnerName={tree.treeContext.treeOwnerName}
           treeOwnerEmail={tree.treeContext.treeOwnerEmail}
@@ -4199,7 +4221,10 @@ function App() {
         onLeftTree={handleTreeDeleted}
         onOpenShare={() => { setAdminPanelVisible(false); handleShareClick() }}
         onKeepRequired={auth.provisional ? () => { setAdminPanelVisible(false); setKeepSheet({ reason: 'manager' }) } : undefined}
-        onTreeUpdated={() => { if (auth.userAuth.token) auth.loadAccountTrees(auth.userAuth.token).catch(() => {}) }}
+        onTreeUpdated={(updated) => {
+          if (updated) tree.setTreeContext((current) => ({ ...current, treeVisual: visualOf(updated) }))
+          if (auth.userAuth.token) auth.loadAccountTrees(auth.userAuth.token).catch(() => {})
+        }}
         onGedcomImported={handleGedcomImported}
         onOpenPhotoStart={() => { setAdminPanelVisible(false); openPhotoStart() }}
         onClose={() => setAdminPanelVisible(false)}

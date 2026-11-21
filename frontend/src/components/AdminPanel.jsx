@@ -25,6 +25,8 @@ import { t } from '../i18n/index.js'
 import { gedcomSizeError, readGedcomFile } from '../utils/gedcomText.js'
 import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
+import TreeVisualField from './TreeVisualField.jsx'
+import { visualModeOf, visualPayload } from '../utils/treeVisual.js'
 
 function normalizeSlug(value) {
   return String(value || '')
@@ -34,9 +36,6 @@ function normalizeSlug(value) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
-
-// Icônes proposées pour un arbre (Patch, 25/10)
-const TREE_ICONS = ['🌳', '🌿', '🌻', '🏡', '❤️', '🧡', '⭐', '📖', '🕊️', '🌊', '⛰️', '🍂', '🌸', '🐚', '☀️']
 
 const AdminPanel = ({
   familyTabs = true,
@@ -72,7 +71,7 @@ const AdminPanel = ({
   const [tree, setTree] = useState(null)
   const [treeName, setTreeName] = useState('')
   const [treeDescription, setTreeDescription] = useState('')
-  const [treeIcon, setTreeIcon] = useState(null)
+  const [treeVisual, setTreeVisual] = useState({ mode: 'letter', icon: null })
   // Contributions de la famille : 'pending' = validées par l'admin, 'direct' = appliquées immédiatement
   const [contributionPolicy, setContributionPolicy] = useState('pending')
   const [savingPolicy, setSavingPolicy] = useState(false)
@@ -145,7 +144,7 @@ const AdminPanel = ({
         setTree(loadedTree)
         setTreeName(loadedTree?.name || '')
         setTreeDescription(loadedTree?.description || '')
-        setTreeIcon(loadedTree?.icon || null)
+        setTreeVisual(visualModeOf(loadedTree))
       })
       .catch(() => {
         if (!active) return
@@ -217,7 +216,7 @@ const AdminPanel = ({
       const payload = {
         name: nextName,
         description: treeDescription.trim() || null,
-        icon: treeIcon,
+        ...visualPayload(treeVisual),
       }
 
       // Seulement quand le nom change : un arbre à suffixe (famille-martin-2) ne redemande rien à chaque
@@ -237,7 +236,7 @@ const AdminPanel = ({
       setTree(updated)
       setTreeName(updated?.name || nextName)
       setTreeDescription(updated?.description || '')
-      setTreeIcon(updated?.icon || null)
+      setTreeVisual(visualModeOf(updated))
       setSuccessMessage(t('Modifications enregistrées.'))
       onTreeUpdated?.(updated)
     } catch {
@@ -497,21 +496,23 @@ const AdminPanel = ({
                     />
                   </div>
 
-                  {/* Icône de l'arbre : un emoji à la place de la première lettre dans les menus et sur la page d'invitation */}
-                  <div className="pz-field">
-                    <span className="pz-label" id="settingsTreeIconLabel">{t("Icône de l'arbre")}</span>
-                    <div className="ts-icons" role="radiogroup" aria-labelledby="settingsTreeIconLabel">
-                      <button type="button" role="radio" aria-checked={!treeIcon} className="ts-icon ts-icon--letter" onClick={() => setTreeIcon(null)}>
-                        {t('Première lettre')}
-                      </button>
-                      {TREE_ICONS.map((icon) => (
-                        <button key={icon} type="button" role="radio" aria-checked={treeIcon === icon} className="ts-icon" onClick={() => setTreeIcon(icon)}>
-                          {icon}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="pz-hint">{t("Elle remplace la première lettre dans vos menus et sur la page d'invitation.")}</p>
-                  </div>
+                  <TreeVisualField
+                    treeId={treeId}
+                    authToken={authToken}
+                    treeName={treeName.trim() || tree?.name || ''}
+                    value={treeVisual}
+                    image={tree?.image || null}
+                    onChange={setTreeVisual}
+                    disabled={saving}
+                    onImageSaved={(image, isNew) => {
+                      const updated = { ...tree, icon: null, image }
+                      setTree(updated)
+                      setTreeVisual({ mode: 'photo', icon: null })
+                      setErrorMessage('')
+                      setSuccessMessage(isNew ? t("Photo de l'arbre enregistrée.") : t('Cadrage enregistré.'))
+                      onTreeUpdated?.(updated)
+                    }}
+                  />
 
                   <div className="pz-field">
                     <label htmlFor="settingsTreeDescription">{t('Description')} <span className="ts-optional">{t('facultatif')}</span></label>

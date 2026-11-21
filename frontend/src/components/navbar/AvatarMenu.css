@@ -50,3 +50,4 @@
 
 /* Arbre avec une icône choisie : l'emoji seul, sans la pastille de couleur de la lettre */
 .navm-tree-mono--emoji { background: transparent; font-size: 17px; line-height: 1; }
+.navm-tree-mono--photo { background: transparent; overflow: hidden; }

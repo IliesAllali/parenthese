@@ -59,10 +59,17 @@ export default {
   "{name} le gère avec vous. Cette personne n’y aura plus accès, la famille non plus.": "{name} verwaltet ihn mit dir. Diese Person verliert den Zugang, die Familie auch.",
   // Fiche : droits retirés pendant une modification (PersonCard)
   "Vous ne pouvez plus modifier cet arbre. Rechargez la page pour voir vos droits actuels.": "Du kannst diesen Stammbaum nicht mehr bearbeiten. Lade die Seite neu, um deine aktuellen Rechte zu sehen.",
-  // Icône de l'arbre (AdminPanel) et bouton du bas (ContextualNavbar)
-  "Icône de l'arbre": "Symbol des Stammbaums",
+  // Visuel de l'arbre (TreeVisualField) et bouton du bas (ContextualNavbar)
+  "Visuel de l'arbre": "Bild des Stammbaums",
   "Première lettre": "Anfangsbuchstabe",
-  "Elle remplace la première lettre dans vos menus et sur la page d'invitation.": "Es ersetzt den Anfangsbuchstaben in deinen Menüs und auf der Einladungsseite.",
+  "Icône": "Symbol",
+  "Icônes": "Symbole",
+  "Changer d'icône": "Symbol ändern",
+  "Changer de photo": "Foto ändern",
+  "Comme dans vos menus et sur la page de la famille": "So erscheint es in deinen Menüs und auf der Seite der Familie",
+  "La photo sera retirée en enregistrant.": "Das Foto wird beim Speichern entfernt.",
+  "Photo de l'arbre enregistrée.": "Foto des Stammbaums gespeichert.",
+  "Cadrage enregistré.": "Ausschnitt gespeichert.",
   // Erreurs (errorMessages.js)
   "Cette invitation est pour une autre adresse. Utilisez l'adresse à laquelle vous avez été invité.": "Diese Einladung gilt für eine andere Adresse. Verwende die Adresse, an die die Einladung ging.",
   "Ce lien d'invitation ne marche plus. Demandez-en un nouveau à la personne qui vous a invité.": "Dieser Einladungslink funktioniert nicht mehr. Bitte die Person, die dich eingeladen hat, um einen neuen.",

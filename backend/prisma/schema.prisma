@@ -134,8 +134,13 @@ model Tree {
   slug                   String                  @unique
   name                   String
   description            String?
-  // Icône choisie pour l'arbre (un emoji), à la place de la première lettre dans les menus ; null = la lettre
+  // Visuel de l'arbre, un seul à la fois : la photo, sinon l'icône (un emoji), sinon la première lettre du nom
   icon                   String?
+  // Photo de l'arbre : l'original dans le dossier de l'arbre, cadré à l'affichage comme un portrait
+  imagePath              String?
+  imageMimeType          String?
+  imageCrop              Json?
+  imageUpdatedAt         DateTime?
   rootPersonId           String?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt

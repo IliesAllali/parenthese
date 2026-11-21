@@ -69,7 +69,18 @@
 
 /* Arbre avec une icône choisie : l'emoji seul, sans la pastille de couleur de la lettre */
 .pz-tree-mono--emoji { background: transparent; font-size: 22px; line-height: 1; }
-.invite-tree-icon { font-size: 30px; line-height: 1; }
+/* Arbre avec une photo : la photo recadrée remplit la pastille */
+.pz-tree-mono--photo { background: transparent; overflow: hidden; }
+
+/* Visuel de l'arbre en tête de la porte (lien partagé) et de l'invitation d'un gestionnaire */
+.gate-tree-mark,
+.invite-tree-mark {
+  width: 56px; height: 56px; margin-bottom: 14px; display: grid; place-items: center; overflow: hidden;
+  border-radius: 16px; background: var(--pz-a100); color: var(--pz-a700); font: 400 28px/1 var(--pz-serif);
+}
+.gate-tree-mark--emoji,
+.invite-tree-mark--emoji { background: var(--pz-a50); font-size: 30px; }
+.invite-tree-mark--photo { background: transparent; }
 
 /* Connexion par le fournisseur reliée au compte (OIDC) */
 .account-oidc-linked { margin: 8px 0 0; font: 400 13px var(--pz-sans); color: var(--pz-muted); }

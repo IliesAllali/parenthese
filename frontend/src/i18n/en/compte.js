@@ -4,7 +4,6 @@
 export default {
   // Écran d'accès par mot de passe (AccessGate)
   "Cet arbre est *introuvable*": "This tree *can't be found*",
-  "Ouvrir {slot}": "Open {slot}",
   "Ouvrir un arbre *partagé*": "Open a *shared* tree",
   "Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé.": "The link may be incomplete, or the tree may have been deleted. Ask the person who sent it for a new link.",
   "Entrez le code et le mot de passe reçus avec votre lien de partage.": "Enter the code and password that came with your share link.",
