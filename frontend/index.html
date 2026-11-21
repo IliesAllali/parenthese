@@ -8,8 +8,8 @@
     <meta name="description" content="Parenthèse, l'application. Les arbres partagés sont privés : la vitrine publique est sur parenthese.io." />
     <!-- Arbres familiaux privés (noms, dates) : l'app ne doit pas être indexée, la vitrine est parenthese.io -->
     <meta name="robots" content="noindex, nofollow" />
-    <!-- Aperçu d'un lien collé dans WhatsApp, Messenger, iMessage… : le même pour toutes les adresses de l'app.
-         Rien ne vient de l'arbre partagé (ni nom de famille, ni photo) : les robots d'aperçu ne reçoivent que ce texte et l'image de la démo. -->
+    <!-- Aperçu d'un lien collé dans WhatsApp, Messenger, iMessage… : celui-ci pour toutes les adresses de l'app,
+         sauf /arbre/… : l'API y remplace le titre et l'image par le nom de l'arbre et son cadre (backend, routes/public.ts). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Parenthèse" />
     <meta property="og:locale" content="fr_FR" />

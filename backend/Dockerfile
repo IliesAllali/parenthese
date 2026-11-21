@@ -50,6 +50,8 @@ RUN PRISMA_VERSION="$(node -p "require('./package-lock.json').packages['node_mod
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY --from=build /app/dist ./dist
+# Police et icônes de l'image d'aperçu d'un lien partagé (src/lib/link-preview.ts)
+COPY assets ./assets
 
 RUN mkdir -p /app/storage/media && chown -R node:node /app/storage
 

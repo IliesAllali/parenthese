@@ -86,6 +86,9 @@ const envSchema = z.object({
   // même adresse) ; à renseigner quand le front a sa propre adresse (développement).
   OIDC_APP_URL: z.string().trim().default(''),
   OIDC_SCOPES: z.string().default('openid email profile'),
+  // Page de l'app (frontend/dist/index.html) que /arbre/… renvoie avec l'aperçu du lien (balises og) de l'arbre.
+  // Par défaut celle du dépôt, à côté du dossier backend (pm2 lance l'API depuis backend/).
+  FRONTEND_INDEX_PATH: z.string().trim().default(''),
   // Nom du bouton « Se connecter avec … »
   OIDC_PROVIDER_NAME: z.string().trim().max(40).default('SSO'),
   // Un compte n'est créé ou relié par son email que si le fournisseur le dit vérifié (email_verified). À false
