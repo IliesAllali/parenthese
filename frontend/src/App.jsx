@@ -8,7 +8,7 @@ import { findSelfCandidates, hasAnsweredSelf, markSelfAnswered } from './utils/s
 import { readContributorName, saveContributorName } from './utils/contributorName.js'
 import { datePrecisionsOf } from './utils/dateInput.js'
 import { HELP_URL } from './utils/siteLinks.js'
-import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
+import { fullNameLabel, setSurnameUppercase, shortNameLabel, surnameLabel } from './utils/personName.js'
 import { setPortraitShape } from './utils/portraitCrop.js'
 import { useUndoable } from './hooks/useUndoable.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
@@ -471,13 +471,13 @@ function buildContribChangesList(draft = {}) {
 
   for (const entry of addedPersonEntries) {
     const d = entry && typeof entry === 'object' ? entry : (draft.modifiedPersons?.[String(entry)] || {})
-    const name = `${d.firstName || ''} ${surnameLabel(d.lastName)}`.trim() || t('Nouvelle personne')
+    const name = fullNameLabel(d, { unknown: false }) || t('Nouvelle personne')
     items.push({ entityType: 'person', action: 'create', label: name })
   }
 
   for (const [id, d] of Object.entries(draft.modifiedPersons || {})) {
     if (addedPersonIds.includes(String(id))) continue
-    const name = `${d.firstName || ''} ${surnameLabel(d.lastName)}`.trim() || t('Personne')
+    const name = fullNameLabel(d, { unknown: false }) || t('Personne')
     items.push({ entityType: 'person', action: 'update', label: name })
   }
 
@@ -829,7 +829,7 @@ function App() {
 
   const accountDisplayName = useMemo(() => {
     if (linkedSelfPerson) {
-      const fullName = `${linkedSelfPerson.firstName || ''} ${surnameLabel(linkedSelfPerson.lastName)}`.trim()
+      const fullName = fullNameLabel(linkedSelfPerson, { unknown: false })
       if (fullName) {
         return fullName
       }
@@ -1127,7 +1127,7 @@ function App() {
     const saveOnLeave = personSaveOnLeaveRef.current
     if (!current || !saveOnLeave || isDemoMode) return true
     const outcome = await saveOnLeave()
-    if (outcome === 'saved') setDraftNotice(t('Modifications de {name} enregistrées', { name: firstNameLabel(current) }))
+    if (outcome === 'saved') setDraftNotice(t('Modifications de {name} enregistrées', { name: shortNameLabel(current) }))
     return outcome !== 'blocked'
   }, [tree.selectedPerson, isDemoMode])
 
@@ -1396,7 +1396,7 @@ function App() {
   const openKinForm = useCallback(async ({ type, person, sex = null, query = '', via = 'menu' }) => {
     if (!person) return
     const [first = '', ...rest] = String(query).trim().split(/\s+/)
-    const personName = [person.firstName, surnameLabel(person.lastName)].filter(Boolean).join(' ')
+    const personName = fullNameLabel(person, { unknown: false })
     const parents = type === 'parent' ? getParents(person.id) : []
     // Le second parent : son sexe se déduit du premier, et les deux forment un couple
     const coParent = parents.length === 1 ? parents[0] : null
@@ -1468,7 +1468,7 @@ function App() {
           const links = getSiblingParentLinks(rel.personId, filiations, unions)
           if (links.length === 0) {
             const sibling = persons.find((person) => String(person.id) === String(rel.personId))
-            const siblingName = [sibling?.firstName, surnameLabel(sibling?.lastName)].filter(Boolean).join(' ')
+            const siblingName = fullNameLabel(sibling, { unknown: false })
             setAddPersonError(siblingName
               ? t("Ajoutez d'abord un parent à {name} pour pouvoir lui rattacher un frère ou une sœur.", { name: siblingName })
               : t("Ajoutez d'abord un parent à cette personne pour pouvoir lui rattacher un frère ou une sœur."))
@@ -1608,7 +1608,7 @@ function App() {
           // fois avec le bouton « Envoyer » de la barre (Patch, 25/10). Avant, la fenêtre d'envoi s'ouvrait d'office,
           // seule façon de montrer qu'un ajout invisible comptait.
           setAddPersonPanelVisible(false)
-          setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: [formData.firstName, surnameLabel(formData.lastName)].filter(Boolean).join(' ') || t('Nouvelle personne') }))
+          setDraftNotice(t("{name} est sur l'arbre, en brouillon. Envoyez quand vous avez fini.", { name: fullNameLabel(formData, { unknown: false }) || t('Nouvelle personne') }))
           return { proposed: true, id: isDemoMode ? null : `ghost:brouillon:${ref}`, demoPerson: isDemoMode ? persons[persons.length - 1] : null }
         }
 
@@ -2331,7 +2331,7 @@ function App() {
       if (ownTree && !accessToken) return
 
       const target = persons.find((candidate) => String(candidate.id) === String(personId))
-      const name = target ? firstNameLabel(target) : ''
+      const name = target ? shortNameLabel(target) : ''
       // Accordé quand le sexe est connu, « supprimé·e » seulement quand il ne l'est pas
       const sex = target?.sex
       const snapshot = removePersonFromGraph(personId)
@@ -2400,7 +2400,7 @@ function App() {
       .filter((tag) => String(tag.personId) !== String(removed.personId))
       .map((tag) => persons.find((candidate) => String(candidate.id) === String(tag.personId)))
       .filter(Boolean)
-      .map((person) => firstNameLabel(person))
+      .map((person) => shortNameLabel(person))
     if (!removeMedia()) return
     tree.bumpGraphRevision()
     undoable.start({
@@ -3984,7 +3984,7 @@ function App() {
         userEmail={accountEmail}
         userAvatarPhoto={accountAvatarPhoto}
         userAvatarCrop={linkedSelfPerson?.avatarCrop ?? null}
-        linkedPersonName={linkedSelfPerson ? `${linkedSelfPerson.firstName || ''} ${surnameLabel(linkedSelfPerson.lastName)}`.trim() : ''}
+        linkedPersonName={linkedSelfPerson ? fullNameLabel(linkedSelfPerson, { unknown: false }) : ''}
         activeTreeName={activeAccountTreeName}
         annotationTools={editMode.isActive ? {
           activeTool: annot.activeTool,

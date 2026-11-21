@@ -6,7 +6,7 @@
 // enfant), limitée aux années où la personne a vécu. Une fiche sans aucun événement a donc déjà une frise.
 
 import { t, dateLocale } from '../i18n/index.js'
-import { firstNameLabel, fullNameLabel } from './personName.js'
+import { fullNameLabel, shortNameLabel } from './personName.js'
 import { formatPlace } from './place.js'
 import { ageInYears } from './age.js'
 
@@ -103,18 +103,18 @@ const ageAt = (birth, end) => {
 const joinMeta = (...parts) => parts.filter(Boolean).join(' · ')
 
 // Le prénom d'un proche, cliquable dans la frise : il ouvre sa fiche
-const linkTo = (p, name = firstNameLabel(p)) => (p?.id != null && name ? { personId: p.id, name } : null)
+const linkTo = (p, name = shortNameLabel(p)) => (p?.id != null && name ? { personId: p.id, name } : null)
 
 const parentWord = (p) => {
-  if (p.sex === 'male' || p.sex === 'M') return t('Décès de son père {name}', { name: firstNameLabel(p) })
-  if (p.sex === 'female' || p.sex === 'F') return t('Décès de sa mère {name}', { name: firstNameLabel(p) })
-  return t('Décès de {name}, son parent', { name: firstNameLabel(p) })
+  if (p.sex === 'male' || p.sex === 'M') return t('Décès de son père {name}', { name: shortNameLabel(p) })
+  if (p.sex === 'female' || p.sex === 'F') return t('Décès de sa mère {name}', { name: shortNameLabel(p) })
+  return t('Décès de {name}, son parent', { name: shortNameLabel(p) })
 }
 
 const siblingWord = (p) => {
-  if (p.sex === 'male' || p.sex === 'M') return t('Naissance de son frère {name}', { name: firstNameLabel(p) })
-  if (p.sex === 'female' || p.sex === 'F') return t('Naissance de sa sœur {name}', { name: firstNameLabel(p) })
-  return t('Naissance de {name}, sa fratrie', { name: firstNameLabel(p) })
+  if (p.sex === 'male' || p.sex === 'M') return t('Naissance de son frère {name}', { name: shortNameLabel(p) })
+  if (p.sex === 'female' || p.sex === 'F') return t('Naissance de sa sœur {name}', { name: shortNameLabel(p) })
+  return t('Naissance de {name}, sa fratrie', { name: shortNameLabel(p) })
 }
 
 /**
@@ -190,7 +190,7 @@ export function buildLifeTimeline(person, family = {}, life = null) {
     }
     if (union.partner && within(yearOf(union.partner.deathDate) ?? union.partner.deathYear)) {
       const year2 = yearOf(union.partner.deathDate) ?? union.partner.deathYear
-      out.push({ key: `partner-death-${union.id}`, year: year2, order: 4, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(union.partner) }), link: linkTo(union.partner) })
+      out.push({ key: `partner-death-${union.id}`, year: year2, order: 4, kind: 'fam', title: t('Décès de {name}', { name: shortNameLabel(union.partner) }), link: linkTo(union.partner) })
     }
   }
 
@@ -200,7 +200,7 @@ export function buildLifeTimeline(person, family = {}, life = null) {
     let title = eventTitle(event)
     if (event.unionId) {
       const union = (family.unions || []).find((u) => String(u.id) === String(event.unionId))
-      if (union?.partner && ['divorce', 'annulment', 'engagement', 'marriage_contract'].includes(event.type)) title = `${title} (${firstNameLabel(union.partner)})`
+      if (union?.partner && ['divorce', 'annulment', 'engagement', 'marriage_contract'].includes(event.type)) title = `${title} (${shortNameLabel(union.partner)})`
     }
     out.push({
       key: `event-${event.id}`, year, order: 1, kind: 'minor', title,
@@ -214,9 +214,9 @@ export function buildLifeTimeline(person, family = {}, life = null) {
 
   for (const child of family.children || []) {
     const year = yearOf(child.birthDate) ?? child.birthYear
-    if (within(year)) out.push({ key: `child-${child.id}`, year, order: 5, kind: 'fam', title: t('Naissance de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
+    if (within(year)) out.push({ key: `child-${child.id}`, year, order: 5, kind: 'fam', title: t('Naissance de {name}', { name: shortNameLabel(child) }), link: linkTo(child) })
     const death = yearOf(child.deathDate) ?? child.deathYear
-    if (within(death)) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: firstNameLabel(child) }), link: linkTo(child) })
+    if (within(death)) out.push({ key: `child-death-${child.id}`, year: death, order: 6, kind: 'fam', title: t('Décès de {name}', { name: shortNameLabel(child) }), link: linkTo(child) })
   }
   for (const sibling of family.siblings || []) {
     const year = yearOf(sibling.birthDate) ?? sibling.birthYear

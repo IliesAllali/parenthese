@@ -1,4 +1,4 @@
-import { surnameLabel } from '../utils/personName.js'
+import { fullNameLabel } from '../utils/personName.js'
 import { useEffect, useState } from 'react'
 import { buildMediaUrl } from '../utils/mediaToken.js'
 import { API_BASE_URL } from '../api/client'
@@ -119,11 +119,11 @@ function nameOfPersonRef(id, sessionChanges = []) {
   const key = String(id)
   if (key.startsWith('tmp:')) {
     const added = sessionChanges.find((c) => c.entityType === 'person' && c.afterJson?.ref === key)
-    const name = `${added?.afterJson?.firstName || ''} ${surnameLabel(added?.afterJson?.lastName)}`.trim()
+    const name = fullNameLabel(added?.afterJson, { unknown: false })
     return name || t('la nouvelle personne')
   }
   const person = treePersons.find((candidate) => String(candidate.id) === key)
-  const name = `${person?.firstName || ''} ${surnameLabel(person?.lastName)}`.trim()
+  const name = fullNameLabel(person, { unknown: false })
   return name || null
 }
 
@@ -167,7 +167,7 @@ function getPersonDisplayName(change, sessionChanges = []) {
   const before = change.beforeJson && typeof change.beforeJson === 'object' ? change.beforeJson : null
   if (!after && !before) return null
   const data = { ...before, ...after }
-  const name = `${data.firstName || ''} ${surnameLabel(data.lastName)}`.trim()
+  const name = fullNameLabel(data, { unknown: false })
   return name || null
 }
 

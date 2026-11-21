@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 import SearchResultsDropdown from './SearchResultsDropdown'
+import { isSearchable } from '../../hooks/usePersonSearch'
 import './ExpandableSearch.css'
 import { t } from '../../i18n/index.js'
 import { isCommandK, withShortcut } from '../../utils/shortcuts.js'
@@ -153,7 +154,7 @@ function ExpandableSearch({
           </div>
 
           {/* Dropdown résultats */}
-          {query.trim().length >= 2 && !resultsHidden && (
+          {isSearchable(query) && !resultsHidden && (
             <SearchResultsDropdown
               results={results}
               query={query}

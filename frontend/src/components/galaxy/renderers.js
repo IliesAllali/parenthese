@@ -12,7 +12,7 @@ import {
 } from './constants'
 import { getEntranceProgress, drawPartialBezier } from './utils'
 import { fitNickname } from '../../utils/nickname.js'
-import { firstNameLabel, isFirstNameUnknown, surnameLabel } from '../../utils/personName.js'
+import { firstNameLabel, isFirstNameUnknown, shortNameLabel, surnameLabel } from '../../utils/personName.js'
 import { blurhashCanvas } from '../../utils/blurhash.js'
 import { birthdayToday, localDayKey } from '../../utils/birthday.js'
 
@@ -673,12 +673,14 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
 
   // Prénom inconnu : libellé en italique (pas de prénom à afficher sinon)
   const nameUnknown = isFirstNameUnknown(person)
-  const nameLabel = nameUnknown ? firstNameLabel(person) : person.firstName
+  // Un prénom chinois ne se dit pas seul : le nom entier, nom de famille d'abord (#258), sans ligne du nom en dessous
+  const nameLabel = nameUnknown ? firstNameLabel(person) : shortNameLabel(person)
+  const wholeName = !nameUnknown && nameLabel !== String(person.firstName).trim()
   ctx.font = `${nameUnknown ? 'italic ' : ''}400 13px "Newsreader", Georgia, serif`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   // Réglage « nom de famille sous le prénom » (#168) : celui de naissance s'il est connu, coupé comme le surnom
-  const familyName = fullNames && withDetail ? surnameLabel(person.birthName || person.lastName) : ''
+  const familyName = fullNames && withDetail && !wholeName ? surnameLabel(person.birthName || person.lastName) : ''
   const familyLabel = familyName ? fitNickname(ctx, familyName, NICKNAME_MAX_W) : ''
   const lineShift = familyLabel ? 15 : 0
   if (nameLabel) {

@@ -1,4 +1,5 @@
-import { firstNameLabel, fullNameLabel, surnameLabel } from '../utils/personName.js'
+import { fullNameLabel } from '../utils/personName.js'
+import PersonName from './PersonName.jsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Search, Unlink, UserRound, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -246,7 +247,7 @@ const ImmichFacePanel = ({ person, treeId, token, onClose, onImmichChange }) => 
       <div className="pz-modal immich-modal-card" role="dialog" aria-modal="true" aria-labelledby="immichFaceTitle">
         <div className="pz-modal-head">
           <p className="pz-eyebrow">{t('Reconnaissance des visages')}</p>
-          <h1 id="immichFaceTitle" className="pz-title">{firstNameLabel(person)} <em>{surnameLabel(person.lastName)}</em></h1>
+          <h1 id="immichFaceTitle" className="pz-title"><PersonName person={person} /></h1>
         </div>
         <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pz-modal-close" onClick={onClose} aria-label={t('Fermer')}>
           <X size={18} aria-hidden="true" />

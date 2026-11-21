@@ -1,6 +1,6 @@
 import './SearchResultsDropdown.css'
+import PersonName from '../PersonName.jsx'
 import { t } from '../../i18n/index.js'
-import { firstNameLabel, surnameLabel } from '../../utils/personName.js'
 import PortraitThumb from '../PortraitThumb.jsx'
 
 // Raison du match renvoyée par usePersonSearch (valeur française), traduite à l'affichage
@@ -72,7 +72,7 @@ function SearchResultsDropdown({
             {/* Info personne */}
             <div className="search-result-info">
               <div className="search-result-name">
-                {firstNameLabel(person)} <span className="search-result-lastname">{surnameLabel(person.lastName)}</span>
+                <PersonName person={person} lastClassName="search-result-lastname" />
               </div>
               <div className="search-result-meta">
                 {person.birthYear && <span className="search-result-year">{person.birthYear}{person.deathYear ? `–${person.deathYear}` : ''}</span>}

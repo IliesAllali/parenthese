@@ -1,7 +1,8 @@
 import { X } from 'lucide-react'
 
 import { t, dateLocale } from '../i18n/index.js'
-import { firstNameLabel, surnameLabel } from '../utils/personName.js'
+import { fullNameLabel } from '../utils/personName.js'
+import PersonName from './PersonName.jsx'
 import PzBusy from './PzBusy'
 import './ProposalCard.css'
 import NoPhotoPortrait from './NoPhotoPortrait.jsx'
@@ -73,7 +74,7 @@ function ReviewActions({ ghost, review }) {
 export default function ProposalCard({ person, summary = '', review = null, onClose }) {
   const ghost = person?.ghost
   const years = [person?.birthYear, person?.deathYear].filter(Boolean).join(' – ')
-  const name = [firstNameLabel(person), surnameLabel(person?.lastName)].filter(Boolean).join(' ')
+  const name = fullNameLabel(person)
   return (
     <div className="person-card proposal-card" role="dialog" aria-label={t('Proposition : {name}', { name })}>
       <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon pc-close" onClick={onClose} aria-label={t('Fermer')}>
@@ -86,8 +87,7 @@ export default function ProposalCard({ person, summary = '', review = null, onCl
         <div className="pc-id">
           <p className="pz-eyebrow proposal-eyebrow">{ghost?.source === 'draft' ? t('Brouillon') : ghost?.source === 'sent' ? t('En attente') : t('Proposition')}</p>
           <h2 className="pc-name">
-            {person?.firstName ? person.firstName : <span className="pc-name-unknown">{firstNameLabel(person)}</span>}
-            {person?.lastName && <>{' '}<em>{surnameLabel(person.lastName)}</em></>}
+            <PersonName person={person} unknownClassName="pc-name-unknown" />
           </h2>
           {years && <p className="proposal-years">{years}</p>}
         </div>

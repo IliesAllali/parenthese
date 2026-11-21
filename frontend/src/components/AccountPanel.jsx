@@ -1,4 +1,5 @@
-import { firstNameLabel, surnameLabel } from '../utils/personName.js'
+import { fullNameLabel } from '../utils/personName.js'
+import PersonName from './PersonName.jsx'
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import './AccountScreens.css'
@@ -37,7 +38,7 @@ const AccountPanel = ({
   }
 
   const displayName = linkedPerson
-    ? `${linkedPerson.firstName || ''} ${surnameLabel(linkedPerson.lastName)}`.trim()
+    ? fullNameLabel(linkedPerson, { unknown: false })
     : userDisplayName || (userEmail ? t('Mon compte') : t('Qui êtes-vous dans cet arbre ?'))
 
   return (
@@ -92,7 +93,7 @@ const AccountPanel = ({
                     <span className="ap-item-avatar" aria-hidden="true">
                       {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <NoPhotoPortrait />}
                     </span>
-                    <span className="ap-item-name">{firstNameLabel(person)} <em>{surnameLabel(person.lastName)}</em></span>
+                    <span className="ap-item-name"><PersonName person={person} /></span>
                     {isSelected && <span className="pz-tag pz-tag--accent">{t("C'est moi")}</span>}
                   </button>
                 )

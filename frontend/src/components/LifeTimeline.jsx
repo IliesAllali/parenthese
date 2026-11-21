@@ -7,7 +7,7 @@ import { blurPlaceholder } from '../utils/blurhash.js'
 import Skeleton from './Skeleton.jsx'
 import { useVideoThumbnail } from '../hooks/useVideoThumbnail.js'
 import './VideoThumb.css'
-import { firstNameLabel } from '../utils/personName.js'
+import { shortNameLabel } from '../utils/personName.js'
 
 // Onglet Vie de la fiche : naissance, unions et décès en grands repères, les autres événements
 // plus petits entre eux, la famille proche en retrait. Les sources restent repliées.
@@ -124,7 +124,7 @@ export default function LifeTimeline({
     if (loading && !life) return <Skeleton variant="timeline" count={3} label={t('Chargement de la frise')} />
     return (
       <div className="pc-empty">
-        <p className="pz-sub">{t('Pas encore de date connue pour {name}.', { name: firstNameLabel(person) })}</p>
+        <p className="pz-sub">{t('Pas encore de date connue pour {name}.', { name: shortNameLabel(person) })}</p>
         <p className="pz-small">{t('Les dates de naissance, d’union et de décès, et celles de sa famille, apparaîtront ici.')}</p>
         {noticeLine}
         {addButton}

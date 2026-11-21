@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Check, Search, UserPlus, X } from 'lucide-react'
 import { t } from '../i18n/index.js'
-import { firstNameLabel, fullNameLabel } from '../utils/personName.js'
+import { fullNameLabel, shortNameLabel } from '../utils/personName.js'
 import './MediaPeople.css'
 import PortraitThumb from './PortraitThumb.jsx'
 
@@ -21,7 +21,7 @@ export function MediaPeopleMarkers({ people, getPerson, activeId = null, hotId =
   return people.filter((tag) => tag.x != null && tag.y != null).map((tag) => {
     const person = getPerson(tag.personId)
     if (!person) return null
-    const name = firstNameLabel(person)
+    const name = shortNameLabel(person)
     return (
       <button
         key={tag.personId}
@@ -82,7 +82,7 @@ export function MediaPeopleList({
             onBlur={() => onHover?.(null)}
           >
             <PersonAvatar person={person} />
-            <span>{firstNameLabel(person)}</span>
+            <span>{shortNameLabel(person)}</span>
           </button>
         ))}
       </div>
@@ -113,7 +113,7 @@ export function MediaPeopleList({
                     </span>
                   )}
                 </button>
-                <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon mp-edit-remove" onClick={() => onRemove?.(person.id)} aria-label={t('Retirer {name}', { name: firstNameLabel(person) })}>
+                <button type="button" className="pz-btn pz-btn--ghost pz-btn--icon mp-edit-remove" onClick={() => onRemove?.(person.id)} aria-label={t('Retirer {name}', { name: shortNameLabel(person) })}>
                   <X size={15} strokeWidth={2} />
                 </button>
               </li>
