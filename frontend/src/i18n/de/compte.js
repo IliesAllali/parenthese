@@ -4,7 +4,6 @@
 export default {
   // Écran d'accès par mot de passe (AccessGate)
   "Cet arbre est *introuvable*": "Dieser Stammbaum ist *nicht auffindbar*",
-  "Ouvrir {slot}": "{slot} öffnen",
   "Ouvrir un arbre *partagé*": "Einen *geteilten* Stammbaum öffnen",
   "Le lien est peut-être incomplet, ou l'arbre a été supprimé. Demandez un nouveau lien à la personne qui vous l'a envoyé.": "Vielleicht ist der Link unvollständig oder der Stammbaum wurde gelöscht. Bitte die Person, die ihn dir geschickt hat, um einen neuen Link.",
   "Entrez le code et le mot de passe reçus avec votre lien de partage.": "Gib den Code und das Passwort ein, die du mit deinem Link bekommen hast.",

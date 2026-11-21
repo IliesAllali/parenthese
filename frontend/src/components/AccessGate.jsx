@@ -61,7 +61,8 @@ const AccessGate = ({
               <>
                 {treeName && <TreeMark base="gate-tree-mark" name={treeName} icon={treeIcon} />}
                 <h1 className="pz-title">
-                  {treeName ? richText(t('Ouvrir {slot}'), <em>{treeName}</em>) : richText(t('Ouvrir un arbre *partagé*'))}
+                  {/* Le nom de l'arbre seul, sous son visuel : le verbe reste sur le bouton « Voir l'arbre » (Patch, 21/11) */}
+                {treeName || richText(t('Ouvrir un arbre *partagé*'))}
                 </h1>
               </>
             )}

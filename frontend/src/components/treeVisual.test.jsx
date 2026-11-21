@@ -92,11 +92,20 @@ describe('où le visuel apparaît', () => {
     expect(html).toContain('🌳')
   })
 
-  it('la porte de la famille montre l’icône au-dessus du nom', () => {
+  it('la porte de la famille montre l’icône, puis le nom de l’arbre seul en titre ; le verbe reste sur le bouton', () => {
     const html = clean(renderToStaticMarkup(
       <AccessGate initialTreeId="t1" treeName="Famille Martin" treeIcon="⛵" loading={false} onSubmit={noop} />,
     ))
     expect(html).toContain('gate-tree-mark--emoji')
     expect(html).toContain('⛵')
+    expect(html).toMatch(/<h1 class="pz-title">Famille Martin<\/h1>/)
+    expect(html).not.toContain('Ouvrir')
+    expect(html).toContain("Voir l'arbre")
+  })
+
+  it('sans nom, la porte garde « Ouvrir un arbre partagé »', () => {
+    const html = clean(renderToStaticMarkup(<AccessGate loading={false} onSubmit={noop} />))
+    expect(html).toContain('Ouvrir un arbre <em>partagé</em>')
+    expect(html).not.toContain('gate-tree-mark')
   })
 })
