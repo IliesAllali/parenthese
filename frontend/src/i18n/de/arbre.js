@@ -11,6 +11,11 @@ export default {
   "Le nom de naissance quand il est connu, sinon le nom d'usage. Réglage de ce navigateur.": "Der Geburtsname, wenn er bekannt ist, sonst der aktuelle Nachname. Gilt für diesen Browser.",
   "Les noms de famille en capitales": "Nachnamen in Großbuchstaben",
   "Jeanne MARTIN plutôt que Jeanne Martin, pour toute la famille. Les noms restent enregistrés comme ils ont été tapés.": "Johanna SCHMIDT statt Johanna Schmidt, für die ganze Familie. Die Namen bleiben so gespeichert, wie sie eingetippt wurden.",
+  "Forme des portraits": "Form der Porträts",
+  "Variées": "Gemischt",
+  "Rondes": "Rund",
+  "Carrées": "Eckig",
+  "Variées : ronde, rectangle ou polaroïd selon la personne et sa photo. Le choix vaut pour toute la famille ; une forme choisie en recadrant une photo reste la sienne.": "Gemischt: rund, rechteckig oder Polaroid, je nach Person und Foto. Die Wahl gilt für die ganze Familie; eine beim Zuschneiden gewählte Form bleibt erhalten.",
   // Arbre sur canvas (components/galaxy/renderers.js)
   "Voir les parents": "Eltern anzeigen",
   "Voir {firstName}": "{firstName} anzeigen",

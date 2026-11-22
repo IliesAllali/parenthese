@@ -8,6 +8,7 @@ import { readContributorName, saveContributorName } from './utils/contributorNam
 import { datePrecisionsOf } from './utils/dateInput.js'
 import { HELP_URL } from './utils/siteLinks.js'
 import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
+import { setPortraitShape } from './utils/portraitCrop.js'
 import { useUndoable } from './hooks/useUndoable.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
 import { readShareKey } from './utils/shareKey.js'
@@ -697,8 +698,9 @@ function App() {
   })
 
   const buildEmptyTreeContext = useCallback((overrides = {}) => {
-    // Sans arbre ouvert, les noms s'affichent tels qu'ils ont été tapés
+    // Sans arbre ouvert, les noms s'affichent tels qu'ils ont été tapés, les portraits dans leurs formes variées
     setSurnameUppercase(false)
+    setPortraitShape('varied')
     return {
     treeId: '',
     treeName: '',
@@ -710,6 +712,7 @@ function App() {
     rootPersonId: null,
     accessToken: '',
     surnameUppercase: false,
+    portraitShape: 'varied',
     ...overrides,
     }
   }, [])
@@ -4036,6 +4039,7 @@ function App() {
         familyTabs={familyTabs}
         fullNames={fullNames}
         surnameUppercase={tree.treeContext.surnameUppercase}
+        portraitShape={tree.treeContext.portraitShape}
         annotationViewRef={annotationViewRef}
         onAnnotationsAnchored={persistAnnotationAnchors}
         selfPersonId={linkedSelfPersonId || null}
@@ -4234,6 +4238,8 @@ function App() {
         onFullNamesChange={setFullNames}
         surnameUppercase={tree.treeContext.surnameUppercase}
         onSurnameUppercaseChange={(on) => { setSurnameUppercase(on); tree.setTreeContext((current) => ({ ...current, surnameUppercase: on })) }}
+        portraitShape={tree.treeContext.portraitShape}
+        onPortraitShapeChange={(shape) => { setPortraitShape(shape); tree.setTreeContext((current) => ({ ...current, portraitShape: shape })) }}
       />
       <PhotoStartPanel
         visible={photoStart.visible}

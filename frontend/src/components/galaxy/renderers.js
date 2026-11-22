@@ -996,10 +996,11 @@ function drawMediaContent(ctx, media, ms, imageCache) {
 // ============================================================
 // Dessiner le cadre photo (polaroid, rect, round)
 // ============================================================
-// Forme choisie au recadrage d'abord ; sinon une photo très large ou très haute impose la sienne, et une photo
-// carrée ou presque garde la forme tirée au hasard pour la personne (pickFrameType), pour que l'arbre ne soit
-// pas uniforme. Même règle que la fenêtre de recadrage (portraitCrop.js).
-function resolveFrameType(person, img) {
+// Forme choisie au recadrage d'abord ; puis la forme réglée pour l'arbre, la même pour tous (la photo y est
+// recadrée). En « variées », une photo très large ou très haute impose la sienne, et une photo carrée ou
+// presque garde la forme tirée au hasard pour la personne (pickFrameType), pour que l'arbre ne soit pas
+// uniforme. Même règle que la fenêtre de recadrage (portraitCrop.js).
+export function resolveFrameType(person, img) {
   const ratio = img?.naturalWidth && img?.naturalHeight ? img.naturalWidth / img.naturalHeight : 1
   return resolveFrameKind(person.frameType || 'round', ratio, cropShape(person.avatarCrop))
 }

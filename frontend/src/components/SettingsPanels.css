@@ -340,3 +340,8 @@ body:has(.family-tabs):has(.edit-mode-toast) .contrib-success-toast { top: 124px
   .contrib-field-label { width: 88px; }
 }
 .tm-share-btn { justify-self: start; }
+
+/* Forme des portraits : un réglage de l'arbre parmi les cases de l'Affichage, quatre choix en onglets */
+.ts-portrait-shape { padding: 14px; border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); }
+.ts-portrait-shapes { margin-top: 8px; }
+.ts-portrait-shapes .pz-tab { white-space: nowrap; padding: 0 8px; }

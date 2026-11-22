@@ -7,16 +7,33 @@ export const DEFAULT_CROP = { x: 0.5, y: 0.5, zoom: 1 }
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
-// Formes qu'on choisit au recadrage, gardées dans le cadrage (crop.shape). Sans choix, la forme suit la photo
-// (très large ou très haute) ou le cadre tiré au hasard pour la personne.
+// Formes qu'on choisit au recadrage, gardées dans le cadrage (crop.shape). Sans choix, la forme réglée pour
+// l'arbre, sinon la photo (très large ou très haute) ou le cadre tiré au hasard pour la personne.
 const FRAME_SHAPES = ['round', 'square', 'polaroid', 'portrait', 'landscape']
 export const cropShape = (crop) => (FRAME_SHAPES.includes(crop?.shape) ? crop.shape : null)
 
+// Forme des portraits choisie pour tout l'arbre (Paramètres de l'arbre, Affichage), reçue avec le graphe.
+// 'varied' : une forme par personne, comme avant ; 'round', 'square', 'polaroid' : la même pour tous.
+export const PORTRAIT_SHAPES = ['varied', 'round', 'square', 'polaroid']
+let treePortraitShape = 'varied'
+
+export const portraitShapeOf = (value) => (PORTRAIT_SHAPES.includes(value) ? value : 'varied')
+
+export function setPortraitShape(value) {
+  treePortraitShape = portraitShapeOf(value)
+}
+
+export function getPortraitShape() {
+  return treePortraitShape
+}
+
 // Forme du cadre dans le canevas : même règle que resolveFrameType et drawFrame (renderers.js).
-// La forme choisie l'emporte ; sinon une photo très large ou très haute change la forme, et à défaut
+// La forme choisie au recadrage l'emporte. Sinon, une forme réglée pour l'arbre s'applique à tous et la photo
+// est recadrée à cette forme. En « variées », une photo très large ou très haute change la forme, et à défaut
 // le cadre tiré pour la personne (frameType) reste.
-export function resolveFrameKind(frameType, imageRatio, shape = null) {
+export function resolveFrameKind(frameType, imageRatio, shape = null, treeShape = treePortraitShape) {
   if (shape) return shape === 'portrait' || shape === 'landscape' ? 'rect' : shape
+  if (treeShape !== 'varied' && PORTRAIT_SHAPES.includes(treeShape)) return treeShape
   if (imageRatio >= 1.28) return 'rect'
   if (imageRatio <= 0.78) return 'polaroid'
   return frameType || 'round'

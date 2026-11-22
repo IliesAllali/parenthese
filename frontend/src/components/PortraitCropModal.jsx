@@ -28,7 +28,8 @@ const KEY_ZOOM_STEP = 0.2
 const SHAPE_LABELS = { round: t('Rond'), square: t('Carré'), polaroid: t('Polaroïd'), portrait: t('Vertical'), landscape: t('Horizontal') }
 
 // Recadrage d'un portrait. Le masque garde la forme du cadre de la personne dans l'arbre ; la photo
-// glisse dessous. La forme se choisit aussi ici : sans choix, elle suit la photo ou le tirage de la personne.
+// glisse dessous. La forme se choisit aussi ici : sans choix, elle suit la forme réglée pour l'arbre, sinon la
+// photo ou le tirage de la personne.
 // `mode` : 'recrop' (depuis le menu) ou 'new' (juste après le choix d'une photo).
 // `lockedShape` : forme imposée, sans sélecteur (la photo d'un arbre est toujours carrée, comme sa pastille).
 const PortraitCropModal = ({ src, frameType, name, mode = 'recrop', initialCrop = null, lockedShape = null, saving = false, error = '', onSave, onClose }) => {

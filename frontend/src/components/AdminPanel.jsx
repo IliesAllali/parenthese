@@ -26,6 +26,7 @@ import { gedcomSizeError, readGedcomFile } from '../utils/gedcomText.js'
 import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
 import TreeVisualField from './TreeVisualField.jsx'
+import PortraitShapeField from './PortraitShapeField.jsx'
 import { visualModeOf, visualPayload } from '../utils/treeVisual.js'
 
 function normalizeSlug(value) {
@@ -44,6 +45,8 @@ const AdminPanel = ({
   onFullNamesChange = null,
   surnameUppercase = false,
   onSurnameUppercaseChange = null,
+  portraitShape = 'varied',
+  onPortraitShapeChange = null,
   visible,
   treeId,
   authToken,
@@ -76,6 +79,7 @@ const AdminPanel = ({
   const [contributionPolicy, setContributionPolicy] = useState('pending')
   const [savingPolicy, setSavingPolicy] = useState(false)
   const [savingSurnames, setSavingSurnames] = useState(false)
+  const [savingPortraitShape, setSavingPortraitShape] = useState(false)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -195,6 +199,24 @@ const AdminPanel = ({
       setErrorMessage(t("Impossible d'enregistrer ce réglage."))
     } finally {
       setSavingSurnames(false)
+    }
+  }
+
+  // Forme des portraits, réglage de l'arbre comme les capitales : toute la famille voit les mêmes cadres
+  const handlePortraitShapeChange = async (shape) => {
+    if (!treeId || !authToken || savingPortraitShape) return
+    const previous = portraitShape
+    onPortraitShapeChange?.(shape)
+    setSavingPortraitShape(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+    try {
+      await updateTreeSettings(treeId, { portraitShape: shape }, authToken)
+    } catch {
+      onPortraitShapeChange?.(previous)
+      setErrorMessage(t("Impossible d'enregistrer ce réglage."))
+    } finally {
+      setSavingPortraitShape(false)
     }
   }
 
@@ -602,6 +624,7 @@ const AdminPanel = ({
                         <small>{t('Jeanne MARTIN plutôt que Jeanne Martin, pour toute la famille. Les noms restent enregistrés comme ils ont été tapés.')}</small>
                       </span>
                     </label>
+                    <PortraitShapeField value={portraitShape} disabled={savingPortraitShape} onChange={handlePortraitShapeChange} />
                   </fieldset>
                 </form>
               )}

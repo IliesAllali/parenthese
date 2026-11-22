@@ -11,6 +11,11 @@ export default {
   "Le nom de naissance quand il est connu, sinon le nom d'usage. Réglage de ce navigateur.": 'The maiden name when it is known, otherwise the current last name. Saved in this browser.',
   'Les noms de famille en capitales': 'Last names in capitals',
   'Jeanne MARTIN plutôt que Jeanne Martin, pour toute la famille. Les noms restent enregistrés comme ils ont été tapés.': 'Jeanne MARTIN rather than Jeanne Martin, for the whole family. Names stay saved the way they were typed.',
+  'Forme des portraits': 'Portrait shape',
+  'Variées': 'Mixed',
+  'Rondes': 'Round',
+  'Carrées': 'Square',
+  'Variées : ronde, rectangle ou polaroïd selon la personne et sa photo. Le choix vaut pour toute la famille ; une forme choisie en recadrant une photo reste la sienne.': 'Mixed: round, rectangle or polaroid depending on the person and their photo. The choice applies to the whole family; a shape chosen while cropping a photo stays its own.',
   // Arbre sur canvas (components/galaxy/renderers.js)
   'Voir les parents': 'See parents',
   'Voir {firstName}': 'See {firstName}',

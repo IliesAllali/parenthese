@@ -9,6 +9,7 @@ import type { GedcomRecords } from '../lib/gedcom-photos.js'
 import type { MembershipRole } from '../types/auth.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { sexOrNull, type PersonSex } from '../lib/person-sex.js'
+import { mostlySurnamesInCapitals } from '../lib/tree-display.js'
 
 const treeIdParamSchema = z.object({
   id: z.string().min(1),
@@ -663,6 +664,16 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
     // Adoptions déclarées sous l'enfant (« 2 PEDI adopted ») : enfant → familles où il est adopté
     const adoptedByChild = new Map(indiNodes.map((indi) => [indi.xref!, adoptedFamilies(indi)]))
 
+    // Arbre encore vide et fichier aux noms de famille presque tous en capitales : l'arbre passe aux noms en
+    // capitales, pour que les noms tapés ensuite ressemblent à ceux du fichier. Un arbre qui a déjà des
+    // personnes garde son réglage.
+    const surnamesInCapitals = existingPersons.length === 0 && mostlySurnamesInCapitals(
+      indiNodes.map((indi) => {
+        const nameNode = findChild(indi, 'NAME')
+        return nameNode ? parseGedcomName(nameNode.value).lastName : ''
+      }),
+    )
+
     importInProgress = true
     try {
     await app.prisma.$transaction(async (tx) => {
@@ -812,6 +823,14 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      if (surnamesInCapitals && personsCreated > 0) {
+        await tx.treeSettings.upsert({
+          where: { treeId },
+          create: { treeId, surnameUppercase: true },
+          update: { surnameUppercase: true },
+        })
+      }
+
       await tx.auditLog.create({
         data: {
           treeId,
@@ -820,7 +839,7 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
           action: 'gedcom_imported',
           entityType: 'tree',
           entityId: treeId,
-          payloadJson: { personsCreated, personsReused, unionsCreated, linksCreated, eventsCreated, relationsSkipped, photoRefs: photoRefs.length, mediaRefs: mediaRefs.length },
+          payloadJson: { personsCreated, personsReused, unionsCreated, linksCreated, eventsCreated, relationsSkipped, photoRefs: photoRefs.length, mediaRefs: mediaRefs.length, surnameUppercase: surnamesInCapitals && personsCreated > 0 },
         },
       })
     }, { timeout: 60000 })
