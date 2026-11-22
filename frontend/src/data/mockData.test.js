@@ -41,11 +41,28 @@ describe('loadGraphData avatar mapping', () => {
             displayOrder: 1,
             isFeatured: true,
           },
+          {
+            id: 'm-2',
+            personId: 'p-2',
+            type: 'video',
+            mimeType: 'video/youtube',
+            urlPath: 'https://www.youtube.com/watch?v=aaaaaaaaaaa',
+            thumbUrlPath: '/trees/t-1/media/m-2/thumbnail',
+            caption: null,
+            displayOrder: 2,
+            isFeatured: true,
+          },
         ],
         annotations: [],
       },
       { apiBaseUrl: '/api', mediaToken: 'abc' },
     )
+
+    // Vidéo YouTube : l'adresse de lecture reste celle de YouTube, sans jeton ; la miniature vient de l'API
+    const [photo, video] = getPersonMedias('p-2')
+    expect(photo.thumbUrl).toBeNull()
+    expect(video.url).toBe('https://www.youtube.com/watch?v=aaaaaaaaaaa')
+    expect(video.thumbUrl).toBe('/api/trees/t-1/media/m-2/thumbnail?token=abc')
 
     expect(getPersonById('p-1')?.photo).toBe('/api/trees/t-1/persons/p-1/avatar?token=abc')
     expect(getPersonById('p-2')?.photo).toBeNull()

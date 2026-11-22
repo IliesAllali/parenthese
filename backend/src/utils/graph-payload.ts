@@ -54,6 +54,7 @@ export type GraphPayload = {
     type: string
     mimeType: string
     urlPath: string
+    thumbUrlPath: string | null
     caption: string | null
     source: string | null
     displayOrder: number
@@ -149,6 +150,8 @@ export function buildGraphPayload(
         type: media.type,
         mimeType: media.mimeType,
         urlPath: media.mimeType === 'video/youtube' ? media.filePath : `/trees/${treeId}/media/${media.id}`,
+        // Miniature d'une vidéo YouTube, servie par Parenthèse (cherchée à sa première demande si elle manque)
+        thumbUrlPath: media.mimeType === 'video/youtube' ? `/trees/${treeId}/media/${media.id}/thumbnail` : null,
         caption: media.caption,
         source: media.source,
         displayOrder: media.displayOrder,

@@ -5,6 +5,8 @@ import { buildLifeTimeline } from '../utils/lifeTimeline.js'
 import './LifeTimeline.css'
 import { blurPlaceholder } from '../utils/blurhash.js'
 import Skeleton from './Skeleton.jsx'
+import { useVideoThumbnail } from '../hooks/useVideoThumbnail.js'
+import './VideoThumb.css'
 import { firstNameLabel } from '../utils/personName.js'
 
 // Onglet Vie de la fiche : naissance, unions et décès en grands repères, les autres événements
@@ -54,31 +56,50 @@ function Title({ entry, editable, onEdit, onOpenPerson }) {
 
 const FILE_LABELS = { video: t('Vidéo'), audio: t('Enregistrement'), document: t('Document') }
 
-// Souvenirs rattachés au moment : les photos en vignettes, le reste (vidéo, acte, voix) en pastilles
+function FileChip({ media, onOpen }) {
+  const Icon = media.type === 'video' ? Play : media.type === 'audio' ? Mic : media.type === 'document' ? FileText : Paperclip
+  return (
+    <button type="button" className="lt-file" onClick={() => onOpen?.(media)}>
+      <Icon size={14} strokeWidth={1.8} aria-hidden="true" />
+      <span className="lt-file-label">{media.label || FILE_LABELS[media.type] || t('Souvenir')}</span>
+    </button>
+  )
+}
+
+// Vidéo YouTube avec sa miniature, rangée avec les photos ; la pastille d'avant si la miniature ne vient pas
+function VideoAttachment({ media, onOpen }) {
+  const { showImage, onError } = useVideoThumbnail(media.thumbUrl)
+  if (!showImage) return <FileChip media={media} onOpen={onOpen} />
+  return (
+    <button type="button" className="lt-photo" onClick={() => onOpen?.(media)} aria-label={t('Voir « {title} »', { title: media.label })}>
+      <span className="video-thumb video-thumb--image">
+        <img src={media.thumbUrl} alt="" loading="lazy" onError={onError} />
+        <span className="video-thumb-play" aria-hidden="true"><Play size={14} fill="currentColor" strokeWidth={0} /></span>
+      </span>
+    </button>
+  )
+}
+
+// Souvenirs rattachés au moment : les photos et les vidéos YouTube en vignettes, le reste (acte, voix) en pastilles
 function Attachments({ medias, onOpen }) {
   if (medias.length === 0) return null
-  const photos = medias.filter((m) => m.type === 'photo' && m.url)
-  const others = medias.filter((m) => !(m.type === 'photo' && m.url))
+  const isThumb = (m) => (m.type === 'photo' && m.url) || (m.type === 'video' && m.thumbUrl)
+  const thumbs = medias.filter(isThumb)
+  const others = medias.filter((m) => !isThumb(m))
   return (
     <div className="lt-attach">
-      {photos.length > 0 && (
+      {thumbs.length > 0 && (
         <div className="lt-photos">
-          {photos.map((media) => (
-            <button key={media.id} type="button" className="lt-photo" onClick={() => onOpen?.(media)} aria-label={t('Voir « {title} »', { title: media.label })}>
-              <img src={media.url} alt="" loading="lazy" {...blurPlaceholder(media.blurhash)} />
-            </button>
-          ))}
+          {thumbs.map((media) => media.type === 'video'
+            ? <VideoAttachment key={media.id} media={media} onOpen={onOpen} />
+            : (
+              <button key={media.id} type="button" className="lt-photo" onClick={() => onOpen?.(media)} aria-label={t('Voir « {title} »', { title: media.label })}>
+                <img src={media.url} alt="" loading="lazy" {...blurPlaceholder(media.blurhash)} />
+              </button>
+            ))}
         </div>
       )}
-      {others.map((media) => {
-        const Icon = media.type === 'video' ? Play : media.type === 'audio' ? Mic : media.type === 'document' ? FileText : Paperclip
-        return (
-          <button key={media.id} type="button" className="lt-file" onClick={() => onOpen?.(media)}>
-            <Icon size={14} strokeWidth={1.8} aria-hidden="true" />
-            <span className="lt-file-label">{media.label || FILE_LABELS[media.type] || t('Souvenir')}</span>
-          </button>
-        )
-      })}
+      {others.map((media) => <FileChip key={media.id} media={media} onOpen={onOpen} />)}
     </div>
   )
 }

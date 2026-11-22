@@ -1,0 +1,7 @@
+.video-thumb { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; background: var(--pz-ink); color: var(--pz-bg); }
+.video-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.video-thumb-play { position: relative; display: grid; place-items: center; }
+/* Sur la miniature, le triangle a son disque sombre : il se lit sur une image claire comme sur une sombre */
+.video-thumb--image .video-thumb-play { width: 34px; height: 34px; border-radius: 50%; background: rgba(42, 38, 34, .62); color: #fff; }
+.video-thumb--image .video-thumb-play svg { margin-left: 2px; }
+.lt-photo .video-thumb--image .video-thumb-play { width: 26px; height: 26px; }

@@ -26,6 +26,7 @@ import { normalizeSex, SEX_CHOICES } from '../utils/personSex.js'
 import { ProposalBanner } from './ProposalCard.jsx'
 import { blurPlaceholder } from '../utils/blurhash.js'
 import PortraitThumb from './PortraitThumb.jsx'
+import VideoThumb from './VideoThumb.jsx'
 import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 
 // Aucune modification en cours (référence stable)
@@ -896,7 +897,7 @@ const PersonCard = ({
                   >
                     {media.type === 'photo' && media.url
                       ? <img src={media.url} alt={media.label || ''} loading="lazy" {...blurPlaceholder(media.blurhash)} />
-                      : <span className="pc-tile-video"><Play size={18} fill="currentColor" strokeWidth={0} /></span>}
+                      : <VideoThumb src={media.type === 'video' ? media.thumbUrl : null} />}
                     {media.label && <span className="pc-tile-label">{media.label}</span>}
                   </button>
                 ))}
@@ -924,7 +925,7 @@ const PersonCard = ({
                       >
                         {media.type === 'photo' && media.url
                           ? <img src={media.url} alt={media.label || ''} loading="lazy" {...blurPlaceholder(media.blurhash)} />
-                          : <span className="pc-tile-video"><Play size={18} fill="currentColor" strokeWidth={0} /></span>}
+                          : <VideoThumb src={media.type === 'video' ? media.thumbUrl : null} />}
                         {media.label && <span className="pc-tile-label">{media.label}</span>}
                       </button>
                     )

@@ -105,6 +105,8 @@ The sign-in screen then shows "Sign in with Authentik". On a first sign-in, Pare
 
 A self-hosted instance sends no analytics. Usage tracking on parenthese.io only turns on when a PostHog key is provided at build time, which this setup does not do.
 
+When someone adds a YouTube video to a person, the `api` container fetches its thumbnail once from `i.ytimg.com` (only the video's ID is sent) and keeps it with the tree's files. Browsers then get the thumbnail from your instance and only contact YouTube when someone plays the video. Without Internet access the video still works the same way and simply shows without a thumbnail.
+
 The help and privacy links in the app point to parenthese.io. To use your own pages, set `VITE_HELP_URL` and `VITE_PRIVACY_URL` when you build the front end yourself (see `frontend/.env.example`).
 
 Useful commands:

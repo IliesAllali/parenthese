@@ -263,6 +263,8 @@ export function loadGraphData(graph, options = {}) {
         type: media.type || 'photo',
         url: mediaUrl,
         urlHd: mediaUrl,
+        // Miniature d'une vidéo YouTube, servie par Parenthèse : rien ne part chez YouTube avant la lecture
+        thumbUrl: media.thumbUrlPath ? buildProtectedAssetUrl(media.thumbUrlPath, apiBaseUrl, mediaToken) : null,
         label: media.caption || t('Média {n}', { n: index + 1 }),
         source: media.source || null,
         displayOrder: Number.isFinite(media.displayOrder) ? media.displayOrder : index + 1,

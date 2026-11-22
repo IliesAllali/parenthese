@@ -3,7 +3,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { Prisma } from '../generated/prisma/client.js'
-import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { env, MEDIA_UPLOAD_BODY_LIMIT, UPLOAD_BODY_LIMIT } from '../config/env.js'
@@ -28,6 +28,7 @@ import { mediaPeopleSchema, normalizeMediaPeople, replaceMediaPeople } from '../
 import { resolveTreeMediaDirectory } from '../lib/tree-purge.js'
 import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
 import { sendTreeImage, treeImageOf } from '../lib/tree-visual.js'
+import { ensureYoutubeThumbnail } from '../lib/youtube-thumbnail.js'
 import type { MembershipRole } from '../types/auth.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 import { forgetPendingPhoto, reservePendingPhoto, sweepStalePendingPhotos } from '../lib/annotation-changes.js'
@@ -485,6 +486,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
           payloadJson: { personId: params.data.personId, type: 'video', youtubeUrl: payload.data.youtubeUrl },
         },
       })
+      // Miniature cherchée en fond : l'ajout n'attend pas YouTube, et un échec laisse la bande de film
+      void ensureYoutubeThumbnail(app.prisma, getStorageRoot(), media)
       return reply.code(201).send({ media, status: media.status })
     }
 
@@ -1032,7 +1035,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     const existingMedia = await app.prisma.mediaItem.findFirst({
       where: { id: params.data.mediaId, treeId: params.data.id, personId: params.data.personId, deletedAt: null },
-      select: { filePath: true },
+      select: { filePath: true, thumbPath: true },
     })
 
     const updateResult = await app.prisma.mediaItem.updateMany({
@@ -1053,6 +1056,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     // Supprimé = effacé du disque (la ligne reste pour le journal), et plus personne n'y est identifié
     await removeStoredFile(getStorageRoot(), existingMedia?.filePath)
+    await removeStoredFile(getStorageRoot(), existingMedia?.thumbPath)
     await app.prisma.mediaPersonTag.deleteMany({ where: { treeId: params.data.id, mediaId: params.data.mediaId } })
 
     await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
@@ -1268,19 +1272,23 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     return sendTreeImage(reply, tree)
   })
 
-  app.get('/trees/:id/media/:mediaId', async (request, reply) => {
+  // Souvenir lisible par qui le demande, ou la réponse d'erreur déjà envoyée
+  const findReadableMedia = async (request: FastifyRequest, reply: FastifyReply) => {
     const params = mediaParamsSchema.safeParse(request.params)
     if (!params.success) {
-      return reply.code(400).send({ error: 'invalid_params' })
+      reply.code(400).send({ error: 'invalid_params' })
+      return null
     }
 
     const query = downloadQuerySchema.safeParse(request.query)
     if (!query.success) {
-      return reply.code(400).send({ error: 'invalid_query' })
+      reply.code(400).send({ error: 'invalid_query' })
+      return null
     }
 
     if (!(await canReadMedia(app, params.data.id, request, query.data.token))) {
-      return reply.code(401).send({ error: 'authentication_required' })
+      reply.code(401).send({ error: 'authentication_required' })
+      return null
     }
 
     const media = await app.prisma.mediaItem.findFirst({
@@ -1290,7 +1298,11 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         deletedAt: null,
       },
       select: {
+        id: true,
+        treeId: true,
+        personId: true,
         filePath: true,
+        thumbPath: true,
         mimeType: true,
         status: true,
         uploadedBy: true,
@@ -1298,7 +1310,8 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     })
 
     if (!media) {
-      return reply.code(404).send({ error: 'media_not_found' })
+      reply.code(404).send({ error: 'media_not_found' })
+      return null
     }
 
     // Un souvenir qui attend la relecture ne se lit que par qui gère l'arbre ou par qui l'a envoyé, pas par toute la
@@ -1307,9 +1320,17 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
       const userId = await mediaRequesterUserId(app, request, query.data.token)
       const allowed = Boolean(userId) && (media.uploadedBy === userId || Boolean(await requireAdminMembership(app, userId as string, params.data.id)))
       if (!allowed) {
-        return reply.code(404).send({ error: 'media_not_found' })
+        reply.code(404).send({ error: 'media_not_found' })
+        return null
       }
     }
+
+    return media
+  }
+
+  app.get('/trees/:id/media/:mediaId', async (request, reply) => {
+    const media = await findReadableMedia(request, reply)
+    if (!media) return reply
 
     // YouTube videos: filePath is the YouTube URL, redirect the browser
     if (media.mimeType === 'video/youtube') {
@@ -1328,6 +1349,27 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     }
 
     applyMediaResponseHeaders(reply, media.mimeType, path.basename(media.filePath))
+    return sendFileWithRanges(request, reply, absolutePath, size)
+  })
+
+  // Miniature d'une vidéo YouTube, servie par Parenthèse : le navigateur ne contacte pas YouTube avant la lecture.
+  // Un souvenir ajouté avant la miniature la reçoit à sa première demande. Pas de miniature : 404, la bande de film reste.
+  app.get('/trees/:id/media/:mediaId/thumbnail', async (request, reply) => {
+    const media = await findReadableMedia(request, reply)
+    if (!media) return reply
+    if (media.mimeType !== 'video/youtube') {
+      return reply.code(404).send({ error: 'thumbnail_not_found' })
+    }
+
+    const storageRoot = getStorageRoot()
+    const thumbPath = media.thumbPath ?? await ensureYoutubeThumbnail(app.prisma, storageRoot, media)
+    const absolutePath = thumbPath ? path.resolve(storageRoot, thumbPath) : null
+    const size = absolutePath && absolutePath.startsWith(storageRoot + path.sep) ? await storedFileSize(absolutePath) : null
+    if (!absolutePath || size === null) {
+      return reply.code(404).send({ error: 'thumbnail_not_found' })
+    }
+
+    applyMediaResponseHeaders(reply, 'image/jpeg', path.basename(thumbPath as string))
     return sendFileWithRanges(request, reply, absolutePath, size)
   })
 
