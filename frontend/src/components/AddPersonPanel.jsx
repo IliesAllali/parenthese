@@ -12,6 +12,8 @@ import { withEmphasis } from '../utils/richText.jsx'
 import NoPhotoPortrait from './NoPhotoPortrait.jsx'
 import { kinNamePrefill, kinSexChoices, kinTitle } from '../utils/kinForm.js'
 import { dateWarnings, datePrecisionsOf } from '../utils/dateInput.js'
+import { presumedDeceased } from '../utils/lifeStatus.js'
+import LifeStatusChoice from './LifeStatusChoice.jsx'
 
 // « Plus de détails » reste ouvert pour qui l'a ouvert une fois (préférence de ce navigateur)
 const DETAILS_KEY = 'pz-ajout-details'
@@ -61,8 +63,10 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
   const [birthDatePrecision, setBirthDatePrecision] = useState(null)
   const [deathDatePrecision, setDeathDatePrecision] = useState(null)
   const warnings = dateWarnings({ birthDate, deathDate, birthDatePrecision, deathDatePrecision })
-  // Décédé(e) sans date connue (issue #77)
-  const [isDeceased, setIsDeceased] = useState(false)
+  // En vie ou décédé(e), en vue dès le début du formulaire (live du 22/11). Décédé(e) sans date : date inconnue (#77).
+  // Née il y a plus de 110 ans : décédée d'office, tant qu'on n'a pas choisi soi-même
+  const [deceased, setDeceased] = useState(false)
+  const [statusTouched, setStatusTouched] = useState(false)
   // Lien d'enfant ou de parent : la personne qui est l'enfant du lien a été adoptée
   const [adopted, setAdopted] = useState(false)
   // Les champs de date gardent leur texte : on les recrée après chaque ajout
@@ -104,7 +108,8 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       setDeathDate('')
       setBirthDatePrecision(null)
       setDeathDatePrecision(null)
-      setIsDeceased(false)
+      setDeceased(false)
+      setStatusTouched(false)
       setDateFieldsKey((k) => k + 1)
       setSexMissing(false)
     }
@@ -166,7 +171,8 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       setDeathDate('')
       setBirthDatePrecision(null)
       setDeathDatePrecision(null)
-      setIsDeceased(false)
+      setDeceased(false)
+      setStatusTouched(false)
       setDateFieldsKey((k) => k + 1)
       setRelations([])
       setTouched({})
@@ -198,8 +204,25 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     setRelations((prev) => prev.filter((r) => r.personId !== personId))
   }
 
+  const changeBirthDate = (date, precision) => {
+    setBirthDate(date)
+    setBirthDatePrecision(precision)
+    if (!statusTouched) setDeceased(presumedDeceased(date))
+  }
+  const chooseStatus = (value) => {
+    setDeceased(value)
+    setStatusTouched(true)
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
+    // En vie : une date de décès tapée avant de changer d'avis ne part pas
+    const keptDeath = deceased ? deathDate : ''
+    const lifeFields = {
+      deathDate: keptDeath || null,
+      ...datePrecisionsOf({ birthDate, deathDate: keptDeath, birthDatePrecision, deathDatePrecision }),
+      isDeceased: deceased && !keptDeath,
+    }
 
     if (!unknownFirstName && !firstName.trim()) {
       setTouched({ firstName: true })
@@ -236,9 +259,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
         nickname: nickname.trim() || null,
         sex,
         birthDate: birthDate || null,
-        deathDate: deathDate || null,
-        ...datePrecisionsOf({ birthDate, deathDate, birthDatePrecision, deathDatePrecision }),
-        isDeceased: !deathDate && isDeceased,
+        ...lifeFields,
         relations: kinRelations,
         kin: true,
       })
@@ -252,9 +273,7 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
       nickname: nickname.trim() || null,
       sex,
       birthDate: birthDate || null,
-      deathDate: deathDate || null,
-      ...datePrecisionsOf({ birthDate, deathDate, birthDatePrecision, deathDatePrecision }),
-      isDeceased: !deathDate && isDeceased,
+      ...lifeFields,
       // Adopté(e) : s'applique aux liens d'enfant ou de parent de cette fiche
       relations: relations.map((rel) => ({ ...rel, adopted: adopted && (rel.type === 'child' || rel.type === 'parent') })),
     })
@@ -295,6 +314,13 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
     writeDetailsOpen(next)
     setDetailsOpen(next)
   }
+
+  const statusField = (
+    <div className="pz-field">
+      <span className="pz-label" id="ap-status-label">{t('Statut')}</span>
+      <LifeStatusChoice deceased={deceased} sex={sex} className="apn-types apn-sex" labelledBy="ap-status-label" onChange={chooseStatus} />
+    </div>
+  )
 
   const duplicateBox = duplicates.length > 0 && (
     <div className="apn-duplicate" role="status">
@@ -385,8 +411,16 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
 
       <div className="pz-field">
         <label htmlFor="ap-birthDate">{t('Année de naissance')} <span className="apn-optional">{t('facultatif')}</span></label>
-        <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} placeholder="1960" />
+        <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={changeBirthDate} placeholder="1960" />
       </div>
+
+      {statusField}
+      {deceased && (
+        <div className="pz-field">
+          <label htmlFor="ap-deathDate">{t('Décès')} <span className="apn-optional">{t('vide si inconnue')}</span></label>
+          <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} placeholder=" " />
+        </div>
+      )}
 
       {detailsOpen && (
         <>
@@ -406,16 +440,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           <div className="pz-field">
             <label htmlFor="ap-nickname">{t('Surnom')} <span className="apn-optional">{t('facultatif')}</span></label>
             <input id="ap-nickname" type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} autoComplete="off" maxLength={120} />
-          </div>
-          <div className="pz-field">
-            <label htmlFor="ap-deathDate">{t('Décès')} <span className="apn-optional">{t('année ou date')}</span></label>
-            <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} placeholder=" " />
-            {!deathDate && (
-              <label className="apn-deceased">
-                <input type="checkbox" checked={isDeceased} onChange={(e) => setIsDeceased(e.target.checked)} />
-                {sex === 'male' ? t('Décédé, date inconnue') : sex === 'female' ? t('Décédée, date inconnue') : t('Décédé(e), date inconnue')}
-              </label>
-            )}
           </div>
         </>
       )}
@@ -539,21 +563,18 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
             </div>
           </div>
 
+          {statusField}
+
           <div className="pz-row2 apn-row">
             <div className="pz-field">
               <label htmlFor="ap-birthDate">{t('Naissance')}</label>
-              <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={(date, precision) => { setBirthDate(date); setBirthDatePrecision(precision) }} />
+              <DateField key={`b-${dateFieldsKey}`} id="ap-birthDate" value={birthDate} precision={birthDatePrecision} warning={warnings.birth} onChange={changeBirthDate} />
             </div>
-            <div className="pz-field">
-              <label htmlFor="ap-deathDate">{t('Décès')}</label>
-              <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} />
-            </div>
-            {/* Hors de la colonne Décès pour tenir sur une ligne, comme la case du prénom */}
-            {!deathDate && (
-              <label className="apn-deceased apn-row-check">
-                <input type="checkbox" checked={isDeceased} onChange={(e) => setIsDeceased(e.target.checked)} />
-                {sex === 'male' ? t('Décédé, date inconnue') : sex === 'female' ? t('Décédée, date inconnue') : t('Décédé(e), date inconnue')}
-              </label>
+            {deceased && (
+              <div className="pz-field">
+                <label htmlFor="ap-deathDate">{t('Décès')} <span className="apn-optional">{t('vide si inconnue')}</span></label>
+                <DateField key={`d-${dateFieldsKey}`} id="ap-deathDate" value={deathDate} precision={deathDatePrecision} warning={warnings.death} onChange={(date, precision) => { setDeathDate(date); setDeathDatePrecision(precision) }} />
+              </div>
             )}
           </div>
 

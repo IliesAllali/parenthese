@@ -3,7 +3,7 @@ export default {
   'Ajouter {name}': '{name} hinzufügen',
   'Son père ou sa mère ?': 'Vater oder Mutter?',
   "Nom d'usage": 'Ehename',
-  'année ou date': 'Jahr oder Datum',
+  'vide si inconnue': 'leer, falls unbekannt',
   'Moins de détails': 'Weniger Angaben',
   'Père': 'Vater',
   'Mère': 'Mutter',

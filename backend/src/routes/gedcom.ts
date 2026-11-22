@@ -9,6 +9,7 @@ import type { GedcomRecords } from '../lib/gedcom-photos.js'
 import type { MembershipRole } from '../types/auth.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { sexOrNull, type PersonSex } from '../lib/person-sex.js'
+import { presumedDeceased } from '../lib/presumed-deceased.js'
 
 const treeIdParamSchema = z.object({
   id: z.string().min(1),
@@ -710,8 +711,8 @@ export const gedcomRoutes: FastifyPluginAsync = async (app) => {
             sex,
             birthDate,
             deathDate,
-            // « 1 DEAT Y » ou un décès sans date : décédé(e), date inconnue
-            isDeceased: Boolean(deatNode) && !deathDate,
+            // « 1 DEAT Y » ou un décès sans date : décédé(e), date inconnue ; sans DEAT, née il y a plus de 110 ans aussi
+            isDeceased: !deathDate && (Boolean(deatNode) || presumedDeceased(birthDate)),
             birthPlace,
             profession,
             notes,

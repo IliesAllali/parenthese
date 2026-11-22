@@ -192,7 +192,6 @@
   font: 500 13px var(--pz-sans); color: var(--pz-ink-2);
 }
 .pc-alive-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pz-faint); }
-.pc-alive.is-alive .pc-alive-dot { background: var(--pz-success); }
 .pc-verify.is-on { background: var(--pz-a100); color: var(--pz-a700); border-color: transparent; }
 .pc-verify.is-on .pc-alive-dot { background: var(--pz-a500); }
 

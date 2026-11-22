@@ -3,7 +3,7 @@ export default {
   'Ajouter {name}': 'Add {name}',
   'Son père ou sa mère ?': 'Father or mother?',
   "Nom d'usage": 'Married name',
-  'année ou date': 'year or date',
+  'vide si inconnue': 'leave empty if unknown',
   'Moins de détails': 'Fewer details',
   'Père': 'Father',
   'Mère': 'Mother',
