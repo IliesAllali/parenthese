@@ -37,7 +37,7 @@ export default {
   "Ajouter ce fichier": "添加这个文件",
   "1 fichier ajouté.": "已添加1个文件。",
   "{n} fichiers ajoutés.": "已添加{n}个文件。",
-  "Tout ajouter ({n})": "全部添加({n}件)",
+  "Tout ajouter ({n})": "全部添加（{n}件）",
   "1 fichier ajouté aux souvenirs.": "已添加1个文件到回忆。",
   "{n} fichiers ajoutés aux souvenirs.": "已添加{n}个文件到回忆。",
   "Seuls les fichiers cités par votre logiciel sont envoyés, vers votre arbre uniquement.": "只有你的软件列出的文件会发送，仅发送到你的家谱树中。",
