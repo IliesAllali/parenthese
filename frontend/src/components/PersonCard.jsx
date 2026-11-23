@@ -17,7 +17,8 @@ import PortraitCropModal from './PortraitCropModal.jsx'
 import { imagePlacement } from '../utils/portraitCrop.js'
 import { t, dateLocale } from '../i18n/index.js'
 import { formatPlace } from '../utils/place.js'
-import { firstNameLabel, fullNameLabel, isFirstNameUnknown, isSurnameUppercase, surnameLabel } from '../utils/personName.js'
+import { fullNameLabel, isFirstNameUnknown, isSurnameUppercase, shortNameLabel, surnameLabel } from '../utils/personName.js'
+import PersonName from './PersonName.jsx'
 import { dateEntryToText, dateWarnings, isYearOnly } from '../utils/dateInput.js'
 import { ageInYears } from '../utils/age.js'
 import { birthdayToday } from '../utils/birthday.js'
@@ -571,16 +572,16 @@ const PersonCard = ({
         const p2 = persons.find(p => p.id === union.partner2Id)
         // Union sans type (fréquent après un import GEDCOM) : pas de « (null) » à côté des prénoms
         const kind = union.unionType ? ` (${unionTypeLabel(union.unionType)})` : ''
-        return `${p1 ? firstNameLabel(p1) : '?'} + ${p2 ? firstNameLabel(p2) : '?'}${kind}`
+        return `${p1 ? shortNameLabel(p1) : '?'} + ${p2 ? shortNameLabel(p2) : '?'}${kind}`
       }
     }
 
     if (preferredFiliation.parentId && parentsList.length <= 1) {
       const parent = persons.find(p => p.id === preferredFiliation.parentId)
       if (preferredFiliation.parentageType === 'inconnu') {
-        return t('{name} (parent unique, autre parent inconnu)', { name: parent ? firstNameLabel(parent) : '?' })
+        return t('{name} (parent unique, autre parent inconnu)', { name: parent ? shortNameLabel(parent) : '?' })
       }
-      return t('{name} (parent unique)', { name: parent ? firstNameLabel(parent) : '?' })
+      return t('{name} (parent unique)', { name: parent ? shortNameLabel(parent) : '?' })
     }
     return null
   }
@@ -794,8 +795,7 @@ const PersonCard = ({
             </div>
           ) : (
             <h2 className="pc-name">
-              {isFirstNameUnknown(person) ? <span className="pc-name-unknown">{firstNameLabel(person)}</span> : person.firstName}
-              {person.lastName && <>{' '}<em>{surnameLabel(person.lastName)}</em></>}
+              <PersonName person={person} unknownClassName="pc-name-unknown" />
             </h2>
           )}
           {!editMode && metaItems.length > 0 && (
@@ -873,7 +873,7 @@ const PersonCard = ({
           <div className="pc-souvenirs">
             {personMedias.length === 0 && taggedMedias.length === 0 && (
               <div className="pc-empty">
-                <p className="pz-sub">{t('Pas encore de souvenir pour {name}.', { name: firstNameLabel(person) })}</p>
+                <p className="pz-sub">{t('Pas encore de souvenir pour {name}.', { name: shortNameLabel(person) })}</p>
                 <p className="pz-small">{canManageMedia ? t('Une photo, une anecdote, sa voix. Vous pouvez ajouter le premier.') : t('Une photo, une anecdote, sa voix.')}</p>
               </div>
             )}
@@ -918,8 +918,8 @@ const PersonCard = ({
             )}
 
             {taggedMedias.length > 0 && (
-              <section className="pc-tagged" aria-label={t('Avec {name}', { name: firstNameLabel(person) })}>
-                <h3 className="pc-tagged-title">{t('Avec {name}', { name: firstNameLabel(person) })}</h3>
+              <section className="pc-tagged" aria-label={t('Avec {name}', { name: shortNameLabel(person) })}>
+                <h3 className="pc-tagged-title">{t('Avec {name}', { name: shortNameLabel(person) })}</h3>
                 <div className="pc-grid">
                   {taggedMedias.map((media) => {
                     const owner = getPersonById(media.personId)
@@ -1088,7 +1088,7 @@ const PersonCard = ({
                           const partnerId = u.partner1Id === person.id ? u.partner2Id : u.partner1Id
                           const partner = persons.find(p => p.id === partnerId)
                           const yearRange = u.startYear ? (u.endYear ? `${u.startYear}–${u.endYear}` : t('depuis {year}', { year: u.startYear })) : ''
-                          return `${partner ? firstNameLabel(partner) : '?'} ${surnameLabel(partner?.lastName)}${yearRange ? ` (${yearRange})` : ''}`
+                          return `${partner ? fullNameLabel(partner) : '?'}${yearRange ? ` (${yearRange})` : ''}`
                         }).join(', ')}
                       </span>
                     </div>
@@ -1096,7 +1096,7 @@ const PersonCard = ({
                   {childrenList.length > 0 && (
                     <div className="pc-row">
                       <span className="pc-label">{t('Enfants')}</span>
-                      <span className="value">{childrenList.map(c => firstNameLabel(c)).join(', ')}</span>
+                      <span className="value">{childrenList.map(c => shortNameLabel(c)).join(', ')}</span>
                     </div>
                   )}
                 </div>
@@ -1381,7 +1381,7 @@ const RelationSearchInline = forwardRef(function RelationSearchInline(
                 <span className="pc-rel-avatar" aria-hidden="true">
                   {p.photo ? <PortraitThumb src={p.photo} crop={p.avatarCrop} /> : <span>{p.firstName[0]}</span>}
                 </span>
-                <span className="pc-rel-name">{firstNameLabel(p)} <em>{surnameLabel(p.lastName)}</em></span>
+                <span className="pc-rel-name"><PersonName person={p} /></span>
                 {p.birthYear && <span className="pc-rel-meta">{p.birthYear}</span>}
               </button>
             </li>

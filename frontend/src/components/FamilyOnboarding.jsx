@@ -1,4 +1,4 @@
-import { firstNameLabel, fullNameLabel } from '../utils/personName.js'
+import { fullNameLabel, shortNameLabel } from '../utils/personName.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search, UserPlus, X } from 'lucide-react'
 import './FamilyOnboarding.css'
@@ -72,7 +72,7 @@ export function SelfAsk({ candidates = [], anchor = null, parentsOf, onConfirm, 
       aria-labelledby="foSelfTitle"
     >
       <h2 id="foSelfTitle" className="fo-self-title">
-        {single ? t("C'est vous, {name} ?", { name: firstNameLabel(single) }) : t("C'est vous ?")}
+        {single ? t("C'est vous, {name} ?", { name: shortNameLabel(single) }) : t("C'est vous ?")}
       </h2>
       <div className="fo-self-actions">
         {single ? (

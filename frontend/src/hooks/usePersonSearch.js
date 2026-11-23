@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { EAST_ASIAN } from '../utils/eastAsian.js'
 
 /**
  * Système de scoring pour la pertinence de recherche
@@ -35,6 +36,13 @@ const asksToVerify = (q) => {
   return plain.length >= 5 && 'a verifier'.startsWith(plain)
 }
 
+// Assez long pour chercher : deux caractères, ou un seul en chinois, japonais ou coréen, où un caractère est
+// déjà un nom (« 陳 », #258)
+export function isSearchable(query) {
+  const q = String(query ?? '').trim()
+  return q.length >= 2 || (q.length === 1 && EAST_ASIAN.test(q))
+}
+
 /**
  * Seuil minimum de score pour afficher un résultat
  */
@@ -60,8 +68,9 @@ function fieldsOf(person) {
     firstName,
     lastName,
     birthName: birthName !== lastName ? birthName : '',
-    // Les deux ordres : « andre dupont » et « dupont andre », l'ordre des registres
-    names: [`${firstName} ${lastName}`.trim(), `${lastName} ${firstName}`.trim()],
+    // Les deux ordres : « andre dupont » et « dupont andre », l'ordre des registres. Un nom d'Asie de l'Est
+    // s'écrit aussi d'un seul tenant : « 陳港生 »
+    names: [`${firstName} ${lastName}`.trim(), `${lastName} ${firstName}`.trim(), ...(EAST_ASIAN.test(firstName + lastName) ? [`${lastName}${firstName}`] : [])],
     birthNames: birthName && birthName !== lastName ? [`${firstName} ${birthName}`.trim(), `${birthName} ${firstName}`.trim()] : [],
     nickname: fold(person.nickname),
     profession: fold(person.profession),
@@ -93,7 +102,7 @@ function calculateScore(query, person) {
   let score = 0
   const q = fold(query)
 
-  if (!q || q.length < 2) return 0
+  if (!isSearchable(q)) return 0
   if (person.toVerify && asksToVerify(q)) return SCORE_WEIGHTS.NAME_EXACT
 
   const f = fieldsOf(person)
@@ -217,7 +226,7 @@ export function usePersonSearch(persons = [], revision = 0) {
 
   // Calculer les résultats de recherche avec scoring
   const results = useMemo(() => {
-    if (!query || query.trim().length < 2) {
+    if (!isSearchable(query)) {
       return []
     }
 

@@ -5,7 +5,7 @@ import PortraitThumb from '../PortraitThumb.jsx'
 import { t } from '../../i18n/index.js'
 import { withEmphasis } from '../../utils/richText.jsx'
 import { ofName } from '../../utils/kinForm.js'
-import { firstNameLabel, surnameLabel } from '../../utils/personName.js'
+import { fullNameLabel } from '../../utils/personName.js'
 import NoPhotoPortrait from '../NoPhotoPortrait.jsx'
 
 const ICON = { size: 18, strokeWidth: 2, 'aria-hidden': true }
@@ -66,7 +66,7 @@ export default function KinAddMenu({
                   {person.photo ? <PortraitThumb src={person.photo} crop={person.avatarCrop} /> : <NoPhotoPortrait />}
                 </span>
               )}
-              label={`${firstNameLabel(person)} ${surnameLabel(person.lastName)}`.trim()}
+              label={fullNameLabel(person)}
               sub={self ? t('vous') : label || null}
               onSelect={() => { onTarget?.(person); back() }}
             />

@@ -2,11 +2,11 @@
 // kin = { type: 'parent' | 'sibling' | 'spouse' | 'child', person: { id, firstName, lastName, sex }, sex, coParentId }
 //   person : la personne dont on ajoute le proche ; sex : imposé par le lien (case « Père », second parent), sinon null
 import { t } from '../i18n/index.js'
-import { firstNameLabel } from './personName.js'
+import { shortNameLabel } from './personName.js'
 
 // « de Lucie », « d’Hélène » : le français élide devant une voyelle ou un h (muet dans presque tous les prénoms)
 export function ofName(person) {
-  const name = (person && firstNameLabel(person)) || ''
+  const name = (person && shortNameLabel(person)) || ''
   return /^[aeiouyhàâäéèêëîïôöûüœæ]/i.test(name) ? t('d’{name}', { name }) : t('de {name}', { name })
 }
 

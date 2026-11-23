@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { firstNameLabel, fullNameLabel, isFirstNameUnknown, setSurnameUppercase, surnameLabel } from './personName.js'
+import { familyNameFirst, firstNameLabel, fullNameLabel, isFirstNameUnknown, setSurnameUppercase, shortNameLabel, surnameLabel } from './personName.js'
 
 describe('prénom inconnu', () => {
   it('un prénom vide ou blanc est inconnu', () => {
@@ -39,5 +39,33 @@ describe('noms de famille en capitales', () => {
     setSurnameUppercase(true)
     expect(surnameLabel(null)).toBe('')
     expect(surnameLabel(undefined)).toBe('')
+  })
+})
+
+describe('noms d’Asie de l’Est (#258)', () => {
+  afterEach(() => setSurnameUppercase(false))
+  const fang = { firstName: '仕龙', lastName: '房' }
+
+  it('met le nom de famille d’abord, collé au prénom', () => {
+    expect(familyNameFirst(fang)).toBe(true)
+    expect(fullNameLabel(fang)).toBe('房仕龙')
+    expect(fullNameLabel({ firstName: '민준', lastName: '김' })).toBe('김민준')
+    expect(fullNameLabel({ firstName: 'Kong-sang', lastName: 'Chan' })).toBe('Kong-sang Chan')
+  })
+
+  it('garde le libellé du prénom inconnu à part', () => {
+    expect(fullNameLabel({ firstName: '', lastName: '房' })).toBe('Prénom inconnu 房')
+    expect(fullNameLabel({ firstName: '', lastName: '房' }, { unknown: false })).toBe('房')
+  })
+
+  it('dans une phrase, un prénom en caractères Han donne le nom entier', () => {
+    expect(shortNameLabel(fang)).toBe('房仕龙')
+    expect(shortNameLabel({ firstName: '仕龙', lastName: '' })).toBe('仕龙')
+    expect(shortNameLabel({ firstName: 'Marie', lastName: 'Dupont' })).toBe('Marie')
+  })
+
+  it('le japonais en kana et le coréen gardent le prénom seul', () => {
+    expect(shortNameLabel({ firstName: 'さくら', lastName: '山田' })).toBe('さくら')
+    expect(shortNameLabel({ firstName: '민준', lastName: '김' })).toBe('민준')
   })
 })

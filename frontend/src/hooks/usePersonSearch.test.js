@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateScore, getMatchReason, MIN_SCORE_THRESHOLD } from './usePersonSearch.js'
+import { calculateScore, getMatchReason, isSearchable, MIN_SCORE_THRESHOLD } from './usePersonSearch.js'
 
 const robert = { firstName: 'Robert', lastName: 'Dupont', nickname: 'Loulou' }
 const andre = { firstName: 'André', lastName: 'Dupont', nickname: null }
@@ -75,5 +75,32 @@ describe('recherche tolérante (cas limites du 20/11)', () => {
     expect(found('dupont', helene)).toBe(false)
     expect(found('martin paul', marie)).toBe(false)
     expect(found('rive', marie)).toBe(false)
+  })
+})
+
+describe('recherche de noms chinois (#258)', () => {
+  const fang = { id: 1, firstName: '仕龙', lastName: '房' }
+  const chen = { id: 2, firstName: '月榮', lastName: '陈', nickname: '莉莉' }
+  const found = (q, p) => calculateScore(q, p) >= MIN_SCORE_THRESHOLD
+
+  it('cherche dès un caractère chinois, japonais ou coréen, deux sinon', () => {
+    expect(isSearchable('房')).toBe(true)
+    expect(isSearchable('김')).toBe(true)
+    expect(isSearchable('か')).toBe(true)
+    expect(isSearchable('a')).toBe(false)
+    expect(isSearchable(' ')).toBe(false)
+  })
+
+  it('trouve par le nom de famille seul, par le prénom, et par le nom entier écrit d’un tenant', () => {
+    expect(found('房', fang)).toBe(true)
+    expect(found('仕龙', fang)).toBe(true)
+    expect(found('房仕龙', fang)).toBe(true)
+    expect(found('房 仕龙', fang)).toBe(true)
+    expect(getMatchReason('房仕龙', fang)).toBe('Nom')
+    expect(found('房', chen)).toBe(false)
+  })
+
+  it('trouve par le surnom', () => {
+    expect(found('莉莉', chen)).toBe(true)
   })
 })
