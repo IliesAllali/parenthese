@@ -1,8 +1,6 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import path from 'node:path'
-
 import type { PrismaClient } from '../generated/prisma/client.js'
-import { removeStoredFile, sniffMimeType } from './media-files.js'
+import { sniffMimeType } from './media-files.js'
+import { storeMediaThumbnail } from './media-thumbnail.js'
 
 // Miniature d'une vidéo YouTube posée sur une personne. Le serveur la va chercher une fois chez i.ytimg.com et la
 // garde avec les autres fichiers de l'arbre : le navigateur de la famille la reçoit de Parenthèse, et ne contacte
@@ -110,18 +108,9 @@ export function ensureYoutubeThumbnail(
       failedAt.set(media.id, Date.now())
       return null
     }
-    const relativePath = path.posix.join(media.treeId, media.personId, `${media.id}-miniature.jpg`)
-    const absolutePath = path.resolve(storageRoot, relativePath)
-    if (!absolutePath.startsWith(storageRoot + path.sep)) return null
-    await mkdir(path.dirname(absolutePath), { recursive: true })
-    await writeFile(absolutePath, buffer)
     // Souvenir supprimé pendant l'appel : la miniature ne reste pas sur le disque
-    const updated = await prisma.mediaItem.updateMany({ where: { id: media.id, deletedAt: null }, data: { thumbPath: relativePath } })
-    if (updated.count === 0) {
-      await removeStoredFile(storageRoot, relativePath)
-      return null
-    }
-    failedAt.delete(media.id)
+    const relativePath = await storeMediaThumbnail(prisma, storageRoot, media, buffer)
+    if (relativePath) failedAt.delete(media.id)
     return relativePath
   })()
     .catch(() => {

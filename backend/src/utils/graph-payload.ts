@@ -150,8 +150,11 @@ export function buildGraphPayload(
         type: media.type,
         mimeType: media.mimeType,
         urlPath: media.mimeType === 'video/youtube' ? media.filePath : `/trees/${treeId}/media/${media.id}`,
-        // Miniature d'une vidéo YouTube, servie par Parenthèse (cherchée à sa première demande si elle manque)
-        thumbUrlPath: media.mimeType === 'video/youtube' ? `/trees/${treeId}/media/${media.id}/thumbnail` : null,
+        // Miniature d'une vidéo, servie par Parenthèse. YouTube : cherchée à sa première demande si elle manque ;
+        // fichier vidéo : seulement s'il en a une (prise par le navigateur à l'envoi, ou plus tard par qui gère l'arbre)
+        thumbUrlPath: media.mimeType === 'video/youtube' || (media.type === 'video' && media.thumbPath)
+          ? `/trees/${treeId}/media/${media.id}/thumbnail`
+          : null,
         caption: media.caption,
         source: media.source,
         displayOrder: media.displayOrder,

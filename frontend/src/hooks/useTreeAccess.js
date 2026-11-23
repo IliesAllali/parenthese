@@ -144,6 +144,11 @@ export function useTreeAccess() {
     setGraphRevision((current) => current + 1)
   }, [])
 
+  // Une image changée sans nouveau placement (miniature ajoutée après coup) : l'arbre et la fiche se redessinent
+  const bumpAssetRevision = useCallback(() => {
+    setAssetRevision((current) => current + 1)
+  }, [])
+
   const handleUnlock = async (treeId, password, options = {}) => {
     setGateLoading(true)
     setGateError('')
@@ -220,6 +225,7 @@ export function useTreeAccess() {
     wizardState, setWizardState,
     graphRevision,
     bumpGraphRevision,
+    bumpAssetRevision,
     canEditCurrentTree,
     canSubmitContribution,
     openTreeGraph,

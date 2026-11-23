@@ -29,6 +29,7 @@ import { resolveTreeMediaDirectory } from '../lib/tree-purge.js'
 import { canReadTree, canReadTreeWithMediaToken } from '../lib/tree-access.js'
 import { sendTreeImage, treeImageOf } from '../lib/tree-visual.js'
 import { ensureYoutubeThumbnail } from '../lib/youtube-thumbnail.js'
+import { decodeThumbnailBase64, isVideoFileMime, sanitizeVideoThumbnail, storeMediaThumbnail } from '../lib/media-thumbnail.js'
 import type { MembershipRole } from '../types/auth.js'
 import { ContributionRouteError, resolveSubmissionContext } from './contributions.js'
 import { forgetPendingPhoto, reservePendingPhoto, sweepStalePendingPhotos } from '../lib/annotation-changes.js'
@@ -70,6 +71,9 @@ const uploadBinaryMediaSchema = z.object({
   source: mediaSourceSchema,
   // Qui est sur la photo, dit à l'envoi : la famille le dit sur ce qu'elle envoie, encore en attente de relecture
   people: mediaPeopleSchema.optional(),
+  // Vidéo : une image prise par le navigateur. Lue à part, sans contrainte ici : une miniature ratée ne fait jamais
+  // échouer l'envoi de la vidéo, elle est laissée de côté.
+  thumbnailBase64: z.unknown().optional(),
 })
 
 const uploadCitationMediaSchema = z.object({
@@ -92,6 +96,10 @@ const uploadYoutubeVideoSchema = z.object({
   youtubeUrl: z.string().max(500).regex(YOUTUBE_URL_RE),
   caption: z.string().max(280).optional().nullable(),
   source: mediaSourceSchema,
+})
+
+const videoThumbnailSchema = z.object({
+  thumbnailBase64: z.string().min(1),
 })
 
 const uploadMediaSchema = z.union([uploadBinaryMediaSchema, uploadCitationMediaSchema, uploadYoutubeVideoSchema])
@@ -367,6 +375,7 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     // Fichier reconnu, nettoyé et compté AVANT toute écriture : un envoi refusé ne laisse ni contribution
     // vide en attente ni fichier sur le disque
     let prepared: { buffer: Buffer; mimeType: string; extension: string } | null = null
+    let thumbnail: Buffer | null = null
     let uploadFileName = ''
     let uploadCaption: string | null = null
     if (!('youtubeUrl' in payload.data)) {
@@ -399,9 +408,12 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
         }
         uploadFileName = payload.data.fileName
         uploadCaption = payload.data.caption ?? null
+        if (isVideoFileMime(prepared.mimeType)) {
+          thumbnail = await sanitizeVideoThumbnail(decodeThumbnailBase64(payload.data.thumbnailBase64))
+        }
       }
 
-      if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length, isPending)) {
+      if (await exceedsStorageQuota(app, params.data.id, prepared.buffer.length + (thumbnail?.length ?? 0), isPending)) {
         return reply.code(413).send({ error: 'storage_quota_exceeded' })
       }
     }
@@ -540,6 +552,12 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     if (!isPending) {
       await syncPersonMediaOrder(app.prisma, params.data.id, params.data.personId)
+    }
+
+    // Miniature d'une vidéo, prise par le navigateur : un échec d'écriture laisse la vidéo sans, jamais en erreur
+    if (thumbnail) {
+      const thumbPath = await storeMediaThumbnail(app.prisma, storageRoot, media, thumbnail).catch(() => null)
+      if (thumbPath) media.thumbPath = thumbPath
     }
 
     await recordContributionChange(mediaId, { type: payload.data.type, mimeType: prepared.mimeType, caption: uploadCaption })
@@ -1352,17 +1370,20 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
     return sendFileWithRanges(request, reply, absolutePath, size)
   })
 
-  // Miniature d'une vidéo YouTube, servie par Parenthèse : le navigateur ne contacte pas YouTube avant la lecture.
-  // Un souvenir ajouté avant la miniature la reçoit à sa première demande. Pas de miniature : 404, la bande de film reste.
+  // Miniature d'une vidéo, servie par Parenthèse. YouTube : le navigateur ne contacte pas YouTube avant la lecture, et
+  // un souvenir ajouté avant la miniature la reçoit à sa première demande. Fichier vidéo : l'image prise par le
+  // navigateur à l'envoi, ou plus tard chez qui gère l'arbre (PUT ci-dessous). Pas de miniature : 404, la bande de
+  // film reste.
   app.get('/trees/:id/media/:mediaId/thumbnail', async (request, reply) => {
     const media = await findReadableMedia(request, reply)
     if (!media) return reply
-    if (media.mimeType !== 'video/youtube') {
+    const isYoutube = media.mimeType === 'video/youtube'
+    if (!isYoutube && !isVideoFileMime(media.mimeType)) {
       return reply.code(404).send({ error: 'thumbnail_not_found' })
     }
 
     const storageRoot = getStorageRoot()
-    const thumbPath = media.thumbPath ?? await ensureYoutubeThumbnail(app.prisma, storageRoot, media)
+    const thumbPath = media.thumbPath ?? (isYoutube ? await ensureYoutubeThumbnail(app.prisma, storageRoot, media) : null)
     const absolutePath = thumbPath ? path.resolve(storageRoot, thumbPath) : null
     const size = absolutePath && absolutePath.startsWith(storageRoot + path.sep) ? await storedFileSize(absolutePath) : null
     if (!absolutePath || size === null) {
@@ -1371,6 +1392,50 @@ export const mediaRoutes: FastifyPluginAsync = async (app) => {
 
     applyMediaResponseHeaders(reply, 'image/jpeg', path.basename(thumbPath as string))
     return sendFileWithRanges(request, reply, absolutePath, size)
+  })
+
+  // Miniature d'un fichier vidéo envoyé avant qu'elles existent : prise par le navigateur de qui gère l'arbre, une
+  // fois, quand la vidéo passe sous ses yeux. Réservé au propriétaire et aux co-gestionnaires, et seulement si la
+  // vidéo n'en a pas encore.
+  app.put('/trees/:id/media/:mediaId/thumbnail', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request, reply) => {
+    if (!request.actor || request.actor.kind !== 'user') {
+      return reply.code(401).send({ error: 'authentication_required' })
+    }
+    const params = mediaParamsSchema.safeParse(request.params)
+    if (!params.success) {
+      return reply.code(400).send({ error: 'invalid_params' })
+    }
+    if (!(await requireAdminMembership(app, request.actor.userId, params.data.id))) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+    const payload = videoThumbnailSchema.safeParse(request.body)
+    if (!payload.success) {
+      return reply.code(400).send({ error: 'invalid_payload' })
+    }
+
+    const media = await app.prisma.mediaItem.findFirst({
+      where: { id: params.data.mediaId, treeId: params.data.id, deletedAt: null, status: { not: 'rejected' } },
+      select: { id: true, treeId: true, personId: true, mimeType: true, thumbPath: true },
+    })
+    if (!media || !isVideoFileMime(media.mimeType)) {
+      return reply.code(404).send({ error: 'media_not_found' })
+    }
+    if (media.thumbPath) {
+      return reply.code(409).send({ error: 'thumbnail_exists' })
+    }
+
+    const thumbnail = await sanitizeVideoThumbnail(decodeThumbnailBase64(payload.data.thumbnailBase64))
+    if (!thumbnail) {
+      return reply.code(400).send({ error: 'invalid_thumbnail' })
+    }
+    if (await exceedsStorageQuota(app, params.data.id, thumbnail.length, false)) {
+      return reply.code(413).send({ error: 'storage_quota_exceeded' })
+    }
+    const thumbPath = await storeMediaThumbnail(app.prisma, getStorageRoot(), media, thumbnail)
+    if (!thumbPath) {
+      return reply.code(404).send({ error: 'media_not_found' })
+    }
+    return reply.send({ thumbUrlPath: `/trees/${params.data.id}/media/${media.id}/thumbnail` })
   })
 
   // ---- Annotation Photos ----

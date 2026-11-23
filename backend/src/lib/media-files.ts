@@ -11,10 +11,11 @@ import sharp from 'sharp'
 export type BinaryMediaType = 'photo' | 'video' | 'audio' | 'document' | 'geojson' | 'gpx'
 
 export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const
+export const VIDEO_FILE_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'] as const
 
 const ALLOWED_BY_TYPE: Record<BinaryMediaType, readonly string[]> = {
   photo: IMAGE_MIME_TYPES,
-  video: ['video/mp4', 'video/quicktime', 'video/webm'],
+  video: VIDEO_FILE_MIME_TYPES,
   audio: ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/flac'],
   document: [
     'application/pdf',

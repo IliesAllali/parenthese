@@ -174,9 +174,22 @@ export function resetToDemoData() {
   filiations = JSON.parse(JSON.stringify(INITIAL_FILIATIONS))
 }
 
+// Adresse de l'API et jeton médias du dernier chargement : pour une miniature ajoutée sans recharger l'arbre
+let assetContext = { apiBaseUrl: '', mediaToken: '' }
+
+// Miniature arrivée après le chargement (fichier vidéo complété par qui gère l'arbre) : posée sur le souvenir, sans
+// recharger l'arbre ni toucher à la fiche ouverte. Renvoie true si le souvenir était là.
+export function setMediaThumbnail(mediaId, thumbUrlPath) {
+  const thumbUrl = buildProtectedAssetUrl(thumbUrlPath, assetContext.apiBaseUrl, assetContext.mediaToken)
+  if (!thumbUrl || !medias.some((media) => media.id === mediaId)) return false
+  medias = medias.map((media) => (media.id === mediaId ? { ...media, thumbUrl } : media))
+  return true
+}
+
 export function loadGraphData(graph, options = {}) {
   const mediaToken = options.mediaToken || ''
   const apiBaseUrl = (options.apiBaseUrl || '').replace(/\/$/, '')
+  assetContext = { apiBaseUrl, mediaToken }
   const avatarCacheBust = options.avatarCacheBust ?? null
 
   const remotePersons = Array.isArray(graph?.persons) ? graph.persons : []
@@ -263,7 +276,7 @@ export function loadGraphData(graph, options = {}) {
         type: media.type || 'photo',
         url: mediaUrl,
         urlHd: mediaUrl,
-        // Miniature d'une vidéo YouTube, servie par Parenthèse : rien ne part chez YouTube avant la lecture
+        // Miniature d'une vidéo, servie par Parenthèse (YouTube : rien ne part chez YouTube avant la lecture)
         thumbUrl: media.thumbUrlPath ? buildProtectedAssetUrl(media.thumbUrlPath, apiBaseUrl, mediaToken) : null,
         label: media.caption || t('Média {n}', { n: index + 1 }),
         source: media.source || null,

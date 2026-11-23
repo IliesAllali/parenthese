@@ -84,6 +84,7 @@ import { loadMediaRefs, loadPhotoRefs, pickFirstFaces, prepareImageForUpload, sa
 import { fileToBase64, getAccountErrorMessage } from './utils/errorMessages'
 import { getCoupleParentLinks, getSiblingParentLinks } from './utils/familyLinks'
 import { getUploadMimeType, inferMediaTypeFromMimeType, validateMediaFile } from './utils/mediaUpload'
+import { videoThumbnailField } from './utils/videoFrame.js'
 import {
   getSource,
   rememberSource,
@@ -609,6 +610,7 @@ function App() {
     treeContext: tree.treeContext,
     refreshCurrentTreeGraph: tree.refreshCurrentTreeGraph,
     refreshTreeAndKeepSelection,
+    bumpAssetRevision: tree.bumpAssetRevision,
   })
   const contrib = useContributions({
     canEditCurrentTree: tree.canEditCurrentTree,
@@ -3669,6 +3671,7 @@ function App() {
             dataBase64: await fileToBase64(prepared),
             caption: caption ? String(caption).slice(0, 280) : null,
             source: source ? String(source).slice(0, 500) : null,
+            ...(await videoThumbnailField(prepared, type)),
           }
           // Trop d'envois d'un coup (429) : on attend et on réessaie, deux fois au plus
           for (let attempt = 0; ; attempt += 1) {

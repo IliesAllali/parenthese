@@ -1,11 +1,15 @@
-import { useState } from 'react'
-import { uploadPersonMedia, reorderPersonMedia, deletePersonMedia, updatePersonMedia, updateMediaPeople, fetchPersonLife } from '../api/treeApi'
-import { getPersonMedias } from '../data/mockData'
+import { useEffect, useState } from 'react'
+import { uploadPersonMedia, reorderPersonMedia, deletePersonMedia, updatePersonMedia, updateMediaPeople, fetchPersonLife, uploadMediaThumbnail } from '../api/treeApi'
+import { getPersonMedias, setMediaThumbnail } from '../data/mockData'
 import { fileToBase64, getAccountErrorMessage } from '../utils/errorMessages'
 import { getUploadMimeType, resolveUploadMediaType, validateMediaFile } from '../utils/mediaUpload'
 import { prepareImageForUpload } from '../utils/photoImport.js'
+import { captureVideoFrame, isVideoFileMime, videoThumbnailField } from '../utils/videoFrame.js'
 import { readContributorName, saveContributorName } from '../utils/contributorName'
 import { t } from '../i18n/index.js'
+
+// Vidéos dont la miniature a déjà été tentée pendant cette session (réussie ou non) : une seule fois chacune
+const thumbnailAttempts = new Set()
 
 // Souvenir envoyé par la famille : en attente de la relecture du propriétaire
 function noticeFor(created) {
@@ -21,12 +25,42 @@ export function useMediaManager({
   treeContext,
   refreshCurrentTreeGraph,
   refreshTreeAndKeepSelection,
+  bumpAssetRevision,
 }) {
   const [mediaManagerState, setMediaManagerState] = useState({ visible: false, loading: false, error: '', notice: '' })
 
   const selectedPersonMedias = selectedPerson ? getPersonMedias(selectedPerson.id) : []
 
   const canUploadMedia = canEditCurrentTree || canSubmitContribution
+
+  // Fichier vidéo envoyé avant les miniatures : quand il passe sous les yeux de qui gère l'arbre (la fiche de la
+  // personne ouverte), son navigateur prend l'image et l'envoie, une fois. Jamais chez la famille ni un visiteur.
+  const missingThumbnailIds = canEditCurrentTree
+    ? selectedPersonMedias
+      .filter((media) => media.type === 'video' && !media.thumbUrl && media.url && isVideoFileMime(media.mimeType) && !thumbnailAttempts.has(media.id))
+      .map((media) => media.id)
+      .join(',')
+    : ''
+  useEffect(() => {
+    if (!missingThumbnailIds || !treeContext.treeId || !treeContext.accessToken) return
+    const { treeId, accessToken } = treeContext
+    const pending = selectedPersonMedias.filter((media) => missingThumbnailIds.split(',').includes(media.id))
+    pending.forEach((media) => thumbnailAttempts.add(media.id))
+    ;(async () => {
+      // Une vidéo après l'autre : le navigateur n'en décode qu'une à la fois
+      for (const media of pending) {
+        const thumbnailBase64 = await captureVideoFrame(media.url)
+        if (!thumbnailBase64) continue
+        try {
+          const saved = await uploadMediaThumbnail(treeId, media.id, thumbnailBase64, accessToken)
+          // Posée sur le souvenir sans recharger l'arbre : la fiche ouverte et la vidéo en lecture restent
+          if (saved?.thumbUrlPath && setMediaThumbnail(media.id, saved.thumbUrlPath)) bumpAssetRevision?.()
+        } catch {
+          // Refusée ou déjà là : la vignette sombre reste
+        }
+      }
+    })()
+  }, [missingThumbnailIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpenMediaManager = () => {
     if (!canUploadMedia || !selectedPerson) {
@@ -150,6 +184,7 @@ export function useMediaManager({
             source,
             // Qui est sur la photo, dit à l'envoi : relu avec le souvenir quand il vient de la famille
             ...(resolvedType === 'photo' && people.length ? { people } : {}),
+            ...(await videoThumbnailField(file, resolvedType)),
             ...byLabel,
           },
           treeContext.accessToken,
@@ -197,6 +232,7 @@ export function useMediaManager({
           caption: caption || null,
           source: null,
           lifeEventId,
+          ...(await videoThumbnailField(file, type)),
           ...(submittedByLabel ? { submittedByLabel } : {}),
         },
         treeContext.accessToken,

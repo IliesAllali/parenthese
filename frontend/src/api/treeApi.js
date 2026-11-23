@@ -363,6 +363,15 @@ export async function uploadPersonMedia(treeId, personId, payload, token) {
   return data.media
 }
 
+// Miniature d'un fichier vidéo envoyé avant qu'elles existent, prise par le navigateur de qui gère l'arbre
+export async function uploadMediaThumbnail(treeId, mediaId, thumbnailBase64, token) {
+  return apiRequest(`/trees/${encodeURIComponent(treeId)}/media/${encodeURIComponent(mediaId)}/thumbnail`, {
+    method: 'PUT',
+    headers: bearer(token),
+    body: JSON.stringify({ thumbnailBase64 }),
+  })
+}
+
 export async function reorderPersonMedia(treeId, personId, orderedMediaIds, token) {
   const data = await apiRequest(`/trees/${encodeURIComponent(treeId)}/persons/${encodeURIComponent(personId)}/media/reorder`, {
     method: 'PATCH',
