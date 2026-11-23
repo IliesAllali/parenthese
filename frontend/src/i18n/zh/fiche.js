@@ -445,10 +445,9 @@ export default {
   'Année ou date': '年份或日期',
   'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': '年份（1950）、日期（{exemple}）、月份（1950年3月）或“约1920”',
   'Date inconnue': '日期未知',
+  'vide si inconnue': '未知则留空',
+  'La fiche passera en « Décédé(e) », avec cette date et ce lieu.': '资料将标记为“已故”，并记录这个日期和地点。',
   'date inconnue': '日期未知',
-  'Décédé(e), date inconnue': '已故，日期未知',
-  'Décédé, date inconnue': '已故，日期未知',
-  'Décédée, date inconnue': '已故，日期未知',
   'Prénom inconnu': '未知名字',
   'Je ne connais pas son prénom': '我不知道他的名字',
   // Recadrage du portrait (PortraitCropModal, menu du badge, App)

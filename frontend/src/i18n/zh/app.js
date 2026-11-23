@@ -64,12 +64,10 @@ export default {
   'Session invalide ou expirée. Reconnectez-vous.': '会话无效或已过期。请重新登录。',
 
   // App.jsx : arbre vide
-  'Votre arbre est créé.': '你的家谱树已被创建。',
-  "Ajoutez un proche pour commencer, comme votre mère, votre père ou un frère. Il suffit d'un prénom.": '先添加一个亲人开始，比如你的母亲、父亲或兄弟。只需要一个名字即可。',
   'Fermer': '关闭',
   'Ajouter une première personne': '添加第一位人物',
+  'Commencez par vous': '从你自己开始',
   'Ajouter une personne': '添加人物',
-  "Commencer l'arbre": '开始创建家谱树',
 
   // ErrorBoundary, BootLoader
   'Une erreur inattendue est survenue': '发生了意外错误',

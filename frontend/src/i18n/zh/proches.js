@@ -3,7 +3,6 @@ export default {
   'Ajouter {name}': '添加{name}',
   'Son père ou sa mère ?': '父亲还是母亲？',
   "Nom d'usage": '现用姓',
-  'année ou date': '年份或者日期',
   'Moins de détails': '显示更少细节',
   'Père': '父亲',
   'Mère': '母亲',
