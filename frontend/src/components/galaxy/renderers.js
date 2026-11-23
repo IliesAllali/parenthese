@@ -7,7 +7,7 @@ import { Map as mapIcon, MapPin as mapPinIcon, Route as routeIcon, UserRound as 
 import {
   PERSON_R, UNKNOWN_R, UNION_W, UNION_H, COMPACT_R, COMPACT_SCALE, LINE_SCALE, LINE_ALPHA,
   MAX_ORBIT_MEDIAS, ORBIT_MEDIA_SIZE,
-  COLORS, NO_PHOTO_ICON_SCALE,
+  COLORS, NO_PHOTO_ICON_SCALE, NODE_LABEL_Y, NODE_LABEL_LINE,
   LOD_SHADOW_MIN_SCALE, LOD_DETAIL_MIN_SCALE, LOD_LABEL_FADE_IN, LOD_LABEL_FADE_OUT, CULL_MARGIN,
 } from './constants'
 import { getEntranceProgress, drawPartialBezier } from './utils'
@@ -661,7 +661,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   // --- Labels (estompés puis absents en dézoom) ---
   if (labelAlpha <= 0) return
   const labelRot = rd?.labelRotation || 0
-  const labelOffsetY = (PERSON_R + 24) * personScale
+  const labelOffsetY = NODE_LABEL_Y * personScale
   ctx.save()
   ctx.globalAlpha = nodeProgress * labelAlpha * dim
   ctx.translate(cx, cy + labelOffsetY)
@@ -733,9 +733,9 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
       // Le jour J, l'âge remplace l'année, en terracotta
       ctx.font = '500 11px "DM Sans", system-ui, sans-serif'
       ctx.fillStyle = BIRTHDAY_TEXT
-      ctx.fillText(t('{age} ans aujourd’hui', { age: birthday.age }), 0, (hasNickname ? 31 : 15) + lineShift)
+      ctx.fillText(t('{age} ans aujourd’hui', { age: birthday.age }), 0, (hasNickname ? 31 : NODE_LABEL_LINE) + lineShift)
     } else {
-      ctx.fillText(years, 0, (hasNickname ? 31 : 15) + lineShift)
+      ctx.fillText(years, 0, (hasNickname ? 31 : NODE_LABEL_LINE) + lineShift)
     }
   }
 
@@ -1378,6 +1378,41 @@ function drawPatchMark(ctx, node, pos, progress, patch) {
     ctx.lineTo(x + 2.6, y)
     ctx.stroke()
   }
+  ctx.restore()
+}
+
+// Arbre vide (Patch, 23/11) : le premier portrait à ajouter. Un nœud carré sans photo, avec une pastille « + »
+// terracotta en haut à droite, sur la diagonale comme drawPatchMark, posée sur le coin du cadre. Dessiné centré
+// en (0, 0), aux mesures du canevas ; FIRST_PORTRAIT_HALF est la demi-taille du dessin, pastille comprise
+const ADD_BADGE = { dist: PERSON_R + 6, ring: 11, disc: 9, plus: 4, plusWidth: 1.7 }
+export const FIRST_PORTRAIT_HALF = Math.ceil(Math.max(
+  PERSON_R + 4 + 3, // cadre carré de drawFrame : côté intérieur PERSON_R + 4, bord blanc 3
+  ADD_BADGE.dist * Math.SQRT1_2 + ADD_BADGE.ring,
+)) + 1
+
+export function drawFirstPortrait(ctx) {
+  drawPortrait(ctx, 'square', { isAlive: true }, null, false)
+  const angle = -Math.PI / 4
+  const x = Math.cos(angle) * ADD_BADGE.dist
+  const y = Math.sin(angle) * ADD_BADGE.dist
+  ctx.save()
+  ctx.fillStyle = '#FBFAF7'
+  ctx.beginPath()
+  ctx.arc(x, y, ADD_BADGE.ring, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = GHOST.color
+  ctx.beginPath()
+  ctx.arc(x, y, ADD_BADGE.disc, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = '#FFFFFF'
+  ctx.lineWidth = ADD_BADGE.plusWidth
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(x - ADD_BADGE.plus, y)
+  ctx.lineTo(x + ADD_BADGE.plus, y)
+  ctx.moveTo(x, y - ADD_BADGE.plus)
+  ctx.lineTo(x, y + ADD_BADGE.plus)
+  ctx.stroke()
   ctx.restore()
 }
 

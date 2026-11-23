@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { buildMediaUrl } from './utils/mediaToken.js'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
+import FirstPortraitButton from './components/FirstPortraitButton.jsx'
 import { FamilyWelcome, SelfAsk, SouvenirPicker } from './components/FamilyOnboarding.jsx'
 import { findSelfCandidates, hasAnsweredSelf, markSelfAnswered } from './utils/selfMatch.js'
 import { readContributorName, saveContributorName } from './utils/contributorName.js'
@@ -3846,28 +3847,8 @@ function App() {
   return (
     <div className="app">
       {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
-      {/* Bouton premier ajout (arbre vide) */}
-      {isEmptyTree && (
-        <button
-          type="button"
-          className="empty-tree-add"
-          onClick={() => { editMode.activate(); handleOpenAddPerson() }}
-          aria-label={t('Ajouter une première personne')}
-        >
-          <svg className="empty-tree-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="16" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
-          <div className="empty-tree-add-body">
-            <span className="empty-tree-add-title">{t('Ajouter une personne')}</span>
-            <span className="empty-tree-add-hint">{t("Commencer l'arbre")}</span>
-          </div>
-          <svg className="empty-tree-add-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="6 4 10 8 6 12" />
-          </svg>
-        </button>
-      )}
+      {/* Arbre vide : le premier portrait, qu'on touche pour ajouter la première personne */}
+      {isEmptyTree && <FirstPortraitButton onClick={() => { editMode.activate(); handleOpenAddPerson() }} />}
       {/* Recherche Expandable */}
       <ExpandableSearch
         results={search.results}
