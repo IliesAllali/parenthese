@@ -33,7 +33,7 @@ describe('nommage chinois', () => {
     expect(getFirstCousin(true, zh.FATHER, zh.OLDER_SISTER, zh.DAUGHTER)).toEqual('表姐')
     expect(getFirstCousin(false, zh.MOTHER, zh.OLDER_SISTER, zh.DAUGHTER)).toEqual('表妹')
     expect(getFirstCousin(false, zh.MOTHER, zh.YOUNGER_SISTER, zh.DAUGHTER, zh.HUSBAND)).toEqual('表妹夫')
-    expect(getFirstCousin(false, zh.FATHER, zh.YOUNGER_BROTHER, zh.SON, zh.WIFE)).toEqual('堂弟妇')
+    expect(getFirstCousin(false, zh.FATHER, zh.YOUNGER_BROTHER, zh.SON, zh.WIFE)).toEqual('堂弟媳')
     expect(getRelative(zh.FATHER, zh.FATHER, zh.OLDER_BROTHER)).toEqual('伯祖父')
     expect(getRelative(zh.YOUNGER_BROTHER, zh.SON, zh.SON)).toEqual('侄孙')
     expect(getRelative(zh.OLDER_SISTER, zh.DAUGHTER, zh.DAUGHTER)).toEqual('甥孙女')
@@ -89,9 +89,9 @@ describe('nommage chinois', () => {
   it('disambiguate when two options are available', () => {
     expect(getRelative(zh.PARENT)).toEqual('父亲/母亲')
     expect(getRelative(zh.FATHER, zh.BROTHER)).toEqual('伯父/叔父')
-    expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟妇')
+    expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟媳')
     expect(getRelative(zh.MOTHER, zh.OLDER_SIBLING)).toEqual('舅父/姨母')
-    expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟妇')
+    expect(getRelative(zh.BROTHER, zh.WIFE)).toEqual('嫂嫂/弟媳')
   })
 
   it('fallback when unknown', () => {
