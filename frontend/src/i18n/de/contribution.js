@@ -210,6 +210,7 @@ export default {
   "Il manque votre prénom": "Ihr Vorname fehlt",
   "Copiez-le à la main": "Kopiere ihn von Hand",
   "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "Die Verbindung wurde unterbrochen. Prüfe dein Netz und versuche es noch einmal.",
+  "Ce fichier n'a pas pu être lu. Il a peut-être changé depuis que vous l'avez choisi. Choisissez-le de nouveau.": "Diese Datei konnte nicht gelesen werden. Vielleicht hat sie sich geändert, seit du sie ausgewählt hast. Wähle sie noch einmal aus.",
   "Ça n'a pas marché. Réessayez dans un moment.": "Das hat nicht geklappt. Versuche es gleich noch einmal.",
   "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "Dieses Foto ist im HEIC-Format, das Parenthèse noch nicht lesen kann. Schick es als JPEG oder mach einen Screenshot davon.",
   "Souvenir pour {name}": "Erinnerung an {name}",

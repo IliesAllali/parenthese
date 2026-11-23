@@ -224,6 +224,7 @@ export default {
   "Il manque votre prénom": "Your first name is missing",
   "Copiez-le à la main": "Copy it by hand",
   "La connexion a été coupée. Vérifiez le réseau, puis réessayez.": "The connection was cut. Check your network, then try again.",
+  "Ce fichier n'a pas pu être lu. Il a peut-être changé depuis que vous l'avez choisi. Choisissez-le de nouveau.": "This file couldn't be read. It may have changed since you chose it. Choose it again.",
   "Ça n'a pas marché. Réessayez dans un moment.": "That didn't work. Try again in a moment.",
   "Cette photo est au format HEIC, que Parenthèse ne lit pas encore. Envoyez-la en JPEG, ou faites-en une capture d'écran.": "This photo is in HEIC format, which Parenthèse can't read yet. Send it as a JPEG, or take a screenshot of it.",
   "Souvenir pour {name}": "Memory for {name}",
