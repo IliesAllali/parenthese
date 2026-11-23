@@ -101,7 +101,7 @@ function computeCouplePoints(p1Pos, p2Pos, unionPos, p1R, p2R, nodeRandomData, s
 // commune à la fratrie, chaque enfant s'en détache par une courbe.
 // Coins arrondis de rayon fixe (accolade franche, forme A).
 // ============================================================
-const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
+export const FIL = { color: '#E3A590', width: 1.1, dot: '#D2694A', dotR: 2.6 }
 // Proposé, pas encore relu (utils/ghosts.js) : pointillés terracotta, portrait délavé, étiquette au-dessus
 const GHOST = { color: '#D2694A', dash: [5, 4], wash: 'rgba(251, 250, 247, 0.55)', annotationAlpha: 0.45 }
 const GHOST_LABELS = { draft: () => t('Brouillon'), sent: () => t('En attente'), pending: () => t('Proposé') }
@@ -511,6 +511,8 @@ function measureTextCached(ctx, text, fontKey) {
 function drawPersonNode(ctx, node, pos, nodeProgress, {
   nodeRandomData, imageCache, hoverScales, selectedGlowScales, searchGlowScales,
   mediaHoverState, entrance, entranceActive, elapsed, view = null, liftScales = null, fullNames = false,
+  // Dessin immobile (aperçu des réglages) : pas de confettis
+  still = false,
 }) {
   const { cx, cy } = pos
   const person = getPersonById(node._data.id) || node._data
@@ -656,7 +658,7 @@ function drawPersonNode(ctx, node, pos, nodeProgress, {
   const birthday = withDetail ? birthdayToday(person, frameNow) : null
   if (birthday) drawBirthdayHat(ctx, frameTopOf(frameType, person, img))
   ctx.restore()
-  if (birthday && nodeProgress >= 1) queueConfetti(node.id, cx, cy, personScale)
+  if (birthday && nodeProgress >= 1 && !still) queueConfetti(node.id, cx, cy, personScale)
 
   // --- Labels (estompés puis absents en dézoom) ---
   if (labelAlpha <= 0) return

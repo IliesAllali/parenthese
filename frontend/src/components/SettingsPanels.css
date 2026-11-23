@@ -345,3 +345,15 @@ body:has(.family-tabs):has(.edit-mode-toast) .contrib-success-toast { top: 124px
 .ts-portrait-shape { padding: 14px; border: 1px solid var(--pz-line); border-radius: var(--pz-r-m); }
 .ts-portrait-shapes { margin-top: 8px; }
 .ts-portrait-shapes .pz-tab { white-space: nowrap; padding: 0 8px; }
+
+/* Aperçu de l'Affichage : un couple et leur enfant dessinés par l'arbre. Il reste en haut de la fenêtre pendant
+   qu'on fait défiler les réglages, qui passent dessous (fond de la feuille, sans ombre). */
+/* Collé au bord de la feuille, marge intérieure comprise (28 px, 24 px au téléphone : pz.css .pz-modal) : rien ne
+   défile au-dessus de l'aperçu. Ses 8 px du haut prennent la place de l'écart de la grille. */
+.ts-preview { position: sticky; top: -28px; z-index: 1; margin: -8px -4px 0; padding: 8px 4px 6px; background: var(--pz-surface); }
+@media (max-width: 560px) { .ts-preview { top: -24px; } }
+.ts-preview-stage { position: relative; overflow: hidden; border-radius: var(--pz-r-m); background: var(--pz-bg); }
+.ts-preview-stage canvas { display: block; width: 100%; height: 100%; }
+/* Les onglets de l'arbre (Galaxy.css) réduits comme la scène dessinée (SCALE de DisplayPreview.jsx) */
+.ts-preview-tabs { position: absolute; top: 4px; left: 4px; display: flex; gap: 6px; padding: 4px; pointer-events: none; transform: scale(.76); transform-origin: top left; }
+.ts-preview-tabs .family-tab { cursor: default; }

@@ -27,6 +27,7 @@ import { readGedcomBundle, zipErrorMessage } from '../utils/gedcomBundle.js'
 import Skeleton from './Skeleton.jsx'
 import TreeVisualField from './TreeVisualField.jsx'
 import PortraitShapeField from './PortraitShapeField.jsx'
+import DisplayPreview from './DisplayPreview.jsx'
 import { visualModeOf, visualPayload } from '../utils/treeVisual.js'
 
 function normalizeSlug(value) {
@@ -556,7 +557,6 @@ const AdminPanel = ({
 
                   <fieldset className="ts-policy" disabled={savingPolicy}>
                     <legend className="pz-eyebrow">{t('Contributions de la famille')}</legend>
-                    <p className="pz-small">{t('Ce que deviennent les ajouts et corrections faits avec le mot de passe de contribution.')}</p>
                     <label className={`ts-choice ${contributionPolicy === 'pending' ? 'is-active' : ''}`}>
                       <input
                         type="radio"
@@ -565,10 +565,7 @@ const AdminPanel = ({
                         checked={contributionPolicy === 'pending'}
                         onChange={() => handlePolicyChange('pending')}
                       />
-                      <span className="ts-choice-text">
-                        <strong>{t('Je valide chaque proposition')}</strong>
-                        <small>{t("Rien n'apparaît dans l'arbre avant votre accord.")}</small>
-                      </span>
+                      <span className="ts-choice-text"><strong>{t('Je valide chaque ajout')}</strong></span>
                     </label>
                     <label className={`ts-choice ${contributionPolicy === 'direct' ? 'is-active' : ''}`}>
                       <input
@@ -578,39 +575,14 @@ const AdminPanel = ({
                         checked={contributionPolicy === 'direct'}
                         onChange={() => handlePolicyChange('direct')}
                       />
-                      <span className="ts-choice-text">
-                        <strong>{t("Les modifications s'appliquent tout de suite")}</strong>
-                        <small>{t("La famille modifie l'arbre sans attendre. Vous gardez l'historique.")}</small>
-                      </span>
+                      <span className="ts-choice-text"><strong>{t("Les ajouts s'appliquent tout de suite")}</strong></span>
                     </label>
                   </fieldset>
 
-                  <fieldset className="ts-policy">
+                  {/* Affichage : l'aperçu reste en haut de la fenêtre pendant qu'on fait défiler les réglages (Patch, 23/11) */}
+                  <fieldset className="ts-policy ts-display">
                     <legend className="pz-eyebrow">{t('Affichage')}</legend>
-                    <label className={`ts-choice ${familyTabs ? 'is-active' : ''}`}>
-                      <input
-                        type="checkbox"
-                        name="familyTabs"
-                        checked={familyTabs}
-                        onChange={(event) => onFamilyTabsChange?.(event.target.checked)}
-                      />
-                      <span className="ts-choice-text">
-                        <strong>{t('Les grandes familles par alliance dans des onglets')}</strong>
-                        <small>{t("Une belle-famille plus large qu'un écran s'ouvre dans son propre onglet au lieu d'être dessinée dans l'arbre. Réglage de ce navigateur.")}</small>
-                      </span>
-                    </label>
-                    <label className={`ts-choice ${fullNames ? 'is-active' : ''}`}>
-                      <input
-                        type="checkbox"
-                        name="fullNames"
-                        checked={fullNames}
-                        onChange={(event) => onFullNamesChange?.(event.target.checked)}
-                      />
-                      <span className="ts-choice-text">
-                        <strong>{t("Le nom de famille sous le prénom")}</strong>
-                        <small>{t("Le nom de naissance quand il est connu, sinon le nom d'usage. Réglage de ce navigateur.")}</small>
-                      </span>
-                    </label>
+                    <DisplayPreview familyTabs={familyTabs} fullNames={fullNames} surnameUppercase={surnameUppercase} portraitShape={portraitShape} />
                     <label className={`ts-choice ${surnameUppercase ? 'is-active' : ''}`}>
                       <input
                         type="checkbox"
@@ -619,10 +591,25 @@ const AdminPanel = ({
                         disabled={savingSurnames}
                         onChange={(event) => handleSurnameUppercaseChange(event.target.checked)}
                       />
-                      <span className="ts-choice-text">
-                        <strong>{t('Les noms de famille en capitales')}</strong>
-                        <small>{t('Jeanne MARTIN plutôt que Jeanne Martin, pour toute la famille. Les noms restent enregistrés comme ils ont été tapés.')}</small>
-                      </span>
+                      <span className="ts-choice-text"><strong>{t('Noms en capitales')}</strong></span>
+                    </label>
+                    <label className={`ts-choice ${fullNames ? 'is-active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        name="fullNames"
+                        checked={fullNames}
+                        onChange={(event) => onFullNamesChange?.(event.target.checked)}
+                      />
+                      <span className="ts-choice-text"><strong>{t('Nom sous le prénom')}</strong></span>
+                    </label>
+                    <label className={`ts-choice ${familyTabs ? 'is-active' : ''}`}>
+                      <input
+                        type="checkbox"
+                        name="familyTabs"
+                        checked={familyTabs}
+                        onChange={(event) => onFamilyTabsChange?.(event.target.checked)}
+                      />
+                      <span className="ts-choice-text"><strong>{t('Belles-familles en onglets')}</strong></span>
                     </label>
                     <PortraitShapeField value={portraitShape} disabled={savingPortraitShape} onChange={handlePortraitShapeChange} />
                   </fieldset>
