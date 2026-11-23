@@ -521,32 +521,6 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
           {duplicateBox}
 
           <div className="pz-field">
-            <label htmlFor="ap-birthName">{t('Nom de naissance')} <span className="apn-optional">{t('si différent')}</span></label>
-            <input
-              id="ap-birthName"
-              type="text"
-              className={isSurnameUppercase() ? 'pz-caps' : undefined}
-              value={birthName}
-              onChange={(e) => setBirthName(e.target.value)}
-              placeholder={t('Martin')}
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="pz-field">
-            <label htmlFor="ap-nickname">{t('Surnom')} <span className="apn-optional">{t('facultatif')}</span></label>
-            <input
-              id="ap-nickname"
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder={t('Loulou')}
-              autoComplete="off"
-              maxLength={120}
-            />
-          </div>
-
-          <div className="pz-field">
             <span className="pz-label" id="ap-sex-label">{t('Sexe')} <span className="apn-optional">{t('facultatif')}</span></span>
             <div className="pz-tabs apn-types apn-sex" role="group" aria-labelledby="ap-sex-label">
               {SEX_CHOICES.map(({ value, label }) => (
@@ -577,6 +551,38 @@ function AddPersonPanel({ visible, persons = [], loading = false, error = '', on
               </div>
             )}
           </div>
+
+          {/* Comme le formulaire court : le nom de naissance et le surnom attendent « Plus de détails » */}
+          {detailsOpen && (<>
+          <div className="pz-field">
+            <label htmlFor="ap-birthName">{t('Nom de naissance')} <span className="apn-optional">{t('si différent')}</span></label>
+            <input
+              id="ap-birthName"
+              type="text"
+              className={isSurnameUppercase() ? 'pz-caps' : undefined}
+              value={birthName}
+              onChange={(e) => setBirthName(e.target.value)}
+              placeholder={t('Martin')}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="pz-field">
+            <label htmlFor="ap-nickname">{t('Surnom')} <span className="apn-optional">{t('facultatif')}</span></label>
+            <input
+              id="ap-nickname"
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={t('Loulou')}
+              autoComplete="off"
+              maxLength={120}
+            />
+          </div>
+          </>)}
+          <button type="button" className="pz-link apn-more" onClick={toggleDetails} aria-expanded={detailsOpen}>
+            {detailsOpen ? t('Moins de détails') : t('Plus de détails')}
+          </button>
 
           <section className="apn-section">
             <h3 className="apn-section-title">{t('Place dans la famille')}</h3>
