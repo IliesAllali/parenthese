@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { drawPortrait, resolveFrameType, traceSibship } from './renderers'
+import { drawMediaContent, drawPortrait, resolveFrameType, traceSibship } from './renderers'
 import { setPortraitShape } from '../../utils/portraitCrop.js'
 
 // Contexte canvas minimal qui enregistre les appels de tracé
@@ -70,6 +70,36 @@ describe('drawPortrait, marque « À vérifier »', () => {
     const { ctx, calls } = recorder()
     drawPortrait(ctx, 'round', person, null, false)
     expect(calls.some(c => c[0] === 'fillText' && c[1] === '?')).toBe(false)
+  })
+})
+
+describe('drawMediaContent, vidéo YouTube', () => {
+  const thumb = { naturalWidth: 480, naturalHeight: 360 }
+  const video = { type: 'video', url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa', thumbUrl: '/api/trees/t/media/m/thumbnail?token=x' }
+
+  it('dessine la miniature chargée, puis le triangle de lecture par-dessus', () => {
+    const { ctx, calls } = recorder()
+    drawMediaContent(ctx, video, 14, new Map([[video.thumbUrl, thumb]]))
+    const image = calls.findIndex(c => c[0] === 'drawImage')
+    expect(image).toBeGreaterThan(-1)
+    expect(calls[image][1]).toBe(thumb)
+    const triangle = calls.findIndex((c, i) => i > image && c[0] === 'closePath')
+    expect(triangle).toBeGreaterThan(image)
+  })
+
+  it("sans miniature chargée, la bande de film d'avant, sans aucune image", () => {
+    const { ctx, calls } = recorder()
+    drawMediaContent(ctx, video, 14, new Map())
+    expect(calls.some(c => c[0] === 'drawImage')).toBe(false)
+    expect(calls.filter(c => c[0] === 'fillRect').length).toBeGreaterThan(4)
+  })
+
+  it("ne cherche jamais l'adresse YouTube de la vidéo dans le cache d'images", () => {
+    const { ctx } = recorder()
+    const asked = []
+    const cache = { get: (key) => { asked.push(key); return undefined } }
+    drawMediaContent(ctx, video, 14, cache)
+    expect(asked).not.toContain(video.url)
   })
 })
 

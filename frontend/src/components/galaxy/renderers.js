@@ -895,9 +895,9 @@ function drawGpxThumbnail(ctx, ms) {
   drawLucideIcon(ctx, routeIcon.node, 0, 0, ms * 1.02, '#3A678F', 1.35, 1)
 }
 
-function drawMediaContent(ctx, media, ms, imageCache) {
+export function drawMediaContent(ctx, media, ms, imageCache) {
   // Photo pas encore chargée : son aperçu flou
-  const mImg = media.url ? (imageCache.get(media.url) || (media.type === 'photo' ? blurhashCanvas(media.blurhash) : null)) : null
+  const mImg = media.type === 'photo' && media.url ? (imageCache.get(media.url) || blurhashCanvas(media.blurhash)) : null
 
   if (media.type === 'photo' && mImg) {
     ctx.save()
@@ -907,6 +907,25 @@ function drawMediaContent(ctx, media, ms, imageCache) {
     // Recadrée au centre comme les portraits : un souvenir horizontal ou vertical n'est plus tassé dans le carré
     drawImageCover(ctx, mImg, -ms, -ms, ms * 2, ms * 2)
     ctx.restore()
+  } else if (media.type === 'video' && media.thumbUrl && imageCache.get(media.thumbUrl)) {
+    // Miniature YouTube servie par Parenthèse, le triangle de lecture sur un disque sombre par-dessus
+    ctx.save()
+    ctx.beginPath()
+    ctx.roundRect(-ms, -ms, ms * 2, ms * 2, 1)
+    ctx.clip()
+    drawImageCover(ctx, imageCache.get(media.thumbUrl), -ms, -ms, ms * 2, ms * 2)
+    ctx.restore()
+    ctx.fillStyle = 'rgba(42, 38, 34, 0.62)'
+    ctx.beginPath()
+    ctx.arc(0, 0, 8.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#FFFFFF'
+    ctx.beginPath()
+    ctx.moveTo(-3, -5)
+    ctx.lineTo(-3, 5)
+    ctx.lineTo(5.5, 0)
+    ctx.closePath()
+    ctx.fill()
   } else if (media.type === 'video') {
     ctx.fillStyle = '#3D3731'
     ctx.beginPath()

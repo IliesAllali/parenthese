@@ -97,6 +97,8 @@ L'écran de connexion affiche alors « Se connecter avec Authentik ». À la pre
 
 Une instance auto-hébergée n'envoie aucune mesure d'audience : le suivi d'usage de parenthese.io ne s'active que si une clé PostHog est fournie au build, ce que cette configuration ne fait pas.
 
+Quand quelqu'un ajoute une vidéo YouTube sur une personne, le conteneur `api` va chercher sa miniature une fois chez `i.ytimg.com` (seul l'identifiant de la vidéo part) et la garde avec les fichiers de l'arbre. Les navigateurs reçoivent ensuite la miniature de votre instance, et ne contactent YouTube qu'au moment où quelqu'un lance la vidéo. Sans accès à Internet, la vidéo marche pareil, elle s'affiche juste sans miniature.
+
 Les liens d'aide et de vie privée de l'application mènent à parenthese.io. Pour pointer vers vos propres pages, renseignez `VITE_HELP_URL` et `VITE_PRIVACY_URL` quand vous construisez vous-même le front (voir `frontend/.env.example`).
 
 Commandes utiles :

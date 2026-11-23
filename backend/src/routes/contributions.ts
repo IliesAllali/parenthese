@@ -1583,9 +1583,9 @@ export const contributionRoutes: FastifyPluginAsync = async (app) => {
       if (rejectedMediaIds.length > 0) {
         const rejected = await app.prisma.mediaItem.findMany({
           where: { id: { in: rejectedMediaIds }, treeId: params.data.id },
-          select: { filePath: true },
+          select: { filePath: true, thumbPath: true },
         })
-        await Promise.all(rejected.map((media) => removeStoredFile(storageRoot, media.filePath)))
+        await Promise.all(rejected.flatMap((media) => [media.filePath, media.thumbPath]).map((filePath) => removeStoredFile(storageRoot, filePath)))
       }
       await Promise.all(filesToRemove.map((filePath) => removeStoredFile(storageRoot, filePath)))
 
