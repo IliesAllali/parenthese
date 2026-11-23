@@ -41,7 +41,7 @@ export default {
 
   // ─── Message d'invitation ───
   'Bonjour à tous,': '大家好，',
-  "Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon et apportez vos vieilles photos, on le complétera ensemble à table. Et si quelqu'un raconte une histoire de famille, enregistrez-la sur votre téléphone, sa voix aura sa place dans l'arbre.": "春节快到了，我把我们家的家谱放到网上了。你们可以在年夜饭前看看它，并带上你们的老照片，我们一起在饭桌上补全它。如果有人讲家族故事，用手机录下来，他的声音也会留在家谱里。",
+  "Pour Noël, j'ai mis l'arbre de notre famille en ligne. Regardez-le avant le réveillon et apportez vos vieilles photos, on le complétera ensemble à table. Et si quelqu'un raconte une histoire de famille, enregistrez-la sur votre téléphone, sa voix aura sa place dans l'arbre.": "圣诞节快到了，我把我们家的家谱放到网上了。你们可以在圣诞前夜晚餐前看看它，并带上你们的老照片，我们一起在饭桌上补全它。如果有人讲家族故事，用手机录下来，他的声音也会留在家谱里。",
   "Je rassemble l'histoire de notre famille dans un arbre en ligne, et j'aimerais que vous m'aidiez à le compléter.": "我正在把我们家的历史整理成一棵在线家谱，希望你们能帮我补全它。",
   "L'arbre est ici {url}": '家谱在这里：{url}',
 
