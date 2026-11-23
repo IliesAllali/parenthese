@@ -28,6 +28,11 @@ export function tooManyAttemptsMessage(error) {
 
 // Ces messages s'affichent à toute la famille : ni « backend » ni « API ». Réseau coupé ou serveur muet, puis le reste.
 function interruptedMessage(error) {
+  // Fichier choisi puis modifié, déplacé ou supprimé avant l'envoi (dossier synchronisé, galerie du téléphone) :
+  // le navigateur refuse de le lire et réessayer n'y change rien, il faut le choisir de nouveau
+  if (error?.name === 'NotReadableError' || error?.message === 'file_read_failed') {
+    return t("Ce fichier n'a pas pu être lu. Il a peut-être changé depuis que vous l'avez choisi. Choisissez-le de nouveau.")
+  }
   if (['network_error', 'request_timeout'].includes(error?.payload?.error) || error instanceof TypeError) {
     return t('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
   }

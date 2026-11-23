@@ -190,6 +190,12 @@ describe('messages lus par la famille', () => {
     expect(getShareErrorMessage({ status: 0, payload: { error: 'request_timeout' } })).toBe('La connexion a été coupée. Vérifiez le réseau, puis réessayez.')
   })
 
+  it('un fichier changé depuis son choix demande de le choisir de nouveau, pas de réessayer', () => {
+    const attendu = "Ce fichier n'a pas pu être lu. Il a peut-être changé depuis que vous l'avez choisi. Choisissez-le de nouveau."
+    expect(getAccountErrorMessage(new DOMException('The requested file could not be read', 'NotReadableError'))).toBe(attendu)
+    expect(getAccountErrorMessage(new Error('file_read_failed'))).toBe(attendu)
+  })
+
   it('une photo HEIC refusée dit quoi faire', () => {
     expect(getAccountErrorMessage({ status: 400, message: 'photo_heic_unsupported' })).toContain('HEIC')
   })
