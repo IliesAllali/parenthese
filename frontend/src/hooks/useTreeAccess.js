@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { setMediaToken } from '../utils/mediaToken.js'
 import { setSurnameUppercase } from '../utils/personName.js'
+import { setPortraitShape } from '../utils/portraitCrop.js'
 import { API_BASE_URL } from '../api/client'
 import { fetchTreeGraph, unlockTreeAccess } from '../api/treeApi'
 import { loadGraphData, persons as graphPersons, resetToDemoData } from '../data/mockData'
@@ -43,6 +44,7 @@ export function useTreeAccess() {
     rootPersonId: null,
     accessToken: '',
     surnameUppercase: false,
+    portraitShape: 'varied',
   })
   const [bootState, setBootState] = useState('loading')
   const [gateLoading, setGateLoading] = useState(false)
@@ -71,6 +73,7 @@ export function useTreeAccess() {
     const graphPayload = await fetchTreeGraph(treeId, token)
     setMediaToken(graphPayload.mediaToken)
     setSurnameUppercase(graphPayload.surnameUppercase)
+    setPortraitShape(graphPayload.portraitShape)
     loadGraphData(graphPayload.graph, {
       mediaToken: graphPayload.mediaToken,
       apiBaseUrl: API_BASE_URL,
@@ -104,6 +107,7 @@ export function useTreeAccess() {
       rootPersonId: preferredRootPersonId,
       accessToken: token,
       surnameUppercase: graphPayload.surnameUppercase,
+      portraitShape: graphPayload.portraitShape,
       // Visuel de l'arbre (photo, icône ou lettre) : l'onglet du navigateur le reprend
       treeVisual: graphPayload.visual,
     }))
@@ -210,8 +214,10 @@ export function useTreeAccess() {
       rootPersonId: null,
       accessToken: '',
       surnameUppercase: false,
+      portraitShape: 'varied',
     })
     setSurnameUppercase(false)
+    setPortraitShape('varied')
     setBootState('ready')
   }
 

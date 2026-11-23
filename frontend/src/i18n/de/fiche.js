@@ -433,6 +433,7 @@ export default {
   "Envoyer": "Senden",
   "Pour que la famille sache de qui ça vient": "Damit die Familie weiß, von wem es kommt",
   "Source et note": "Quelle und Notiz",
+  "La fiche passera en « Décédé(e) », avec cette date et ce lieu.": "Das Profil wird als „Verstorben“ markiert, mit diesem Datum und Ort.",
   "Souvenirs de {name}": "Erinnerungen an {name}",
   "Une photo, une vidéo, un enregistrement ou un document, comme un acte en PDF. Ils rejoignent aussi ses souvenirs.": "Ein Foto, ein Video, eine Aufnahme oder ein Dokument, etwa eine Urkunde als PDF. Sie kommen auch zu den Erinnerungen.",
   "Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.": "Danke, ist abgeschickt. Das Ereignis erscheint in ihrem Leben, sobald die Person, die den Stammbaum verwaltet, es angenommen hat.",
@@ -441,9 +442,6 @@ export default {
   "Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »": "Ein Jahr (1950), ein Datum ({exemple}), ein Monat (März 1950) oder „um 1920“",
   "Date inconnue": "Datum unbekannt",
   "date inconnue": "Datum unbekannt",
-  "Décédé(e), date inconnue": "Verstorben, Datum unbekannt",
-  "Décédé, date inconnue": "Verstorben, Datum unbekannt",
-  "Décédée, date inconnue": "Verstorben, Datum unbekannt",
   "Prénom inconnu": "Vorname unbekannt",
   "Je ne connais pas son prénom": "Ich kenne den Vornamen nicht",
   // Recadrage du portrait (PortraitCropModal, menu du badge, App)

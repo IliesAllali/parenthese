@@ -1614,6 +1614,30 @@ describe('API security and authz', () => {
     await app.close()
   })
 
+  it('enregistre la forme des portraits pour tout l arbre, variées par défaut, et refuse une forme inconnue', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    const patch = (payload: object) => app.inject({ method: 'PATCH', url: '/trees/tree-1/settings', headers: { authorization: `Bearer ${token}` }, payload })
+
+    expect((await patch({ portraitShape: 'round' })).statusCode).toBe(200)
+    expect(prismaMock.treeSettings.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ portraitShape: 'round', surnameUppercase: false }),
+        update: expect.objectContaining({ portraitShape: 'round', surnameUppercase: undefined }),
+      }),
+    )
+    expect((await patch({ surnameUppercase: true })).statusCode).toBe(200)
+    expect(prismaMock.treeSettings.upsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ portraitShape: 'varied' }),
+        update: expect.objectContaining({ portraitShape: undefined }),
+      }),
+    )
+    expect((await patch({ portraitShape: 'rect' })).statusCode).toBe(400)
+    expect((await patch({ portraitShape: 'hexagon' })).statusCode).toBe(400)
+    await app.close()
+  })
+
   // Audit 1.0 (30/09/2026)
   it('no longer accepts an account session in a media address', async () => {
     const app = createApp()

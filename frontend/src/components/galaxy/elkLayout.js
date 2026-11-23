@@ -569,6 +569,15 @@ export function computeLayout(graphData = null, referenceId = null) {
   function traverseChain(component, gen, chainVisited) {
     const star = component.size > STAR_MIN ? starOf(component) : null
     if (star) { pushStar(star, gen); return }
+    // Les petits conjoints (conjoints isolés) n'entrent pas dans le parcours : chacun se pose ensuite contre son
+    // partenaire, du côté libre. Parcourus avec les autres dans l'ordre des unions, ils tombaient entre une
+    // personne et le conjoint de ses enfants dès que leur union était listée avant (rang d'affichage, couple
+    // séparé ajouté par le placement) : le troisième conjoint passait devant le couple (live du 22/11).
+    // Une personne et seulement des petits conjoints : parcours de toujours, un de chaque côté (#223).
+    const isCompactKey = (key) => compactPartnerOf.has(personByElkId.get(key)?.id)
+    const core = new Set([...component].filter(key => !isCompactKey(key)))
+    const chainSet = core.size > 1 ? core : component
+    const compactsOf = (key) => chainSet === component ? [] : (adj.get(key) || []).filter(n => component.has(n.otherKey) && isCompactKey(n.otherKey))
     // Choisir le point de départ (extrémité de la chaîne)
     const leaves = [...component].filter(key =>
       (adj.get(key) || []).filter(n => component.has(n.otherKey)).length <= 1
@@ -584,16 +593,32 @@ export function computeLayout(graphData = null, referenceId = null) {
         if (minIdx < bestIdx) { bestIdx = minIdx; leaf = leafKey }
       }
     }
+    // Départ sur un petit conjoint : la chaîne part de son partenaire, ses petits conjoints à sa gauche
+    if (!chainSet.has(leaf)) leaf = `p-${compactPartnerOf.get(personByElkId.get(leaf).id)}`
 
     function traverse(key) {
       if (chainVisited.has(key)) return
       chainVisited.add(key)
 
-      pushPersonKey(key, gen)
-
       const neighbors = (adj.get(key) || [])
-        .filter(n => component.has(n.otherKey) && !chainVisited.has(n.otherKey))
+        .filter(n => chainSet.has(n.otherKey) && !chainVisited.has(n.otherKey))
+      const compacts = compactsOf(key)
 
+      // Côté libre : à gauche au départ de la chaîne (le premier marié au plus près), à droite au bout. Au
+      // milieu de deux conjoints, pas de côté libre : tous dans l'ordre des unions, comme avant
+      if (neighbors.length && key !== leaf) {
+        const ordered = (adj.get(key) || []).filter(n => (chainSet.has(n.otherKey) || compacts.includes(n)) && !chainVisited.has(n.otherKey))
+        pushPersonKey(key, gen)
+        for (const { unionElkId, otherKey } of ordered) {
+          pushUnionKey(unionElkId, gen)
+          traverse(otherKey)
+        }
+        return
+      }
+      compacts.forEach(({ otherKey }) => chainVisited.add(otherKey))
+      if (neighbors.length) [...compacts].reverse().forEach(({ unionElkId, otherKey }) => { pushPersonKey(otherKey, gen); pushUnionKey(unionElkId, gen) })
+      pushPersonKey(key, gen)
+      if (!neighbors.length) compacts.forEach(({ unionElkId, otherKey }) => { pushUnionKey(unionElkId, gen); pushPersonKey(otherKey, gen) })
       for (const { unionElkId, otherKey } of neighbors) {
         pushUnionKey(unionElkId, gen)
         traverse(otherKey)

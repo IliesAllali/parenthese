@@ -2,12 +2,14 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { buildMediaUrl } from './utils/mediaToken.js'
 import Galaxy from './components/Galaxy'
 import PersonCard from './components/PersonCard.jsx'
+import FirstPortraitButton from './components/FirstPortraitButton.jsx'
 import { FamilyWelcome, SelfAsk, SouvenirPicker } from './components/FamilyOnboarding.jsx'
 import { findSelfCandidates, hasAnsweredSelf, markSelfAnswered } from './utils/selfMatch.js'
 import { readContributorName, saveContributorName } from './utils/contributorName.js'
 import { datePrecisionsOf } from './utils/dateInput.js'
 import { HELP_URL } from './utils/siteLinks.js'
 import { firstNameLabel, setSurnameUppercase, surnameLabel } from './utils/personName.js'
+import { setPortraitShape } from './utils/portraitCrop.js'
 import { useUndoable } from './hooks/useUndoable.js'
 import { hasSeenFamilyWelcome, markFamilyWelcomeSeen } from './utils/familyWelcome'
 import { readShareKey } from './utils/shareKey.js'
@@ -699,8 +701,9 @@ function App() {
   })
 
   const buildEmptyTreeContext = useCallback((overrides = {}) => {
-    // Sans arbre ouvert, les noms s'affichent tels qu'ils ont été tapés
+    // Sans arbre ouvert, les noms s'affichent tels qu'ils ont été tapés, les portraits dans leurs formes variées
     setSurnameUppercase(false)
+    setPortraitShape('varied')
     return {
     treeId: '',
     treeName: '',
@@ -712,6 +715,7 @@ function App() {
     rootPersonId: null,
     accessToken: '',
     surnameUppercase: false,
+    portraitShape: 'varied',
     ...overrides,
     }
   }, [])
@@ -3849,28 +3853,8 @@ function App() {
   return (
     <div className="app">
       {/* Bannière de bienvenue (premier utilisateur, mode démo) */}
-      {/* Bouton premier ajout (arbre vide) */}
-      {isEmptyTree && (
-        <button
-          type="button"
-          className="empty-tree-add"
-          onClick={() => { editMode.activate(); handleOpenAddPerson() }}
-          aria-label={t('Ajouter une première personne')}
-        >
-          <svg className="empty-tree-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="16" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
-          <div className="empty-tree-add-body">
-            <span className="empty-tree-add-title">{t('Ajouter une personne')}</span>
-            <span className="empty-tree-add-hint">{t("Commencer l'arbre")}</span>
-          </div>
-          <svg className="empty-tree-add-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <polyline points="6 4 10 8 6 12" />
-          </svg>
-        </button>
-      )}
+      {/* Arbre vide : le premier portrait, qu'on touche pour ajouter la première personne */}
+      {isEmptyTree && <FirstPortraitButton onClick={() => { editMode.activate(); handleOpenAddPerson() }} />}
       {/* Recherche Expandable */}
       <ExpandableSearch
         results={search.results}
@@ -4039,6 +4023,7 @@ function App() {
         familyTabs={familyTabs}
         fullNames={fullNames}
         surnameUppercase={tree.treeContext.surnameUppercase}
+        portraitShape={tree.treeContext.portraitShape}
         annotationViewRef={annotationViewRef}
         onAnnotationsAnchored={persistAnnotationAnchors}
         selfPersonId={linkedSelfPersonId || null}
@@ -4237,6 +4222,8 @@ function App() {
         onFullNamesChange={setFullNames}
         surnameUppercase={tree.treeContext.surnameUppercase}
         onSurnameUppercaseChange={(on) => { setSurnameUppercase(on); tree.setTreeContext((current) => ({ ...current, surnameUppercase: on })) }}
+        portraitShape={tree.treeContext.portraitShape}
+        onPortraitShapeChange={(shape) => { setPortraitShape(shape); tree.setTreeContext((current) => ({ ...current, portraitShape: shape })) }}
       />
       <PhotoStartPanel
         visible={photoStart.visible}

@@ -41,6 +41,35 @@ describe('computeBlockLayout, conjoints isolés', () => {
     })
     expect(children.find(n => n.id === 'p-s')._compact).toBeUndefined()
   })
+
+  // a, ses parents, ses enfants avec c1 ; c2 et c3 ajoutés après coup, sans parent ni enfant. Leurs unions sont
+  // listées avant celle de c1 (même rang d'affichage, ou couple séparé ajouté par le placement à la fin)
+  const threeSpouses = (spouseUnions) => ({
+    persons: ['pa', 'ma', 'a', 'c1', 'c2', 'c3', 'k1', 'k2'].map(person),
+    unions: [union('u0', 'pa', 'ma'), ...spouseUnions],
+    filiations: [fil('fa', 'a', 'u0'), fil('fk1', 'k1', 'u1'), fil('fk2', 'k2', 'u1')],
+  })
+  const between = (children, left, right) => {
+    const byId = new Map(children.map(n => [n.id, n]))
+    const lo = Math.min(byId.get(left).x, byId.get(right).x), hi = Math.max(byId.get(left).x, byId.get(right).x)
+    return children.filter(n => n._type === 'person' && n._generation === byId.get(left)._generation && n.x > lo && n.x < hi).map(n => n.id)
+  }
+
+  it('pose un petit conjoint ajouté en dernier contre son partenaire, jamais entre lui et le parent de ses enfants', () => {
+    for (const unions of [
+      [union('u2', 'a', 'c2'), union('u3', 'a', 'c3'), union('u1', 'a', 'c1')],
+      [union('u2', 'a', 'c2'), union('u3', 'c3', 'a'), union('u1', 'c1', 'a')],
+    ]) {
+      const { children } = computeBlockLayout(threeSpouses(unions))
+      expect(between(children, 'p-a', 'p-c1')).toEqual([])
+      // c2, premier marié, colle à a ; c3 passe derrière lui, du même côté
+      expect(between(children, 'p-a', 'p-c2')).toEqual([])
+      expect(between(children, 'p-a', 'p-c3')).toEqual(['p-c2'])
+      const byId = new Map(children.map(n => [n.id, n]))
+      expect(Math.sign(byId.get('p-c2').x - byId.get('p-a').x)).toBe(Math.sign(byId.get('p-c3').x - byId.get('p-a').x))
+      expect(Math.sign(byId.get('p-c2').x - byId.get('p-a').x)).toBe(-Math.sign(byId.get('p-c1').x - byId.get('p-a').x))
+    }
+  })
 })
 
 describe('computeBlockLayout, ordre de la fratrie', () => {

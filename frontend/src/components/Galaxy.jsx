@@ -1,7 +1,7 @@
 import { surnameLabel } from '../utils/personName.js'
 import { memo, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react'
 import { getPersonMedias, getParents, getChildren, getPersonUnions, persons as graphPersons, unions as graphUnions, filiations as graphFiliations } from '../data/mockData'
-import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER } from './galaxy/constants'
+import { PERSON_R, FLOAT_SPEED, FLOAT_AMPLITUDE, REPULSION_RADIUS, REPULSION_STRENGTH, MAX_ORBIT_MEDIAS, ENTRANCE_NODE_DURATION, ENTRANCE_CAMERA_DURATION, ENTRANCE_CAMERA_FROM_SCALE, ENTRANCE_REDUCED_DURATION, ENTRANCE_LINE_DELAY, ENTRANCE_LINE_DURATION, ENTRANCE_ORBIT_DELAY, ENTRANCE_ORBIT_DURATION, ENTRANCE_ORBIT_STAGGER, INIT_MAX_SCALE } from './galaxy/constants'
 import { easeOutCubic } from './galaxy/utils'
 import { generateNodeRandomData, coupleBarMeta, restoreCoupleBarMeta } from './galaxy/elkLayout'
 import { computeBlockLayout, familyTabsOf, lineToFamily, subgraphOf, takeRootLayout } from './galaxy/blockLayout'
@@ -76,7 +76,7 @@ function barTabs(tabs, activeKey) {
   })
 }
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, surnameUppercase = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, surnameUppercase = false, portraitShape = 'varied', annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`) : la liste des familles de l'arbre, calculée une fois par
@@ -113,6 +113,8 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   useEffect(() => { fullNamesRef.current = fullNames; needsRedrawRef.current = true }, [fullNames])
   // Noms en capitales : le libellé se relit au dessin (surnameLabel), il suffit de redessiner
   useEffect(() => { needsRedrawRef.current = true }, [surnameUppercase])
+  // Forme des portraits de l'arbre : relue au dessin (resolveFrameType), il suffit de redessiner
+  useEffect(() => { needsRedrawRef.current = true }, [portraitShape])
   useEffect(() => { ghostsRef.current = ghosts; needsRedrawRef.current = true }, [ghosts])
   const onAnnotationsAnchoredRef = useRef(onAnnotationsAnchored)
   useEffect(() => { onAnnotationsAnchoredRef.current = onAnnotationsAnchored }, [onAnnotationsAnchored])
@@ -733,12 +735,11 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
     })
     const graphW = maxX - minX
     const graphH = maxY - minY
-    const maxInitScale = 1.2
     const padding = 80
     const fitScale = Math.min(
       (cssW - padding * 2) / Math.max(graphW, 1),
       (cssH - padding * 2) / Math.max(graphH, 1),
-      maxInitScale,
+      INIT_MAX_SCALE,
     )
     let scale = Math.max(MIN_SCALE, fitScale)
     let offsetX = (cssW - graphW * scale) / 2 - minX * scale

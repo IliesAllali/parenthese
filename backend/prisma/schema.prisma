@@ -286,6 +286,9 @@ model TreeSettings {
   contributorPolicy        ContributionPolicy @default(pending)
   // Noms de famille affichés en capitales pour tous ceux qui ouvrent l'arbre ; ils restent enregistrés tels que tapés
   surnameUppercase         Boolean            @default(false)
+  // Forme des portraits pour toute la famille : varied (tirée pour chaque personne), round, square ou polaroid.
+  // Une forme choisie en recadrant une photo l'emporte toujours.
+  portraitShape            String             @default("varied")
   updatedAt                DateTime           @updatedAt
   tree                     Tree               @relation(fields: [treeId], references: [id], onDelete: Cascade)
 

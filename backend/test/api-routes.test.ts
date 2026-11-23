@@ -423,19 +423,30 @@ describe('Graph routes', () => {
     expect(body.graph.persons[0].firstName).toBe('Alice')
     expect(body.graph.unions).toHaveLength(0)
     expect(body.graph.filiations).toHaveLength(0)
-    expect(body.display).toEqual({ surnameUppercase: false })
+    expect(body.display).toEqual({ surnameUppercase: false, portraitShape: 'varied' })
     await app.close()
   })
 
   it('envoie le réglage des noms en capitales avec le graphe, à tous ceux qui l ouvrent', async () => {
     const app = createApp()
     const token = await createUserToken(app)
-    prismaMock.treeSettings.findUnique.mockResolvedValue({ surnameUppercase: true })
+    prismaMock.treeSettings.findUnique.mockResolvedValue({ surnameUppercase: true, portraitShape: 'polaroid' })
 
     const response = await app.inject({ method: 'GET', url: '/trees/tree-1/graph', headers: { authorization: `Bearer ${token}` } })
 
     expect(response.statusCode).toBe(200)
-    expect(response.json().display).toEqual({ surnameUppercase: true })
+    expect(response.json().display).toEqual({ surnameUppercase: true, portraitShape: 'polaroid' })
+    await app.close()
+  })
+
+  it('une forme des portraits inconnue en base revient à « variées »', async () => {
+    const app = createApp()
+    const token = await createUserToken(app)
+    prismaMock.treeSettings.findUnique.mockResolvedValue({ surnameUppercase: false, portraitShape: 'hexagon' })
+
+    const response = await app.inject({ method: 'GET', url: '/trees/tree-1/graph', headers: { authorization: `Bearer ${token}` } })
+
+    expect(response.json().display).toEqual({ surnameUppercase: false, portraitShape: 'varied' })
     await app.close()
   })
 
@@ -917,6 +928,68 @@ describe('Import GEDCOM', () => {
     expect(prismaMock.union.create.mock.calls[0][0].data).toMatchObject({ partner1PersonId: 'p-Jean', partner2PersonId: null })
     expect(prismaMock.parentChildLink.create).toHaveBeenCalledTimes(1)
     expect(prismaMock.parentChildLink.create.mock.calls[0][0].data).toMatchObject({ parentPersonId: 'p-Jean', childPersonId: 'p-Paul' })
+    await app.close()
+  })
+})
+
+describe('Import GEDCOM, noms de famille en capitales', () => {
+  const importer = async (content: string, existing: Array<Record<string, unknown>> = []) => {
+    const app = createApp()
+    const auth = { authorization: `Bearer ${await createUserToken(app)}` }
+    prismaMock.person.findMany.mockResolvedValue(existing)
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.person.create.mockImplementation(async ({ data }: { data: { firstName: string } }) => ({ id: `p-${data.firstName}` }))
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/import/gedcom', headers: auth, payload: { content } })
+    expect(response.statusCode).toBe(200)
+    await app.close()
+  }
+  const gedcom = (names: string[]) => ['0 HEAD', ...names.flatMap((name, i) => [`0 @I${i + 1}@ INDI`, `1 NAME ${name}`]), '0 TRLR'].join('\n')
+  const capitalsOn = expect.objectContaining({ where: { treeId: 'tree-1' }, create: expect.objectContaining({ surnameUppercase: true }), update: { surnameUppercase: true } })
+
+  it('arbre vide et quatre noms sur cinq en capitales : le réglage s allume', async () => {
+    await importer(gedcom(['Jean /MARTIN/', 'Marie /DURAND/', 'Paul /MARTIN/', 'Rose /LEFÈVRE/', 'Luc /Martin/']))
+    expect(prismaMock.treeSettings.upsert).toHaveBeenCalledWith(capitalsOn)
+  })
+
+  it('moins de 80 % en capitales : rien ne change', async () => {
+    await importer(gedcom(['Jean /MARTIN/', 'Marie /DURAND/', 'Paul /MARTIN/', 'Rose /Lefèvre/', 'Luc /Martin/']))
+    expect(prismaMock.treeSettings.upsert).not.toHaveBeenCalled()
+  })
+
+  it('un arbre qui a déjà des personnes garde son réglage, même avec un fichier tout en capitales', async () => {
+    const existing = [{ id: 'p-0', firstName: 'Anne', lastName: 'Martin', birthDate: null, deathDate: null, avatarPath: null }]
+    await importer(gedcom(['Jean /MARTIN/', 'Marie /DURAND/']), existing)
+    expect(prismaMock.treeSettings.upsert).not.toHaveBeenCalled()
+  })
+})
+
+describe('Import GEDCOM : décès présumé après 110 ans (live du 22/11)', () => {
+  it('sans DEAT, née il y a plus de 110 ans : décédée, date inconnue ; plus jeune ou sans naissance : en vie', async () => {
+    const app = createApp()
+    const auth = { authorization: `Bearer ${await createUserToken(app)}` }
+    prismaMock.person.findMany.mockResolvedValue([])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.person.create.mockImplementation(async ({ data }: { data: { firstName: string } }) => ({ id: `p-${data.firstName}` }))
+    prismaMock.person.create.mockClear()
+    const recent = new Date().getUTCFullYear() - 50
+    const content = [
+      '0 HEAD',
+      '0 @I1@ INDI', '1 NAME Jean /Martin/', '1 BIRT', '2 DATE 1886',
+      '0 @I2@ INDI', '1 NAME Marie /Martin/', '1 BIRT', `2 DATE ${recent}`,
+      '0 @I3@ INDI', '1 NAME Paul /Martin/',
+      '0 @I4@ INDI', '1 NAME Louise /Martin/', '1 BIRT', '2 DATE 1880', '1 DEAT', '2 DATE 1950',
+      '0 TRLR',
+    ].join('\n')
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/import/gedcom', headers: auth, payload: { content } })
+    expect(response.statusCode).toBe(200)
+    const byName = Object.fromEntries(prismaMock.person.create.mock.calls.map((call: [{ data: { firstName: string; isDeceased: boolean; deathDate: Date | null } }]) => [call[0].data.firstName, call[0].data]))
+    expect(byName.Jean).toMatchObject({ isDeceased: true, deathDate: null })
+    expect(byName.Marie).toMatchObject({ isDeceased: false })
+    expect(byName.Paul).toMatchObject({ isDeceased: false })
+    // Un décès daté reste une date, sans le drapeau « date inconnue »
+    expect(byName.Louise).toMatchObject({ isDeceased: false, deathDate: new Date('1950-01-01T00:00:00.000Z') })
     await app.close()
   })
 })

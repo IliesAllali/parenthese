@@ -4,6 +4,7 @@ import { Save, Trash2, Plus, X, Search, Check, Play, ImagePlus, Camera, Crop, Sp
 import { getParents, getChildren, getPersonUnions, getPersonMedias, getPersonTaggedMedias, getDemoLife, getPersonById, filiations, persons, unions } from '../data/mockData'
 import { deleteLifeEvent, fetchPersonLife } from '../api/treeApi.js'
 import LifeTimeline from './LifeTimeline.jsx'
+import LifeStatusChoice from './LifeStatusChoice.jsx'
 import MomentSheet from './MomentSheet.jsx'
 import { fetchImmichConfig } from '../api/immichApi.js'
 import GeoMediaThumbnail from './GeoMediaThumbnail'
@@ -341,6 +342,13 @@ const PersonCard = ({
   const openField = (field) => {
     setOpenedFields((prev) => (prev.includes(field) ? prev : [...prev, field]))
     setFocusField(field)
+  }
+  // « Décédé(e) » ouvre tout de suite la date et le lieu du décès, la date prend le curseur
+  const chooseDeceased = (deceased) => {
+    handleFieldChange('isAlive', !deceased)
+    if (!deceased) return
+    setOpenedFields((prev) => [...prev, ...['deathYear', 'deathPlace'].filter((f) => !prev.includes(f))])
+    setFocusField('deathYear')
   }
   const birthFilled = isFilled(getEditValue('birthYear', person.birthDate || person.birthYear))
   const deathFilled = isFilled(getEditValue('deathYear', person.deathDate || person.deathYear))
@@ -1005,16 +1013,15 @@ const PersonCard = ({
                   </div>
                 )}
                 {editMode && (
-                  <div className="pc-row">
-                    <span className="pc-label">{t('Statut')}</span>
-                    <button
-                      type="button"
-                      className={`pc-alive ${getEditValue('isAlive', person.isAlive) ? 'is-alive' : 'is-deceased'}`}
-                      onClick={() => handleFieldChange('isAlive', !getEditValue('isAlive', person.isAlive))}
-                    >
-                      <span className="pc-alive-dot" />
-                      {getEditValue('isAlive', person.isAlive) ? t('En vie') : editSex === 'male' ? t('Décédé') : editSex === 'female' ? t('Décédée') : t('Décédé(e)')}
-                    </button>
+                  <div className="pc-row pc-row--seg" data-pc-field="isAlive">
+                    <span className="pc-label" id="pc-status-label">{t('Statut')}</span>
+                    <LifeStatusChoice
+                      deceased={deceasedNow}
+                      sex={editSex}
+                      className="pc-seg"
+                      labelledBy="pc-status-label"
+                      onChange={chooseDeceased}
+                    />
                   </div>
                 )}
                 {editMode && (
@@ -1032,8 +1039,9 @@ const PersonCard = ({
                     </button>
                   </div>
                 )}
-                {infoRow('deathYear', t('Décès'), deathFilled, renderEditableValue({ field: 'deathYear', value: person.deathDate || person.deathYear || '', placeholder: t('Date de décès'), type: 'date', emptyLabel: t('Date inconnue') }), deceasedNow)}
-                {infoRow('deathPlace', t('Lieu de décès'), isFilled(getEditValue('deathPlace', person.deathPlace)), renderEditableValue({ field: 'deathPlace', value: person.deathPlace || '', placeholder: t('Lieu de décès'), format: formatPlace }))}
+                {/* En modification, les champs du décès suivent le statut : ouverts dès « Décédé(e) », retirés avec « En vie » */}
+                {(!editMode || deceasedNow) && infoRow('deathYear', t('Décès'), deathFilled, renderEditableValue({ field: 'deathYear', value: person.deathDate || person.deathYear || '', placeholder: t('Date de décès'), type: 'date', emptyLabel: t('Date inconnue') }), deceasedNow)}
+                {(!editMode || deceasedNow) && infoRow('deathPlace', t('Lieu de décès'), isFilled(getEditValue('deathPlace', person.deathPlace)), renderEditableValue({ field: 'deathPlace', value: person.deathPlace || '', placeholder: t('Lieu de décès'), format: formatPlace }))}
                 {!editMode && (
                   <div className="pc-row">
                     <span className="pc-label">{t('Âge')}</span>
@@ -1294,6 +1302,8 @@ const PersonCard = ({
           medias={momentSheet.entry?.milestone?.unionId ? lifeMedias : personMedias}
           isAdmin={canEditMoments}
           onUploadFile={onUploadMomentFile}
+          // Date et lieu d'une naissance ou d'un décès : enregistrés sur la fiche, par le même chemin que l'onglet Infos
+          onVitalSave={canEditMoments && onSave ? (changes) => onSave(person.id, changes) : undefined}
           onClose={() => setMomentSheet(null)}
           onDelete={onUndoable && treeId && immichToken ? (event) => {
             // Le moment quitte la frise tout de suite ; la requête part à la fin du délai d'annulation
