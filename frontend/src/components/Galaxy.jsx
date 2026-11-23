@@ -76,7 +76,7 @@ function barTabs(tabs, activeKey) {
   })
 }
 
-const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, surnameUppercase = false, annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
+const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlightIds = [], graphRevision = 0, annotationHandlers = null, transformReadRef = null, zoomApiRef = null, focusPersonId = null, assetRevision = 0, reorderEnabled = false, onReorderSiblings = null, familyTabs = true, fullNames = false, surnameUppercase = false, portraitShape = 'varied', annotationViewRef = null, onAnnotationsAnchored = null, selfPersonId = null, ghosts = null, initialFamilyKey = null, onFamilyChange = null }) => {
   const canvasRef = useRef(null)
   const layoutDataRef = useRef(null)
   // Onglets de familles (réglage `familyTabs`) : la liste des familles de l'arbre, calculée une fois par
@@ -113,6 +113,8 @@ const Galaxy = ({ onPersonSelect, onMediaSelect, selectedPersonId, searchHighlig
   useEffect(() => { fullNamesRef.current = fullNames; needsRedrawRef.current = true }, [fullNames])
   // Noms en capitales : le libellé se relit au dessin (surnameLabel), il suffit de redessiner
   useEffect(() => { needsRedrawRef.current = true }, [surnameUppercase])
+  // Forme des portraits de l'arbre : relue au dessin (resolveFrameType), il suffit de redessiner
+  useEffect(() => { needsRedrawRef.current = true }, [portraitShape])
   useEffect(() => { ghostsRef.current = ghosts; needsRedrawRef.current = true }, [ghosts])
   const onAnnotationsAnchoredRef = useRef(onAnnotationsAnchored)
   useEffect(() => { onAnnotationsAnchoredRef.current = onAnnotationsAnchored }, [onAnnotationsAnchored])

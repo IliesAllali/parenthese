@@ -1,5 +1,6 @@
 import { API_BASE_URL, apiRequest, bearer } from './client'
 import { readContributorName } from '../utils/contributorName.js'
+import { portraitShapeOf } from '../utils/portraitCrop.js'
 
 export async function resolveTreeBySlug(slug) {
   const data = await apiRequest(`/api/arbre/${encodeURIComponent(slug)}`)
@@ -52,6 +53,7 @@ export async function fetchTreeGraph(treeId, token) {
     graph: data?.graph || { persons: [], unions: [], filiations: [], medias: [] },
     mediaToken: data?.mediaToken || '',
     surnameUppercase: Boolean(data?.display?.surnameUppercase),
+    portraitShape: portraitShapeOf(data?.display?.portraitShape),
     ownerFirstName: data?.ownerFirstName || '',
     visual: data?.visual || null,
   }

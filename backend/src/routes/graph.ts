@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyRequest } from 'fastif
 import { z } from 'zod'
 
 import { signMediaToken } from '../lib/tree-access.js'
+import { portraitShapeOf } from '../lib/tree-display.js'
 import { TREE_VISUAL_SELECT, treeImageOf } from '../lib/tree-visual.js'
 import { recordTreeVisit, type VisitAccessKind } from '../lib/tree-visits.js'
 import { buildGraphPayload } from '../utils/graph-payload.js'
@@ -164,7 +165,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       }),
       app.prisma.treeSettings.findUnique({
         where: { treeId },
-        select: { surnameUppercase: true },
+        select: { surnameUppercase: true, portraitShape: true },
       }),
       app.prisma.tree.findUnique({ where: { id: treeId }, select: { id: true, owner: { select: { firstName: true } }, ...TREE_VISUAL_SELECT } }),
     ])
@@ -176,7 +177,7 @@ export const graphRoutes: FastifyPluginAsync = async (app) => {
       rootPersonId,
       graph,
       // Réglages d'affichage choisis par les gestionnaires, les mêmes pour tous ceux qui ouvrent l'arbre
-      display: { surnameUppercase: Boolean(settings?.surnameUppercase) },
+      display: { surnameUppercase: Boolean(settings?.surnameUppercase), portraitShape: portraitShapeOf(settings?.portraitShape) },
       // Prénom de la personne qui gère l'arbre, jamais son adresse : « Lucie les verra » après un envoi de la famille
       ownerFirstName: owner?.owner?.firstName?.trim() || null,
       // Visuel de l'arbre (icône ou photo, sinon la lettre) : l'onglet du navigateur le reprend

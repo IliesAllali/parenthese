@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { drawPortrait, traceSibship } from './renderers'
+import { drawPortrait, resolveFrameType, traceSibship } from './renderers'
+import { setPortraitShape } from '../../utils/portraitCrop.js'
 
 // Contexte canvas minimal qui enregistre les appels de tracé
 const recorder = () => {
@@ -69,5 +70,42 @@ describe('drawPortrait, marque « À vérifier »', () => {
     const { ctx, calls } = recorder()
     drawPortrait(ctx, 'round', person, null, false)
     expect(calls.some(c => c[0] === 'fillText' && c[1] === '?')).toBe(false)
+  })
+})
+
+describe('forme du cadre d un portrait dans l arbre', () => {
+  const wide = { naturalWidth: 1600, naturalHeight: 900 }
+  const tall = { naturalWidth: 600, naturalHeight: 1000 }
+  const squarish = { naturalWidth: 800, naturalHeight: 800 }
+
+  it('« variées » : le tirage de la personne, sauf photo très large ou très haute', () => {
+    setPortraitShape('varied')
+    expect(resolveFrameType({ frameType: 'round' }, squarish)).toBe('round')
+    expect(resolveFrameType({ frameType: 'round' }, wide)).toBe('rect')
+    expect(resolveFrameType({ frameType: 'round' }, tall)).toBe('polaroid')
+    expect(resolveFrameType({ frameType: 'polaroid' }, null)).toBe('polaroid')
+  })
+
+  it('forme uniforme : tous les portraits la prennent, photo ou non, large ou haute', () => {
+    try {
+      for (const shape of ['round', 'square', 'polaroid']) {
+        setPortraitShape(shape)
+        for (const img of [squarish, wide, tall, null]) {
+          expect(resolveFrameType({ frameType: 'rect' }, img)).toBe(shape)
+        }
+      }
+    } finally {
+      setPortraitShape('varied')
+    }
+  })
+
+  it('la forme choisie au recadrage l emporte sur la forme de l arbre', () => {
+    try {
+      setPortraitShape('round')
+      expect(resolveFrameType({ frameType: 'round', avatarCrop: { x: 0.5, y: 0.5, zoom: 1, shape: 'polaroid' } }, squarish)).toBe('polaroid')
+      expect(resolveFrameType({ frameType: 'round', avatarCrop: { x: 0.5, y: 0.5, zoom: 1, shape: 'landscape' } }, squarish)).toBe('rect')
+    } finally {
+      setPortraitShape('varied')
+    }
   })
 })

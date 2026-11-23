@@ -7,7 +7,9 @@ import {
   frameAspect,
   imagePlacement,
   normalizeCrop,
+  getPortraitShape,
   resolveFrameKind,
+  setPortraitShape,
   shapeOfKind,
 } from './portraitCrop.js'
 
@@ -111,5 +113,43 @@ describe('forme choisie au recadrage', () => {
     expect(normalizeCrop({ x: 0.2, y: 0.3, zoom: 2, shape: 'hexagone' })).toEqual({ x: 0.2, y: 0.3, zoom: 2 })
     expect(cropForSave(400, 400, 1, DEFAULT_CROP)).toBeNull()
     expect(cropForSave(400, 400, 1, DEFAULT_CROP, 'round')).toEqual({ x: 0.5, y: 0.5, zoom: 1, shape: 'round' })
+  })
+})
+
+describe('forme des portraits réglée pour l arbre', () => {
+  it('« variées » garde la règle d avant : la photo, puis le tirage de la personne', () => {
+    expect(resolveFrameKind('round', 1, null, 'varied')).toBe('round')
+    expect(resolveFrameKind('round', 2, null, 'varied')).toBe('rect')
+    expect(resolveFrameKind('rect', 0.5, null, 'varied')).toBe('polaroid')
+  })
+
+  it('une forme uniforme s applique à tous, quel que soit le format de la photo', () => {
+    for (const shape of ['round', 'square', 'polaroid']) {
+      expect(resolveFrameKind('rect', 1, null, shape)).toBe(shape)
+      expect(resolveFrameKind('round', 2, null, shape)).toBe(shape)
+      expect(resolveFrameKind('polaroid', 0.5, null, shape)).toBe(shape)
+    }
+    // Zone photo carrée : la photo est recadrée à la forme
+    expect(frameAspect(resolveFrameKind('round', 2, null, 'square'), 2)).toBe(1)
+  })
+
+  it('la forme choisie au recadrage l emporte toujours', () => {
+    expect(resolveFrameKind('round', 1, 'landscape', 'round')).toBe('rect')
+    expect(resolveFrameKind('round', 1, 'polaroid', 'square')).toBe('polaroid')
+    expect(resolveFrameKind('round', 1, 'round', 'polaroid')).toBe('round')
+  })
+
+  it('le réglage reçu avec le graphe sert par défaut, une valeur inconnue revient à « variées »', () => {
+    try {
+      setPortraitShape('square')
+      expect(getPortraitShape()).toBe('square')
+      expect(resolveFrameKind('round', 2)).toBe('square')
+      expect(shapeOfKind(resolveFrameKind('rect', 1), 1)).toBe('square')
+      setPortraitShape('hexagone')
+      expect(getPortraitShape()).toBe('varied')
+      expect(resolveFrameKind('round', 2)).toBe('rect')
+    } finally {
+      setPortraitShape('varied')
+    }
   })
 })

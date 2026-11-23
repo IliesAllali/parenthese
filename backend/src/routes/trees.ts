@@ -13,6 +13,7 @@ import { decryptSharePassword, encryptSharePassword } from '../lib/share-passwor
 import { purgeTrees } from '../lib/tree-purge.js'
 import { signMediaToken } from '../lib/tree-access.js'
 import { withTreeVisual } from '../lib/tree-visual.js'
+import { PORTRAIT_SHAPES } from '../lib/tree-display.js'
 import { findFreeSlug, isUniqueViolation, isValidSlug, normalizeSlug } from '../lib/tree-slug.js'
 import { nextSiblingOrder } from '../lib/sibling-order.js'
 import { createHmac } from 'node:crypto'
@@ -78,6 +79,7 @@ const patchTreeSettingsSchema = z
     memberContributionPolicy: z.enum(['direct', 'pending']).optional(),
     contributorPolicy: z.enum(['direct', 'pending']).optional(),
     surnameUppercase: z.boolean().optional(),
+    portraitShape: z.enum(PORTRAIT_SHAPES).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: 'at_least_one_setting_required',
@@ -1247,11 +1249,13 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
         visitorPolicy: 'read_only',
         contributorPolicy: payload.data.contributorPolicy ?? 'pending',
         surnameUppercase: payload.data.surnameUppercase ?? false,
+        portraitShape: payload.data.portraitShape ?? 'varied',
       },
       update: {
         memberContributionPolicy: payload.data.memberContributionPolicy,
         contributorPolicy: payload.data.contributorPolicy,
         surnameUppercase: payload.data.surnameUppercase,
+        portraitShape: payload.data.portraitShape,
       },
     })
 
