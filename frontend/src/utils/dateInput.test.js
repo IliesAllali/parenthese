@@ -133,6 +133,33 @@ describe('date approchée (cas limites du 20/11)', () => {
   })
 })
 
+describe('dates en chinois, telles que l’appli les affiche (PR #273)', () => {
+  const ZH = { order: 'ymd', sep: '/' }
+  it('jour, mois et année en 年/月/日', () => {
+    expect(parseDateInput('1950年3月12日', ZH)).toBe('1950-03-12')
+    expect(parseDateInput('1950 年 3 月 12 日', ZH)).toBe('1950-03-12')
+    expect(parseDateInput('1950年03月12号', ZH)).toBe('1950-03-12')
+    expect(parseDateInput('１９５０年３月１２日', ZH)).toBe('1950-03-12')
+    expect(parseDateInput('1950年', ZH)).toBe('1950-01-01')
+    expect(parseDateInput('1950/03/12', ZH)).toBe('1950-03-12')
+    expect(parseDateInput('1950年2月31日', ZH)).toBeUndefined()
+    const shown = new Date(Date.UTC(1950, 2, 12)).toLocaleDateString('zh-CN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+    expect(parseDateInput(shown, ZH)).toBe('1950-03-12')
+  })
+
+  it('un mois, et « vers » une année', () => {
+    expect(parseDateEntry('1950年3月', ZH)).toEqual({ date: '1950-03-01', precision: 'month' })
+    const shown = new Date(Date.UTC(1950, 2, 1)).toLocaleDateString('zh-CN', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    expect(parseDateEntry(shown, ZH)).toEqual({ date: '1950-03-01', precision: 'month' })
+    for (const text of ['约1920', '约1920年', '大约1920', '大约 1920 年', '1920年左右', '1920左右']) {
+      expect(parseDateEntry(text, ZH)).toEqual({ date: '1920-01-01', precision: 'about' })
+    }
+    for (const text of ['1950年13月', '约19', '1920年前', '三月1950']) {
+      expect(parseDateEntry(text, ZH)).toBeUndefined()
+    }
+  })
+})
+
 describe('avertissements doux des dates (cas limites du 20/11)', () => {
   const today = '2026-11-20'
   it('signale un décès avant la naissance', () => {

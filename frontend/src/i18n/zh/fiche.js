@@ -443,7 +443,7 @@ export default {
   'Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.': '谢谢，已发送。这个时刻会在管理这棵家谱树的人审核后显示在其人生中。',
   // Dates : année seule, décès sans date (issue #77)
   'Année ou date': '年份或日期',
-  'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': '年份（1950）、日期（{exemple}）、月份（1950年3 月）或“约1920年”',
+  'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': '年份（1950）、日期（{exemple}）、月份（1950年3月）或“约1920”',
   'Date inconnue': '日期未知',
   'date inconnue': '日期未知',
   'Décédé(e), date inconnue': '已故，日期未知',
