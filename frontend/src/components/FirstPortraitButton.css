@@ -1,0 +1,61 @@
+/* Premier portrait d'un arbre vide. Mesures en px du canevas (variables posées par FirstPortraitButton.jsx
+   depuis galaxy/constants.js), le tout agrandi au zoom d'arrivée : centre du portrait au centre de l'écran. */
+.first-portrait {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 100;
+  width: var(--fp-width);
+  height: calc(var(--fp-line-y) + 8px);
+  margin: calc(-1 * var(--fp-half)) 0 0 calc(var(--fp-width) / -2);
+  transform: scale(var(--fp-scale));
+  transform-origin: 50% var(--fp-half);
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--fp-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.first-portrait-frame {
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--fp-half));
+  width: calc(var(--fp-half) * 2);
+  height: calc(var(--fp-half) * 2);
+}
+
+/* Comme les libellés d'un nœud (textBaseline middle) : centre de la ligne sur sa hauteur */
+.first-portrait-name,
+.first-portrait-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+.first-portrait-name {
+  top: var(--fp-name-y);
+  font: 400 13px/1 'Newsreader', Georgia, serif;
+}
+
+.first-portrait-line {
+  top: var(--fp-line-y);
+  font: 400 11px/1 'DM Sans', system-ui, sans-serif;
+  color: var(--fp-muted);
+}
+
+.first-portrait:hover .first-portrait-name {
+  color: var(--fp-hover);
+}
+
+/* Anneau de focus des boutons de l'app (.pz-btn) */
+.first-portrait:focus-visible {
+  outline: 2px solid var(--pz-a500);
+  outline-offset: 3px;
+}
