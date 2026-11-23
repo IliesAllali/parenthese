@@ -440,6 +440,7 @@ export default {
   'Envoyer': 'Send',
   'Pour que la famille sache de qui ça vient': 'So the family knows who it comes from',
   'Source et note': 'Source and note',
+  'La fiche passera en « Décédé(e) », avec cette date et ce lieu.': 'The profile will be marked “Deceased”, with this date and place.',
   'Souvenirs de {name}': 'Memories of {name}',
   'Une photo, une vidéo, un enregistrement ou un document, comme un acte en PDF. Ils rejoignent aussi ses souvenirs.': 'A photo, a video, a recording or a document, such as a record as a PDF. They also join their memories.',
   'Merci, c’est envoyé. Le moment apparaîtra dans sa vie quand la personne qui gère l’arbre l’aura accepté.': 'Thanks, it has been sent. The moment will show in their life once the person who manages the tree has accepted it.',
@@ -448,9 +449,6 @@ export default {
   'Une année (1950), une date ({exemple}), un mois (mars 1950) ou « vers 1920 »': 'A year (1950), a date ({exemple}), a month (March 1950) or “about 1920”',
   'Date inconnue': 'Date unknown',
   'date inconnue': 'date unknown',
-  'Décédé(e), date inconnue': 'Deceased, date unknown',
-  'Décédé, date inconnue': 'Deceased, date unknown',
-  'Décédée, date inconnue': 'Deceased, date unknown',
   'Prénom inconnu': 'Unknown first name',
   'Je ne connais pas son prénom': "I don't know their first name",
   // Recadrage du portrait (PortraitCropModal, menu du badge, App)

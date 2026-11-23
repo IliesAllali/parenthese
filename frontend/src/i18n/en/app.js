@@ -64,12 +64,9 @@ export default {
   'Session invalide ou expirée. Reconnectez-vous.': 'Your session is invalid or has expired. Please sign in again.',
 
   // App.jsx : arbre vide
-  'Votre arbre est créé.': 'Your tree is created.',
-  "Ajoutez un proche pour commencer, comme votre mère, votre père ou un frère. Il suffit d'un prénom.": 'Add someone close to get started, like your mother, your father or a brother. A first name is all it takes.',
   'Fermer': 'Close',
   'Ajouter une première personne': 'Add a first person',
-  'Ajouter une personne': 'Add a person',
-  "Commencer l'arbre": 'Start the tree',
+  'Commencez par vous': 'Start with yourself',
 
   // ErrorBoundary, BootLoader
   'Une erreur inattendue est survenue': 'Something unexpected went wrong',

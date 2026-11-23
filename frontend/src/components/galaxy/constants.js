@@ -61,6 +61,13 @@ export const ENTRANCE_ORBIT_STAGGER = 100
 // Part du cadre occupée par la silhouette d'une personne sans photo
 export const NO_PHOTO_ICON_SCALE = 0.6
 
+// Zoom d'arrivée le plus serré : un petit arbre (une personne) s'ouvre à cette taille, centré sur le canevas
+export const INIT_MAX_SCALE = 1.2
+
+// Libellés sous le portrait : centre du prénom à NODE_LABEL_Y du centre du nœud, années une ligne plus bas
+export const NODE_LABEL_Y = PERSON_R + 24
+export const NODE_LABEL_LINE = 15
+
 export const COLORS = {
   nodeAlive: '#F2EFEA',
   nodeDead: '#EBE6DF',

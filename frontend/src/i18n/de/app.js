@@ -59,12 +59,9 @@ export default {
   "Aucun arbre accessible n'a pu être chargé automatiquement.": "Es konnte kein zugänglicher Stammbaum automatisch geladen werden.",
   "Session invalide ou expirée. Reconnectez-vous.": "Deine Sitzung ist ungültig oder abgelaufen. Bitte melde dich neu an.",
   // App.jsx : arbre vide
-  "Votre arbre est créé.": "Dein Stammbaum ist angelegt.",
-  "Ajoutez un proche pour commencer, comme votre mère, votre père ou un frère. Il suffit d'un prénom.": "Füge zum Anfang eine nahestehende Person hinzu, etwa deine Mutter, deinen Vater oder einen Bruder. Ein Vorname genügt.",
   "Fermer": "Schließen",
   "Ajouter une première personne": "Erste Person hinzufügen",
-  "Ajouter une personne": "Person hinzufügen",
-  "Commencer l'arbre": "Stammbaum beginnen",
+  "Commencez par vous": "Fang bei dir an",
   // ErrorBoundary, BootLoader
   "Une erreur inattendue est survenue": "Etwas Unerwartetes ist schiefgegangen",
   "L'application a rencontré un problème. Vous pouvez essayer de recharger ou revenir à l'écran précédent.": "Die App hatte ein Problem. Du kannst versuchen, die Seite neu zu laden oder zum vorherigen Bildschirm zurückzugehen.",

@@ -34,6 +34,11 @@ import { persons as globalPersons, unions as globalUnions, filiations as globalF
 //   de sa fratrie. Le trait vers un conjoint qui n'est pas à côté d'elle
 //   passe au-dessus des portraits (elkLayout starOf, renderers traceJump).
 //
+//   Un conjoint isolé (sans parent ni enfant) est un petit portrait collé
+//   à son partenaire, du côté libre de la chaîne, dans l'ordre des
+//   mariages : jamais entre lui et le parent de ses enfants, quel que
+//   soit l'ordre des unions (elkLayout traverseChain).
+//
 // Banc, archétypes et témoins : tools/layout-bench/.
 // ============================================================
 

@@ -52,30 +52,26 @@ export function scrubAnalyticsEvent(event) {
   return next
 }
 
-// Source d'arrivée (?source=hn, landing, app-shared...) : lue une fois à l'ouverture et gardée sur
-// l'appareil, pour que l'inscription dise d'où vient le visiteur même après quelques clics.
-// La première source connue gagne, « direct » ne remplace jamais une vraie source.
-const SOURCE_KEY = 'parenthese_source'
+// Source d'arrivée (?source=hn, landing, app-shared...) : lue à l'ouverture et gardée en mémoire le temps
+// de la visite, pour que l'inscription dise d'où vient le visiteur même après quelques clics. Rien n'est
+// écrit sur l'appareil : la mesure d'audience ne pose ni cookie ni stockage local, donc aucun consentement
+// à demander. La première source connue gagne, « direct » ne remplace jamais une vraie source.
+let arrivalSource = ''
 
 // fallback : source donnée par l'app quand l'adresse n'en porte pas (arbre-partage, demo), au même rang
 export function rememberSource(fallback = '') {
+  if (arrivalSource) return
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('source') || fallback
     const clean = String(fromUrl || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40)
-    if (clean && clean !== 'direct' && !localStorage.getItem(SOURCE_KEY)) {
-      localStorage.setItem(SOURCE_KEY, clean)
-    }
+    if (clean && clean !== 'direct') arrivalSource = clean
   } catch {
-    // Stockage indisponible : l'inscription partira sans source
+    // Adresse illisible : l'inscription partira sans source
   }
 }
 
 export function getSource() {
-  try {
-    return localStorage.getItem(SOURCE_KEY) || 'direct'
-  } catch {
-    return 'direct'
-  }
+  return arrivalSource || 'direct'
 }
 
 function normalizeRole(value) {
@@ -95,7 +91,8 @@ export function initAppAnalytics() {
     .then(({ default: posthog }) => {
       posthog.init(key, {
         api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
-        cross_subdomain_cookie: true,
+        // Ni cookie ni stockage local : l'identifiant de visite vit en mémoire et disparaît avec l'onglet.
+        persistence: 'memory',
         defaults: '2026-01-30',
         person_profiles: 'identified_only',
         autocapture: false,
