@@ -41,6 +41,28 @@ describe('PersonCard, onglet Infos', () => {
     expect(html).toContain('+ Surnom')
   })
 
+  // Le statut montre les deux choix, celui qui vaut est coché (live du 22/11 : « En vie » seul ne disait pas qu'on pouvait le changer)
+  const statusButtons = (html) => [...html.matchAll(/<button[^>]*role="radio"[^>]*aria-checked="(true|false)"[^>]*>([^<]+)<\/button>/g)]
+    .map(([, checked, label]) => ({ label, checked: checked === 'true' }))
+
+  it('en modification, le statut offre « En vie » et « Décédé(e) », la personne vivante sur « En vie »', () => {
+    const html = render({ ...sparse, isAlive: true }, true)
+    expect(html).toContain('role="radiogroup"')
+    expect(statusButtons(html)).toEqual([{ label: 'En vie', checked: true }, { label: 'Décédé(e)', checked: false }])
+  })
+
+  it('une personne décédée : « Décédée » coché pour une femme, et la ligne Décès est là', () => {
+    const html = render({ ...sparse, sex: 'female', deathDate: '1970-03-02' }, true)
+    expect(statusButtons(html)).toEqual([{ label: 'En vie', checked: false }, { label: 'Décédée', checked: true }])
+    expect(html).toContain('data-pc-field="deathYear"')
+  })
+
+  it('une personne vivante n’a pas de ligne Décès en modification', () => {
+    const html = render({ ...sparse, isAlive: true }, true)
+    expect(html).not.toContain('data-pc-field="deathYear"')
+    expect(html).not.toContain('data-pc-field="deathPlace"')
+  })
+
   it('en lecture, pas de pastille, et le lieu de décès s’affiche quand il existe', () => {
     const html = render({ ...sparse, deathPlace: 'Nantes, France', deathDate: '1970-03-02' }, false)
     expect(html).not.toContain('pc-fill-chip')

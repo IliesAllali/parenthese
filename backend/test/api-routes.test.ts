@@ -921,6 +921,36 @@ describe('Import GEDCOM', () => {
   })
 })
 
+describe('Import GEDCOM : décès présumé après 110 ans (live du 22/11)', () => {
+  it('sans DEAT, née il y a plus de 110 ans : décédée, date inconnue ; plus jeune ou sans naissance : en vie', async () => {
+    const app = createApp()
+    const auth = { authorization: `Bearer ${await createUserToken(app)}` }
+    prismaMock.person.findMany.mockResolvedValue([])
+    prismaMock.union.findMany.mockResolvedValue([])
+    prismaMock.parentChildLink.findMany.mockResolvedValue([])
+    prismaMock.person.create.mockImplementation(async ({ data }: { data: { firstName: string } }) => ({ id: `p-${data.firstName}` }))
+    prismaMock.person.create.mockClear()
+    const recent = new Date().getUTCFullYear() - 50
+    const content = [
+      '0 HEAD',
+      '0 @I1@ INDI', '1 NAME Jean /Martin/', '1 BIRT', '2 DATE 1886',
+      '0 @I2@ INDI', '1 NAME Marie /Martin/', '1 BIRT', `2 DATE ${recent}`,
+      '0 @I3@ INDI', '1 NAME Paul /Martin/',
+      '0 @I4@ INDI', '1 NAME Louise /Martin/', '1 BIRT', '2 DATE 1880', '1 DEAT', '2 DATE 1950',
+      '0 TRLR',
+    ].join('\n')
+    const response = await app.inject({ method: 'POST', url: '/trees/tree-1/import/gedcom', headers: auth, payload: { content } })
+    expect(response.statusCode).toBe(200)
+    const byName = Object.fromEntries(prismaMock.person.create.mock.calls.map((call: [{ data: { firstName: string; isDeceased: boolean; deathDate: Date | null } }]) => [call[0].data.firstName, call[0].data]))
+    expect(byName.Jean).toMatchObject({ isDeceased: true, deathDate: null })
+    expect(byName.Marie).toMatchObject({ isDeceased: false })
+    expect(byName.Paul).toMatchObject({ isDeceased: false })
+    // Un décès daté reste une date, sans le drapeau « date inconnue »
+    expect(byName.Louise).toMatchObject({ isDeceased: false, deathDate: new Date('1950-01-01T00:00:00.000Z') })
+    await app.close()
+  })
+})
+
 describe('Sexe dans le GEDCOM (issue #114)', () => {
   const importer = async (app: FastifyInstance, content: string) => {
     const auth = { authorization: `Bearer ${await createUserToken(app)}` }
