@@ -49,7 +49,7 @@ describe('nommage chinois', () => {
       0: {start: -1},
       1: {start: 0, end: 3},
       2: {start: 1, end: 2}
-    }, zh.FATHER, zh.FATHER, zh.YOUNGER_BROTHER, zh.SON)).toEqual('叔堂伯父')
+    }, zh.FATHER, zh.FATHER, zh.YOUNGER_BROTHER, zh.SON)).toEqual('堂伯父')
     expect(getCousin(true, 1, {
       0: {start: -1},
       1: {start: 0, end: 3},
@@ -182,3 +182,67 @@ describe('nommage chinois', () => {
   })
 })
 
+// Chemin complet avec années de naissance ; je suis né en 0
+const person = (sex, birthYear) => ({ sex, birthYear })
+const step = (move, sex = null, birthYear = undefined) => ({ move, person: person(sex, birthYear) })
+
+describe('nommage chinois, corrections de la revue', () => {
+  it('maternal 外 once, right after 曾/高', () => {
+    expect(getRelative(zh.MOTHER, zh.MOTHER, zh.OLDER_BROTHER)).toEqual('外舅祖父')
+    expect(getRelative(zh.MOTHER, zh.MOTHER, zh.YOUNGER_BROTHER)).toEqual('外舅祖父')
+    expect(getRelative(zh.MOTHER, zh.FATHER, zh.OLDER_BROTHER)).toEqual('外伯祖父')
+    expect(getRelative(zh.MOTHER, zh.FATHER, zh.YOUNGER_BROTHER)).toEqual('外叔祖父')
+    expect(getRelative(zh.MOTHER, zh.MOTHER, zh.OLDER_SISTER)).toEqual('外姨祖母')
+    expect(getRelative(zh.MOTHER, zh.FATHER, zh.FATHER, zh.OLDER_BROTHER)).toEqual('曾外伯祖父')
+  })
+
+  it("father's mother's brother is 舅祖父", () => {
+    expect(getRelative(zh.FATHER, zh.MOTHER, zh.OLDER_BROTHER)).toEqual('舅祖父')
+    expect(getRelative(zh.FATHER, zh.MOTHER, zh.YOUNGER_BROTHER)).toEqual('舅祖父')
+  })
+
+  it('all-male paternal line stays 堂', () => {
+    const secondCousin = (birthYear) => nameZh(path([
+      step('up', 'male', -30), step('up', 'male', -60), step('sibling', 'male', -58),
+      step('down', 'male', -28), step('down', 'male', birthYear),
+    ]))
+    expect(secondCousin(3)).toEqual('从堂弟')
+    expect(secondCousin(-3)).toEqual('从堂哥')
+    expect(nameZh(path([
+      step('up', 'male', -30), step('up', 'male', -60), step('up', 'male', -90), step('sibling', 'male', -88),
+      step('down', 'male', -58), step('down', 'male', -28), step('down', 'female', 2),
+    ]))).toEqual('族妹')
+    const fathersCousin = (birthYear) => nameZh(path([
+      step('up', 'male', -30), step('up', 'male', -60), step('sibling', 'male', -58), step('down', 'male', birthYear),
+    ]))
+    expect(fathersCousin(-35)).toEqual('堂伯父')
+    expect(fathersCousin(-25)).toEqual('堂叔父')
+    // A woman in the line keeps the contributor's 表 forms
+    expect(nameZh(path([
+      step('up', 'male', -30), step('up', 'female', -60), step('sibling', 'male', -58),
+      step('down', 'male', -28), step('down', 'male', 3),
+    ]))).toEqual('舅表弟')
+  })
+
+  it('unknown birth year gives both forms', () => {
+    expect(nameZh(path([step('up', 'male', -30), step('sibling', 'female', -32), step('down', 'female')]))).toEqual('表姐/表妹')
+    expect(nameZh(path([step('up', 'male', -30), step('sibling', 'male', -32), step('down', 'male')]))).toEqual('堂哥/堂弟')
+    expect(nameZh(path([step('up', 'male', -30), step('sibling', 'female', -32), step('down')]))).toEqual('表兄弟姐妹')
+    expect(nameZh(path([
+      step('up', 'male', -30), step('up', 'male', -60), step('sibling', 'male', -58), step('down', 'male'),
+    ]))).toEqual('堂伯父/堂叔父')
+  })
+
+  it('half and step siblings when something is unknown', () => {
+    expect(nameZh(path([step('up', 'male', -30), step('down', 'male', 5)]))).toEqual('同父异母弟弟')
+    expect(nameZh(path([step('up', 'female', -30), step('down', 'female', -5)]))).toEqual('同母异父姐姐')
+    expect(nameZh(path([step('up', null, -30), step('down', 'male', 5)]))).toEqual('同父异母弟弟/同母异父弟弟')
+    expect(nameZh(path([step('up', 'female', -30), step('down', null, -5)]))).toEqual('同母异父哥哥/同母异父姐姐')
+    expect(nameZh(path([step('up', 'male', -30), step('down', 'male')]))).toEqual('同父异母哥哥/同父异母弟弟')
+    expect(nameZh(path([step('up', 'male', -30), step('down', 'other')]))).toEqual('同父异母兄弟姐妹')
+    expect(nameZh(path([step('up'), step('down')]))).toEqual('同父异母兄弟姐妹/同母异父兄弟姐妹')
+    expect(nameZh(path([step('up', 'male', -30), step('spouse', 'female', -28), step('down', 'female', 2)]))).toEqual('继妹妹')
+    expect(nameZh(path([step('up', 'male', -30), step('spouse', 'female', -28), step('down', 'male')]))).toEqual('继哥哥/继弟弟')
+    expect(nameZh(path([step('up'), step('spouse'), step('down')]))).toEqual('继兄弟姐妹')
+  })
+})

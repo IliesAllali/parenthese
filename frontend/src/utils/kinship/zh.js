@@ -1,5 +1,4 @@
-import { normalizeSex } from './index.js'
-import { isHalfSibling, isStepSibling } from './facts.js'
+import { isHalfSibling, isStepSibling, normalizeSex } from './facts.js'
 
 // Mot genré quand le sexe de la personne nommée est connu, forme double sinon
 const g = (sex, male, female, other) => (sex === 'male' ? male : sex === 'female' ? female : other)
@@ -31,7 +30,8 @@ export const
   CHILD = 'C',
 
   // Regexes for common checks
-  TANG_HIGHER_ORDER_COUSIN = /^f+[gd]$/,
+  // Paternal line through men only: fathers up, a brother, then sons down
+  TANG_HIGHER_ORDER_COUSIN = /^f+[gd]e*$/,
   HIGHER_ORDER_COUSIN = /^[fm]{3,}/,
   BO_UNCLE = /fg/,
   SHU_UNCLE = /fd/,
@@ -141,7 +141,7 @@ const links = {
   'ffg': '伯祖父',
   'ffd': '叔祖父',
   'ffj': '姑祖母',
-  'fmg': '外舅祖父',
+  'fmg': '舅祖父',
   'fmj': '姨祖母',
 
   'mf': '外公',
@@ -169,10 +169,16 @@ const links = {
 function getCousinPrefix(intermediaries) {
   let label
 
-  let suffix = '表'
+  // All-male paternal line: the degree of the cousinship gives the prefix on its own,
+  // without the 伯/叔 of the branch (堂伯父, 从堂弟 rather than 叔堂伯父, 叔堂弟)
   if (intermediaries.match(TANG_HIGHER_ORDER_COUSIN)) {
-    suffix = '堂'
+    const ups = intermediaries.match(/^f+/)[0].length
+    const downs = intermediaries.length - ups - 1
+    const degree = Math.min(ups, downs + 1)
+    return degree === 1 ? '堂' : degree === 2 ? '从堂' : '族'
   }
+
+  let suffix = '表'
 
   if (intermediaries.length === 2) return suffix
 
@@ -264,40 +270,59 @@ function promoteSiblings(pathCode) {
 // regardless of whether your aunt is older or younger than your mother;
 // maternal ancestors and your daughters' descendents get a prefix but otherwise
 // have the same term as paternal ones and your sons' descendents, respectively
+// Direct ancestors through a mother, and descendants through a daughter, take the paternal
+// term with the 外 prefix. The parent right before a sibling stays as it is: it decides
+// between 伯/叔/姑 and 舅/姨 (mother's father's younger brother: 外叔祖父).
+function getLineage(pathCode) {
+  if (!pathCode.match(DIRECT_ANCESTOR_DESCENDENT)) return undefined
+
+  let middle, end
+
+  if (pathCode.match(ENDS_WITH_SPOUSE)) {
+    middle = pathCode.slice(0, -2)
+    end = pathCode.slice(-2)
+  } else {
+    middle = pathCode.slice(0, -1)
+    end = pathCode.charAt(pathCode.length - 1)
+  }
+  if ('gdjk'.includes(end.charAt(0)) && middle.length > 0) {
+    end = `${middle.slice(-1)}${end}`
+    middle = middle.slice(0, -1)
+  }
+
+  while (middle.includes(MOTHER)) {
+    middle = middle.replace(MOTHER, FATHER)
+    let newPath = `${middle}${end}`
+    if (newPath in links) {
+      // The maternal 外 goes right after 曾/高: 外伯祖父, 曾外祖父, 外舅祖父
+      const label = links[newPath]
+      return label.includes('外') ? label : label.replace(/^([曾高]?)/, '$1外')
+    }
+  }
+
+  while (middle.includes(DAUGHTER)) {
+    middle = middle.replace(DAUGHTER, SON)
+    let newPath = `${middle}${end}`
+    if (newPath in links) {
+      return `外${links[newPath]}`
+    }
+  }
+
+  return undefined
+}
+
 function getPromoted(pathCode) {
+  const lineage = getLineage(pathCode)
+  if (lineage !== undefined) return lineage
+
   pathCode = promoteSiblings(pathCode)
 
   if (pathCode in links) {
     return links[pathCode]
   }
 
-  if (pathCode.match(DIRECT_ANCESTOR_DESCENDENT)) {
-    let middle, end
-
-    if (pathCode.match(ENDS_WITH_SPOUSE)) {
-      middle = pathCode.slice(0, -2)
-      end = pathCode.slice(-2)
-    } else {
-      middle = pathCode.slice(0, -1)
-      end = pathCode.charAt(pathCode.length - 1)
-    }
-
-    while (middle.includes(MOTHER)) {
-      middle = middle.replace(MOTHER, FATHER)
-      let newPath = `${middle}${end}`
-      if (newPath in links) {
-        return links[newPath].replace(/^([曾高]?[^祖]?)/, '$1外')
-      }
-    }
-
-    while (middle.includes(DAUGHTER)) {
-      middle = middle.replace(DAUGHTER, SON)
-      let newPath = `${middle}${end}`
-      if (newPath in links) {
-        return `外${links[newPath]}`
-      }
-    }
-  }
+  const promotedLineage = getLineage(pathCode)
+  if (promotedLineage !== undefined) return promotedLineage
 
   let end = pathCode.charAt(pathCode.length - 1)
   pathCode = pathCode.slice(0, -1)
@@ -336,9 +361,7 @@ function getDisambiguated(pathCode, { isOlder, generationDistance, generationInd
       generationIndices
     })
 
-    if (a === b) return a
-
-    return [a, b].filter((x) => x !== undefined).join('/')
+    return bothForms(a, b)
   }
 }
 
@@ -378,6 +401,15 @@ export function getName(pathCode, { isOlder, generationDistance, generationIndic
   // Remove the chain from generations above the target person in order
   // and connect the blood relatives on the same level as pseudo-siblings,
   // then recompute using the new chain and add a prefix
+  // Unknown relative age: both forms, like siblings (表哥/表弟)
+  if (isOlder === undefined) {
+    return bothForms(getCousin(pathCode, true, generationDistance, generationIndices),
+      getCousin(pathCode, false, generationDistance, generationIndices))
+  }
+  return getCousin(pathCode, isOlder, generationDistance, generationIndices)
+}
+
+function getCousin(pathCode, isOlder, generationDistance, generationIndices) {
   let { start, end } = generationIndices[Math.max(generationDistance, 0)]
   if (pathCode.match(ENDS_WITH_SPOUSE)) {
     end--
@@ -394,6 +426,19 @@ export function getName(pathCode, { isOlder, generationDistance, generationIndic
   }
 
   return undefined
+}
+
+// Join two possible labels. The four forms of one cousin (表哥/表弟/表姐/表妹)
+// become the neutral 表兄弟姐妹.
+function bothForms(a, b) {
+  const forms = [...new Set([a, b].filter((x) => x !== undefined).flatMap((x) => x.split('/')))]
+  if (forms.length === 0) return undefined
+  const stem = forms[0].slice(0, -1)
+  const ends = forms.map((x) => x.slice(-1)).sort().join('')
+  if (forms.length === 4 && forms.every((x) => x.slice(0, -1) === stem) && ends === [...'哥弟姐妹'].sort().join('')) {
+    return `${stem}兄弟姐妹`
+  }
+  return forms.join('/')
 }
 
 // Convert a path to a string encoding each step as a character
@@ -461,6 +506,9 @@ export function encodePath(path) {
     // Only one person in the chain from this generation;
     // no relevant age difference to report
     isOlder = false
+  } else if (!Number.isFinite(births[birthCount - 1]) || !Number.isFinite(births[0])) {
+    // A birth year is missing: the label gives both forms
+    isOlder = undefined
   } else {
     isOlder = births[birthCount - 1] < births[0]
   }
@@ -468,25 +516,36 @@ export function encodePath(path) {
   return { pathCode, generationDistance, isOlder, generationIndices }
 }
 
+// Sibling terms for a half or step sibling: one when sex and relative age are known,
+// two when one of them is unknown (哥哥/弟弟), none when both are (neutral 兄弟姐妹)
+function siblingTerms(sex, isOlder) {
+  const sexes = sex === 'male' ? [true] : sex === 'female' ? [false] : [true, false]
+  const ages = isOlder === undefined ? [true, false] : [isOlder]
+  if (sexes.length * ages.length > 2) return []
+  return sexes.flatMap((isMale) => ages.map((older) => links[getPseudoSibling(older, isMale)]))
+}
+
+// Prefixed sibling labels, two forms at most: beyond that the sibling term turns neutral
+function prefixedSiblings(prefixes, terms) {
+  if (terms.length === 0 || prefixes.length * terms.length > 2) {
+    return prefixes.map((p) => `${p}兄弟姐妹`).join('/')
+  }
+  return prefixes.flatMap((p) => terms.map((t) => `${p}${t}`)).join('/')
+}
+
 export default function nameZh(path) {
   let { pathCode, generationDistance, isOlder, generationIndices } = encodePath(path)
-  const sex = path.steps[path.steps.length - 1].person.sex
+  const sex = normalizeSex(path.steps[path.steps.length - 1].person.sex)
 
-  // Check for half- and stepsiblings first
+  // Check for half- and stepsiblings first; the first step tells which parent is shared
   if (isHalfSibling(path)) {
-    let prefix
-    if (pathCode.match(`^${FATHER}`)) {
-      prefix = '同父异母'
-    } else {
-      prefix = '同母异父'
-    }
-    let label = getPseudoSibling(isOlder, sex === 'male')
-    return `${prefix}${links[label]}`
+    const parent = pathCode.charAt(0)
+    const prefixes = parent === FATHER ? ['同父异母'] : parent === MOTHER ? ['同母异父'] : ['同父异母', '同母异父']
+    return prefixedSiblings(prefixes, siblingTerms(sex, isOlder))
   }
 
   if (isStepSibling(path)) {
-    let label = getPseudoSibling(isOlder, sex === 'male')
-    return `继${links[label]}`
+    return prefixedSiblings(['继'], siblingTerms(sex, isOlder))
   }
 
   let label = getName(pathCode, { isOlder, generationDistance, generationIndices })
