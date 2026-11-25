@@ -5,6 +5,8 @@
 // « March 12, 1950 », « 12. März 1950 ».
 // Une date approchée se tape aussi (cas limites du 20/11) : « mars 1950 » ou « 03/1950 », rangée au 1er du mois avec la
 // précision « month », et « vers 1920 » (about, around, um, ca.), rangée au 1er janvier avec la précision « about ».
+// En chinois, les formes que l'appli affiche se relisent : « 1950年3月12日 », « 1950年3月 », « 1950年 », « 约1920 »
+// (et « 大约1920 », « 1920年左右 »), chiffres pleine chasse compris.
 import { dateFormat, dateLocale, t } from '../i18n/index.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -59,9 +61,24 @@ function parseWritten(raw) {
   return undefined
 }
 
+// Formes chinoises vers les formes déjà lues : « 1950年3月12日 » → « 1950-3-12 », « 1950年3月 » → « 1950-3 »,
+// « 1950年 » → « 1950 », « 约1920 », « 大约1920年 », « 1920年左右 » → « ~1920 »
+function fromChinese(raw) {
+  const text = raw.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\s+/g, '')
+  if (!/[年月日号约左右前后]/.test(text)) return raw
+  const about = text.match(/^(?:大约|约|大概)(\d{4})年?$/) || text.match(/^(\d{4})年?(?:左右|前后)$/)
+  if (about) return `~${about[1]}`
+  const full = text.match(/^(\d{4})年(\d{1,2})月(\d{1,2})[日号]$/)
+  if (full) return `${full[1]}-${full[2]}-${full[3]}`
+  const month = text.match(/^(\d{4})年(\d{1,2})月$/)
+  if (month) return `${month[1]}-${month[2]}`
+  const year = text.match(/^(\d{4})年$/)
+  return year ? year[1] : raw
+}
+
 // Texte du champ vers la valeur stockée : '' si vide, « AAAA-MM-JJ » si valable, undefined si on ne comprend pas
 export function parseDateInput(text, { order } = dateFormat) {
-  const raw = String(text ?? '').trim()
+  const raw = fromChinese(String(text ?? '').trim())
   if (!raw) return ''
   if (/^\d{4}$/.test(raw)) return `${raw}-01-01`
   let day
@@ -116,7 +133,7 @@ function parseMonthYear(raw) {
 // Texte du champ vers { date, precision } : date « AAAA-MM-JJ » (ou '' si vide), precision null, 'month' ou 'about' ;
 // undefined si on ne comprend pas
 export function parseDateEntry(text, format = dateFormat) {
-  const raw = String(text ?? '').trim()
+  const raw = fromChinese(String(text ?? '').trim())
   const exact = parseDateInput(raw, format)
   if (exact !== undefined) return { date: exact, precision: null }
   const month = parseMonthYear(raw)
