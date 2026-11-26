@@ -563,14 +563,14 @@ describe('API security and authz', () => {
           treeId: 'tree-1', deletedAt: null, childPersonId: 'hugo',
           OR: [{ id: { in: ['link-h1', 'link-h2'] } }, { viaUnionId: { in: ['union-1'] } }],
         },
-        data: { displayOrder: 1 },
+        data: { displayOrder: 1, orderChosen: true },
       })
       expect(prismaMock.parentChildLink.updateMany).toHaveBeenNthCalledWith(2, {
         where: {
           treeId: 'tree-1', deletedAt: null, childPersonId: 'anne',
           OR: [{ id: { in: ['link-a1', 'link-a2'] } }, { viaUnionId: { in: ['union-1'] } }],
         },
-        data: { displayOrder: 2 },
+        data: { displayOrder: 2, orderChosen: true },
       })
       expect(prismaMock.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ action: 'children_reordered', payloadJson: { childIds: ['hugo', 'anne'] } }),

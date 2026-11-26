@@ -1738,8 +1738,8 @@ function App() {
     order.forEach((entry, index) => {
       for (const filiation of filiations) {
         if (!entry.linkIds.includes(String(filiation.id))) continue
-        previous.set(filiation, filiation.displayOrder)
-        filiation.displayOrder = index + 1
+        previous.set(filiation, { displayOrder: filiation.displayOrder, orderChosen: filiation.orderChosen })
+        Object.assign(filiation, { displayOrder: index + 1, orderChosen: true })
       }
     })
     setSiblingOrderRevision((current) => current + 1)
@@ -1747,7 +1747,7 @@ function App() {
     try {
       await reorderSiblings(tree.treeContext.treeId, order, tree.treeContext.accessToken || auth.userAuth.token)
     } catch (error) {
-      for (const [filiation, value] of previous) filiation.displayOrder = value
+      for (const [filiation, values] of previous) Object.assign(filiation, values)
       setSiblingOrderRevision((current) => current + 1)
       setDraftNotice(t("L'ordre n'a pas pu être enregistré. Réessayez."))
       throw error

@@ -97,5 +97,5 @@ export function filiationsWithOrder(filiations, unions, source, orderedNodeIds) 
   orderedNodeIds.forEach((nodeId, index) => {
     for (const f of filiationsOf(filiations, unions, source, personIdOf(nodeId))) orderByFiliation.set(f, index + 1)
   })
-  return filiations.map((f) => (orderByFiliation.has(f) ? { ...f, displayOrder: orderByFiliation.get(f) } : f))
+  return filiations.map((f) => (orderByFiliation.has(f) ? { ...f, displayOrder: orderByFiliation.get(f), orderChosen: true } : f))
 }

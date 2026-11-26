@@ -47,6 +47,7 @@ export type GraphPayload = {
     viaUnionId: string | null
     parentageType: string | null
     displayOrder: number
+    orderChosen: boolean
   }>
   medias: Array<{
     id: string
@@ -143,6 +144,7 @@ export function buildGraphPayload(
         viaUnionId: link.viaUnionId,
         parentageType: link.parentageType,
         displayOrder: link.displayOrder,
+        orderChosen: link.orderChosen,
       })),
     medias: medias.map((media) => ({
         id: media.id,
