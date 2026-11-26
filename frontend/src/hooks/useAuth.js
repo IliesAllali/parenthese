@@ -13,6 +13,7 @@ import {
   updateLastOpenedTree,
 } from '../api/authApi'
 import { listTrees } from '../api/treeApi'
+import { getSource, trackAppEvent } from '../utils/analytics'
 import { getAccountDeletionErrorMessage, getAccountErrorMessage } from '../utils/errorMessages'
 import { clearAccountLocalData } from '../utils/localHygiene.js'
 
@@ -77,6 +78,7 @@ export function useAuth() {
 
   // Session ouverte : jeton et profil gardés sur l'appareil, puis les arbres du compte
   const openSession = async (token, user) => {
+    if (loadUserProfile()?.provisional === true && user?.provisional !== true) trackAppEvent('account_kept', { source: getSource() })
     localStorage.setItem(USER_TOKEN_STORAGE_KEY, token)
     saveUserProfile(user || null)
     setUserAuth({ token, user })

@@ -3331,7 +3331,7 @@ function App() {
         },
         token,
       )
-      trackAppEvent('tree_created', { tree_id: toOpaqueTreeId(createdTree.id) })
+      trackAppEvent('tree_created', { tree_id: toOpaqueTreeId(createdTree.id), source: getSource() })
 
       // On importe le fichier au lieu de commencer par « vous », sinon la personne saisie ici existerait deux
       // fois après l'import
