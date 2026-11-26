@@ -2346,7 +2346,7 @@ export const treeRoutes: FastifyPluginAsync = async (app) => {
             childPersonId: entry.childId,
             OR: [{ id: { in: entry.linkIds } }, ...(unionIds.length ? [{ viaUnionId: { in: unionIds } }] : [])],
           },
-          data: { displayOrder: index + 1 },
+          data: { displayOrder: index + 1, orderChosen: true },
         })
       }),
     )

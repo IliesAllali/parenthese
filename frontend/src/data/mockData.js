@@ -237,6 +237,7 @@ export function loadGraphData(graph, options = {}) {
         parentId: viaKeptUnion ? null : filiation.parentPersonId,
         parentageType: filiation.parentageType || 'biologique',
         displayOrder: Number.isFinite(filiation.displayOrder) ? filiation.displayOrder : index + 1,
+        orderChosen: filiation.orderChosen,
       }
     })
     .filter((filiation) => {

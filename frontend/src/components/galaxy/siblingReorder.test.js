@@ -113,6 +113,18 @@ describe('ordre de la fratrie dans les données', () => {
     expect(row).toEqual(['c', 'a', 'b'])
     expect(graph.filiations.every((f) => f.displayOrder === 1)).toBe(true)
   })
+
+  it('l’ordre choisi passe avant le renvoi au bout d’un large bloc de descendants', () => {
+    const link = (childId, unionId) => viaUnion(`f-${childId}`, childId, unionId)
+    const family = {
+      persons: ['gp', 'gm', 'a', 'b', 'c', 'm', 'e1', 'n1', 'e2', 'n2', 'e3', 'n3', 'k1', 'k2', 'k3', 'k4', 'k5'].map(person),
+      unions: [union('u0', 'gp', 'gm'), union('uc', 'c', 'm'), union('u1', 'e1', 'n1'), union('u2', 'e2', 'n2'), union('u3', 'e3', 'n3')],
+      filiations: [...['a', 'b', 'c'].map((k) => link(k, 'u0')), ...['e1', 'e2', 'e3'].map((k) => link(k, 'uc')), ...['k1', 'k2', 'k3', 'k4', 'k5'].map((k) => link(k, 'u3'))],
+    }
+    const filiations = filiationsWithOrder(family.filiations, family.unions, 'u-u0', ['p-c', 'p-a', 'p-b'])
+    const groups = buildSiblingGroups(computeBlockLayout({ ...family, filiations }))
+    expect(groups.get('p-c').ids).toEqual(['p-c', 'p-a', 'p-b'])
+  })
 })
 
 describe('fratrie de parents séparés', () => {

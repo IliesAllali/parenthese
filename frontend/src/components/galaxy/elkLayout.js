@@ -157,6 +157,7 @@ export function normalizeFiliationsForLayout(filiations = [], unions = []) {
           parentId: null,
           parentageType: 'biologique',
           displayOrder: Math.min(toOrder(filiationA.displayOrder), toOrder(directByParent.get(parentB)?.displayOrder)),
+          orderChosen: filiationA.orderChosen,
         })
 
         seenUnionIds.add(matchingUnion.id)
@@ -689,6 +690,7 @@ export function computeLayout(graphData = null, referenceId = null) {
       id: `e-${f.id}`, sources: [sourceId], targets: [targetId],
       _parentageType: f.parentageType,
       _displayOrder: f.displayOrder,
+      _orderChosen: f.orderChosen,
       // Lien proposé, pas encore relu (utils/ghosts.js) : dessiné en pointillés
       _ghost: Boolean(f.ghost),
       // Case à remplir (utils/kinSlots.js) : pointillés gris

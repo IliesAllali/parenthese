@@ -179,6 +179,7 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
   const toOrder = (v) => (Number.isFinite(v) ? v : Number.MAX_SAFE_INTEGER)
   const edgeOrder = new Map(result.edges.map(e => [`${e.sources[0]}>${e.targets[0]}`, toOrder(e._displayOrder)]))
   for (const [u, kids] of childrenOfUnion) kids.sort((a, b) => edgeOrder.get(`${u}>${a}`) - edgeOrder.get(`${u}>${b}`))
+  const chosenUnions = new Set(result.edges.filter(e => e._orderChosen).map(e => e.sources[0]))
   const hasParents = (chain) => chain.some(id => parentUnionOf.has(id))
 
   // Ligne de sang de la référence : tout ce qu'on atteint par les seuls liens parent / enfant
@@ -350,7 +351,7 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
   }
 
   // Famille attachée à un conjoint : l'enfant à coller (ancre) doit finir au bout de sa fratrie, du côté du
-  // couple. Si l'ordre choisi l'en empêche, la fratrie est dessinée en miroir (du dernier au premier).
+  // couple. Une fratrie rangée à la main (orderChosen) passe avant cette règle et celle du gros bloc.
   let anchor = null // { kid, end: 'left' | 'right', path: Set<chaîne> } : la branche du conjoint longe ce bord
   const pathOf = (kid) => {
     const s = new Set([chainOf.get(kid)])
@@ -431,11 +432,12 @@ function layoutOnce(graphData, referenceId, forcedSide, familyTabs = true) {
     const byOffCenter = (list) => [...list].sort((a, b) => offCenter(b) - offCenter(a))
     const kids = unionsOfChain.flatMap(u => {
       const group = childBlocks.filter(b => b.unionId === u)
+      if (chosenUnions.has(u)) return group
       return [...byOffCenter(group.filter(b => b.attachSide < 0)), ...byOffCenter(group.filter(b => !b.attachSide)), ...byOffCenter(group.filter(b => b.attachSide > 0))]
     })
     // La branche qui mène au conjoint d'une autre famille va au bout, du côté de cette famille
     if (anchor) {
-      const i = kids.findIndex(b => b.kid != null && anchor.path.has(chainOf.get(b.kid)))
+      const i = kids.findIndex(b => b.kid != null && (b.ghost || !chosenUnions.has(b.unionId)) && anchor.path.has(chainOf.get(b.kid)))
       if (i >= 0) { const [b] = kids.splice(i, 1); if (anchor.end === 'right') kids.push(b); else kids.unshift(b) }
     }
     // Règle du bout (Patch, 19/10 soir) : seule une belle-famille au bout de la fratrie est dessinée entière.
